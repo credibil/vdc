@@ -43,14 +43,11 @@ where
     /// The request to process.
     pub body: B,
 
-    /// Optional headers associated with this request.
+    /// Headers associated with this request.
     pub headers: H,
 }
 
-impl<B> From<B> for Request<B, NoHeaders>
-where
-    B: Body,
-{
+impl<B: Body> From<B> for Request<B, NoHeaders> {
     fn from(body: B) -> Self {
         Self {
             body,
@@ -108,23 +105,24 @@ pub(crate) use seal::{Body, Headers};
 pub(crate) mod seal {
     use std::fmt::Debug;
 
-    /// The `Body` trait is used to restrict the types able to be a Request
-    /// body. It is implemented by all `xxxRequest` types.
+    /// The `Body` trait is used to restrict the types able to implement
+    /// request body. It is implemented by all `xxxRequest` types.
     pub trait Body: Clone + Debug + Send + Sync {}
 
-    /// The `Headers` trait is used to restrict the types able to be a Request
-    /// headers. It is implemented by handlers expecting headers.
+    /// The `Headers` trait is used to restrict the types able to implement
+    /// request headers.
     pub trait Headers: Clone + Debug + Send + Sync {}
 }
 
-/// Empty request headers implementation
+/// Implement empty headers for use by handlers that do not require headers.
 #[derive(Clone, Debug)]
 pub struct NoHeaders;
 impl Headers for NoHeaders {}
 
-/// TODO: Add documentation
+/// An authorization-only header for use by handlers that soley require
+/// authorization.
 #[derive(Clone, Debug)]
 pub struct AuthorizationHeaders {
-    /// TODO: Add documentation
+    /// The authorization header (access token).
     pub authorization: String,
 }
