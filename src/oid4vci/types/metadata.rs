@@ -50,12 +50,6 @@ pub struct OAuthServerResponse {
 /// The registration request.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct RegistrationRequest {
-    /// A previously issued Access Token, as extracted from the Authorization
-    /// header of the Credential Request. Used to grant access to register a
-    /// client.
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub access_token: String,
-
     /// Metadata provided by the client undertaking registration.
     #[serde(flatten)]
     pub client_metadata: Client,

@@ -3,10 +3,10 @@
 use tracing::instrument;
 
 use crate::oid4vci::Result;
-use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request};
+use crate::oid4vci::endpoint::{Body, Handler, Request};
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::State;
-use crate::oid4vci::types::{RegistrationRequest, RegistrationResponse};
+use crate::oid4vci::types::{RegistrationHeaders, RegistrationRequest, RegistrationResponse};
 use crate::server;
 
 /// Registration request handler.
@@ -17,37 +17,31 @@ use crate::server;
 /// not available.
 #[instrument(level = "debug", skip(provider))]
 async fn register(
-    issuer: &str, provider: &impl Provider, request: RegistrationRequest,
+    issuer: &str, provider: &impl Provider,
+    request: Request<RegistrationRequest, RegistrationHeaders>,
 ) -> Result<RegistrationResponse> {
     tracing::debug!("register");
 
-    verify(provider, &request).await?;
+    // verify access token
+    StateStore::get::<State>(provider, &request.headers.authorization)
+        .await
+        .map_err(|e| server!("state not found: {e}"))?;
 
-    let Ok(client_metadata) = provider.register(&request.client_metadata).await else {
+    let Ok(client_metadata) = provider.register(&request.body.client_metadata).await else {
         return Err(server!("Registration failed"));
     };
 
     Ok(RegistrationResponse { client_metadata })
 }
 
-impl Handler for Request<RegistrationRequest, NoHeaders> {
+impl Handler for Request<RegistrationRequest, RegistrationHeaders> {
     type Response = RegistrationResponse;
 
     fn handle(
         self, issuer: &str, provider: &impl Provider,
     ) -> impl Future<Output = Result<Self::Response>> + Send {
-        register(issuer, provider, self.body)
+        register(issuer, provider, self)
     }
 }
 
 impl Body for RegistrationRequest {}
-
-async fn verify(provider: &impl Provider, request: &RegistrationRequest) -> Result<()> {
-    tracing::debug!("register::verify");
-
-    // verify state is still accessible (has not expired)
-    match StateStore::get::<State>(provider, &request.access_token).await {
-        Ok(_) => Ok(()),
-        Err(e) => Err(server!("State not found: {e}")),
-    }
-}

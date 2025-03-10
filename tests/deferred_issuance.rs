@@ -9,8 +9,8 @@ use credibil_vc::oid4vci::endpoint;
 use credibil_vc::oid4vci::proof::{self, Payload, Type, Verify};
 use credibil_vc::oid4vci::types::{
     CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest,
-    DeferredCredentialRequest, NonceRequest, ProofClaims, ResponseType, TokenGrantType,
-    TokenRequest,
+    DeferredCredentialRequest, DeferredHeaders, NonceRequest, ProofClaims, ResponseType,
+    TokenGrantType, TokenRequest,
 };
 use insta::assert_yaml_snapshot as assert_snapshot;
 use utils::issuer::{CREDENTIAL_ISSUER as ALICE_ISSUER, PENDING_USER, ProviderImpl};
@@ -92,9 +92,13 @@ async fn deferred() {
         panic!("expected transaction_id");
     };
 
-    let request = DeferredCredentialRequest {
-        access_token: token.access_token.into(),
-        transaction_id: transaction_id.clone(),
+    let request = endpoint::Request {
+        body: DeferredCredentialRequest {
+            transaction_id: transaction_id.clone(),
+        },
+        headers: DeferredHeaders {
+            authorization: token.access_token.clone(),
+        },
     };
     let response =
         endpoint::handle(ALICE_ISSUER, request, &provider).await.expect("should return credential");

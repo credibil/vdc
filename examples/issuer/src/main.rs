@@ -319,12 +319,16 @@ async fn credential(
 async fn deferred_credential(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
-    Json(mut req): Json<DeferredCredentialRequest>,
+    Json(request): Json<DeferredCredentialRequest>,
 ) -> AxResult<DeferredCredentialResponse> {
-    req.access_token = auth.0.token().to_string();
+    let request = endpoint::Request {
+        body: request,
+        headers: CredentialHeaders {
+            authorization: auth.token().to_string(),
+        },
+    };
 
-    #[allow(clippy::large_futures)]
-    endpoint::handle(&format!("http://{host}"), req, &provider).await.into()
+    endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
 }
 
 /// Notification endpoint

@@ -10,12 +10,13 @@
 
 use tracing::instrument;
 
-use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request};
+use crate::oid4vci::endpoint::{Body, Handler, Request};
 use crate::oid4vci::issuer::credential::credential;
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::{Stage, State};
 use crate::oid4vci::types::{
-    CredentialHeaders, DeferredCredentialRequest, DeferredCredentialResponse, ResponseType,
+    CredentialHeaders, DeferredCredentialRequest, DeferredCredentialResponse, DeferredHeaders,
+    ResponseType,
 };
 use crate::oid4vci::{Error, Result};
 use crate::{invalid, server};
@@ -28,12 +29,15 @@ use crate::{invalid, server};
 /// not available.
 #[instrument(level = "debug", skip(provider))]
 async fn deferred(
-    issuer: &str, provider: &impl Provider, request: DeferredCredentialRequest,
+    issuer: &str, provider: &impl Provider,
+    request: Request<DeferredCredentialRequest, DeferredHeaders>,
 ) -> Result<DeferredCredentialResponse> {
     tracing::debug!("deferred");
 
+    let transaction_id = &request.body.transaction_id;
+
     // retrieve deferred credential request from state
-    let Ok(state) = StateStore::get::<State>(provider, &request.transaction_id).await else {
+    let Ok(state) = StateStore::get::<State>(provider, &transaction_id).await else {
         return Err(Error::InvalidTransactionId("deferred state not found".to_string()));
     };
     if state.is_expired() {
@@ -47,7 +51,7 @@ async fn deferred(
     let req = Request {
         body: deferred_state.credential_request,
         headers: CredentialHeaders {
-            authorization: request.access_token,
+            authorization: request.headers.authorization,
         },
     };
     let response = credential(issuer, provider, req).await?;
@@ -59,20 +63,20 @@ async fn deferred(
     }
 
     // remove deferred state item
-    StateStore::purge(provider, &request.transaction_id)
+    StateStore::purge(provider, &transaction_id)
         .await
         .map_err(|e| server!("issue purging state: {e}"))?;
 
     Ok(response)
 }
 
-impl Handler for Request<DeferredCredentialRequest, NoHeaders> {
+impl Handler for Request<DeferredCredentialRequest, DeferredHeaders> {
     type Response = DeferredCredentialResponse;
 
     fn handle(
         self, issuer: &str, provider: &impl Provider,
     ) -> impl Future<Output = Result<Self::Response>> + Send {
-        deferred(issuer, provider, self.body)
+        deferred(issuer, provider, self)
     }
 }
 

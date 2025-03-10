@@ -299,11 +299,6 @@ pub struct DeferredCredentialRequest {
     /// Identifies a Deferred Issuance transaction from an earlier Credential
     /// Request.
     pub transaction_id: String,
-
-    /// A previously issued Access Token, as extracted from the Authorization
-    /// header of the Batch Credential Request.
-    #[serde(skip)]
-    pub access_token: String,
 }
 
 /// The Deferred Credential Response uses the same format and credential

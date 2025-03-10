@@ -21,8 +21,14 @@ pub use crate::oauth::GrantType;
 /// Credential request headers.
 pub type CredentialHeaders = AuthorizationHeaders;
 
+/// Deferred Credential request headers.
+pub type DeferredHeaders = AuthorizationHeaders;
+
 /// Notification request headers.
 pub type NotificationHeaders = AuthorizationHeaders;
+
+/// Registration request headers.
+pub type RegistrationHeaders = AuthorizationHeaders;
 
 /// Used by the Wallet to notify the Credential Issuer of certain events for
 /// issued Credentials. These events enable the Credential Issuer to take
