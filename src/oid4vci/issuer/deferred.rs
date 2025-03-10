@@ -8,15 +8,15 @@
 //! valid for the issuance of the Credential previously requested at the
 //! Credential Endpoint or the Batch Credential Endpoint.
 
-use http::HeaderMap;
-use http::header::AUTHORIZATION;
 use tracing::instrument;
 
-use crate::oid4vci::endpoint::{Body, NoHeaders, Handler, Request};
+use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request};
 use crate::oid4vci::issuer::credential::credential;
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::{Stage, State};
-use crate::oid4vci::types::{DeferredCredentialRequest, DeferredCredentialResponse, ResponseType};
+use crate::oid4vci::types::{
+    CredentialHeaders, DeferredCredentialRequest, DeferredCredentialResponse, ResponseType,
+};
 use crate::oid4vci::{Error, Result};
 use crate::{invalid, server};
 
@@ -44,12 +44,11 @@ async fn deferred(
     };
 
     // make credential request
-    let mut headers = HeaderMap::new();
-    headers.insert(AUTHORIZATION, request.access_token.parse().unwrap());
     let req = Request {
         body: deferred_state.credential_request,
-        headers: Some(headers),
-        headers2: None,
+        headers: CredentialHeaders {
+            authorization: request.access_token,
+        },
     };
     let response = credential(issuer, provider, req).await?;
 

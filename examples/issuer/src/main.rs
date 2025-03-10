@@ -17,11 +17,12 @@ use axum_extra::TypedHeader;
 use axum_extra::headers::authorization::Bearer;
 use axum_extra::headers::{Authorization, Host};
 use credibil_vc::oid4vci::types::{
-    AuthorizationRequest, CreateOfferRequest, CreateOfferResponse, CredentialOfferRequest,
-    CredentialOfferResponse, CredentialRequest, CredentialResponse, DeferredCredentialRequest,
-    DeferredCredentialResponse, MetadataRequest, MetadataResponse, NotificationRequest,
-    NotificationResponse, OAuthServerRequest, OAuthServerResponse, PushedAuthorizationRequest,
-    PushedAuthorizationResponse, TokenRequest, TokenResponse,
+    AuthorizationRequest, CreateOfferRequest, CreateOfferResponse, CredentialHeaders,
+    CredentialOfferRequest, CredentialOfferResponse, CredentialRequest, CredentialResponse,
+    DeferredCredentialRequest, DeferredCredentialResponse, MetadataRequest, MetadataResponse,
+    NotificationHeaders, NotificationRequest, NotificationResponse, OAuthServerRequest,
+    OAuthServerResponse, PushedAuthorizationRequest, PushedAuthorizationResponse, TokenRequest,
+    TokenResponse,
 };
 use credibil_vc::oid4vci::{self, endpoint};
 use credibil_vc::urlencode;
@@ -303,13 +304,13 @@ async fn credential(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>, Json(request): Json<CredentialRequest>,
 ) -> AxResult<CredentialResponse> {
-    let mut headers = HeaderMap::new();
-    headers.insert(AUTHORIZATION, auth.token().parse().unwrap());
     let request = endpoint::Request {
         body: request,
-        headers: Some(headers),
-        headers2: None,
+        headers: CredentialHeaders {
+            authorization: auth.token().to_string(),
+        },
     };
+
     endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
 }
 
@@ -357,8 +358,9 @@ async fn notification(
     headers.insert(AUTHORIZATION, auth.token().parse().unwrap());
     let request = endpoint::Request {
         body: request,
-        headers: Some(headers),
-        headers2: None,
+        headers: NotificationHeaders {
+            authorization: auth.token().to_string(),
+        },
     };
     endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
 }

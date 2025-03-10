@@ -12,7 +12,7 @@ use tracing::instrument;
 
 use crate::core::generate;
 use crate::oid4vci::Result;
-use crate::oid4vci::endpoint::{Body, NoHeaders, Handler, Request};
+use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request};
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::Expire;
 use crate::oid4vci::types::{NonceRequest, NonceResponse};
@@ -40,7 +40,7 @@ async fn nonce(
     Ok(NonceResponse { c_nonce })
 }
 
-impl Handler for Request<NonceRequest,NoHeaders> {
+impl Handler for Request<NonceRequest, NoHeaders> {
     type Response = NonceResponse;
 
     fn handle(

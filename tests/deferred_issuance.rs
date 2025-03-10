@@ -5,13 +5,13 @@ mod utils;
 use std::sync::LazyLock;
 
 use credibil_infosec::jose::JwsBuilder;
-use credibil_vc::oid4vci::endpoint::{self, NoHeaders};
+use credibil_vc::oid4vci::endpoint;
 use credibil_vc::oid4vci::proof::{self, Payload, Type, Verify};
 use credibil_vc::oid4vci::types::{
-    CreateOfferRequest, Credential, CredentialRequest, DeferredCredentialRequest, NonceRequest,
-    ProofClaims, ResponseType, TokenGrantType, TokenRequest,
+    CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest,
+    DeferredCredentialRequest, NonceRequest, ProofClaims, ResponseType, TokenGrantType,
+    TokenRequest,
 };
-use http::header::{AUTHORIZATION, HeaderMap};
 use insta::assert_yaml_snapshot as assert_snapshot;
 use utils::issuer::{CREDENTIAL_ISSUER as ALICE_ISSUER, PENDING_USER, ProviderImpl};
 use utils::wallet::{self, Keyring};
@@ -75,12 +75,11 @@ async fn deferred() {
         .with_proof(jwt)
         .build();
 
-    let mut headers = HeaderMap::new();
-    headers.insert(AUTHORIZATION, token.access_token.parse().unwrap());
     let request = endpoint::Request {
         body: request,
-        headers: Some(headers),
-        headers2: Some(NoHeaders),
+        headers: CredentialHeaders {
+            authorization: token.access_token.clone(),
+        },
     };
 
     let response =

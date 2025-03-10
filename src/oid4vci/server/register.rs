@@ -3,7 +3,7 @@
 use tracing::instrument;
 
 use crate::oid4vci::Result;
-use crate::oid4vci::endpoint::{Body, NoHeaders, Handler, Request};
+use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request};
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::State;
 use crate::oid4vci::types::{RegistrationRequest, RegistrationResponse};

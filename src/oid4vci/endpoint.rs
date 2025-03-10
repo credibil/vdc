@@ -6,8 +6,6 @@
 
 use std::fmt::Debug;
 
-use http::HeaderMap;
-
 use crate::invalid;
 use crate::oid4vci::Result;
 use crate::oid4vci::provider::Provider;
@@ -46,30 +44,20 @@ where
     pub body: B,
 
     /// Optional headers associated with this request.
-    pub headers: Option<HeaderMap>,
-
-    /// Optional headers associated with this request.
-    pub headers2: Option<H>,
+    pub headers: H,
 }
 
-impl<B, H> From<B> for Request<B, H>
+impl<B> From<B> for Request<B, NoHeaders>
 where
     B: Body,
-    H: Headers,
 {
     fn from(body: B) -> Self {
         Self {
             body,
-            headers: None,
-            headers2: None,
+            headers: NoHeaders,
         }
     }
 }
-
-/// Empty request headers implementation
-#[derive(Clone, Debug)]
-pub struct NoHeaders;
-impl Headers for NoHeaders {}
 
 /// Methods common to all messages.
 ///
@@ -127,4 +115,16 @@ pub(crate) mod seal {
     /// The `Headers` trait is used to restrict the types able to be a Request
     /// headers. It is implemented by handlers expecting headers.
     pub trait Headers: Clone + Debug + Send + Sync {}
+}
+
+/// Empty request headers implementation
+#[derive(Clone, Debug)]
+pub struct NoHeaders;
+impl Headers for NoHeaders {}
+
+/// TODO: Add documentation
+#[derive(Clone, Debug)]
+pub struct AuthorizationHeaders {
+    /// TODO: Add documentation
+    pub authorization: String,
 }

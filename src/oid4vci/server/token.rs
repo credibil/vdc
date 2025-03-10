@@ -19,7 +19,7 @@ use tracing::instrument;
 
 use crate::core::{generate, pkce};
 use crate::oauth::GrantType;
-use crate::oid4vci::endpoint::{Body, NoHeaders, Handler, Request};
+use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore};
 use crate::oid4vci::state::{Expire, Stage, State, Token};
 use crate::oid4vci::types::{

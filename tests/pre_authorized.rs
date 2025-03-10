@@ -10,11 +10,10 @@ use credibil_vc::OneMany;
 use credibil_vc::oid4vci::endpoint;
 use credibil_vc::oid4vci::proof::{self, Payload, Type, Verify};
 use credibil_vc::oid4vci::types::{
-    AuthorizationDetail, CreateOfferRequest, Credential, CredentialOfferRequest, CredentialRequest,
-    NonceRequest, NotificationEvent, NotificationHeaders, NotificationRequest, ProofClaims,
-    ResponseType, TokenGrantType, TokenRequest,
+    AuthorizationDetail, CreateOfferRequest, Credential, CredentialHeaders, CredentialOfferRequest,
+    CredentialRequest, NonceRequest, NotificationEvent, NotificationHeaders, NotificationRequest,
+    ProofClaims, ResponseType, TokenGrantType, TokenRequest,
 };
-use http::header::{AUTHORIZATION, HeaderMap};
 use insta::assert_yaml_snapshot as assert_snapshot;
 use utils::issuer::{CREDENTIAL_ISSUER as ALICE_ISSUER, NORMAL_USER, ProviderImpl};
 use utils::wallet::{self, Keyring};
@@ -45,7 +44,6 @@ async fn offer_val() {
     let pre_auth_grant = grants.pre_authorized_code.expect("should have pre-authorized code grant");
 
     let request = TokenRequest::builder()
-        // .client_id(BOB_CLIENT)
         .grant_type(TokenGrantType::PreAuthorizedCode {
             pre_authorized_code: pre_auth_grant.pre_authorized_code,
             tx_code: response.tx_code.clone(),
@@ -63,12 +61,7 @@ async fn offer_val() {
     // proof of possession of key material
     let jws = JwsBuilder::new()
         .jwt_type(Type::Openid4VciProofJwt)
-        .payload(
-            ProofClaims::new()
-                // .client_id(BOB_CLIENT)
-                .credential_issuer(ALICE_ISSUER)
-                .nonce(nonce.c_nonce),
-        )
+        .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
         .build()
         .await
@@ -84,12 +77,11 @@ async fn offer_val() {
         .with_proof(jwt)
         .build();
 
-    let mut headers = HeaderMap::new();
-    headers.insert(AUTHORIZATION, token.access_token.parse().unwrap());
     let request = endpoint::Request {
         body: request,
-        headers: Some(headers),
-        headers2: None,
+        headers: CredentialHeaders {
+            authorization: token.access_token.clone(),
+        },
     };
 
     let response =
@@ -216,12 +208,11 @@ async fn two_datasets() {
         let request =
             CredentialRequest::builder().credential_identifier(identifier).with_proof(jwt).build();
 
-        let mut headers = HeaderMap::new();
-        headers.insert(AUTHORIZATION, token.access_token.parse().unwrap());
         let request = endpoint::Request {
             body: request,
-            headers: Some(headers),
-            headers2: None,
+            headers: CredentialHeaders {
+                authorization: token.access_token.clone(),
+            },
         };
 
         let response = endpoint::handle(ALICE_ISSUER, request, &provider)
@@ -320,12 +311,11 @@ async fn reduce_credentials() {
     let request =
         CredentialRequest::builder().credential_identifier(identifier).with_proof(jwt).build();
 
-    let mut headers = HeaderMap::new();
-    headers.insert(AUTHORIZATION, token.access_token.parse().unwrap());
     let request = endpoint::Request {
         body: request,
-        headers: Some(headers),
-        headers2: None,
+        headers: CredentialHeaders {
+            authorization: token.access_token.clone(),
+        },
     };
 
     let response =
@@ -416,12 +406,11 @@ async fn reduce_claims() {
         .with_proof(jwt)
         .build();
 
-    let mut headers = HeaderMap::new();
-    headers.insert(AUTHORIZATION, token.access_token.parse().unwrap());
     let request = endpoint::Request {
         body: request,
-        headers: Some(headers),
-        headers2: None,
+        headers: CredentialHeaders {
+            authorization: token.access_token.clone(),
+        },
     };
 
     let response =
@@ -505,12 +494,11 @@ async fn notify_accepted() {
         .with_proof(jwt)
         .build();
 
-    let mut headers = HeaderMap::new();
-    headers.insert(AUTHORIZATION, token.access_token.parse().unwrap());
     let request = endpoint::Request {
         body: request,
-        headers: Some(headers),
-        headers2: None,
+        headers: CredentialHeaders {
+            authorization: token.access_token.clone(),
+        },
     };
 
     let response =
@@ -529,14 +517,11 @@ async fn notify_accepted() {
         .event_description("Credential accepted")
         .build();
 
-    let mut headers = HeaderMap::new();
-    headers.insert(AUTHORIZATION, token.access_token.parse().unwrap());
     let request = endpoint::Request {
         body: request,
-        headers: Some(headers),
-        headers2: Some(NotificationHeaders {
+        headers: NotificationHeaders {
             authorization: token.access_token.clone(),
-        }),
+        },
     };
 
     endpoint::handle(ALICE_ISSUER, request, &provider).await.expect("response is ok");

@@ -13,24 +13,23 @@ use std::fmt::Debug;
 use chrono::{DateTime, Utc};
 use credibil_infosec::Signer;
 use credibil_infosec::jose::jws::{self, Key};
-use http::header::AUTHORIZATION;
 use tracing::instrument;
 
 use crate::core::{Kind, generate};
-use crate::oid4vci::endpoint::{Body, NoHeaders, Handler, Request};
+use crate::oid4vci::endpoint::{Body, Handler, Request};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Deferrance, Expire, Stage, State};
 use crate::oid4vci::types::{
     AuthorizedDetail, Credential, CredentialConfiguration, CredentialDefinition, CredentialDisplay,
-    CredentialRequest, CredentialResponse, Dataset, Format, Issuer, MultipleProofs, Proof,
-    ProofClaims, RequestBy, ResponseType, SingleProof,
+    CredentialHeaders, CredentialRequest, CredentialResponse, Dataset, Format, Issuer,
+    MultipleProofs, Proof, ProofClaims, RequestBy, ResponseType, SingleProof,
 };
 use crate::oid4vci::{Error, Result};
 use crate::status::issuer::Status;
 use crate::w3c_vc::model::types::{LangString, LangValue};
 use crate::w3c_vc::model::{CredentialSubject, VerifiableCredential};
 use crate::w3c_vc::proof::{self, Payload, Type, W3cFormat};
-use crate::{invalid, server, verify_key};
+use crate::{server, verify_key};
 
 /// Credential request handler.
 ///
@@ -40,17 +39,11 @@ use crate::{invalid, server, verify_key};
 /// not available.
 #[instrument(level = "debug", skip(provider))]
 pub(crate) async fn credential(
-    issuer: &str, provider: &impl Provider, request: Request<CredentialRequest, NoHeaders>,
+    issuer: &str, provider: &impl Provider, request: Request<CredentialRequest, CredentialHeaders>,
 ) -> Result<CredentialResponse> {
     tracing::debug!("credential");
 
-    // get access token from request headers
-    let Some(headers) = request.headers else {
-        return Err(invalid!("headers not set"));
-    };
-    let access_token = headers[AUTHORIZATION].to_str().map_err(|_| invalid!("no access token"))?;
-
-    let Ok(state) = StateStore::get::<State>(provider, access_token).await else {
+    let Ok(state) = StateStore::get::<State>(provider, &request.headers.authorization).await else {
         return Err(Error::AccessDenied("invalid access token".to_string()));
     };
     let iss =
@@ -97,7 +90,7 @@ pub(crate) async fn credential(
     ctx.issue(provider, dataset).await
 }
 
-impl Handler for Request<CredentialRequest, NoHeaders> {
+impl Handler for Request<CredentialRequest, CredentialHeaders> {
     type Response = CredentialResponse;
 
     fn handle(

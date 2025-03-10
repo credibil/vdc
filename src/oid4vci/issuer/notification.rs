@@ -19,10 +19,8 @@
 //! no guarantees that a Credential Issuer will receive a notification within a
 //! certain time period or at all.
 
-use http::header::AUTHORIZATION;
 use tracing::instrument;
 
-use crate::invalid;
 use crate::oid4vci::endpoint::{Body, Handler, Headers, Request};
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::State;
@@ -42,15 +40,8 @@ async fn notification(
 ) -> Result<NotificationResponse> {
     tracing::debug!("notification");
 
-    println!("{:?}", request);
-
-    let Some(headers) = request.headers else {
-        return Err(invalid!("headers not set"));
-    };
-    let access_token = headers[AUTHORIZATION].to_str().map_err(|_| invalid!("no access token"))?;
-
     // verify access token
-    let _ = StateStore::get::<State>(provider, access_token)
+    let _ = StateStore::get::<State>(provider, &request.headers.authorization)
         .await
         .map_err(|_| Error::AccessDenied("invalid access token".to_string()))?;
 
