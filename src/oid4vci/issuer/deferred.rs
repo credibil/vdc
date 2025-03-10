@@ -37,7 +37,7 @@ async fn deferred(
     let transaction_id = &request.body.transaction_id;
 
     // retrieve deferred credential request from state
-    let Ok(state) = StateStore::get::<State>(provider, &transaction_id).await else {
+    let Ok(state) = StateStore::get::<State>(provider, transaction_id).await else {
         return Err(Error::InvalidTransactionId("deferred state not found".to_string()));
     };
     if state.is_expired() {
@@ -63,7 +63,7 @@ async fn deferred(
     }
 
     // remove deferred state item
-    StateStore::purge(provider, &transaction_id)
+    StateStore::purge(provider, transaction_id)
         .await
         .map_err(|e| server!("issue purging state: {e}"))?;
 
