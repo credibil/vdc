@@ -7,10 +7,8 @@ edition.workspace = true
 workspace = true
 
 [dependencies]
-anyhow.workspace = true
 axum.workspace = true
 axum-extra.workspace = true
-chrono.workspace = true
 credibil-vc = { workspace = true, features = ["verifier"] }
 serde.workspace = true
 serde_json.workspace = true

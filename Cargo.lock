@@ -686,7 +686,6 @@ dependencies = [
  "ed25519-dalek",
  "fastrand",
  "flate2",
- "http",
  "image",
  "insta",
  "multibase",
@@ -1673,8 +1672,6 @@ dependencies = [
  "credibil-infosec",
  "credibil-vc",
  "ed25519-dalek",
- "fastrand",
- "multibase",
  "oauth2",
  "rand_core 0.6.4",
  "serde",
@@ -1684,7 +1681,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
- "x25519-dalek",
 ]
 
 [[package]]
@@ -3214,10 +3210,8 @@ checksum = "3ef4c4aa54d5d05a279399bfa921ec387b7aba77caf7a682ae8d86785b8fdad2"
 name = "verifier"
 version = "0.0.0"
 dependencies = [
- "anyhow",
  "axum",
  "axum-extra",
- "chrono",
  "credibil-vc",
  "serde",
  "serde_json",

@@ -38,7 +38,6 @@ derive_builder.workspace = true
 ed25519-dalek = "2.1.1"
 fastrand.workspace = true
 flate2 = "1.1.0"
-http = "1.2.0"
 image = { version = "0.25.5", default-features = false, features = ["png"] }
 percent-encoding = "2.3.1"
 qrcode = { version = "0.14.1", default-features = false, features = ["image"] }
@@ -74,7 +73,7 @@ members = [
     "examples/issuer",
     "examples/verifier",
 ]
-resolver = "3"
+# resolver = "3"
 
 [workspace.package]
 authors = ["Credibil"]
@@ -128,7 +127,7 @@ uuid = { version = "1.15.1", features = ["fast-rng", "v4"] }
 credibil-did = { git = "https://github.com/credibil/did.git" }
 
 [profile.release]
-# Optimize for small code size
-lto = true
+# optimize for small code size
+lto = "thin"
 opt-level = "s"
-strip = true
+strip = "symbols"
