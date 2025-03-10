@@ -17,7 +17,7 @@
 use tracing::instrument;
 
 use crate::oid4vci::Result;
-use crate::oid4vci::endpoint::{Body, Handler, Request};
+use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request};
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::{Stage, State};
 use crate::oid4vci::types::{CredentialOfferRequest, CredentialOfferResponse};
@@ -55,7 +55,7 @@ async fn credential_offer(
     Ok(CredentialOfferResponse { credential_offer })
 }
 
-impl Handler for Request<CredentialOfferRequest> {
+impl Handler for Request<CredentialOfferRequest, NoHeaders> {
     type Response = CredentialOfferResponse;
 
     fn handle(

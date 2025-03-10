@@ -17,6 +17,13 @@ pub use token::*;
 
 pub use crate::oauth::GrantType;
 
+/// TODO: Add documentation
+#[derive(Clone, Debug)]
+pub struct NotificationHeaders {
+    /// TODO: Add documentation
+    pub authorization: String,
+}
+
 /// Used by the Wallet to notify the Credential Issuer of certain events for
 /// issued Credentials. These events enable the Credential Issuer to take
 /// subsequent actions after issuance.

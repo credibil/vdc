@@ -26,7 +26,7 @@
 use tracing::instrument;
 
 use crate::oid4vci::Result;
-use crate::oid4vci::endpoint::{Body, Handler, Request};
+use crate::oid4vci::endpoint::{Body, NoHeaders, Handler, Request};
 use crate::oid4vci::provider::{Metadata, Provider};
 use crate::oid4vci::types::{MetadataRequest, MetadataResponse};
 use crate::server;
@@ -50,7 +50,7 @@ async fn metadata(
     Ok(MetadataResponse { credential_issuer })
 }
 
-impl Handler for Request<MetadataRequest> {
+impl Handler for Request<MetadataRequest, NoHeaders> {
     type Response = MetadataResponse;
 
     fn handle(

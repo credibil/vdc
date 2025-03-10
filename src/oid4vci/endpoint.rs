@@ -22,33 +22,54 @@ use crate::oid4vci::provider::Provider;
 ///
 /// Implementers should look to the Error type and description for more
 /// information on the reason for failure.
-pub async fn handle<T, U>(
-    issuer: &str, request: impl Into<Request<T>>, provider: &impl Provider,
+pub async fn handle<B, H, U>(
+    issuer: &str, request: impl Into<Request<B, H>>, provider: &impl Provider,
 ) -> Result<U>
 where
-    T: Body,
-    Request<T>: Handler<Response = U>,
+    B: Body,
+    H: Headers,
+    Request<B, H>: Handler<Response = U>,
 {
-    let request: Request<T> = request.into();
+    let request: Request<B, H> = request.into();
     request.validate(issuer, provider).await?;
     request.handle(issuer, provider).await
 }
 
 /// A request to process.
 #[derive(Clone, Debug)]
-pub struct Request<T: Body> {
+pub struct Request<B, H>
+where
+    B: Body,
+    H: Headers,
+{
     /// The request to process.
-    pub body: T,
+    pub body: B,
 
     /// Optional headers associated with this request.
     pub headers: Option<HeaderMap>,
+
+    /// Optional headers associated with this request.
+    pub headers2: Option<H>,
 }
 
-impl<T: Body> From<T> for Request<T> {
-    fn from(body: T) -> Self {
-        Self { body, headers: None }
+impl<B, H> From<B> for Request<B, H>
+where
+    B: Body,
+    H: Headers,
+{
+    fn from(body: B) -> Self {
+        Self {
+            body,
+            headers: None,
+            headers2: None,
+        }
     }
 }
+
+/// Empty request headers implementation
+#[derive(Clone, Debug)]
+pub struct NoHeaders;
+impl Headers for NoHeaders {}
 
 /// Methods common to all messages.
 ///
@@ -95,11 +116,15 @@ pub trait Handler: Clone + Debug + Send + Sync {
     }
 }
 
-pub(crate) use seal::Body;
+pub(crate) use seal::{Body, Headers};
 pub(crate) mod seal {
     use std::fmt::Debug;
 
     /// The `Body` trait is used to restrict the types able to be a Request
     /// body. It is implemented by all `xxxRequest` types.
     pub trait Body: Clone + Debug + Send + Sync {}
+
+    /// The `Headers` trait is used to restrict the types able to be a Request
+    /// headers. It is implemented by handlers expecting headers.
+    pub trait Headers: Clone + Debug + Send + Sync {}
 }

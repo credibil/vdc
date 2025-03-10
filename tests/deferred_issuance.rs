@@ -5,7 +5,7 @@ mod utils;
 use std::sync::LazyLock;
 
 use credibil_infosec::jose::JwsBuilder;
-use credibil_vc::oid4vci::endpoint;
+use credibil_vc::oid4vci::endpoint::{self, NoHeaders};
 use credibil_vc::oid4vci::proof::{self, Payload, Type, Verify};
 use credibil_vc::oid4vci::types::{
     CreateOfferRequest, Credential, CredentialRequest, DeferredCredentialRequest, NonceRequest,
@@ -80,6 +80,7 @@ async fn deferred() {
     let request = endpoint::Request {
         body: request,
         headers: Some(headers),
+        headers2: Some(NoHeaders),
     };
 
     let response =

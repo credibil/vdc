@@ -12,7 +12,7 @@ use http::HeaderMap;
 use http::header::AUTHORIZATION;
 use tracing::instrument;
 
-use crate::oid4vci::endpoint::{Body, Handler, Request};
+use crate::oid4vci::endpoint::{Body, NoHeaders, Handler, Request};
 use crate::oid4vci::issuer::credential::credential;
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::{Stage, State};
@@ -49,6 +49,7 @@ async fn deferred(
     let req = Request {
         body: deferred_state.credential_request,
         headers: Some(headers),
+        headers2: None,
     };
     let response = credential(issuer, provider, req).await?;
 
@@ -66,7 +67,7 @@ async fn deferred(
     Ok(response)
 }
 
-impl Handler for Request<DeferredCredentialRequest> {
+impl Handler for Request<DeferredCredentialRequest, NoHeaders> {
     type Response = DeferredCredentialResponse;
 
     fn handle(

@@ -89,6 +89,7 @@ async fn two_proofs() {
     let request = endpoint::Request {
         body: request,
         headers: Some(headers),
+        headers2:None
     };
 
     let response =

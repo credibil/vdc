@@ -11,8 +11,8 @@ use credibil_vc::oid4vci::endpoint;
 use credibil_vc::oid4vci::proof::{self, Payload, Type, Verify};
 use credibil_vc::oid4vci::types::{
     AuthorizationDetail, CreateOfferRequest, Credential, CredentialOfferRequest, CredentialRequest,
-    NonceRequest, NotificationEvent, NotificationRequest, ProofClaims, ResponseType,
-    TokenGrantType, TokenRequest,
+    NonceRequest, NotificationEvent, NotificationHeaders, NotificationRequest, ProofClaims,
+    ResponseType, TokenGrantType, TokenRequest,
 };
 use http::header::{AUTHORIZATION, HeaderMap};
 use insta::assert_yaml_snapshot as assert_snapshot;
@@ -89,6 +89,7 @@ async fn offer_val() {
     let request = endpoint::Request {
         body: request,
         headers: Some(headers),
+        headers2: None,
     };
 
     let response =
@@ -220,6 +221,7 @@ async fn two_datasets() {
         let request = endpoint::Request {
             body: request,
             headers: Some(headers),
+            headers2: None,
         };
 
         let response = endpoint::handle(ALICE_ISSUER, request, &provider)
@@ -323,6 +325,7 @@ async fn reduce_credentials() {
     let request = endpoint::Request {
         body: request,
         headers: Some(headers),
+        headers2: None,
     };
 
     let response =
@@ -418,6 +421,7 @@ async fn reduce_claims() {
     let request = endpoint::Request {
         body: request,
         headers: Some(headers),
+        headers2: None,
     };
 
     let response =
@@ -506,6 +510,7 @@ async fn notify_accepted() {
     let request = endpoint::Request {
         body: request,
         headers: Some(headers),
+        headers2: None,
     };
 
     let response =
@@ -529,6 +534,9 @@ async fn notify_accepted() {
     let request = endpoint::Request {
         body: request,
         headers: Some(headers),
+        headers2: Some(NotificationHeaders {
+            authorization: token.access_token.clone(),
+        }),
     };
 
     endpoint::handle(ALICE_ISSUER, request, &provider).await.expect("response is ok");

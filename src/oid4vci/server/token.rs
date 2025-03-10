@@ -19,7 +19,7 @@ use tracing::instrument;
 
 use crate::core::{generate, pkce};
 use crate::oauth::GrantType;
-use crate::oid4vci::endpoint::{Body, Handler, Request};
+use crate::oid4vci::endpoint::{Body, NoHeaders, Handler, Request};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore};
 use crate::oid4vci::state::{Expire, Stage, State, Token};
 use crate::oid4vci::types::{
@@ -107,7 +107,7 @@ async fn token(
     })
 }
 
-impl Handler for Request<TokenRequest> {
+impl Handler for Request<TokenRequest, NoHeaders> {
     type Response = TokenResponse;
 
     fn handle(

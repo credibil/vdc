@@ -17,7 +17,7 @@ use http::header::AUTHORIZATION;
 use tracing::instrument;
 
 use crate::core::{Kind, generate};
-use crate::oid4vci::endpoint::{Body, Handler, Request};
+use crate::oid4vci::endpoint::{Body, NoHeaders, Handler, Request};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Deferrance, Expire, Stage, State};
 use crate::oid4vci::types::{
@@ -40,7 +40,7 @@ use crate::{invalid, server, verify_key};
 /// not available.
 #[instrument(level = "debug", skip(provider))]
 pub(crate) async fn credential(
-    issuer: &str, provider: &impl Provider, request: Request<CredentialRequest>,
+    issuer: &str, provider: &impl Provider, request: Request<CredentialRequest, NoHeaders>,
 ) -> Result<CredentialResponse> {
     tracing::debug!("credential");
 
@@ -97,7 +97,7 @@ pub(crate) async fn credential(
     ctx.issue(provider, dataset).await
 }
 
-impl Handler for Request<CredentialRequest> {
+impl Handler for Request<CredentialRequest, NoHeaders> {
     type Response = CredentialResponse;
 
     fn handle(

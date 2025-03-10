@@ -308,6 +308,7 @@ async fn credential(
     let request = endpoint::Request {
         body: request,
         headers: Some(headers),
+        headers2: None,
     };
     endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
 }
@@ -357,6 +358,7 @@ async fn notification(
     let request = endpoint::Request {
         body: request,
         headers: Some(headers),
+        headers2: None,
     };
     endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
 }

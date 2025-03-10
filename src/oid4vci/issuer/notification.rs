@@ -23,10 +23,10 @@ use http::header::AUTHORIZATION;
 use tracing::instrument;
 
 use crate::invalid;
-use crate::oid4vci::endpoint::{Body, Handler, Request};
+use crate::oid4vci::endpoint::{Body, Handler, Headers, Request};
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::State;
-use crate::oid4vci::types::{NotificationRequest, NotificationResponse};
+use crate::oid4vci::types::{NotificationHeaders, NotificationRequest, NotificationResponse};
 use crate::oid4vci::{Error, Result};
 
 /// Notification request handler.
@@ -37,9 +37,12 @@ use crate::oid4vci::{Error, Result};
 /// not available.
 #[instrument(level = "debug", skip(provider))]
 async fn notification(
-    issuer: &str, provider: &impl Provider, request: Request<NotificationRequest>,
+    issuer: &str, provider: &impl Provider,
+    request: Request<NotificationRequest, NotificationHeaders>,
 ) -> Result<NotificationResponse> {
     tracing::debug!("notification");
+
+    println!("{:?}", request);
 
     let Some(headers) = request.headers else {
         return Err(invalid!("headers not set"));
@@ -61,7 +64,7 @@ async fn notification(
     Ok(NotificationResponse)
 }
 
-impl Handler for Request<NotificationRequest> {
+impl Handler for Request<NotificationRequest, NotificationHeaders> {
     type Response = NotificationResponse;
 
     fn handle(
@@ -72,3 +75,5 @@ impl Handler for Request<NotificationRequest> {
 }
 
 impl Body for NotificationRequest {}
+
+impl Headers for NotificationHeaders {}
