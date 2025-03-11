@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
-use chrono::Utc;
+use chrono::serde::ts_seconds;
+use chrono::{DateTime, Utc};
 use credibil_infosec::jose::jwk::PublicKeyJwk;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -159,9 +160,9 @@ pub struct ProofClaims {
     #[serde(rename = "aud")]
     pub credential_issuer: String,
 
-    /// The time at which the proof was issued, as a `NumericDate` (seconds
-    /// since 01-01-1970).
-    pub iat: i64,
+    /// The time at which the proof was issued.
+    #[serde(with = "ts_seconds")]
+    pub iat: DateTime<Utc>,
 
     /// A server-provided `c_nonce`.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -173,7 +174,7 @@ impl ProofClaims {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            iat: Utc::now().timestamp(),
+            iat: Utc::now(),
             ..Self::default()
         }
     }
@@ -206,11 +207,13 @@ impl ProofClaims {
 pub struct AttestationClaims {
     /// The time at which the proof was issued, as a `NumericDate` (seconds
     /// since 01-01-1970).
-    pub iat: i64,
+    #[serde(with = "ts_seconds")]
+    pub iat: DateTime<Utc>,
 
     /// The time at which the key attestation and the key(s) it is attesting
     /// expire, as a `NumericDate` (seconds since 01-01-1970).
-    pub exp: i64,
+    #[serde(with = "ts_seconds")]
+    pub exp: DateTime<Utc>,
 
     /// Attested keys from the same key storage component.
     pub attested_keys: Vec<PublicKeyJwk>,

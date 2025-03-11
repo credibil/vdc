@@ -680,6 +680,7 @@ dependencies = [
  "ed25519-dalek",
  "fastrand",
  "flate2",
+ "http",
  "image",
  "insta",
  "multibase",

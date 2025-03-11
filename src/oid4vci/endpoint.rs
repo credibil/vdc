@@ -6,11 +6,13 @@
 
 use std::fmt::Debug;
 
+use http::HeaderMap;
+use http::header::ACCEPT_LANGUAGE;
 use tracing::instrument;
 
 use crate::invalid;
-use crate::oid4vci::Result;
 use crate::oid4vci::provider::Provider;
+use crate::oid4vci::{Error, Result};
 
 /// Handle incoming messages.
 ///
@@ -136,4 +138,18 @@ pub struct AuthorizationHeaders {
 pub struct LanguageHeaders {
     /// The `accept-language` header.
     pub accept_language: String,
+}
+
+impl TryFrom<HeaderMap> for LanguageHeaders {
+    type Error = Error;
+
+    fn try_from(headers: HeaderMap) -> Result<Self> {
+        let accept_language = headers
+            .get(ACCEPT_LANGUAGE)
+            .ok_or_else(|| invalid!("missing `accept-language` header"))?
+            .to_str()
+            .map_err(|_| invalid!("invalid `accept-language` header"))?
+            .to_string();
+        Ok(Self { accept_language })
+    }
 }

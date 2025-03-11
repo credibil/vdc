@@ -39,7 +39,8 @@
 use std::fmt::Debug;
 use std::str;
 
-use chrono::{TimeDelta, Utc};
+use chrono::serde::{ts_seconds, ts_seconds_option};
+use chrono::{DateTime, TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::super::model::{VerifiableCredential, VerifiablePresentation};
@@ -58,11 +59,14 @@ pub struct VcClaims {
     /// When the iat (Issued At) and/or exp (Expiration Time) JWT claims are
     /// present, they represent the issuance and expiration time of the
     /// signature, respectively. Note that these are different from the
-    /// validFrom and validUntil properties defined in Validity Period, which
-    /// represent the validity of the data that is being secured. Use of the nbf
-    /// (Not Before) claim is NOT RECOMMENDED, as it makes little sense to
+    /// `validFrom` and valid`U`ntil properties defined in Validity Period,
+    /// which represent the validity of the data that is being secured.
+    ///
+    /// Use of the nbf claim is NOT RECOMMENDED, as it makes little sense to
     /// attempt to assign a future date to a signature.
-    pub nbf: Option<i64>,
+    #[serde(with = "ts_seconds_option")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub nbf: Option<DateTime<Utc>>,
 
     /// MUST be the `issuer` property of the Credential.
     /// For example, "did:example:123456789abcdefghi#keys-1".
@@ -70,15 +74,17 @@ pub struct VcClaims {
 
     /// MUST be the Credential's issuance date, encoded as a UNIX timestamp
     /// ([RFC7519](https://www.rfc-editor.org/rfc/rfc7519) `NumericDate`).
-    pub iat: i64,
+    #[serde(with = "ts_seconds")]
+    pub iat: DateTime<Utc>,
 
     /// MUST be the `id` property of the Credential.
     pub jti: String,
 
     /// MUST be the Credential's `validUntil`, encoded as a UNIX timestamp
     /// ([RFC7519](https://www.rfc-editor.org/rfc/rfc7519) `NumericDate`).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub exp: Option<i64>,
+    #[serde(with = "ts_seconds_option")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub exp: Option<DateTime<Utc>>,
 
     /// The Verifiable Credential.
     pub vc: VerifiableCredential,
@@ -88,7 +94,7 @@ impl VcClaims {
     /// Create Verifiable Credential JWT payload from a W3C Verifiable
     /// Credential.
     #[must_use]
-    pub fn from_vc(vc: VerifiableCredential, issued_at: i64) -> Self {
+    pub fn from_vc(vc: VerifiableCredential, issued_at: DateTime<Utc>) -> Self {
         let subject = match &vc.credential_subject {
             OneMany::One(sub) => sub,
             OneMany::Many(subs) => &subs[0],
@@ -106,7 +112,7 @@ impl VcClaims {
             iss: issuer_id.clone(),
             iat: issued_at,
             jti: vc.id.clone().unwrap_or_default(),
-            exp: vc.valid_until.map(|exp| exp.timestamp()),
+            exp: vc.valid_until,
             vc,
         }
     }
@@ -134,15 +140,18 @@ pub struct VpClaims {
 
     /// The time the Presentation was created, encoded as a UNIX timestamp
     /// ([RFC7519](https://www.rfc-editor.org/rfc/rfc7519) `NumericDate`).
-    pub nbf: i64,
+    #[serde(with = "ts_seconds")]
+    pub nbf: DateTime<Utc>,
 
     /// The time the Presentation was created, encoded as a UNIX timestamp
     /// ([RFC7519](https://www.rfc-editor.org/rfc/rfc7519) `NumericDate`).
-    pub iat: i64,
+    #[serde(with = "ts_seconds")]
+    pub iat: DateTime<Utc>,
 
     /// The time the Presentation will expire, encoded as a UNIX timestamp
     /// ([RFC7519](https://www.rfc-editor.org/rfc/rfc7519) `NumericDate`).
-    pub exp: i64,
+    #[serde(with = "ts_seconds")]
+    pub exp: DateTime<Utc>,
 
     /// The Verifiable Presentation.
     pub vp: VerifiablePresentation,
@@ -153,14 +162,13 @@ impl From<VerifiablePresentation> for VpClaims {
         Self {
             iss: vp.holder.clone().unwrap_or_default(),
             jti: vp.id.clone().unwrap_or_default(),
-            nbf: Utc::now().timestamp(),
-            iat: Utc::now().timestamp(),
+            nbf: Utc::now(),
+            iat: Utc::now(),
 
             // TODO: configure `exp` time
             exp: Utc::now()
                 .checked_add_signed(TimeDelta::try_hours(1).unwrap_or_default())
-                .unwrap_or_default()
-                .timestamp(),
+                .unwrap_or_default(),
             vp,
 
             ..Self::default()

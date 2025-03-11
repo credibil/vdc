@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use axum::extract::{Path, State};
-use axum::http::header::{ACCEPT_LANGUAGE, AUTHORIZATION};
+use axum::http::header::AUTHORIZATION;
 use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
 use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
@@ -16,7 +16,6 @@ use axum::{Form, Json, Router};
 use axum_extra::TypedHeader;
 use axum_extra::headers::authorization::Bearer;
 use axum_extra::headers::{Authorization, Host};
-use credibil_vc::oid4vci::endpoint::LanguageHeaders;
 use credibil_vc::oid4vci::types::{
     AuthorizationRequest, CreateOfferRequest, CreateOfferResponse, CredentialHeaders,
     CredentialOfferRequest, CredentialOfferResponse, CredentialRequest, CredentialResponse,
@@ -105,9 +104,7 @@ async fn metadata(
 ) -> AxResult<MetadataResponse> {
     let request = endpoint::Request {
         body: MetadataRequest,
-        headers: LanguageHeaders {
-            accept_language: headers[ACCEPT_LANGUAGE].to_str().unwrap().to_string(),
-        },
+        headers: headers.try_into().expect("should find language header"),
     };
     endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
 }

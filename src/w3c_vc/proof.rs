@@ -35,6 +35,7 @@ pub mod jose;
 use std::fmt::Display;
 
 use anyhow::bail;
+use chrono::{DateTime, Utc};
 use credibil_did::DidResolver;
 use credibil_infosec::Signer;
 use credibil_infosec::jose::{jws, jwt};
@@ -71,7 +72,7 @@ pub enum Payload {
         vc: VerifiableCredential,
 
         /// The issuance date and time of the Credential.
-        issued_at: i64,
+        issued_at: DateTime<Utc>,
     },
 
     /// A Verifiable Presentation proof encoded as a JWT.
@@ -148,7 +149,9 @@ pub async fn verify(proof: Verify<'_>, resolver: impl DidResolver) -> anyhow::Re
             let Kind::String(token) = value else {
                 bail!("VerifiableCredential is not a JWT");
             };
+            
             let jwt: jwt::Jwt<jose::VcClaims> = jws::decode(token, verify_key!(resolver)).await?;
+
             Ok(Payload::Vc {
                 vc: jwt.claims.vc,
                 issued_at: jwt.claims.iat,

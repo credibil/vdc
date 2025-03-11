@@ -130,7 +130,7 @@ pub async fn credential(
     let cache_time = ttl.unwrap_or(DEFAULT_TTL);
     claims.insert("ttl".to_string(), Value::Number(cache_time.into()));
 
-    let issued_at = Utc::now().timestamp();
+    let issued_at = Utc::now();
 
     let vc = VcBuilder::new()
         .id(id.clone())

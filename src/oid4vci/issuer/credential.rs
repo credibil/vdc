@@ -331,7 +331,7 @@ impl Context {
                 W3cFormat::JwtVcJson,
                 Payload::Vc {
                     vc: vc.clone(),
-                    issued_at: issuance_date.timestamp(),
+                    issued_at: issuance_date,
                 },
                 &signer,
             )
