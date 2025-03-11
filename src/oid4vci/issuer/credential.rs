@@ -13,7 +13,6 @@ use std::fmt::Debug;
 use chrono::{DateTime, Utc};
 use credibil_infosec::Signer;
 use credibil_infosec::jose::jws::{self, Key};
-use tracing::instrument;
 
 use crate::core::{Kind, generate};
 use crate::oid4vci::endpoint::{Body, Handler, Request};
@@ -37,12 +36,9 @@ use crate::{server, verify_key};
 ///
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
-#[instrument(level = "debug", skip(provider))]
-pub(crate) async fn credential(
+pub async fn credential(
     issuer: &str, provider: &impl Provider, request: Request<CredentialRequest, CredentialHeaders>,
 ) -> Result<CredentialResponse> {
-    tracing::debug!("credential");
-
     let Ok(state) = StateStore::get::<State>(provider, &request.headers.authorization).await else {
         return Err(Error::AccessDenied("invalid access token".to_string()));
     };
@@ -157,7 +153,7 @@ impl CredentialRequest {
                 // endpoint
 
                 // TODO: check proof is signed with supported algorithm (from proof_type)
-                
+
                 let jwt: jws::Jwt<ProofClaims> =
                     match jws::decode(proof_jwt, verify_key!(provider)).await {
                         Ok(jwt) => jwt,

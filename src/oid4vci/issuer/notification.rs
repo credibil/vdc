@@ -19,8 +19,6 @@
 //! no guarantees that a Credential Issuer will receive a notification within a
 //! certain time period or at all.
 
-use tracing::instrument;
-
 use crate::oid4vci::endpoint::{Body, Handler, Headers, Request};
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::State;
@@ -33,13 +31,10 @@ use crate::oid4vci::{Error, Result};
 ///
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
-#[instrument(level = "debug", skip(provider))]
 async fn notification(
-    issuer: &str, provider: &impl Provider,
+    _issuer: &str, provider: &impl Provider,
     request: Request<NotificationRequest, NotificationHeaders>,
 ) -> Result<NotificationResponse> {
-    tracing::debug!("notification");
-
     // verify access token
     let _ = StateStore::get::<State>(provider, &request.headers.authorization)
         .await

@@ -68,7 +68,6 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 
 use chrono::Utc;
-use tracing::instrument;
 
 use crate::core::generate;
 use crate::oauth::GrantType;
@@ -88,7 +87,6 @@ use crate::{invalid, server};
 ///
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
-#[instrument(level = "debug", skip(provider))]
 async fn authorize(
     issuer: &str, provider: &impl Provider, request: AuthorizationRequest,
 ) -> Result<AuthorizationResponse> {
@@ -123,7 +121,62 @@ async fn authorize(
         ..Context::default()
     };
     ctx.verify(provider, &request).await?;
-    ctx.process(provider, request).await
+
+    // authorization_detail
+    let mut details = vec![];
+
+    for (config_id, mut auth_det) in ctx.auth_dets.clone() {
+        let identifiers = Subject::authorize(provider, &request.subject_id, &config_id)
+            .await
+            .map_err(|e| Error::AccessDenied(format!("issue authorizing subject: {e}")))?;
+
+        auth_det.credential = AuthorizationCredential::ConfigurationId {
+            credential_configuration_id: config_id.clone(),
+        };
+
+        details.push(AuthorizedDetail {
+            authorization_detail: auth_det.clone(),
+            credential_identifiers: identifiers.clone(),
+        });
+    }
+
+    // return an error if holder is not authorized for any requested credentials
+    if details.is_empty() {
+        return Err(Error::AccessDenied(
+            "holder is not authorized for requested credentials".to_string(),
+        ));
+    }
+
+    // save authorization state
+    let state = State {
+        expires_at: Utc::now() + Expire::Authorized.duration(),
+        subject_id: Some(request.subject_id),
+        stage: Stage::Authorized(Authorization {
+            code_challenge: request.code_challenge,
+            code_challenge_method: request.code_challenge_method,
+            details,
+            client_id: request.client_id,
+            redirect_uri: request.redirect_uri.clone(),
+        }),
+    };
+
+    let code = generate::auth_code();
+    StateStore::put(provider, &code, &state, state.expires_at)
+        .await
+        .map_err(|e| server!("issue saving authorization state: {e}"))?;
+
+    // remove offer state
+    if let Some(issuer_state) = &request.issuer_state {
+        StateStore::purge(provider, issuer_state)
+            .await
+            .map_err(|e| server!("issue purging offer state: {e}"))?;
+    }
+
+    Ok(AuthorizationResponse {
+        code,
+        state: request.state,
+        redirect_uri: request.redirect_uri.unwrap_or_default(),
+    })
 }
 
 impl Handler for Request<AuthorizationRequest, NoHeaders> {
@@ -149,8 +202,6 @@ impl Context {
     pub async fn verify(
         &mut self, provider: &impl Provider, request: &RequestObject,
     ) -> Result<()> {
-        tracing::debug!("authorize::verify");
-
         // client and server metadata
         let Ok(client) = Metadata::client(provider, &request.client_id).await else {
             return Err(Error::InvalidClient("invalid `client_id`".to_string()));
@@ -356,72 +407,5 @@ impl Context {
         }
 
         Ok(())
-    }
-
-    // Authorize Wallet request:
-    // - check which requested `credential_configuration_id`s the holder is
-    //   authorized for
-    // - save related auth_dets/scope items in state
-    async fn process(
-        &self, provider: &impl Provider, request: RequestObject,
-    ) -> Result<AuthorizationResponse> {
-        tracing::debug!("authorize::process");
-
-        // authorization_detail
-        let mut details = vec![];
-
-        for (config_id, mut auth_det) in self.auth_dets.clone() {
-            let identifiers =
-                Subject::authorize(provider, &request.subject_id, &config_id)
-                    .await
-                    .map_err(|e| Error::AccessDenied(format!("issue authorizing subject: {e}")))?;
-
-            auth_det.credential = AuthorizationCredential::ConfigurationId {
-                credential_configuration_id: config_id.clone(),
-            };
-
-            details.push(AuthorizedDetail {
-                authorization_detail: auth_det.clone(),
-                credential_identifiers: identifiers.clone(),
-            });
-        }
-
-        // return an error if holder is not authorized for any requested credentials
-        if details.is_empty() {
-            return Err(Error::AccessDenied(
-                "holder is not authorized for requested credentials".to_string(),
-            ));
-        }
-
-        // save authorization state
-        let state = State {
-            expires_at: Utc::now() + Expire::Authorized.duration(),
-            subject_id: Some(request.subject_id),
-            stage: Stage::Authorized(Authorization {
-                code_challenge: request.code_challenge,
-                code_challenge_method: request.code_challenge_method,
-                details,
-                client_id: request.client_id,
-                redirect_uri: request.redirect_uri.clone(),
-            }),
-        };
-
-        let code = generate::auth_code();
-        StateStore::put(provider, &code, &state, state.expires_at)
-            .await
-            .map_err(|e| server!("issue saving authorization state: {e}"))?;
-
-        // remove offer state
-        if let Some(issuer_state) = &request.issuer_state {
-            StateStore::purge(provider, issuer_state)
-                .await
-                .map_err(|e| server!("issue purging offer state: {e}"))?;
-        }
-
-        Ok(AuthorizationResponse {
-            code,
-            state: request.state,
-            redirect_uri: request.redirect_uri.unwrap_or_default(),
-        })
     }
 }

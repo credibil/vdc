@@ -7,7 +7,6 @@
 //! [RFC9126]: (https://www.rfc-editor.org/rfc/rfc9126.html)
 
 use chrono::{Duration, Utc};
-use tracing::instrument;
 
 use crate::core::generate;
 use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request};
@@ -25,12 +24,9 @@ use crate::server;
 ///
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
-#[instrument(level = "debug", skip(provider))]
 async fn par(
     issuer: &str, provider: &impl Provider, request: PushedAuthorizationRequest,
 ) -> Result<PushedAuthorizationResponse> {
-    tracing::debug!("par");
-
     // TODO: authenticate client using client assertion (same as token endpoint)
 
     // verify the pushed RequestObject using `/authorize` endpoint logic

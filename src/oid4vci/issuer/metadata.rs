@@ -23,8 +23,6 @@
 //!     Accept-Language: fr-ch, fr;q=0.9, en;q=0.8, de;q=0.7, *;q=0.5
 //! ```
 
-use tracing::instrument;
-
 use crate::oid4vci::Result;
 use crate::oid4vci::endpoint::{Body, Handler, Headers, Request};
 use crate::oid4vci::provider::{Metadata, Provider};
@@ -37,12 +35,9 @@ use crate::server;
 ///
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
-#[instrument(level = "debug", skip(provider))]
 async fn metadata(
-    issuer: &str, provider: &impl Provider, request: Request<MetadataRequest, MetadataHeaders>,
+    issuer: &str, provider: &impl Provider, _: Request<MetadataRequest, MetadataHeaders>,
 ) -> Result<MetadataResponse> {
-    tracing::debug!("metadata");
-
     // FIXME: use language header in request
     let credential_issuer = Metadata::issuer(provider, issuer)
         .await

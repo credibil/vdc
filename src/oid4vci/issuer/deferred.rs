@@ -8,8 +8,6 @@
 //! valid for the issuance of the Credential previously requested at the
 //! Credential Endpoint or the Batch Credential Endpoint.
 
-use tracing::instrument;
-
 use crate::oid4vci::endpoint::{Body, Handler, Request};
 use crate::oid4vci::issuer::credential::credential;
 use crate::oid4vci::provider::{Provider, StateStore};
@@ -27,13 +25,10 @@ use crate::{invalid, server};
 ///
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
-#[instrument(level = "debug", skip(provider))]
 async fn deferred(
     issuer: &str, provider: &impl Provider,
     request: Request<DeferredCredentialRequest, DeferredHeaders>,
 ) -> Result<DeferredCredentialResponse> {
-    tracing::debug!("deferred");
-
     let transaction_id = &request.body.transaction_id;
 
     // retrieve deferred credential request from state

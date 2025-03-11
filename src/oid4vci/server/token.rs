@@ -15,8 +15,6 @@
 
 use std::fmt::Debug;
 
-use tracing::instrument;
-
 use crate::core::{generate, pkce};
 use crate::oauth::GrantType;
 use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request};
@@ -35,12 +33,9 @@ use crate::{invalid, server};
 ///
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
-#[instrument(level = "debug", skip(provider))]
 async fn token(
     issuer: &str, provider: &impl Provider, request: TokenRequest,
 ) -> Result<TokenResponse> {
-    tracing::debug!("token");
-
     // restore state
     let auth_code = match &request.grant_type {
         TokenGrantType::AuthorizationCode { code, .. } => code,
@@ -135,8 +130,8 @@ impl TokenRequest {
         }
 
         // TODO: get Issuer metadata
-        // If the Token Request contains authorization_details and Issuer 
-        // metadata contains an authorization_servers parameter, the 
+        // If the Token Request contains authorization_details and Issuer
+        // metadata contains an authorization_servers parameter, the
         // authorization_details object MUST contain the Issuer's identifier
         // in locations.
 

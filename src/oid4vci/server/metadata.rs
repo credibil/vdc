@@ -16,8 +16,6 @@
 //! this is added as a path component such as
 //! `/.well-known/oauth-authorization-server/issuer1`.
 
-use tracing::instrument;
-
 use crate::oid4vci::Result;
 use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request};
 use crate::oid4vci::provider::{Metadata, Provider};
@@ -30,12 +28,9 @@ use crate::server;
 ///
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
-#[instrument(level = "debug", skip(provider))]
 async fn metadata(
     issuer: &str, provider: &impl Provider, request: OAuthServerRequest,
 ) -> Result<OAuthServerResponse> {
-    tracing::debug!("oauth_server");
-
     let auth_server = Metadata::server(provider, issuer, request.issuer.as_deref())
         .await
         .map_err(|e| server!("issue getting authorization server metadata: {e}"))?;
