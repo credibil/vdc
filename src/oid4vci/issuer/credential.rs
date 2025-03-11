@@ -152,7 +152,12 @@ impl CredentialRequest {
             };
 
             for proof_jwt in proof_jwts {
+                // TODO: ProofClaims cannot use `client_id` if the access token was
+                // obtained in a pre-auth flow with anonymous access to the token
+                // endpoint
+
                 // TODO: check proof is signed with supported algorithm (from proof_type)
+                
                 let jwt: jws::Jwt<ProofClaims> =
                     match jws::decode(proof_jwt, verify_key!(provider)).await {
                         Ok(jwt) => jwt,

@@ -9,14 +9,7 @@ use crate::oauth::{OAuthClient, OAuthServer};
 
 /// Request to retrieve the Credential Issuer's configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct MetadataRequest {
-    /// The language(s) set in HTTP Accept-Language Headers. MUST be values
-    /// defined in [RFC3066].
-    ///
-    /// [RFC3066]: (https://www.rfc-editor.org/rfc/rfc3066)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub languages: Option<String>,
-}
+pub struct MetadataRequest;
 
 /// Response containing the Credential Issuer's configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]

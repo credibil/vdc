@@ -51,7 +51,7 @@ async fn token(
 
     // RFC 6749 requires a particular error here
     let Ok(state) = StateStore::get::<State>(provider, auth_code).await else {
-        return Err(Error::InvalidGrant("authorization code is invalid".to_string()));
+        return Err(Error::InvalidGrant("invalid authorization code".to_string()));
     };
     // authorization code is one-time use
     StateStore::purge(provider, auth_code)
@@ -134,7 +134,12 @@ impl TokenRequest {
             return Err(invalid!("authorization state expired"));
         }
 
-        // TODO: support optional authorization issuers
+        // TODO: get Issuer metadata
+        // If the Token Request contains authorization_details and Issuer 
+        // metadata contains an authorization_servers parameter, the 
+        // authorization_details object MUST contain the Issuer's identifier
+        // in locations.
+
         let Ok(server) = Metadata::server(provider, ctx.issuer, None).await else {
             return Err(invalid!("unknown authorization server"));
         };

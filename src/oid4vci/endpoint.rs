@@ -126,3 +126,11 @@ pub struct AuthorizationHeaders {
     /// The authorization header (access token).
     pub authorization: String,
 }
+
+/// An language-only header for use by handlers that soley require
+/// the `accept-language` header.
+#[derive(Clone, Debug)]
+pub struct LanguageHeaders {
+    /// The `accept-language` header.
+    pub accept_language: String,
+}

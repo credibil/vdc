@@ -26,9 +26,9 @@
 use tracing::instrument;
 
 use crate::oid4vci::Result;
-use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request};
+use crate::oid4vci::endpoint::{Body, Handler, Headers, Request};
 use crate::oid4vci::provider::{Metadata, Provider};
-use crate::oid4vci::types::{MetadataRequest, MetadataResponse};
+use crate::oid4vci::types::{MetadataHeaders, MetadataRequest, MetadataResponse};
 use crate::server;
 
 /// Metadata request handler.
@@ -39,25 +39,26 @@ use crate::server;
 /// not available.
 #[instrument(level = "debug", skip(provider))]
 async fn metadata(
-    issuer: &str, provider: &impl Provider, request: MetadataRequest,
+    issuer: &str, provider: &impl Provider, request: Request<MetadataRequest, MetadataHeaders>,
 ) -> Result<MetadataResponse> {
     tracing::debug!("metadata");
 
-    // TODO: add languages to request
+    // FIXME: use language header in request
     let credential_issuer = Metadata::issuer(provider, issuer)
         .await
         .map_err(|e| server!("issue getting metadata: {e}"))?;
     Ok(MetadataResponse { credential_issuer })
 }
 
-impl Handler for Request<MetadataRequest, NoHeaders> {
+impl Handler for Request<MetadataRequest, MetadataHeaders> {
     type Response = MetadataResponse;
 
     fn handle(
         self, issuer: &str, provider: &impl Provider,
     ) -> impl Future<Output = Result<Self::Response>> + Send {
-        metadata(issuer, provider, self.body)
+        metadata(issuer, provider, self)
     }
 }
 
 impl Body for MetadataRequest {}
+impl Headers for MetadataHeaders {}

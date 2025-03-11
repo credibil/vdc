@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use axum::extract::{Path, State};
-use axum::http::header::AUTHORIZATION;
+use axum::http::header::{ACCEPT_LANGUAGE, AUTHORIZATION};
 use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
 use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
@@ -16,6 +16,7 @@ use axum::{Form, Json, Router};
 use axum_extra::TypedHeader;
 use axum_extra::headers::authorization::Bearer;
 use axum_extra::headers::{Authorization, Host};
+use credibil_vc::oid4vci::endpoint::LanguageHeaders;
 use credibil_vc::oid4vci::types::{
     AuthorizationRequest, CreateOfferRequest, CreateOfferResponse, CredentialHeaders,
     CredentialOfferRequest, CredentialOfferResponse, CredentialRequest, CredentialResponse,
@@ -102,13 +103,13 @@ async fn credential_offer(
 async fn metadata(
     headers: HeaderMap, State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
 ) -> AxResult<MetadataResponse> {
-    let req = MetadataRequest {
-        languages: headers
-            .get("accept-language")
-            .and_then(|v| v.to_str().ok())
-            .map(ToString::to_string),
+    let request = endpoint::Request {
+        body: MetadataRequest,
+        headers: LanguageHeaders {
+            accept_language: headers[ACCEPT_LANGUAGE].to_str().unwrap().to_string(),
+        },
     };
-    endpoint::handle(&format!("http://{host}"), req, &provider).await.into()
+    endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
 }
 
 // OAuth Server metadata endpoint

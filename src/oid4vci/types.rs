@@ -15,14 +15,17 @@ pub use metadata::*;
 use serde::{Deserialize, Serialize};
 pub use token::*;
 
-use super::endpoint::AuthorizationHeaders;
 pub use crate::oauth::GrantType;
+use crate::oid4vci::endpoint::{AuthorizationHeaders, LanguageHeaders};
 
 /// Credential request headers.
 pub type CredentialHeaders = AuthorizationHeaders;
 
 /// Deferred Credential request headers.
 pub type DeferredHeaders = AuthorizationHeaders;
+
+/// Registration request headers.
+pub type MetadataHeaders = LanguageHeaders;
 
 /// Notification request headers.
 pub type NotificationHeaders = AuthorizationHeaders;
