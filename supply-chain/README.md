@@ -1,4 +1,4 @@
-# Credibil's CredentialAuthorization of `cargo vet`
+# Credibil's AuthorizationCredential of `cargo vet`
 
 > [!CAUTION]
 >

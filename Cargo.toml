@@ -36,18 +36,18 @@ credibil-did.workspace = true
 credibil-infosec.workspace = true
 derive_builder.workspace = true
 ed25519-dalek = "2.1.1"
-fastrand = "2.3.0"
+fastrand.workspace = true
 flate2 = "1.1.0"
 image = { version = "0.25.5", default-features = false, features = ["png"] }
 percent-encoding = "2.3.1"
 qrcode = { version = "0.14.1", default-features = false, features = ["image"] }
-rand = "0.9.0"
+rand.workspace = true
 regex = "1.11.1"
 serde.workspace = true
 serde_json.workspace = true
 serde_json_path = "0.7.2"
 sha2 = "0.10.8"
-thiserror = "2.0.11"
+thiserror = "2.0.12"
 tracing.workspace = true
 tracing-subscriber.workspace = true
 urlencoding = "2.1.3"
@@ -57,11 +57,12 @@ uuid.workspace = true
 assert_let_bind.workspace = true
 async-std = { version = "1.13.0", features = ["attributes"] }
 insta.workspace = true
-rstest = "0.24.0"
-test-holder.workspace = true
-test-issuer.workspace = true
+multibase = "0.9"
+rand_core = "0.6.4"
+rstest = "0.25.0"
 test-verifier.workspace = true
 tokio.workspace = true
+x25519-dalek = { version = "2.0.1", features = ["static_secrets"] }
 
 # -----------------------------------------------
 # Workspace
@@ -72,7 +73,7 @@ members = [
     "examples/issuer",
     "examples/verifier",
 ]
-resolver = "3"
+# resolver = "3"
 
 [workspace.package]
 authors = ["Credibil"]
@@ -99,30 +100,34 @@ pedantic = "warn"
 nursery = "warn"
 
 [workspace.dependencies]
-anyhow = "1.0.96"
+anyhow = "1.0.97"
 assert_let_bind = "0.1.1"
 axum = { version = "0.8.1", features = ["macros"] }
 axum-extra = { version = "0.10.0", features = ["typed-header"] }
 base64ct = { version = "1.6.0", features = ["std"] }
-chrono = { version = "0.4.39", features = ["serde"] }
+chrono = { version = "0.4.40", features = ["serde"] }
 credibil-did = "0.1.2"
 credibil-infosec = "0.1.1"
 credibil-vc = { path = "." }
 derive_builder = "0.20.2"
-insta = { version = "1.42.1", features = ["redactions", "yaml"] }
-serde = { version = "1.0.218", features = ["derive"] }
-serde_json = { version = "1.0.139", features = ["alloc"] }
-test-holder = { path = "crates/test-holder" }
-test-issuer = { path = "crates/test-issuer" }
+fastrand = "2.3.0"
+insta = { version = "1.42.2", features = ["redactions", "yaml"] }
+rand = "0.9.0"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = { version = "1.0.140", features = ["alloc"] }
 test-verifier = { path = "crates/test-verifier" }
-tokio = { version = "1.43.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.44.0", features = ["macros", "rt-multi-thread"] }
 tower-http = { version = "0.6.2", features = ["cors", "set-header", "trace"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter", "fmt"] }
-uuid = { version = "1.14.0", features = ["fast-rng", "v4"] }
+uuid = { version = "1.15.1", features = ["fast-rng", "v4"] }
+
+[patch.crates-io]
+# credibil-did = { path = "../did" }
+credibil-did = { git = "https://github.com/credibil/did.git" }
 
 [profile.release]
-# Optimize for small code size
-lto = true
+# optimize for small code size
+lto = "thin"
 opt-level = "s"
-strip = true
+strip = "symbols"

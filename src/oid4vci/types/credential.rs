@@ -1,13 +1,11 @@
-use std::collections::HashMap;
-use std::fmt::{self, Debug};
+use std::fmt::Debug;
 
+use chrono::Utc;
 use credibil_infosec::jose::jwk::PublicKeyJwk;
-use serde::de::{self, Deserializer, Visitor};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use crate::core::Kind;
-use crate::oid4vci::types::{ClaimDefinition, CredentialDefinition};
 use crate::w3c_vc::model::VerifiableCredential;
 
 /// The user information returned by the Subject trait.
@@ -22,204 +20,18 @@ pub struct Dataset {
     pub pending: bool,
 }
 
-/// The `OpenID4VCI` specification defines commonly used [Credential Format
-/// Profiles] to support.  The profiles define Credential format specific
-/// parameters or claims used to support a particular format.
-///
-/// [Credential Format Profiles]: (https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-format-profiles)
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(tag = "format")]
-pub enum Format {
-    /// A W3C Verifiable Credential.
-    ///
-    /// When this format is specified, Credential Offer, Authorization Details,
-    /// Credential Request, and Credential Issuer metadata, including
-    /// `credential_definition` object, MUST NOT be processed using JSON-LD
-    /// rules.
-    #[serde(rename = "jwt_vc_json")]
-    JwtVcJson(ProfileW3c),
-
-    /// A W3C Verifiable Credential.
-    ///
-    /// When using this format, data MUST NOT be processed using JSON-LD rules.
-    ///
-    /// N.B. The `@context` value in the `credential_definition` object can be
-    /// used by the Wallet to check whether it supports a certain VC. If
-    /// necessary, the Wallet could apply JSON-LD processing to the
-    /// Credential issued.
-    #[serde(rename = "ldp-vc")]
-    LdpVc(ProfileW3c),
-
-    /// A W3C Verifiable Credential.
-    ///
-    /// When using this format, data MUST NOT be processed using JSON-LD rules.
-    ///
-    /// N.B. The `@context` value in the `credential_definition` object can be
-    /// used by the Wallet to check whether it supports a certain VC. If
-    /// necessary, the Wallet could apply JSON-LD processing to the
-    /// Credential issued.
-    #[serde(rename = "jwt_vc_json-ld")]
-    JwtVcJsonLd(ProfileW3c),
-
-    /// ISO mDL.
-    ///
-    /// A Credential Format Profile for Credentials complying with [ISO.18013-5]
-    /// — ISO-compliant driving licence specification.
-    ///
-    /// [ISO.18013-5]: (https://www.iso.org/standard/69084.html)
-    #[serde(rename = "mso_mdoc")]
-    IsoMdl(ProfileIsoMdl),
-
-    /// IETF SD-JWT VC.
-    ///
-    /// A Credential Format Profile for Credentials complying with
-    /// [I-D.ietf-oauth-sd-jwt-vc] — SD-JWT-based Verifiable Credentials for
-    /// selective disclosure.
-    ///
-    /// [I-D.ietf-oauth-sd-jwt-vc]: (https://datatracker.ietf.org/doc/html/draft-ietf-oauth-sd-jwt-vc-01)
-    #[serde(rename = "vc+sd-jwt")]
-    VcSdJwt(ProfileSdJwt),
-}
-
-impl Format {
-    /// Claims for the format profile.
-    #[must_use]
-    pub fn claims(&self) -> Option<HashMap<String, Claim>> {
-        match self {
-            Self::JwtVcJson(w3c) | Self::JwtVcJsonLd(w3c) | Self::LdpVc(w3c) => {
-                w3c.credential_definition.credential_subject.clone()
-            }
-            Self::IsoMdl(iso_mdl) => iso_mdl.claims.clone(),
-            Self::VcSdJwt(sd_jwt) => sd_jwt.claims.clone(),
-        }
-    }
-}
-
-impl Default for Format {
-    fn default() -> Self {
-        Self::JwtVcJson(ProfileW3c::default())
-    }
-}
-
-impl std::fmt::Display for Format {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::JwtVcJson(_) => write!(f, "jwt_vc_json"),
-            Self::LdpVc(_) => write!(f, "ldp_vc"),
-            Self::JwtVcJsonLd(_) => write!(f, "jwt_vc_json-ld"),
-            Self::IsoMdl(_) => write!(f, "mso_mdoc"),
-            Self::VcSdJwt(_) => write!(f, "vc+sd-jwt"),
-        }
-    }
-}
-
-/// Supported [Credential Format Profiles].
-///
-/// [Credential Format Profiles]: (https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-format-profiles)
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
-pub enum ProfileClaims {
-    /// W3C Verifiable Credential profile claims.
-    #[serde(rename = "credential_definition")]
-    W3c(CredentialDefinition),
-
-    /// `ISO.18013-5` (Mobile Driving License) and
-    /// Selective Disclosure JWT ([SD-JWT]) profile claims
-    #[serde(rename = "claims")]
-    Claims(HashMap<String, Claim>),
-}
-
-impl Default for ProfileClaims {
-    fn default() -> Self {
-        Self::W3c(CredentialDefinition::default())
-    }
-}
-
-impl ProfileClaims {
-    /// Claims for the format profile.
-    #[must_use]
-    pub fn claims(&self) -> Option<HashMap<String, Claim>> {
-        match self {
-            Self::W3c(credential_definition) => credential_definition.credential_subject.clone(),
-            Self::Claims(claims) => Some(claims.clone()),
-        }
-    }
-}
-
-/// Credential Format Profile for W3C Verifiable Credentials.
-#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq)]
-pub struct ProfileW3c {
-    /// The Credential's definition.
-    pub credential_definition: CredentialDefinition,
-}
-
-impl PartialEq for ProfileW3c {
-    fn eq(&self, other: &Self) -> bool {
-        self.credential_definition.type_ == other.credential_definition.type_
-    }
-}
-
-/// Credential Format Profile for `ISO.18013-5` (Mobile Driving License)
-/// credentials.
-#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq)]
-pub struct ProfileIsoMdl {
-    /// The Credential type, as defined in [ISO.18013-5].
-    pub doctype: String,
-
-    /// A list of claims to include in the issued credential.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub claims: Option<HashMap<String, Claim>>,
-}
-
-impl PartialEq for ProfileIsoMdl {
-    fn eq(&self, other: &Self) -> bool {
-        self.doctype == other.doctype
-    }
-}
-
-/// Credential Format Profile for Selective Disclosure JWT ([SD-JWT])
-/// credentials.
-///
-/// [SD-JWT]: <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-sd-jwt-vc-04>
-#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq)]
-pub struct ProfileSdJwt {
-    /// The Verifiable Credential type. The `vct` value MUST be a
-    /// case-sensitive String or URI serving as an identifier for
-    /// the type of the SD-JWT VC.
-    pub vct: String,
-
-    /// A list of claims to include in the issued credential.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub claims: Option<HashMap<String, Claim>>,
-}
-
-impl PartialEq for ProfileSdJwt {
-    fn eq(&self, other: &Self) -> bool {
-        self.vct == other.vct
-    }
-}
-
 /// `CredentialRequest` is used by the Client to make a Credential Request to
 /// the Credential Endpoint.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(default)]
 pub struct CredentialRequest {
-    /// The URL of the Credential Issuer the Wallet can use obtain offered
-    /// Credentials.
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub credential_issuer: String,
-
-    /// A previously issued Access Token, as extracted from the Authorization
-    /// header of the Credential Request.
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub access_token: String,
-
     /// Identifies the credential requested for issuance using either a
     /// `credential_identifier` or a supported format.
     ///
     /// If `credential_identifiers` were returned in the Token
     /// Response, they MUST be used here. Otherwise, they MUST NOT be used.
     #[serde(flatten)]
-    pub credential: CredentialIssuance,
+    pub credential: RequestBy,
 
     /// Wallet's proof of possession of cryptographic key material the issued
     /// Credential will be bound to.
@@ -239,28 +51,23 @@ pub struct CredentialRequest {
 /// Means used to identifiy Credential type and format when requesting a
 /// Credential.
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
-#[serde(untagged)]
-pub enum CredentialIssuance {
+pub enum RequestBy {
     /// Credential is requested by `credential_identifier`.
     /// REQUIRED when an Authorization Details of type `openid_credential` was
     /// returned from the Token Response.
-    Identifier {
-        /// Identifies a Credential in the `credential_configurations_supported`
-        /// Credential Issuer metadata, but containing different claim values or
-        /// different subset of the Credential's claims.
-        credential_identifier: String,
-    },
+    #[serde(rename = "credential_identifier")]
+    Identifier(String),
 
-    /// Defines the format and type of of the Credential to be issued.  REQUIRED
-    /// when `credential_identifiers` was not returned from the Token Response.
-    Format(Format),
+    /// Credential is requested by `credential_configuration_id`. This
+    /// identifies the entry in the `credential_configurations_supported`
+    /// Issuer metadata.
+    #[serde(rename = "credential_configuration_id")]
+    ConfigurationId(String),
 }
 
-impl Default for CredentialIssuance {
+impl Default for RequestBy {
     fn default() -> Self {
-        Self::Identifier {
-            credential_identifier: String::new(),
-        }
+        Self::Identifier(String::new())
     }
 }
 
@@ -271,11 +78,7 @@ pub enum Proof {
     /// A single proof of possession of the cryptographic key material to which
     /// the issued Credential instance will be bound to.
     #[serde(rename = "proof")]
-    Single {
-        /// The proof type used by the wallet
-        #[serde(flatten)]
-        proof_type: SingleProof,
-    },
+    Single(SingleProof),
 
     /// One or more proof of possessions of the cryptographic key material to
     /// which the issued Credential instances will be bound to.
@@ -285,9 +88,7 @@ pub enum Proof {
 
 impl Default for Proof {
     fn default() -> Self {
-        Self::Single {
-            proof_type: SingleProof::default(),
-        }
+        Self::Single(SingleProof::default())
     }
 }
 
@@ -302,6 +103,21 @@ pub enum SingleProof {
         /// The JWT containing the Wallet's proof of possession of key material.
         jwt: String,
     },
+
+    /// A JWT containg a key attestation without using a proof of possession
+    /// of the key material that is being attested.
+    #[serde(rename = "attestation")]
+    Attestation {
+        /// The JWT containing the Wallet's proof of possession of key material.
+        attestation: String,
+    },
+    //
+    // /// A W3C Verifiable Presentation object signed using the Data Integrity Proof.
+    // #[serde(rename = "ldp_vp")]
+    // LdpVp {
+    //     /// The JWT containing the Wallet's proof of possession of key material.
+    //     ldp_vp: String,
+    // },
 }
 
 impl Default for SingleProof {
@@ -314,9 +130,14 @@ impl Default for SingleProof {
 /// the Wallet to which the issued Credential instance will be bound.
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub enum MultipleProofs {
-    /// The JWT containing the Wallet's proof of possession of key material.
+    /// JWTs containing the Wallet's proof of possession of key material.
     #[serde(rename = "jwt")]
     Jwt(Vec<String>),
+
+    /// JWTs containg a key attestation without using a proof of possession
+    /// of the key material that is being attested.
+    #[serde(rename = "attestation")]
+    Attestation(Vec<String>),
 }
 
 impl Default for MultipleProofs {
@@ -331,20 +152,115 @@ impl Default for MultipleProofs {
 pub struct ProofClaims {
     /// The `client_id` of the Client making the Credential request.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub iss: Option<String>,
+    #[serde(rename = "iss")]
+    pub client_id: Option<String>,
 
     /// The Credential Issuer Identifier.
-    pub aud: String,
+    #[serde(rename = "aud")]
+    pub credential_issuer: String,
 
-    /// The time at which the proof was issued, as
-    /// [RFC7519](https://www.rfc-editor.org/rfc/rfc7519) `NumericDate`.
-    ///
-    /// For example, "1541493724".
+    /// The time at which the proof was issued, as a `NumericDate` (seconds
+    /// since 01-01-1970).
     pub iat: i64,
 
     /// A server-provided `c_nonce`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nonce: Option<String>,
+}
+
+impl ProofClaims {
+    /// Create a new `ProofClaims` instance.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            iat: Utc::now().timestamp(),
+            ..Self::default()
+        }
+    }
+
+    /// Set the `client_id` of the Client making the Credential request.
+    #[must_use]
+    pub fn client_id(mut self, client_id: impl Into<String>) -> Self {
+        self.client_id = Some(client_id.into());
+        self
+    }
+
+    /// Set the Credential Issuer Identifier.
+    #[must_use]
+    pub fn credential_issuer(mut self, credential_issuer: impl Into<String>) -> Self {
+        self.credential_issuer = credential_issuer.into();
+        self
+    }
+
+    /// Set the server-provided `c_nonce`.
+    #[must_use]
+    pub fn nonce(mut self, nonce: impl Into<String>) -> Self {
+        self.nonce = Some(nonce.into());
+        self
+    }
+}
+
+/// Claims containing a Wallet's proof of possession of key material that can be
+/// used for binding an issued Credential.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+pub struct AttestationClaims {
+    /// The time at which the proof was issued, as a `NumericDate` (seconds
+    /// since 01-01-1970).
+    pub iat: i64,
+
+    /// The time at which the key attestation and the key(s) it is attesting
+    /// expire, as a `NumericDate` (seconds since 01-01-1970).
+    pub exp: i64,
+
+    /// Attested keys from the same key storage component.
+    pub attested_keys: Vec<PublicKeyJwk>,
+
+    /// Values that assert the attack potential resistance of the key storage
+    /// component and the keys attested to.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_storage: Option<Vec<AttackPotentialResistance>>,
+
+    /// Values that assert the attack potential resistance of the user
+    /// authentication methods allowed to access the private keys of the
+    /// keys attested to.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_authentication: Option<Vec<AttackPotentialResistance>>,
+
+    /// A server-provided `c_nonce`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nonce: Option<String>,
+
+    /// Defines the supported revocation check mechanisms. For example,
+    /// [ietf-oauth-status-list](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-status-list-09)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+}
+
+/// Options for asserting the attack potential resistance of `key_storage` and
+/// `user_authentication` parameters.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum AttackPotentialResistance {
+    /// Used when key storage or user authentication is resistant to attack
+    /// with attack potential "High", equivalent to VAN.5 according to ISO
+    /// 18045.
+    Iso18045High,
+
+    /// Used when key storage or user authentication is resistant to attack
+    /// with attack potential "Moderate", equivalent to VAN.4 according to
+    /// ISO 18045.
+    Iso18045Moderate,
+
+    /// Used when key storage or user authentication is resistant to attack
+    /// with attack potential "Enhanced-Basic", equivalent to VAN.3 according
+    /// to ISO 18045.
+    Iso18045EnhancedBasic,
+
+    /// Used when key storage or user authentication is resistant to attack
+    /// with attack potential "Basic", equivalent to VAN.2 according to ISO
+    /// 18045.
+    #[default]
+    Iso18045EBasic,
 }
 
 /// Contains information about whether the Credential Issuer supports encryption
@@ -378,18 +294,7 @@ pub struct CredentialResponseEncryption {
 pub struct CredentialResponse {
     /// The Credential Response can be Synchronous or Deferred.
     #[serde(flatten)]
-    pub response: CredentialResponseType,
-
-    /// A nonce to be used to create a proof of possession of key material when
-    /// requesting a Credential. When received, the Wallet MUST use this
-    /// value for its subsequent credential requests until the Credential
-    /// Issuer provides a fresh nonce.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub c_nonce: Option<String>,
-
-    /// The lifetime in seconds of the `c_nonce` parameter.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub c_nonce_expires_in: Option<i64>,
+    pub response: ResponseType,
 
     /// Identifies an issued Credential when the Wallet calls the Issuer's
     /// Notification endpoint. The `notification_id` is included in the
@@ -402,28 +307,49 @@ pub struct CredentialResponse {
 
 /// The Credential Response can be Synchronous or Deferred.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum CredentialResponseType {
-    /// Contains issued Credential.It MAY be a string or an object, depending
-    /// on the Credential Format.
-    Credential(Kind<VerifiableCredential>),
-
+#[serde(untagged)]
+pub enum ResponseType {
     /// Contains an array of issued Credentials. The values in the array MAY be
     /// a string or an object, depending on the Credential Format.
-    Credentials(Vec<Kind<VerifiableCredential>>),
+    Credentials {
+        /// An array of one or more issued Credentials
+        credentials: Vec<Credential>,
 
-    /// String identifying a Deferred Issuance transaction. This claim is
+        /// Used to identify one or more of the Credentials returned in the
+        /// response. The `notification_id` is included in the Notification
+        /// Request.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        notification_id: Option<String>,
+    },
+
+    /// String identifying a Deferred Issuance transaction. This parameter is
     /// contained in the response if the Credential Issuer cannot
     /// immediately issue the Credential. The value is subsequently used to
     /// obtain the respective Credential with the Deferred Credential
     /// Endpoint.
-    TransactionId(String),
+    TransactionId {
+        /// The Deferred Issuance transaction identifier.
+        transaction_id: String,
+    },
 }
 
-impl Default for CredentialResponseType {
+impl Default for ResponseType {
     fn default() -> Self {
-        Self::Credential(Kind::default())
+        Self::Credentials {
+            credentials: vec![Credential {
+                credential: Kind::default(),
+            }],
+            notification_id: None,
+        }
     }
+}
+
+/// The issued credential
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+pub struct Credential {
+    /// Contains one issued Credential. It MAY be a string or an object,
+    /// depending on the Credential Format.
+    pub credential: Kind<VerifiableCredential>,
 }
 
 /// An HTTP POST request, which accepts an `acceptance_token` as the only
@@ -431,16 +357,6 @@ impl Default for CredentialResponseType {
 /// the HTTP header.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct DeferredCredentialRequest {
-    /// The URL of the Credential Issuer the Wallet can use obtain offered
-    /// Credentials.
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub credential_issuer: String,
-
-    /// A previously issued Access Token, as extracted from the Authorization
-    /// header of the Batch Credential Request.
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub access_token: String,
-
     /// Identifies a Deferred Issuance transaction from an earlier Credential
     /// Request.
     pub transaction_id: String,
@@ -448,71 +364,7 @@ pub struct DeferredCredentialRequest {
 
 /// The Deferred Credential Response uses the same format and credential
 /// parameters defined for a Credential Response.
-#[derive(Debug, Deserialize, Serialize)]
-pub struct DeferredCredentialResponse {
-    /// The Credential Response object.
-    #[serde(flatten)]
-    pub credential_response: CredentialResponse,
-}
-
-/// Claim entry. Either a set of nested `Claim`s or a single `ClaimDefinition`.
-#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
-#[serde(untagged)]
-pub enum Claim {
-    /// A single claim definition.
-    Entry(ClaimDefinition),
-
-    /// Nested claims.
-    Set(HashMap<String, Claim>),
-}
-
-impl Default for Claim {
-    fn default() -> Self {
-        Self::Entry(ClaimDefinition::default())
-    }
-}
-
-/// `Claim` requires a custom deserializer as JSON claims are always objects.
-/// The A `Claim::Entry` is a single claim definition, while a `Claim::Set` is a
-/// set of nested claims.
-impl<'de> de::Deserialize<'de> for Claim {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct ClaimVisitor;
-
-        impl<'de> Visitor<'de> for ClaimVisitor {
-            type Value = Claim;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("Claim")
-            }
-
-            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-            where
-                A: de::MapAccess<'de>,
-            {
-                let mut entry = ClaimDefinition::default();
-                let mut set = HashMap::<String, Claim>::new();
-
-                while let Some(key) = map.next_key::<String>()? {
-                    match key.as_str() {
-                        "mandatory" => entry.mandatory = Some(map.next_value()?),
-                        "value_type" => entry.value_type = Some(map.next_value()?),
-                        "display" => entry.display = Some(map.next_value()?),
-                        _ => _ = set.insert(key, map.next_value::<Claim>()?),
-                    }
-                }
-
-                // empty claims (e.g. "given_name": {}) will always be an `entry`
-                if set.is_empty() { Ok(Claim::Entry(entry)) } else { Ok(Claim::Set(set)) }
-            }
-        }
-
-        deserializer.deserialize_map(ClaimVisitor)
-    }
-}
+pub type DeferredCredentialResponse = CredentialResponse;
 
 #[cfg(test)]
 mod tests {
@@ -524,8 +376,6 @@ mod tests {
     #[test]
     fn credential_identifier() {
         let json = serde_json::json!({
-            "credential_issuer": "https://example.com",
-            "access_token": "1234",
             "credential_identifier": "EngineeringDegree2023",
             "proof": {
                 "proof_type": "jwt",
@@ -538,59 +388,10 @@ mod tests {
         assert_snapshot!("credential_identifier", &deserialized);
 
         let request = CredentialRequest {
-            credential_issuer: "https://example.com".into(),
-            access_token: "1234".into(),
-            credential: CredentialIssuance::Identifier {
-                credential_identifier: "EngineeringDegree2023".into(),
-            },
-            proof: Some(Proof::Single {
-                proof_type: SingleProof::Jwt {
-                    jwt: "SomeJWT".into(),
-                },
-            }),
-            ..CredentialRequest::default()
-        };
-
-        let serialized = serde_json::to_value(&request).expect("should serialize to string");
-        assert_eq!(json, serialized);
-    }
-
-    #[test]
-    fn credential_format() {
-        let json = serde_json::json!({
-          "credential_issuer": "https://example.com",
-          "access_token": "1234",
-          "format": "jwt_vc_json",
-          "credential_definition": {
-            "type": [
-              "VerifiableCredential",
-              "EmployeeIDCredential"
-            ],
-          },
-          "proof": {
-            "proof_type": "jwt",
-            "jwt": "SomeJWT"
-          }
-        });
-
-        let deserialized: CredentialRequest =
-            serde_json::from_value(json.clone()).expect("should deserialize from json");
-        assert_snapshot!("credential_format", &deserialized);
-
-        let request = CredentialRequest {
-            credential_issuer: "https://example.com".into(),
-            access_token: "1234".into(),
-            credential: CredentialIssuance::Format(Format::JwtVcJson(ProfileW3c {
-                credential_definition: CredentialDefinition {
-                    type_: Some(vec!["VerifiableCredential".into(), "EmployeeIDCredential".into()]),
-                    ..CredentialDefinition::default()
-                },
+            credential: RequestBy::Identifier("EngineeringDegree2023".to_string()),
+            proof: Some(Proof::Single(SingleProof::Jwt {
+                jwt: "SomeJWT".to_string(),
             })),
-            proof: Some(Proof::Single {
-                proof_type: SingleProof::Jwt {
-                    jwt: "SomeJWT".into(),
-                },
-            }),
             ..CredentialRequest::default()
         };
 
@@ -601,8 +402,6 @@ mod tests {
     #[test]
     fn multiple_proofs() {
         let json = serde_json::json!({
-            "credential_issuer": "https://example.com",
-            "access_token": "1234",
             "credential_identifier": "EngineeringDegree2023",
             "proofs": {
                 "jwt": [
@@ -617,14 +416,10 @@ mod tests {
         assert_snapshot!("multiple_proofs", &deserialized);
 
         let request = CredentialRequest {
-            credential_issuer: "https://example.com".into(),
-            access_token: "1234".into(),
-            credential: CredentialIssuance::Identifier {
-                credential_identifier: "EngineeringDegree2023".into(),
-            },
+            credential: RequestBy::Identifier("EngineeringDegree2023".to_string()),
             proof: Some(Proof::Multiple(MultipleProofs::Jwt(vec![
-                "SomeJWT1".into(),
-                "SomeJWT2".into(),
+                "SomeJWT1".to_string(),
+                "SomeJWT2".to_string(),
             ]))),
             ..CredentialRequest::default()
         };
@@ -675,78 +470,113 @@ mod tests {
                 "type": [
                     "VerifiableCredential",
                     "EmployeeIDCredential"
-                ],
-                "credentialSubject": {
-                    "email": {
-                        "mandatory": true,
-                        "value_type": "string",
-                        "display": [
-                            {
-                                "name": "Email",
-                                "locale": "en-NZ"
-                            }
-                        ]
-                    },
-                    "family_name": {
-                        "mandatory": true,
-                        "value_type": "string",
-                        "display": [
-                            {
-                                "name": "Family name",
-                                "locale": "en-NZ"
-                            }
-                        ]
-                    },
-                    "given_name": {
-                        "mandatory": true,
-                        "value_type": "string",
-                        "display": [
-                            {
-                                "name": "Given name",
-                                "locale": "en-NZ"
-                            }
-                        ]
-                    },
-                    "address": {
-                        "street_address": {
-                            "value_type": "string",
-                            "display": [
-                                {
-                                    "name": "Street Address",
-                                    "locale": "en-NZ"
-                                }
-                            ]
-                        },
-                        "locality": {
-                            "value_type": "string",
-                            "display": [
-                                {
-                                    "name": "Locality",
-                                    "locale": "en-NZ"
-                                }
-                            ]
-                        },
-                        "region": {
-                            "value_type": "string",
-                            "display": [
-                                {
-                                    "name": "Region",
-                                    "locale": "en-NZ"
-                                }
-                            ]
-                        },
-                        "country": {
-                            "value_type": "string",
-                            "display": [
-                                {
-                                    "name": "Country",
-                                    "locale": "en-NZ"
-                                }
-                            ]
+                ]
+            },
+            "claims": [
+                {
+                    "path": [
+                        "credentialSubject",
+                        "email"
+                    ],
+                    "mandatory": true,
+                    "display": [
+                        {
+                            "name": "Email",
+                            "locale": "en-NZ"
                         }
-                    }
+                    ]
+                },
+                {
+                    "path": [
+                        "credentialSubject",
+                        "family_name"
+                    ],
+                    "mandatory": true,
+                    "display": [
+                        {
+                            "name": "Family name",
+                            "locale": "en-NZ"
+                        }
+                    ]
+                },
+                {
+                    "path": [
+                        "credentialSubject",
+                        "given_name"
+                    ],
+                    "mandatory": true,
+                    "display": [
+                        {
+                            "name": "Given name",
+                            "locale": "en-NZ"
+                        }
+                    ]
+                },
+                {
+                    "path": [
+                        "credentialSubject",
+                        "address"
+                    ],
+                    "display": [
+                        {
+                            "name": "Residence",
+                            "locale": "en-NZ"
+                        }
+                    ]
+                },
+                {
+                    "path": [
+                        "credentialSubject",
+                        "address",
+                        "street_address"
+                    ],
+                    "display": [
+                        {
+                            "name": "Street Address",
+                            "locale": "en-NZ"
+                        }
+                    ]
+                },
+                {
+                    "path": [
+                        "credentialSubject",
+                        "address",
+                        "locality"
+                    ],
+                    "display": [
+                        {
+                            "name": "Locality",
+                            "locale": "en-NZ"
+                        }
+                    ]
+                },
+                {
+                    "path": [
+                        "credentialSubject",
+                        "address",
+                        "region"
+                    ],
+                    "display": [
+                        {
+                            "name": "Region",
+                            "locale": "en-NZ"
+                        }
+                    ]
+                },
+                {
+                    "path": [
+                        "credentialSubject",
+                        "address",
+                        "country"
+                    ],
+                    "display": [
+                        {
+                            "name": "Country",
+                            "locale": "en-NZ"
+                        }
+                    ]
                 }
-            }
+            ]
         });
 
         let config: CredentialConfiguration =

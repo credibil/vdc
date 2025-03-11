@@ -43,7 +43,7 @@ use chrono::{TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::super::model::{VerifiableCredential, VerifiablePresentation};
-use crate::core::{Kind, Quota};
+use crate::core::{Kind, OneMany};
 
 /// Claims used for Verifiable Credential issuance when format is
 /// "`jwt_vc_json`".
@@ -90,8 +90,8 @@ impl VcClaims {
     #[must_use]
     pub fn from_vc(vc: VerifiableCredential, issued_at: i64) -> Self {
         let subject = match &vc.credential_subject {
-            Quota::One(sub) => sub,
-            Quota::Many(subs) => &subs[0],
+            OneMany::One(sub) => sub,
+            OneMany::Many(subs) => &subs[0],
         };
 
         let issuer_id = match &vc.issuer {

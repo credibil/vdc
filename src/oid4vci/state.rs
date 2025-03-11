@@ -1,18 +1,12 @@
 //! State is used by the library to persist request information between steps
 //! in the issuance process.
 
-use std::collections::HashMap;
-
 use chrono::{DateTime, TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::oauth::CodeChallengeMethod;
-use crate::oid4vci::types::{
-    AuthorizationDetail, CredentialOffer, CredentialRequest, RequestObject,
-};
+use crate::oid4vci::types::{AuthorizedDetail, CredentialOffer, CredentialRequest, RequestObject};
 use crate::w3c_vc::model::VerifiableCredential;
-
-type CredentialIdentifier = String;
 
 /// State is used to persist request information between issuance steps in the
 /// Credential issuance process.
@@ -82,34 +76,12 @@ pub enum Stage {
 pub struct Offer {
     /// A list of `authorization_details` entries referencing credentials the
     /// Wallet is authorized to request.
-    pub items: Option<Vec<AuthorizedItem>>,
+    pub details: Option<Vec<AuthorizedDetail>>,
 
     /// Transaction code sent to the holder to use (if present)when requesting
     /// an access token.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tx_code: Option<String>,
-}
-
-/// Holds data used during the issuance of a credential.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct Authorized {
-    /// Identifies the dataset associated with the credential to be issued.
-    /// Dataset is unique by issuer not by subject.
-    ///
-    /// For example, the `credential_configuration_id` is `UniversityDegree_JWT`
-    /// and the `credential_identifier` is `EngineeringDegree2023`.
-    pub credential_identifier: String,
-
-    /// Credential's `credential_configuration_id` connecting it with supported
-    /// credential metadata.
-    pub credential_configuration_id: String,
-
-    /// Identifies a subset of claims to use when issuing the associated
-    /// credential. This subset is used in cases where the Wallet has
-    /// requested (and has been authorized for) issuance of a credential
-    /// containing subset of claims.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub claim_ids: Option<Vec<String>>,
 }
 
 /// Authorization state.
@@ -131,7 +103,7 @@ pub struct Authorization {
 
     /// A list of authorized `scope` or `authorization_details` entries along
     /// with credential metadata and dataset identifiers.
-    pub items: Vec<AuthorizedItem>,
+    pub details: Vec<AuthorizedDetail>,
 }
 
 /// Pushed Authorization Request state.
@@ -144,37 +116,6 @@ pub struct PushedAuthorization {
     pub expires_at: DateTime<Utc>,
 }
 
-/// Authorized `authorization_detail` or `scope` item along with
-/// `credential_configuration_id` and `credential_identifier`s.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct AuthorizedItem {
-    /// Authorized item.
-    #[serde(flatten)]
-    pub item: ItemType,
-
-    /// Credential configuration metadata for the item.
-    pub credential_configuration_id: String,
-
-    /// Authorized credential datasets for the item.
-    pub credential_identifiers: Vec<String>,
-}
-
-/// Authorized item type.
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
-pub enum ItemType {
-    /// Authorized item is of type `authorization_detail`
-    AuthorizationDetail(AuthorizationDetail),
-
-    /// Authorized item is of type `scope`
-    Scope(String),
-}
-
-impl Default for ItemType {
-    fn default() -> Self {
-        Self::AuthorizationDetail(AuthorizationDetail::default())
-    }
-}
-
 /// Token state.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Token {
@@ -182,30 +123,9 @@ pub struct Token {
     #[allow(clippy::struct_field_names)]
     pub access_token: String,
 
-    /// The nonce to be used by the Wallet when creating a proof of possession
-    /// of the key proof.
-    pub c_nonce: String,
-
-    /// Number denoting the lifetime in seconds of the `c_nonce`.
-    pub c_nonce_expires_at: DateTime<Utc>,
-
-    /// Credentials (configuration id and identifier) validated for issuance
-    /// using the accompanying access token.
-    pub credentials: HashMap<CredentialIdentifier, Authorized>,
-}
-
-impl Token {
-    /// The number of seconds until the `c_nonce` expires.
-    #[must_use]
-    pub fn c_nonce_expires_in(&self) -> i64 {
-        self.c_nonce_expires_at.signed_duration_since(Utc::now()).num_seconds()
-    }
-
-    /// Determines whether the `c_nonce` has expired.
-    #[must_use]
-    pub fn c_nonce_expired(&self) -> bool {
-        self.c_nonce_expires_in() < 0
-    }
+    /// A list `authorization_details` entries including credential
+    /// identifiers.
+    pub details: Vec<AuthorizedDetail>,
 }
 
 /// Issued Credential state (for Notification endpoint).
@@ -232,8 +152,8 @@ pub enum Expire {
     Authorized,
     /// Access state expiration.
     Access,
-    /// Nonce state expiration.
-    Nonce,
+    // /// Nonce state expiration.
+    // Nonce,
 }
 
 impl Expire {
@@ -243,7 +163,7 @@ impl Expire {
         match self {
             Self::Authorized => TimeDelta::try_minutes(5).unwrap_or_default(),
             Self::Access => TimeDelta::try_minutes(15).unwrap_or_default(),
-            Self::Nonce => TimeDelta::try_minutes(10).unwrap_or_default(),
+            // Self::Nonce => TimeDelta::try_minutes(10).unwrap_or_default(),
         }
     }
 }

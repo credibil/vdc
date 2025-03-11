@@ -1,0 +1,8 @@
+---
+source: tests/vci_authorize.rs
+assertion_line: 247
+expression: "&response"
+---
+code: "[code]"
+state: "1234"
+redirect_uri: "http://localhost:3000/callback"

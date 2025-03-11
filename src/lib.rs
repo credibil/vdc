@@ -34,4 +34,4 @@ pub mod infosec {
 }
 
 /// Re-export basic types
-pub use crate::core::{Kind, Quota, urlencode};
+pub use crate::core::{Kind, OneMany, urlencode};

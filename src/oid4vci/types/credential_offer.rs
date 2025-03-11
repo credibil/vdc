@@ -13,11 +13,6 @@ use crate::oid4vci::types::{AuthorizationCodeGrant, Grants, PreAuthorizedCodeGra
 /// Request a Credential Offer for a Credential Issuer.
 #[derive(Clone, Default, Debug, Deserialize, Serialize)]
 pub struct CreateOfferRequest {
-    /// The URL of the Credential Issuer the Wallet can use obtain offered
-    /// Credentials.
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub credential_issuer: String,
-
     /// Identifies the (previously authenticated) Holder in order that Issuer
     /// can authorize credential issuance.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -106,15 +101,32 @@ pub enum OfferType {
     Uri(String),
 }
 
+impl OfferType {
+    /// Convenience method for extracting a Credential Offer object from an
+    /// offer type if it exists.
+    #[must_use]
+    pub const fn as_object(&self) -> Option<&CredentialOffer> {
+        match self {
+            Self::Object(offer) => Some(offer),
+            Self::Uri(_) => None,
+        }
+    }
+
+    /// Convenience method for extracting a Credential Offer URI from an offer
+    /// type if it exists.
+    #[must_use]
+    pub fn as_uri(&self) -> Option<&str> {
+        match self {
+            Self::Uri(uri) => Some(uri.as_str()),
+            Self::Object(_) => None,
+        }
+    }
+}
+
 /// A Credential Offer object that can be sent to a Wallet as an HTTP GET
 /// request.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct CredentialOffer {
-    /// The URL of the Credential Issuer, the Wallet is requested to obtain one
-    /// or more Credentials from.
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub credential_issuer: String,
-
     /// Credentials offered to the Wallet.
     /// A list of names identifying entries in the
     /// `credential_configurations_supported` `HashMap` in the Credential
@@ -210,10 +222,6 @@ impl CredentialOffer {
 /// to the Offer. The URI has the form `credential_issuer/credential_offer/id`.
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CredentialOfferRequest {
-    /// The URL of the Credential Issuer the Wallet can use obtain the
-    /// Credential Offer.
-    pub credential_issuer: String,
-
     /// The unique identifier for the the previously generated Credential Offer.
     pub id: String,
 }
@@ -233,8 +241,7 @@ mod tests {
     #[test]
     fn credential_offer() {
         let offer = CredentialOffer {
-            credential_issuer: "https://example.com".into(),
-            credential_configuration_ids: vec!["UniversityDegree_JWT".into()],
+            credential_configuration_ids: vec!["UniversityDegree_JWT".to_string()],
             grants: None,
         };
 

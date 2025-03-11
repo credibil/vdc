@@ -2,10 +2,13 @@
 //!
 //! This example demonstrates how to use the Verifiable Credential Issuer (VCI)
 
+mod provider;
+
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use axum::extract::{Path, State};
+use axum::http::header::{ACCEPT_LANGUAGE, AUTHORIZATION};
 use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
 use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
@@ -13,18 +16,20 @@ use axum::{Form, Json, Router};
 use axum_extra::TypedHeader;
 use axum_extra::headers::authorization::Bearer;
 use axum_extra::headers::{Authorization, Host};
-use credibil_vc::oid4vci::{
-    self, AuthorizationRequest, CreateOfferRequest, CreateOfferResponse, CredentialOfferRequest,
-    CredentialOfferResponse, CredentialRequest, CredentialResponse, DeferredCredentialRequest,
-    DeferredCredentialResponse, MetadataRequest, MetadataResponse, NotificationRequest,
-    NotificationResponse, OAuthServerRequest, OAuthServerResponse, PushedAuthorizationRequest,
-    PushedAuthorizationResponse, TokenRequest, TokenResponse,
+use credibil_vc::oid4vci::endpoint::LanguageHeaders;
+use credibil_vc::oid4vci::types::{
+    AuthorizationRequest, CreateOfferRequest, CreateOfferResponse, CredentialHeaders,
+    CredentialOfferRequest, CredentialOfferResponse, CredentialRequest, CredentialResponse,
+    DeferredCredentialRequest, DeferredCredentialResponse, MetadataRequest, MetadataResponse,
+    NotificationHeaders, NotificationRequest, NotificationResponse, OAuthServerRequest,
+    OAuthServerResponse, PushedAuthorizationRequest, PushedAuthorizationResponse, TokenRequest,
+    TokenResponse,
 };
+use credibil_vc::oid4vci::{self, endpoint};
 use credibil_vc::urlencode;
 use oauth2::CsrfToken;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use test_issuer::ProviderImpl;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
@@ -32,6 +37,8 @@ use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
+
+use self::provider::ProviderImpl;
 
 static AUTH_REQUESTS: LazyLock<RwLock<HashMap<String, AuthorizationRequest>>> =
     LazyLock::new(|| RwLock::new(HashMap::new()));
@@ -75,10 +82,9 @@ async fn main() {
 #[axum::debug_handler]
 async fn create_offer(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
-    Json(mut req): Json<CreateOfferRequest>,
+    Json(req): Json<CreateOfferRequest>,
 ) -> AxResult<CreateOfferResponse> {
-    req.credential_issuer = format!("http://{host}");
-    oid4vci::endpoint::handle(&format!("http://{host}"), req, &provider).await.into()
+    endpoint::handle(&format!("http://{host}"), req, &provider).await.into()
 }
 
 // Retrieve Authorization Request Object endpoint
@@ -87,11 +93,8 @@ async fn credential_offer(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
     Path(offer_id): Path<String>,
 ) -> AxResult<CredentialOfferResponse> {
-    let request = CredentialOfferRequest {
-        credential_issuer: format!("http://{host}"),
-        id: offer_id,
-    };
-    oid4vci::endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
+    let request = CredentialOfferRequest { id: offer_id };
+    endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
 }
 
 // Metadata endpoint
@@ -100,14 +103,13 @@ async fn credential_offer(
 async fn metadata(
     headers: HeaderMap, State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
 ) -> AxResult<MetadataResponse> {
-    let req = MetadataRequest {
-        credential_issuer: format!("http://{host}"),
-        languages: headers
-            .get("accept-language")
-            .and_then(|v| v.to_str().ok())
-            .map(ToString::to_string),
+    let request = endpoint::Request {
+        body: MetadataRequest,
+        headers: LanguageHeaders {
+            accept_language: headers[ACCEPT_LANGUAGE].to_str().unwrap().to_string(),
+        },
     };
-    oid4vci::endpoint::handle(&format!("http://{host}"), req, &provider).await.into()
+    endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
 }
 
 // OAuth Server metadata endpoint
@@ -116,11 +118,10 @@ async fn oauth_server(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
 ) -> AxResult<OAuthServerResponse> {
     let req = OAuthServerRequest {
-        credential_issuer: format!("http://{host}"),
         // Issuer should be derived from path component if necessary
         issuer: None,
     };
-    oid4vci::endpoint::handle(&format!("http://{host}"), req, &provider).await.into()
+    endpoint::handle(&format!("http://{host}"), req, &provider).await.into()
 }
 
 /// Authorize endpoint
@@ -134,7 +135,7 @@ async fn authorize(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
     Form(req): Form<AuthorizationRequest>,
 ) -> impl IntoResponse {
-    let AuthorizationRequest::Object(mut object) = req.clone() else {
+    let AuthorizationRequest::Object(object) = req.clone() else {
         panic!("should be an object request");
     };
 
@@ -167,14 +168,12 @@ async fn authorize(
     }
 
     // process request
-    object.credential_issuer = format!("http://{host}");
-
     let Some(redirect_uri) = object.redirect_uri.clone() else {
         return (StatusCode::UNAUTHORIZED, Json(json!({"error": "no redirect_uri"})))
             .into_response();
     };
 
-    match oid4vci::endpoint::handle(&format!("http://{host}"), req, &provider).await {
+    match endpoint::handle(&format!("http://{host}"), req, &provider).await {
         Ok(v) => (StatusCode::FOUND, Redirect::to(&format!("{redirect_uri}?code={}", v.code)))
             .into_response(),
         Err(e) => {
@@ -194,7 +193,7 @@ async fn authorize(
 #[axum::debug_handler]
 async fn par(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
-    Form(mut req): Form<PushedAuthorizationRequest>,
+    Form(req): Form<PushedAuthorizationRequest>,
 ) -> impl IntoResponse {
     let object = &req.request;
 
@@ -227,13 +226,8 @@ async fn par(
     }
 
     // process request
-    req.request.credential_issuer = format!("http://{host}");
-
-    // let axresponse: AxResult<PushedAuthorizationResponse> =
-    //     oid4vci::par(provider, req).await.into();
-
     let axresponse: AxResult<PushedAuthorizationResponse> =
-        oid4vci::endpoint::handle(&format!("http://{host}"), req, &provider).await.into();
+        endpoint::handle(&format!("http://{host}"), req, &provider).await.into();
     axresponse.into_response()
 }
 
@@ -270,6 +264,74 @@ async fn handle_login(
     (StatusCode::FOUND, Redirect::to(&format!("http://{host}/auth?{qs}"))).into_response()
 }
 
+/// Token endpoint
+/// RFC 6749: https://tools.ietf.org/html/rfc6749#section-5.1
+///
+/// The parameters are included in the entity-body of the HTTP response using
+/// the "application/json" media type as defined by [RFC4627].  The parameters
+/// are serialized into JSON
+///
+/// The authorization server MUST include the HTTP "Cache-Control" response
+/// header field [RFC2616] with a value of "no-store" in any response containing
+/// tokens, credentials, or other sensitive information, as well as the "Pragma"
+/// response header field [RFC2616] with a value of "no-cache".
+///
+/// [RFC2616]: (https://www.rfc-editor.org/rfc/rfc2616)
+#[axum::debug_handler]
+async fn token(
+    State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
+    Form(req): Form<HashMap<String, String>>,
+) -> impl IntoResponse {
+    let Ok(tr) = TokenRequest::form_decode(&req) else {
+        tracing::error!("unable to turn HashMap {req:?} into TokenRequest");
+        return (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid request"})))
+            .into_response();
+    };
+
+    let response: AxResult<TokenResponse> =
+        match endpoint::handle(&format!("http://{host}"), tr, &provider).await {
+            Ok(v) => Ok(v).into(),
+            Err(e) => {
+                tracing::error!("error getting token: {e}");
+                Err(e).into()
+            }
+        };
+    response.into_response()
+}
+
+// Credential endpoint
+#[axum::debug_handler]
+async fn credential(
+    State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>, Json(request): Json<CredentialRequest>,
+) -> AxResult<CredentialResponse> {
+    let request = endpoint::Request {
+        body: request,
+        headers: CredentialHeaders {
+            authorization: auth.token().to_string(),
+        },
+    };
+
+    endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
+}
+
+// Deferred endpoint
+#[axum::debug_handler]
+async fn deferred_credential(
+    State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    Json(request): Json<DeferredCredentialRequest>,
+) -> AxResult<DeferredCredentialResponse> {
+    let request = endpoint::Request {
+        body: request,
+        headers: CredentialHeaders {
+            authorization: auth.token().to_string(),
+        },
+    };
+
+    endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
+}
+
 /// Notification endpoint
 ///
 /// This endpoint is used by the Wallet to notify the Credential Issuer of
@@ -295,71 +357,17 @@ async fn handle_login(
 async fn notification(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
-    Json(mut req): Json<NotificationRequest>,
+    Json(request): Json<NotificationRequest>,
 ) -> AxResult<NotificationResponse> {
-    req.credential_issuer = format!("http://{host}");
-    req.access_token = auth.token().to_string();
-    oid4vci::endpoint::handle(&format!("http://{host}"), req, &provider).await.into()
-}
-
-/// Token endpoint
-/// RFC 6749: https://tools.ietf.org/html/rfc6749#section-5.1
-///
-/// The parameters are included in the entity-body of the HTTP response using
-/// the "application/json" media type as defined by [RFC4627].  The parameters
-/// are serialized into JSON
-///
-/// The authorization server MUST include the HTTP "Cache-Control" response
-/// header field [RFC2616] with a value of "no-store" in any response containing
-/// tokens, credentials, or other sensitive information, as well as the "Pragma"
-/// response header field [RFC2616] with a value of "no-cache".
-///
-/// [RFC2616]: (https://www.rfc-editor.org/rfc/rfc2616)
-#[axum::debug_handler]
-async fn token(
-    State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
-    Form(req): Form<HashMap<String, String>>,
-) -> impl IntoResponse {
-    let Ok(mut tr) = TokenRequest::form_decode(&req) else {
-        tracing::error!("unable to turn HashMap {req:?} into TokenRequest");
-        return (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid request"})))
-            .into_response();
+    let mut headers = HeaderMap::new();
+    headers.insert(AUTHORIZATION, auth.token().parse().unwrap());
+    let request = endpoint::Request {
+        body: request,
+        headers: NotificationHeaders {
+            authorization: auth.token().to_string(),
+        },
     };
-    tr.credential_issuer = format!("http://{host}");
-    let response: AxResult<TokenResponse> =
-        match oid4vci::endpoint::handle(&format!("http://{host}"), tr, &provider).await {
-            Ok(v) => Ok(v).into(),
-            Err(e) => {
-                tracing::error!("error getting token: {e}");
-                Err(e).into()
-            }
-        };
-    response.into_response()
-}
-
-// Credential endpoint
-#[axum::debug_handler]
-async fn credential(
-    State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>, Json(mut req): Json<CredentialRequest>,
-) -> AxResult<CredentialResponse> {
-    req.credential_issuer = format!("http://{host}");
-    req.access_token = auth.token().to_string();
-    oid4vci::endpoint::handle(&format!("http://{host}"), req, &provider).await.into()
-}
-
-// Deferred endpoint
-#[axum::debug_handler]
-async fn deferred_credential(
-    State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
-    Json(mut req): Json<DeferredCredentialRequest>,
-) -> AxResult<DeferredCredentialResponse> {
-    req.credential_issuer = format!("http://{host}");
-    req.access_token = auth.0.token().to_string();
-
-    #[allow(clippy::large_futures)]
-    oid4vci::endpoint::handle(&format!("http://{host}"), req, &provider).await.into()
+    endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
 }
 
 // ----------------------------------------------------------------------------

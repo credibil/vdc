@@ -52,7 +52,7 @@ use std::str::FromStr;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::core::Quota;
+use crate::core::OneMany;
 
 /// To be verifiable, a credential must contain at least one proof mechanism,
 /// and details necessary to evaluate that proof.
@@ -109,7 +109,7 @@ pub struct Proof {
     /// MUST be either a string, or a set of strings. SHOULD be used by the
     /// verifier to ensure the proof is used in the correct security domain.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub domain: Option<Quota<String>>,
+    pub domain: Option<OneMany<String>>,
 
     /// Used to mitigate replay attacks. SHOULD be included if a domain is
     /// specified.
@@ -124,7 +124,7 @@ pub struct Proof {
     /// Each value identifies another data integrity proof that MUST verify
     /// before the current proof is processed.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub previous_proof: Option<Quota<String>>,
+    pub previous_proof: Option<OneMany<String>>,
 
     /// Supplied by the proof creator. Can be used to increase privacy by
     /// decreasing linkability that results from deterministically generated

@@ -46,11 +46,11 @@ impl<T: Default> Kind<T> {
     }
 }
 
-/// `Quota` allows serde to serialize/deserialize a single object or a set of
+/// `OneMany` allows serde to serialize/deserialize a single object or a set of
 /// objects.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(untagged)]
-pub enum Quota<T> {
+pub enum OneMany<T> {
     /// Single object
     One(T),
 
@@ -58,13 +58,13 @@ pub enum Quota<T> {
     Many(Vec<T>),
 }
 
-impl<T: Default> Default for Quota<T> {
+impl<T: Default> Default for OneMany<T> {
     fn default() -> Self {
         Self::One(T::default())
     }
 }
 
-impl<T: Clone + Default + PartialEq> Quota<T> {
+impl<T: Clone + Default + PartialEq> OneMany<T> {
     /// Returns `true` if the quota is a single object.
     pub const fn is_one(&self) -> bool {
         match self {

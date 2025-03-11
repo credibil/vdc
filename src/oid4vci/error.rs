@@ -1,4 +1,4 @@
-//! # `OpenID` Errors
+//! # `OpenID4VCI` Errors
 //!
 //! This module defines errors for `OpenID` for Verifiable Credential Issuance
 //! and Verifiable Presentations.
@@ -102,16 +102,20 @@ pub enum Error {
 
     /// Requested credential format is not supported.
     #[error(r#"{{"error": "unsupported_credential_format", "error_description": "{0}"}}"#)]
-    UnsupportedFormat(String),
+    UnsupportedCredentialFormat(String),
 
     /// Credential Request did not contain a proof, or proof was invalid, i.e.
-    /// it was not bound to a Credential Issuer provided `c_nonce`. The
-    /// error response contains new `c_nonce` as well as
-    /// `c_nonce_expires_in` values to be used by the Wallet when creating
-    /// another proof of possession of key material.
+    /// it was not bound to a Credential Issuer provided `c_nonce`.
     #[allow(missing_docs)]
-    #[error(r#"{{"error": "invalid_proof", "error_description": "{hint}", "c_nonce": "{c_nonce}", "c_nonce_expires_in": {c_nonce_expires_in}}}"#)]
-    InvalidProof { hint: String, c_nonce: String, c_nonce_expires_in: i64 },
+    #[error(r#"{{"error": "invalid_proof", "error_description": "{0}"}}"#)]
+    InvalidProof(String),
+
+    /// The proof or proofs parameter in the Credential Request uses an invalid
+    /// nonce: at least one of the key proofs contains an invalid `c_nonce`
+    /// value. The wallet should retrieve a new `c_nonce` value.
+    #[allow(missing_docs)]
+    #[error(r#"{{"error": "invalid_nonce", "error_description": "{0}"}}"#)]
+    InvalidNonce(String),
 
     /// This error occurs when the encryption parameters in the Credential
     /// Request are either invalid or missing. In the latter case, it
@@ -120,6 +124,10 @@ pub enum Error {
     /// contain the necessary encryption parameters.
     #[error(r#"{{"error": "invalid_encryption_parameters", "error_description": "{0}"}}"#)]
     InvalidEncryptionParameters(String),
+
+    /// The Credential Request has not been accepted by the Credential Issuer.
+    #[error(r#"{{"error": "credential_request_denied", "error_description": "{0}"}}"#)]
+    CredentialRequestDenied(String),
 
     /// The Credential issuance is still pending. The error response SHOULD also
     /// contain the interval member, determining the minimum amount of time
@@ -141,24 +149,11 @@ pub enum Error {
 /// Error response for `OpenID` for Verifiable Credentials.
 #[allow(clippy::module_name_repetitions)]
 #[derive(Deserialize, Serialize)]
-pub struct OidError {
-    /// Error code.
-    pub error: String,
-
-    /// Error description.
-    pub error_description: String,
-
-    /// Optional client-state parameter.
+struct OidError {
+    error: String,
+    error_description: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub state: Option<String>,
-
-    /// A fresh `c_nonce` to use when retrying Proof submission.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub c_nonce: Option<String>,
-
-    /// The expiry time of the `c_nonce`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub c_nonce_expires_in: Option<i64>,
+    state: Option<String>,
 }
 
 impl Serialize for Error {
@@ -188,6 +183,33 @@ impl Error {
     }
 }
 
+/// Construct an `Error::ServerError` error from a string or existing error
+/// value.
+#[macro_export]
+macro_rules! invalid {
+    ($fmt:expr, $($arg:tt)*) => {
+        $crate::oid4vci::Error::InvalidRequest(format!($fmt, $($arg)*))
+    };
+     ($err:expr $(,)?) => {
+        $crate::oid4vci::Error::InvalidRequest(format!($err))
+    };
+}
+
+/// Construct an `Error::ServerError` error from a string or existing error
+/// value.
+#[macro_export]
+macro_rules! server {
+    ($fmt:expr, $($arg:tt)*) => {
+        $crate::oid4vci::Error::ServerError(format!($fmt, $($arg)*))
+    };
+    // ($msg:literal $(,)?) => {
+    //     $crate::oid4vci::Error::ServerError($msg.into())
+    // };
+     ($err:expr $(,)?) => {
+        $crate::oid4vci::Error::ServerError(format!($err))
+    };
+}
+
 #[cfg(test)]
 mod test {
     use serde_json::{Value, json};
@@ -197,7 +219,7 @@ mod test {
     // Test that error details are retuned as json.
     #[test]
     fn err_json() {
-        let err = Error::InvalidRequest("bad request".into());
+        let err = invalid!("bad request");
         let ser: Value = serde_json::from_str(&err.to_string()).unwrap();
         assert_eq!(ser, json!({"error":"invalid_request", "error_description": "bad request"}));
     }
@@ -205,7 +227,7 @@ mod test {
     // Test that the error details are returned as an http query string.
     #[test]
     fn err_querystring() {
-        let err = Error::InvalidRequest("Invalid request description".into());
+        let err = invalid!("Invalid request description");
         let ser = urlencode::to_string(&err).unwrap();
         assert_eq!(ser, "error=invalid_request&error_description=Invalid%20request%20description");
     }
@@ -213,30 +235,8 @@ mod test {
     // Test that the error details are returned as an http query string.
     #[test]
     fn err_serialize() {
-        let err = Error::InvalidRequest("bad request".into());
+        let err = invalid!("bad request");
         let ser = serde_json::to_value(&err).unwrap();
         assert_eq!(ser, json!({"error":"invalid_request", "error_description": "bad request"}));
-    }
-
-    // Test an InvalidProof error returns c_nonce and c_nonce_expires_in values
-    // in the external response.
-    #[test]
-    fn proof_err() {
-        let err = Error::InvalidProof {
-            hint: "".into(),
-            c_nonce: "c_nonce".into(),
-            c_nonce_expires_in: 10,
-        };
-        let ser: Value = serde_json::from_str(&err.to_string()).unwrap();
-
-        assert_eq!(
-            ser,
-            json!({
-                "error": "invalid_proof",
-                "error_description": "",
-                "c_nonce": "c_nonce",
-                "c_nonce_expires_in": 10,
-            })
-        );
     }
 }

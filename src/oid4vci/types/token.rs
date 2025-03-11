@@ -3,7 +3,7 @@ use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
-use crate::oid4vci::types::{AuthorizationDetail, ClientAssertion};
+use crate::oid4vci::types::{AuthorizationCredential, AuthorizationDetail, ClientAssertion};
 
 /// Upon receiving a successful Authorization Response, a Token Request is made
 /// as defined in [RFC6749] with extensions to support the Pre-Authorized Code
@@ -13,11 +13,6 @@ use crate::oid4vci::types::{AuthorizationDetail, ClientAssertion};
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct TokenRequest {
-    /// The URL of the Credential Issuer the Wallet can use obtain offered
-    /// Credentials.
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub credential_issuer: String,
-
     /// OAuth 2.0 Client ID used by the Wallet.
     ///
     /// REQUIRED if the client is not authenticating with the authorization
@@ -53,16 +48,17 @@ impl TokenRequest {
     /// use in an HTML form post.
     ///
     /// # Errors
+    ///
     /// Will return an error if any of the object-type fields cannot be
     /// serialized to JSON and URL-encoded. (`authorization_details` and
     /// `client_assertion`).
     pub fn form_encode(&self) -> anyhow::Result<HashMap<String, String>> {
         let mut map = HashMap::new();
-        if !self.credential_issuer.is_empty() {
-            map.insert("credential_issuer".into(), self.credential_issuer.clone());
-        }
+        // if !self.credential_issuer.is_empty() {
+        //     map.insert("credential_issuer".to_string(), self.credential_issuer.clone());
+        // }
         if let Some(client_id) = &self.client_id {
-            map.insert("client_id".into(), client_id.clone());
+            map.insert("client_id".to_string(), client_id.clone());
         }
         match &self.grant_type {
             TokenGrantType::AuthorizationCode {
@@ -70,36 +66,39 @@ impl TokenRequest {
                 redirect_uri,
                 code_verifier,
             } => {
-                map.insert("code".into(), code.clone());
+                map.insert("code".to_string(), code.clone());
                 if let Some(redirect_uri) = redirect_uri {
-                    map.insert("redirect_uri".into(), redirect_uri.clone());
+                    map.insert("redirect_uri".to_string(), redirect_uri.clone());
                 }
                 if let Some(code_verifier) = code_verifier {
-                    map.insert("code_verifier".into(), code_verifier.clone());
+                    map.insert("code_verifier".to_string(), code_verifier.clone());
                 }
             }
             TokenGrantType::PreAuthorizedCode {
                 pre_authorized_code,
                 tx_code,
             } => {
-                map.insert("pre-authorized_code".into(), pre_authorized_code.clone());
+                map.insert("pre-authorized_code".to_string(), pre_authorized_code.clone());
                 if let Some(tx_code) = tx_code {
-                    map.insert("tx_code".into(), tx_code.clone());
+                    map.insert("tx_code".to_string(), tx_code.clone());
                 }
             }
         }
         if let Some(authorization_details) = &self.authorization_details {
             let as_json = serde_json::to_string(authorization_details)?;
-            map.insert("authorization_details".into(), urlencoding::encode(&as_json).to_string());
+            map.insert(
+                "authorization_details".to_string(),
+                urlencoding::encode(&as_json).to_string(),
+            );
         }
         if let Some(client_assertion) = &self.client_assertion {
             map.insert(
-                "client_assertion_type".into(),
+                "client_assertion_type".to_string(),
                 urlencoding::encode("urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
                     .into(),
             );
             let ClientAssertion::JwtBearer { client_assertion } = client_assertion;
-            map.insert("client_assertion".into(), client_assertion.clone());
+            map.insert("client_assertion".to_string(), client_assertion.clone());
         }
         Ok(map)
     }
@@ -113,9 +112,9 @@ impl TokenRequest {
     /// `client_assertion`).
     pub fn form_decode(map: &HashMap<String, String>) -> anyhow::Result<Self> {
         let mut req = Self::default();
-        if let Some(credential_issuer) = map.get("credential_issuer") {
-            req.credential_issuer.clone_from(credential_issuer);
-        }
+        // if let Some(credential_issuer) = map.get("credential_issuer") {
+        //     req.credential_issuer.clone_from(credential_issuer);
+        // }
         if let Some(client_id) = map.get("client_id") {
             req.client_id = Some(client_id.clone());
         }
@@ -220,15 +219,6 @@ pub struct TokenResponse {
     /// The lifetime in seconds of the access token.
     pub expires_in: i64,
 
-    /// A nonce to be used by the Wallet to create a proof of possession of key
-    /// material when requesting credentials.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub c_nonce: Option<String>,
-
-    /// Lifetime in seconds of the `c_nonce`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub c_nonce_expires_in: Option<i64>,
-
     /// REQUIRED when `authorization_details` parameter is used to request
     /// issuance of a certain Credential type. MUST NOT be used otherwise.
     ///
@@ -267,55 +257,105 @@ pub struct AuthorizedDetail {
     pub credential_identifiers: Vec<String>,
 }
 
+impl From<AuthorizationDetail> for AuthorizedDetail {
+    fn from(authorization_detail: AuthorizationDetail) -> Self {
+        Self {
+            authorization_detail,
+            credential_identifiers: Vec::new(),
+        }
+    }
+}
+
+impl AuthorizedDetail {
+    /// Get the `credential_configuration_id` from the `AuthorizationDetail`
+    /// object.
+    #[must_use]
+    pub fn credential_configuration_id(&self) -> Option<&str> {
+        match &self.authorization_detail.credential {
+            AuthorizationCredential::ConfigurationId {
+                credential_configuration_id,
+            } => Some(credential_configuration_id.as_str()),
+            AuthorizationCredential::Format(_) => None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use insta::assert_yaml_snapshot as assert_snapshot;
 
     use super::*;
     use crate::oid4vci::types::{
-        AuthorizationDetailType, Claim, CredentialAuthorization, CredentialDefinition,
-        ProfileClaims,
+        AuthorizationCredential, AuthorizationDetailType, ClaimsDescription,
     };
 
     #[test]
     fn token_request_form_encoding() {
         let request = TokenRequest {
-            credential_issuer: "https://example.com".into(),
-            client_id: Some("1234".into()),
+            client_id: Some("1234".to_string()),
             grant_type: TokenGrantType::PreAuthorizedCode {
-                pre_authorized_code: "WQHhDmQ3ZygxyOPlBjunlA".into(),
-                tx_code: Some("111222".into()),
+                pre_authorized_code: "WQHhDmQ3ZygxyOPlBjunlA".to_string(),
+                tx_code: Some("111222".to_string()),
             },
             authorization_details: Some(vec![AuthorizationDetail {
                 type_: AuthorizationDetailType::OpenIdCredential,
-                credential: CredentialAuthorization::ConfigurationId {
-                    credential_configuration_id: "EmployeeID_JWT".into(),
-                    claims: Some(ProfileClaims::W3c(CredentialDefinition {
-                        context: None,
-                        type_: Some(vec![
-                            "VerifiableCredential".into(),
-                            "EmployeeIDCredential".into(),
-                        ]),
-                        credential_subject: Some(HashMap::from([
-                            ("given_name".to_string(), Claim::default()),
-                            ("family_name".to_string(), Claim::default()),
-                            ("email".to_string(), Claim::default()),
-                            (
-                                "address".to_string(),
-                                Claim::Set(HashMap::from([
-                                    ("street_address".to_string(), Claim::default()),
-                                    ("locality".to_string(), Claim::default()),
-                                    ("region".to_string(), Claim::default()),
-                                    ("country".to_string(), Claim::default()),
-                                ])),
-                            ),
-                        ])),
-                    })),
+                credential: AuthorizationCredential::ConfigurationId {
+                    credential_configuration_id: "EmployeeID_JWT".to_string(),
                 },
-                locations: Some(vec!["https://example.com".into()]),
+                claims: Some(vec![
+                    ClaimsDescription {
+                        path: vec!["credentialSubject".to_string(), "given_name".to_string()],
+                        ..ClaimsDescription::default()
+                    },
+                    ClaimsDescription {
+                        path: vec!["credentialSubject".to_string(), "family_name".to_string()],
+                        ..ClaimsDescription::default()
+                    },
+                    ClaimsDescription {
+                        path: vec!["credentialSubject".to_string(), "email".to_string()],
+                        ..ClaimsDescription::default()
+                    },
+                    ClaimsDescription {
+                        path: vec!["credentialSubject".to_string(), "address".to_string()],
+                        ..ClaimsDescription::default()
+                    },
+                    ClaimsDescription {
+                        path: vec![
+                            "credentialSubject".to_string(),
+                            "address".to_string(),
+                            "street_address".to_string(),
+                        ],
+                        ..ClaimsDescription::default()
+                    },
+                    ClaimsDescription {
+                        path: vec![
+                            "credentialSubject".to_string(),
+                            "address".to_string(),
+                            "locality".to_string(),
+                        ],
+                        ..ClaimsDescription::default()
+                    },
+                    ClaimsDescription {
+                        path: vec![
+                            "credentialSubject".to_string(),
+                            "address".to_string(),
+                            "region".to_string(),
+                        ],
+                        ..ClaimsDescription::default()
+                    },
+                    ClaimsDescription {
+                        path: vec![
+                            "credentialSubject".to_string(),
+                            "address".to_string(),
+                            "country".to_string(),
+                        ],
+                        ..ClaimsDescription::default()
+                    },
+                ]),
+                locations: Some(vec!["https://example.com".to_string()]),
             }]),
             client_assertion: Some(ClientAssertion::JwtBearer {
-                client_assertion: "Ezie91o7DuPsA2PCLOtRUg".into(),
+                client_assertion: "Ezie91o7DuPsA2PCLOtRUg".to_string(),
             }),
         };
 

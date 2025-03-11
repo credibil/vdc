@@ -1,12 +1,14 @@
 ---
 source: src/oid4vci/types/authorization.rs
-assertion_line: 545
+assertion_line: 549
 expression: object.authorization_details
 ---
 - type: openid_credential
   credential_configuration_id: EmployeeID_JWT
-  credential_definition:
-    credentialSubject:
-      email: {}
-      family_name: {}
-      given_name: {}
+  claims:
+    - path:
+        - given_name
+    - path:
+        - family_name
+    - path:
+        - email

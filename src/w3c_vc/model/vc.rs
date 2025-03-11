@@ -19,7 +19,7 @@ use serde_json::{Map, Value};
 
 use super::super::proof::integrity::Proof;
 use super::types::LangString;
-use crate::core::{Kind, Quota};
+use crate::core::{Kind, OneMany};
 
 /// `VerifiableCredential` represents a naive implementation of the W3C
 /// Verifiable Credential data model v1.1.
@@ -52,7 +52,7 @@ pub struct VerifiableCredential {
     /// the type. Syntactic conveniences, such as JSON-LD, SHOULD be used to
     /// ease developer usage.
     #[serde(rename = "type")]
-    pub type_: Quota<String>,
+    pub type_: OneMany<String>,
 
     /// The name property expresses the name of the credential. If present, the
     /// value of the name property MUST be a string or a language value object.
@@ -77,7 +77,7 @@ pub struct VerifiableCredential {
     pub issuer: Kind<Issuer>,
 
     /// A set of objects containing claims about credential subjects(s).
-    pub credential_subject: Quota<CredentialSubject>,
+    pub credential_subject: OneMany<CredentialSubject>,
 
     /// An XMLSCHEMA11-2 (RFC3339) date-time the credential becomes valid.
     /// e.g. 2010-01-01T19:23:24Z.
@@ -93,24 +93,24 @@ pub struct VerifiableCredential {
     /// Used to determine the status of the credential, such as whether it is
     /// suspended or revoked.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub credential_status: Option<Quota<CredentialStatus>>,
+    pub credential_status: Option<OneMany<CredentialStatus>>,
 
     /// The credentialSchema defines the structure and datatypes of the
     /// credential. Consists of one or more schemas that can be used to
     /// check credential data conformance.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub credential_schema: Option<Quota<CredentialSchema>>,
+    pub credential_schema: Option<OneMany<CredentialSchema>>,
 
     /// One or more cryptographic proofs that can be used to detect tampering
     /// and verify authorship of a credential.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub proof: Option<Quota<Proof>>,
+    pub proof: Option<OneMany<Proof>>,
 
     /// Related resources allow external data to be associated with the
     /// credential and an integrity mechanism to allow a verify to check the
     /// related data has not changed since the credential was issued.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub related_resource: Option<Quota<RelatedResource>>,
+    pub related_resource: Option<OneMany<RelatedResource>>,
 
     /// `RefreshService` can be used to provide a link to the issuer's refresh
     /// service so Holder's can refresh (manually or automatically) an
@@ -122,14 +122,14 @@ pub struct VerifiableCredential {
     /// terms under which a verifiable credential or verifiable presentation
     /// was issued.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub terms_of_use: Option<Quota<Term>>,
+    pub terms_of_use: Option<OneMany<Term>>,
 
     /// Evidence can be included by an issuer to provide the verifier with
     /// additional supporting information in a credential. This could be
     /// used by the verifier to establish the confidence with which it
     /// relies on credential claims.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub evidence: Option<Quota<Evidence>>,
+    pub evidence: Option<OneMany<Evidence>>,
 }
 
 // TODO: create structured @context object
@@ -337,13 +337,13 @@ pub struct RelatedResource {
     /// [Section 3.5: The integrity attribute](https://www.w3.org/TR/SRI/#the-integrity-attribute).
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "digestSRI")]
-    pub digest_sri: Option<Quota<String>>,
+    pub digest_sri: Option<OneMany<String>>,
 
     /// One or more cryptographic digests, as defined by the digestMultibase
     /// property in the Verifiable Credential Data Integrity 1.0 specification,
     /// [Section 2.3: Resource Integrity](https://www.w3.org/TR/vc-data-integrity/#resource-integrity).
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub digest_multibase: Option<Quota<String>>,
+    pub digest_multibase: Option<OneMany<String>>,
 }
 
 /// `RefreshService` can be used to provide a link to the issuer's refresh
@@ -416,14 +416,14 @@ pub struct Evidence {
     /// [Section 3.5: The integrity attribute](https://www.w3.org/TR/SRI/#the-integrity-attribute).
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "digestSRI")]
-    pub digest_sri: Option<Quota<String>>,
+    pub digest_sri: Option<OneMany<String>>,
 
     /// One or more cryptographic digests, as defined by the digestMultibase
     /// property in the Verifiable Credential Data Integrity 1.0 specification,
     /// [Section 2.3: Resource Integrity](https://www.w3.org/TR/vc-data-integrity/#resource-integrity).
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "digestMultibase")]
-    pub digest_multibase: Option<Quota<String>>,
+    pub digest_multibase: Option<OneMany<String>>,
 
     /// A list of schema-specific evidence fields.
     #[serde(flatten)]
@@ -446,8 +446,8 @@ impl VcBuilder {
         let mut builder: Self = Self::default();
 
         // set some sensibile defaults
-        builder.vc.context.push(Kind::String("https://www.w3.org/2018/credentials/v1".into()));
-        builder.vc.type_ = Quota::One("VerifiableCredential".into());
+        builder.vc.context.push(Kind::String("https://www.w3.org/2018/credentials/v1".to_string()));
+        builder.vc.type_ = OneMany::One("VerifiableCredential".to_string());
 
         builder
     }
@@ -498,16 +498,16 @@ impl VcBuilder {
     #[must_use]
     pub fn add_subject(mut self, subj: CredentialSubject) -> Self {
         let one_set = match self.vc.credential_subject {
-            Quota::One(one) => {
+            OneMany::One(one) => {
                 if one == CredentialSubject::default() {
-                    Quota::One(subj)
+                    OneMany::One(subj)
                 } else {
-                    Quota::Many(vec![one, subj])
+                    OneMany::Many(vec![one, subj])
                 }
             }
-            Quota::Many(mut set) => {
+            OneMany::Many(mut set) => {
                 set.push(subj);
-                Quota::Many(set)
+                OneMany::Many(set)
             }
         };
 
@@ -519,11 +519,11 @@ impl VcBuilder {
     #[must_use]
     pub fn add_proof(mut self, proof: Proof) -> Self {
         let one_set = match self.vc.proof {
-            None => Quota::One(proof),
-            Some(Quota::One(one)) => Quota::Many(vec![one, proof]),
-            Some(Quota::Many(mut set)) => {
+            None => OneMany::One(proof),
+            Some(OneMany::One(one)) => OneMany::Many(vec![one, proof]),
+            Some(OneMany::Many(mut set)) => {
                 set.push(proof);
-                Quota::Many(set)
+                OneMany::Many(set)
             }
         };
 
@@ -533,7 +533,7 @@ impl VcBuilder {
 
     /// Sets the `credential_status` property.
     #[must_use]
-    pub fn status(mut self, status: Option<Quota<CredentialStatus>>) -> Self {
+    pub fn status(mut self, status: Option<OneMany<CredentialStatus>>) -> Self {
         self.vc.credential_status = status;
         self
     }
@@ -560,7 +560,7 @@ impl VcBuilder {
             }
         }
 
-        if let Quota::One(subj) = &self.vc.credential_subject {
+        if let OneMany::One(subj) = &self.vc.credential_subject {
             if *subj == CredentialSubject::default() {
                 bail!("no credential_subject set");
             }
@@ -651,7 +651,7 @@ mod tests {
         init_tracer();
 
         let mut vc = sample_vc();
-        vc.credential_schema = Some(Quota::Many(vec![
+        vc.credential_schema = Some(OneMany::Many(vec![
             CredentialSchema { ..Default::default() },
             CredentialSchema { ..Default::default() },
         ]));
@@ -700,8 +700,10 @@ mod tests {
                 ..Issuer::default()
             },
         };
-        issuer.extra =
-            Some(HashMap::from([("name".into(), Value::String("Example University".into()))]));
+        issuer.extra = Some(HashMap::from([(
+            "name".to_string(),
+            Value::String("Example University".to_string()),
+        )]));
         vc.issuer = Kind::Object(issuer);
 
         // serialize
@@ -724,15 +726,18 @@ mod tests {
 
         VerifiableCredential {
             context: vec![
-                Kind::String("https://www.w3.org/2018/credentials/v1".into()),
-                Kind::String("https://www.w3.org/2018/credentials/examples/v1".into()),
+                Kind::String("https://www.w3.org/2018/credentials/v1".to_string()),
+                Kind::String("https://www.w3.org/2018/credentials/examples/v1".to_string()),
             ],
-            type_: Quota::Many(vec!["VerifiableCredential".into(), "EmployeeIDCredential".into()]),
-            issuer: Kind::String("https://example.com/issuers/14".into()),
-            id: Some("https://example.com/credentials/3732".into()),
+            type_: OneMany::Many(vec![
+                "VerifiableCredential".to_string(),
+                "EmployeeIDCredential".to_string(),
+            ]),
+            issuer: Kind::String("https://example.com/issuers/14".to_string()),
+            id: Some("https://example.com/credentials/3732".to_string()),
             valid_from: Some(Utc.with_ymd_and_hms(2023, 11, 20, 23, 21, 55).unwrap()),
-            credential_subject: Quota::One(CredentialSubject {
-                id: Some("did:example:ebfeb1f712ebc6f1c276e12ec21".into()),
+            credential_subject: OneMany::One(CredentialSubject {
+                id: Some("did:example:ebfeb1f712ebc6f1c276e12ec21".to_string()),
                 claims: json!({"employeeId": "1234567890"})
                     .as_object()
                     .map_or_else(Map::default, Clone::clone),

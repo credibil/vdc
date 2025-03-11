@@ -118,21 +118,21 @@ mod tests {
     #[test]
     fn response_request_form_encode() {
         let request = ResponseRequest {
-            vp_token: Some(vec![Kind::String("eyJ.etc".into())]),
+            vp_token: Some(vec![Kind::String("eyJ.etc".to_string())]),
             presentation_submission: Some(PresentationSubmission {
-                id: "07b0d07c-f51e-4909-a1ab-d35e2cef20b0".into(),
-                definition_id: "4b93b6aa-2157-4458-80ff-ffcefa3ff3b0".into(),
+                id: "07b0d07c-f51e-4909-a1ab-d35e2cef20b0".to_string(),
+                definition_id: "4b93b6aa-2157-4458-80ff-ffcefa3ff3b0".to_string(),
                 descriptor_map: vec![DescriptorMap {
-                    id: "employment".into(),
-                    format: "jwt_vc_json".into(),
-                    path: "$".into(),
+                    id: "employment".to_string(),
+                    format: "jwt_vc_json".to_string(),
+                    path: "$".to_string(),
                     path_nested: PathNested {
-                        format: "jwt_vc_json".into(),
-                        path: "$.verifiableCredential[0]".into(),
+                        format: "jwt_vc_json".to_string(),
+                        path: "$.verifiableCredential[0]".to_string(),
                     },
                 }],
             }),
-            state: Some("Z2VVKkglOWt-MkNDbX5VN05RRFI4ZkZeT01ZelEzQG8".into()),
+            state: Some("Z2VVKkglOWt-MkNDbX5VN05RRFI4ZkZeT01ZelEzQG8".to_string()),
         };
         let map = request.form_encode().expect("should condense to hashmap");
         assert_snapshot!("response_request_form_encoded", &map, {

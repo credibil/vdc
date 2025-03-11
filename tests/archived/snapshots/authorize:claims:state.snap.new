@@ -1,0 +1,20 @@
+---
+source: tests/vci_authorize.rs
+assertion_line: 163
+expression: state
+---
+subject_id: normal_user
+stage:
+  authorized:
+    client_id: 96bfb9cb-0513-7d64-5532-bed74c48f9ab
+    redirect_uri: "http://localhost:3000/callback"
+    code_challenge: B6qi8EPWVTnONnO8XNSAsN7O2ejthn3pCKwZUO0HzU8
+    code_challenge_method: S256
+    items:
+      - AuthorizationDetail:
+          type: openid_credential
+          credential_configuration_id: EmployeeID_JWT
+        credential_configuration_id: EmployeeID_JWT
+        credential_identifiers:
+          - PHLEmployeeID
+expires_at: "[expires_at]"

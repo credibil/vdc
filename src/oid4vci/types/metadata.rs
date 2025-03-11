@@ -1,28 +1,15 @@
 use std::collections::HashMap;
-use std::fmt::Debug;
+use std::fmt::{self, Debug};
 
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 
 use crate::core::strings::title_case;
 use crate::oauth::{OAuthClient, OAuthServer};
-use crate::oid4vci::types::credential::{Claim, Format};
 
 /// Request to retrieve the Credential Issuer's configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct MetadataRequest {
-    /// The Credential Issuer Identifier for which the configuration is to be
-    /// returned.
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub credential_issuer: String,
-
-    /// The language(s) set in HTTP Accept-Language Headers. MUST be values
-    /// defined in [RFC3066].
-    ///
-    /// [RFC3066]: (https://www.rfc-editor.org/rfc/rfc3066)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub languages: Option<String>,
-}
+pub struct MetadataRequest;
 
 /// Response containing the Credential Issuer's configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
@@ -36,11 +23,6 @@ pub struct MetadataResponse {
 /// configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct OAuthServerRequest {
-    /// The Authorization Server identifier for which the configuration is to be
-    /// returned.
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub credential_issuer: String,
-
     /// Authorization issuer identifier.
     ///
     /// This identifier can be obtained from the `authorization_servers`
@@ -61,16 +43,6 @@ pub struct OAuthServerResponse {
 /// The registration request.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct RegistrationRequest {
-    /// The Credential Issuer for which the client is being registered.
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub credential_issuer: String,
-
-    /// A previously issued Access Token, as extracted from the Authorization
-    /// header of the Credential Request. Used to grant access to register a
-    /// client.
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub access_token: String,
-
     /// Metadata provided by the client undertaking registration.
     #[serde(flatten)]
     pub client_metadata: Client,
@@ -102,6 +74,13 @@ pub struct Issuer {
     /// URL of the Credential Issuer's Credential Endpoint. MAY contain port,
     /// path and query parameter components.
     pub credential_endpoint: String,
+
+    /// URL of the Credential Issuer's Nonce Endpoint. MUST use the https
+    /// scheme and MAY contain port, path, and query parameter components.
+    /// If omitted, the Credential Issuer does not support the Nonce
+    /// Endpoint.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nonce_endpoint: Option<String>,
 
     /// URL of the Credential Issuer's Deferred Credential Endpoint. This URL
     /// MUST use the https scheme and MAY contain port, path, and query
@@ -158,17 +137,22 @@ pub struct Issuer {
     /// value is a Credential object containing metadata about specific
     /// credential.
     pub credential_configurations_supported: HashMap<String, CredentialConfiguration>,
-    //
-    // // TODO: Ddo we want to support this??
-    // /// The Client ID provided by the Issuer when a Wallet is not pre-registered.
-    // /// with the Authorization Server.
-    // ///
-    // /// <https://identity.foundation/jwt-vc-issuance-profile/#using-of-public_client_id-as-a-client_id>
-    // #[serde(skip_serializing_if = "Option::is_none")]
-    // pub public_client_id: Option<String>,
 }
 
 impl Issuer {
+    /// Returns the `credential_configuration_id` for a given format.
+    ///
+    /// # Errors
+    ///
+    /// TODO: add error handling
+    pub fn credential_configuration(
+        &self, credential_configuration_id: &str,
+    ) -> Result<&CredentialConfiguration> {
+        self.credential_configurations_supported
+            .get(credential_configuration_id)
+            .ok_or_else(|| anyhow!("Credential Configuration not found"))
+    }
+
     /// Returns the `credential_configuration_id` for a given format.
     ///
     /// # Errors
@@ -233,10 +217,10 @@ pub struct BatchCredentialIssuance {
     pub batch_size: i64,
 }
 
-/// Language-based display properties for Issuer or Claim.
+/// Language-based display properties for Issuer or `ClaimsDescription`.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Display {
-    /// The name to use when displaying the name of the `Issuer` or `Claim` for
+    /// The name to use when displaying the name of the `Issuer` or `ClaimsDescription` for
     /// the specified locale. If no locale is set, then this value is the
     /// default value.
     pub name: String,
@@ -352,6 +336,10 @@ pub struct CredentialConfiguration {
     /// Language-based display properties of the supported credential.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display: Option<Vec<CredentialDisplay>>,
+
+    /// One or more claims description objects.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub claims: Option<Vec<ClaimsDescription>>,
 }
 
 impl CredentialConfiguration {
@@ -362,16 +350,16 @@ impl CredentialConfiguration {
     ///
     /// Returns an error if the `claimset` contains unsupported claims or does
     /// not contain required (mandatory) claims.
-    pub fn verify_claims(&self, claimset: &HashMap<String, Claim>) -> Result<()> {
+    pub fn verify_claims(&self, claimset: &[ClaimsDescription]) -> Result<()> {
         // ensure `claimset` claims exist in the supported claims
         if !claimset.is_empty() {
-            if let Some(claims) = &self.format.claims() {
+            if let Some(claims) = &self.claims {
                 let _ = Self::claims_supported(claimset, claims);
             }
         }
 
         // ensure all mandatory claims are present
-        if let Some(claims) = &self.format.claims() {
+        if let Some(claims) = &self.claims {
             return Self::claims_required(claimset, claims);
         }
 
@@ -380,47 +368,30 @@ impl CredentialConfiguration {
 
     /// Verifies `claimset` claims are supported by the Credential
     fn claims_supported(
-        claimset: &HashMap<String, Claim>, supported: &HashMap<String, Claim>,
+        requested: &[ClaimsDescription], supported: &[ClaimsDescription],
     ) -> Result<()> {
-        for (key, entry) in claimset {
-            if !supported.contains_key(key) {
-                return Err(anyhow!("{key} claim is not supported"));
-            }
-
-            // check nested claims
-            if let Claim::Set(req_nested) = &entry {
-                if let Claim::Set(sup_nested) = &supported[key] {
-                    Self::claims_supported(req_nested, sup_nested)?;
-                } else {
-                    return Err(anyhow!("{key} claimset is not supported "));
+        for r in requested {
+            for s in supported {
+                if r.path == s.path {
+                    continue;
                 }
+                return Err(anyhow!("{} claim is not supported", r.path.join(".")));
             }
         }
-
         Ok(())
     }
 
     /// Verifies `claimset` contains all required claims
     fn claims_required(
-        requested: &HashMap<String, Claim>, supported: &HashMap<String, Claim>,
+        requested: &[ClaimsDescription], supported: &[ClaimsDescription],
     ) -> Result<()> {
-        for (key, entry) in supported {
-            match entry {
-                Claim::Set(sup_nested) => {
-                    #[allow(clippy::or_fun_call)]
-                    if let Claim::Set(req_nested) =
-                        requested.get(key).unwrap_or(&Claim::Set(HashMap::new()))
-                    {
-                        Self::claims_required(req_nested, sup_nested)?;
-                    } else {
-                        return Err(anyhow!("{key} claim is not supported"));
-                    }
+        for s in supported {
+            if s.mandatory.unwrap_or_default() {
+                // check if claim is present
+                if requested.iter().any(|r| r.path == s.path) {
+                    continue;
                 }
-                Claim::Entry(def) => {
-                    if def.mandatory.unwrap_or_default() && requested.get(key).is_none() {
-                        return Err(anyhow!("{key} claim is required"));
-                    }
-                }
+                return Err(anyhow!("{} claim is required", s.path.join(".")));
             }
         }
 
@@ -432,50 +403,168 @@ impl CredentialConfiguration {
     pub fn claims_display(&self, locale: Option<&str>) -> Vec<String> {
         let mut claim_set = Vec::new();
 
-        if let Some(claims) = &self.format.claims() {
-            for (name, claim) in claims {
-                let prefix = "";
-                Self::claim_label(&mut claim_set, prefix, name, claim, locale);
+        if let Some(claims) = &self.claims {
+            for claim in claims {
+                let display = claim
+                    .display
+                    .as_ref()
+                    .and_then(|display| display.iter().find(|d| d.locale.as_deref() == locale));
+
+                match display {
+                    Some(d) => claim_set.push(d.name.clone()),
+                    None => claim_set.push(title_case(&claim.path.join("."))),
+                }
             }
         }
 
         claim_set
     }
+}
 
-    /// Recursively build claim labels from nested claim definitions.
-    fn claim_label(
-        claim_set: &mut Vec<String>, prefix: &str, name: &str, claim: &Claim, locale: Option<&str>,
-    ) {
-        match claim {
-            Claim::Entry(def) => {
-                let locale_display = def.display.as_ref().and_then(|display| {
-                    locale.as_ref().map_or_else(
-                        || {
-                            Some(
-                                display
-                                    .iter()
-                                    .find(|d| d.locale.is_none())
-                                    .unwrap_or_else(|| &display[0]),
-                            )
-                        },
-                        |loc| display.iter().find(|d| d.locale.as_deref() == Some(loc)),
-                    )
-                });
-                match locale_display {
-                    Some(display) => claim_set.push(prefix.to_owned() + &display.name),
-                    None => claim_set.push(prefix.to_owned() + &title_case(name)),
-                }
-            }
-            Claim::Set(set) => {
-                let mut pre = prefix.to_string();
-                pre.push_str(&title_case(name));
-                pre.push('.');
-                for (name, claim) in set {
-                    Self::claim_label(claim_set, &pre, name, claim, locale);
-                }
-            }
+/// Credential Format defines supported Credential data models. Each profile
+/// defines a specific set of parameters or claims used to support a particular
+/// format.
+///
+/// [Credential Format Profiles]: (https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-format-profiles)
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(tag = "format")]
+pub enum Format {
+    /// A W3C Verifiable Credential.
+    ///
+    /// When this format is specified, Credential Offer, Authorization Details,
+    /// Credential Request, and Credential Issuer metadata, including
+    /// `credential_definition` object, MUST NOT be processed using JSON-LD
+    /// rules.
+    #[serde(rename = "jwt_vc_json")]
+    JwtVcJson(ProfileW3c),
+
+    /// A W3C Verifiable Credential.
+    ///
+    /// When using this format, data MUST NOT be processed using JSON-LD rules.
+    ///
+    /// N.B. The `@context` value in the `credential_definition` object can be
+    /// used by the Wallet to check whether it supports a certain VC. If
+    /// necessary, the Wallet could apply JSON-LD processing to the
+    /// Credential issued.
+    #[serde(rename = "ldp-vc")]
+    LdpVc(ProfileW3c),
+
+    /// A W3C Verifiable Credential.
+    ///
+    /// When using this format, data MUST NOT be processed using JSON-LD rules.
+    ///
+    /// N.B. The `@context` value in the `credential_definition` object can be
+    /// used by the Wallet to check whether it supports a certain VC. If
+    /// necessary, the Wallet could apply JSON-LD processing to the
+    /// Credential issued.
+    #[serde(rename = "jwt_vc_json-ld")]
+    JwtVcJsonLd(ProfileW3c),
+
+    /// ISO mDL.
+    ///
+    /// A Credential Format Profile for Credentials complying with [ISO.18013-5]
+    /// — ISO-compliant driving licence specification.
+    ///
+    /// [ISO.18013-5]: (https://www.iso.org/standard/69084.html)
+    #[serde(rename = "mso_mdoc")]
+    IsoMdl(ProfileIsoMdl),
+
+    /// IETF SD-JWT VC.
+    ///
+    /// A Credential Format Profile for Credentials complying with
+    /// [I-D.ietf-oauth-sd-jwt-vc] — SD-JWT-based Verifiable Credentials for
+    /// selective disclosure.
+    ///
+    /// [I-D.ietf-oauth-sd-jwt-vc]: (https://datatracker.ietf.org/doc/html/draft-ietf-oauth-sd-jwt-vc-01)
+    #[serde(rename = " dc+sd-jwt")]
+    VcSdJwt(ProfileSdJwt),
+}
+
+impl Default for Format {
+    fn default() -> Self {
+        Self::JwtVcJson(ProfileW3c::default())
+    }
+}
+
+impl fmt::Display for Format {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::JwtVcJson(_) => write!(f, "jwt_vc_json"),
+            Self::LdpVc(_) => write!(f, "ldp_vc"),
+            Self::JwtVcJsonLd(_) => write!(f, "jwt_vc_json-ld"),
+            Self::IsoMdl(_) => write!(f, "mso_mdoc"),
+            Self::VcSdJwt(_) => write!(f, " dc+sd-jwt"),
         }
     }
+}
+
+/// Credential Format Profile for W3C Verifiable Credentials.
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq)]
+pub struct ProfileW3c {
+    /// The detailed description of the W3C Credential type.
+    pub credential_definition: CredentialDefinition,
+}
+
+impl PartialEq for ProfileW3c {
+    fn eq(&self, other: &Self) -> bool {
+        self.credential_definition.type_ == other.credential_definition.type_
+    }
+}
+
+/// Credential Format Profile for `ISO.18013-5` (Mobile Driving License)
+/// credentials.
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq)]
+pub struct ProfileIsoMdl {
+    /// The Credential type, as defined in [ISO.18013-5].
+    pub doctype: String,
+}
+
+impl PartialEq for ProfileIsoMdl {
+    fn eq(&self, other: &Self) -> bool {
+        self.doctype == other.doctype
+    }
+}
+
+/// Credential Format Profile for Selective Disclosure JWT ([SD-JWT])
+/// credentials.
+///
+/// [SD-JWT]: <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-sd-jwt-vc-04>
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq)]
+pub struct ProfileSdJwt {
+    /// The Verifiable Credential type. The `vct` value MUST be a
+    /// case-sensitive String or URI serving as an identifier for
+    /// the type of the SD-JWT VC.
+    pub vct: String,
+}
+
+impl PartialEq for ProfileSdJwt {
+    fn eq(&self, other: &Self) -> bool {
+        self.vct == other.vct
+    }
+}
+
+/// Claim entry. Either a set of nested `Claim`s or a single `ClaimDisplay`.
+#[derive(Clone, Default, Debug, Deserialize, Serialize, PartialEq, Eq)]
+pub struct ClaimsDescription {
+    /// Represents a claims path pointer specifying the path to a claim within
+    /// the credential.
+    ///
+    /// For example, the path `["address", "street_address"]` points to the
+    /// `street_address` claim within the `address` claim.
+    pub path: Vec<String>,
+
+    /// Indicates whether the Credential Issuer will include this claim in the
+    /// issued Credential or not.
+    ///
+    /// When set to false, the claim is not included in the issued Credential
+    /// if the wallet did not request the inclusion of  the claim, and/or if
+    /// the Credential Issuer chose to not include the claim.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mandatory: Option<bool>,
+
+    /// Display properties of the claim for specified languages.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display: Option<Vec<Display>>,
 }
 
 /// `ProofTypesSupported` describes specifics of the key proof(s) that the
@@ -569,79 +658,12 @@ pub struct CredentialDefinition {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub context: Option<Vec<String>>,
 
-    /// Uniquely identifies the credential type the Credential Definition
-    /// display properties are for, in accordance with the W3C Verifiable
-    /// Credentials Data Model.
     /// Contains the type values the Wallet requests authorization for at the
     /// Credential Issuer. It MUST be present if the claim format is present in
     /// the root of the authorization details object. It MUST not be present
     /// otherwise.
     #[serde(rename = "type")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub type_: Option<Vec<String>>,
-
-    /// A list of name/value pairs identifying claims offered in the Credential.
-    /// A value can be another such object (nested data structures), or an array
-    /// of objects. Each claim defines language-based display properties for
-    /// `credentialSubject` fields.
-    ///
-    /// N.B. This property is used by the Wallet to specify which claims it is
-    /// requesting to be issued out of all the claims the Credential Issuer is
-    /// capable of issuing for this particular Credential (data minimization).
-    #[serde(rename = "credentialSubject")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub credential_subject: Option<HashMap<String, Claim>>,
-}
-
-/// Claim is used to hold language-based display properties for a
-/// credentialSubject field.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct ClaimDefinition {
-    /// When true, indicates that the Credential Issuer will always include this
-    /// claim in the issued Credential. When false, the claim is not
-    /// included in the issued Credential if the wallet did not request the
-    /// inclusion of the claim, and/or if the Credential Issuer chose to not
-    /// include the claim. If the mandatory parameter is omitted, the
-    /// default value is false. Defaults to false.
-    //  #[serde(skip_serializing_if = "std::ops::Not::not")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub mandatory: Option<bool>,
-
-    /// The type of value of the claim. Defaults to string. Supported values
-    /// include `string`, `number`, and `image` media types such as
-    /// image/jpeg. See [IANA media type registry] for a complete list of
-    /// media types.
-    ///
-    /// [IANA media type registry]: (https://www.iana.org/assignments/media-types/media-types.xhtml#image)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub value_type: Option<ValueType>,
-
-    /// Language-based display properties of the field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub display: Option<Vec<Display>>,
-    //
-    // /// Nested claims.
-    // #[serde(flatten)]
-    // #[serde(skip_serializing_if = "Option::is_none")]
-    // pub nested: Option<HashMap<String, Claim>>,
-}
-
-/// `ValueType` is used to define a claim's value type.
-#[derive(Default, Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum ValueType {
-    /// Value of type String. The default.
-    #[default]
-    String,
-
-    /// Value of type Number.
-    Number,
-
-    /// Image media types such as `image/jpeg`. See [IANA media type registry]
-    /// for a complete list of media types.
-    ///
-    ///[IANA media type registry]: (https://www.iana.org/assignments/media-types/media-types.xhtml#image)
-    Image,
+    pub type_: Vec<String>,
 }
 
 /// OAuth 2 client metadata used for registering clients of the issuance and
@@ -678,3 +700,6 @@ pub struct Server {
     #[serde(rename = "pre-authorized_grant_anonymous_access_supported")]
     pub pre_authorized_grant_anonymous_access_supported: bool,
 }
+
+#[cfg(test)]
+mod tests {}

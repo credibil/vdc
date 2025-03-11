@@ -7,6 +7,7 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
+use crate::invalid;
 use crate::oid4vci::Error;
 
 /// OAuth 2 client metadata used for registering clients of the issuance and
@@ -153,7 +154,7 @@ impl FromStr for OAuthClient {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let Ok(res) = serde_json::from_str(s) else {
-            return Err(Error::InvalidRequest("failed to parse Verifier".into()));
+            return Err(invalid!("failed to parse Verifier"));
         };
         Ok(res)
     }

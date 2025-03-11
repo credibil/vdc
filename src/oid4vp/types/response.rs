@@ -46,14 +46,17 @@ impl ResponseRequest {
         let mut map = HashMap::new();
         if let Some(vp_token) = &self.vp_token {
             let as_json = serde_json::to_string(vp_token)?;
-            map.insert("vp_token".into(), urlencoding::encode(&as_json).to_string());
+            map.insert("vp_token".to_string(), urlencoding::encode(&as_json).to_string());
         }
         if let Some(presentation_submission) = &self.presentation_submission {
             let as_json = serde_json::to_string(presentation_submission)?;
-            map.insert("presentation_submission".into(), urlencoding::encode(&as_json).to_string());
+            map.insert(
+                "presentation_submission".to_string(),
+                urlencoding::encode(&as_json).to_string(),
+            );
         }
         if let Some(state) = &self.state {
-            map.insert("state".into(), state.into());
+            map.insert("state".to_string(), state.into());
         }
         Ok(map)
     }

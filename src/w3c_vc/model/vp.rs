@@ -17,7 +17,7 @@ use uuid::Uuid;
 
 use super::super::model::vc::VerifiableCredential;
 use super::super::proof::integrity::Proof;
-use crate::core::{Kind, Quota};
+use crate::core::{Kind, OneMany};
 
 /// A Verifiable Presentation is used to combine and present credentials to a
 /// Verifer.
@@ -44,7 +44,7 @@ pub struct VerifiablePresentation {
     /// e.g. `"type": ["VerifiablePresentation",
     /// "CredentialManagerPresentation"]`
     #[serde(rename = "type")]
-    pub type_: Quota<String>,
+    pub type_: OneMany<String>,
 
     /// The verifiableCredential property MUST be constructed from one or more
     /// verifiable credentials, or of data derived from verifiable
@@ -59,7 +59,7 @@ pub struct VerifiablePresentation {
 
     /// An embedded proof ensures that the presentation is verifiable.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub proof: Option<Quota<Proof>>,
+    pub proof: Option<OneMany<Proof>>,
 }
 
 impl VerifiablePresentation {
@@ -104,8 +104,8 @@ impl VpBuilder {
 
         // sensibile defaults
         builder.vp.id = Some(format!("urn:uuid:{}", Uuid::new_v4()));
-        builder.vp.context.push(Kind::String("https://www.w3.org/2018/credentials/v1".into()));
-        builder.vp.type_ = Quota::One("VerifiablePresentation".into());
+        builder.vp.context.push(Kind::String("https://www.w3.org/2018/credentials/v1".to_string()));
+        builder.vp.type_ = OneMany::One("VerifiablePresentation".to_string());
         builder
     }
 
@@ -120,12 +120,12 @@ impl VpBuilder {
     #[must_use]
     pub fn add_type(mut self, type_: impl Into<String>) -> Self {
         let mut vp_type = match self.vp.type_ {
-            Quota::One(t) => vec![t],
-            Quota::Many(t) => t,
+            OneMany::One(t) => vec![t],
+            OneMany::Many(t) => t,
         };
         vp_type.push(type_.into());
 
-        self.vp.type_ = Quota::Many(vp_type);
+        self.vp.type_ = OneMany::Many(vp_type);
         self
     }
 
@@ -156,7 +156,7 @@ impl VpBuilder {
         if self.vp.context.len() < 2 {
             bail!("context is required");
         }
-        if let Quota::One(_) = self.vp.type_ {
+        if let OneMany::One(_) = self.vp.type_ {
             bail!("type is required");
         }
 
@@ -230,11 +230,13 @@ mod tests {
 
     fn base_vp() -> anyhow::Result<VerifiablePresentation> {
         let mut subj = CredentialSubject::default();
-        subj.id = Some("did:example:ebfeb1f712ebc6f1c276e12ec21".into());
+        subj.id = Some("did:example:ebfeb1f712ebc6f1c276e12ec21".to_string());
         subj.claims = json!({"employeeID": "1234567890"}).as_object().unwrap().clone();
 
         let vc = VerifiableCredential::builder()
-            .add_context(Kind::String("https://www.w3.org/2018/credentials/examples/v1".into()))
+            .add_context(Kind::String(
+                "https://www.w3.org/2018/credentials/examples/v1".to_string(),
+            ))
             .id("https://example.com/credentials/3732")
             .add_type("EmployeeIDCredential")
             .issuer("https://example.com/issuers/14")
@@ -242,7 +244,9 @@ mod tests {
             .build()?;
 
         VerifiablePresentation::builder()
-            .add_context(Kind::String("https://www.w3.org/2018/credentials/examples/v1".into()))
+            .add_context(Kind::String(
+                "https://www.w3.org/2018/credentials/examples/v1".to_string(),
+            ))
             .add_type("EmployeeIDCredential")
             .add_credential(Kind::Object(vc))
             .build()

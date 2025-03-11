@@ -8,14 +8,14 @@ use std::ops::Deref;
 
 use serde::{Deserialize, Serialize};
 
-use crate::core::{Kind, Quota};
+use crate::core::{Kind, OneMany};
 
 /// `LangString` is a string that has one or more language representations.
 ///
 /// <https://www.w3.org/TR/vc-data-model-2.0/#language-and-base-direction>
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(transparent)]
-pub struct LangString(Kind<Quota<LangValue>>);
+pub struct LangString(Kind<OneMany<LangValue>>);
 
 impl LangString {
     /// Create a new `LangString` from a simple string.
@@ -27,7 +27,7 @@ impl LangString {
     /// Create a new `LangString` from a single language object.
     #[must_use]
     pub const fn new_object(value: LangValue) -> Self {
-        Self(Kind::Object(Quota::One(value)))
+        Self(Kind::Object(OneMany::One(value)))
     }
 
     /// Add a language object to the `LangString`.
@@ -38,7 +38,7 @@ impl LangString {
                     value: s.clone(),
                     ..LangValue::default()
                 };
-                self.0 = Kind::Object(Quota::Many(vec![existing, value]));
+                self.0 = Kind::Object(OneMany::Many(vec![existing, value]));
             }
             Kind::Object(lang_values) => {
                 let mut new_values = lang_values.clone();
@@ -76,14 +76,14 @@ impl LangString {
         match &self.0 {
             Kind::String(s) => Ok(s.to_string()),
             Kind::Object(lang_values) => match lang_values {
-                Quota::One(lang_value) => {
+                OneMany::One(lang_value) => {
                     if lang_value.language == Some(language.to_string()) {
                         Ok(lang_value.value.clone())
                     } else {
                         Err(anyhow::anyhow!("Language tag not found"))
                     }
                 }
-                Quota::Many(lang_values) => {
+                OneMany::Many(lang_values) => {
                     for lang_value in lang_values {
                         if lang_value.language == Some(language.to_string()) {
                             return Ok(lang_value.value.clone());
@@ -97,7 +97,7 @@ impl LangString {
 }
 
 impl Deref for LangString {
-    type Target = Kind<Quota<LangValue>>;
+    type Target = Kind<OneMany<LangValue>>;
 
     fn deref(&self) -> &Self::Target {
         &self.0

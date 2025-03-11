@@ -15,7 +15,7 @@ use axum_extra::TypedHeader;
 use axum_extra::headers::Host;
 use credibil_vc::oid4vp::{
     self, CreateRequestRequest, CreateRequestResponse, RequestObjectRequest, RequestObjectResponse,
-    ResponseRequest, ResponseResponse,
+    ResponseRequest, ResponseResponse, endpoint,
 };
 use serde::Serialize;
 use serde_json::json;
@@ -55,7 +55,7 @@ async fn create_request(
     Json(mut request): Json<CreateRequestRequest>,
 ) -> AxResult<CreateRequestResponse> {
     request.client_id = format!("http://{host}");
-    oid4vp::endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
+    endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
 }
 
 // Retrieve Authorization Request Object endpoint
@@ -68,7 +68,7 @@ async fn request_object(
         client_id: format!("http://{host}"),
         id: object_id,
     };
-    oid4vp::endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
+    endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
 }
 
 // Wallet Authorization response endpoint
@@ -83,7 +83,7 @@ async fn response(
             .into_response();
     };
     let response: AxResult<ResponseResponse> =
-        match oid4vp::endpoint::handle(&format!("http://{host}"), req, &provider).await {
+        match endpoint::handle(&format!("http://{host}"), req, &provider).await {
             Ok(r) => Ok(r).into(),
             Err(e) => {
                 tracing::error!("error getting response: {e}");

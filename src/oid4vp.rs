@@ -162,11 +162,12 @@
 //! [JWT VC Presentation Profile]: (https://identity.foundation/jwt-vc-presentation-profile)
 
 pub mod endpoint;
+pub mod provider;
+pub mod types;
+
 mod error;
 mod handlers;
-pub mod provider;
-pub mod state;
-pub mod types;
+mod state;
 
 /// Proofs
 pub mod proof {

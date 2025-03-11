@@ -1,8 +1,0 @@
----
-source: src/oid4vp/verifier.rs
-assertion_line: 780
-expression: "&map"
----
-presentation_submission: "%7B%22id%22%3A%2207b0d07c-f51e-4909-a1ab-d35e2cef20b0%22%2C%22definition_id%22%3A%224b93b6aa-2157-4458-80ff-ffcefa3ff3b0%22%2C%22descriptor_map%22%3A%5B%7B%22id%22%3A%22employment%22%2C%22format%22%3A%22jwt_vc_json%22%2C%22path%22%3A%22%24%22%2C%22path_nested%22%3A%7B%22format%22%3A%22jwt_vc_json%22%2C%22path%22%3A%22%24.verifiableCredential%5B0%5D%22%7D%7D%5D%7D"
-state: Z2VVKkglOWt-MkNDbX5VN05RRFI4ZkZeT01ZelEzQG8
-vp_token: "%5B%22eyJ.etc%22%5D"

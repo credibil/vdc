@@ -11,7 +11,6 @@ use base64ct::{Base64UrlUnpadded, Encoding};
 const PIN_CHARS: &str = "0123456789";
 const PIN_LEN: usize = 6;
 
-// "'`+=,./\|:;?><}{][_-
 const SAFE_CHARS: &str =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789)(*&^%$#@!~";
 const STATE_LEN: usize = 32;

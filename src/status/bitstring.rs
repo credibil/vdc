@@ -123,12 +123,12 @@ pub async fn credential(
     let id = format!("{base_url}/{}", config.list);
 
     let mut claims = Map::new();
-    claims.insert("type".into(), Value::String("BitstringStatusList".into()));
-    claims.insert("purpose".into(), Value::String(config.purpose.to_string()));
-    claims.insert("encodedList".into(), Value::String(bitstring.into()));
+    claims.insert("type".to_string(), Value::String("BitstringStatusList".to_string()));
+    claims.insert("purpose".to_string(), Value::String(config.purpose.to_string()));
+    claims.insert("encodedList".to_string(), Value::String(bitstring.into()));
 
     let cache_time = ttl.unwrap_or(DEFAULT_TTL);
-    claims.insert("ttl".into(), Value::Number(cache_time.into()));
+    claims.insert("ttl".to_string(), Value::Number(cache_time.into()));
 
     let issued_at = Utc::now().timestamp();
 

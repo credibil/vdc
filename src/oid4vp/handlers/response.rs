@@ -26,7 +26,7 @@ use serde_json_path::JsonPath;
 use tracing::instrument;
 
 use crate::core::Kind;
-use crate::oid4vp::endpoint::Request;
+use crate::oid4vp::endpoint::{Body, Handler, Request};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
 use crate::oid4vp::types::{ResponseRequest, ResponseResponse};
@@ -42,23 +42,42 @@ use crate::w3c_vc::proof::{Payload, Verify};
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
 #[instrument(level = "debug", skip(provider))]
-pub async fn response(
-    provider: impl Provider, request: ResponseRequest,
+async fn response(
+    credential_issuer: &str, provider: &impl Provider, request: ResponseRequest,
 ) -> Result<ResponseResponse> {
+    tracing::debug!("response");
+
     // TODO: handle case where Wallet returns error instead of submission
     verify(provider.clone(), &request).await?;
-    process(provider, &request).await
+
+    // clear state
+    let Some(state_key) = &request.state else {
+        return Err(Error::InvalidRequest("client state not found".to_string()));
+    };
+    StateStore::purge(provider, state_key)
+        .await
+        .map_err(|e| Error::ServerError(format!("issue purging state: {e}")))?;
+
+    Ok(ResponseResponse {
+        // TODO: add response to state using `response_code` so Wallet can fetch full response
+        // TODO: align redirct_uri to spec
+        // redirect_uri: Some(format!("http://localhost:3000/cb#response_code={}", "1234")),
+        redirect_uri: Some("http://localhost:3000/cb".to_string()),
+        response_code: None,
+    })
 }
 
-impl Request for ResponseRequest {
+impl Handler for Request<ResponseRequest> {
     type Response = ResponseResponse;
 
     fn handle(
-        self, _credential_issuer: &str, provider: &impl Provider,
+        self, credential_issuer: &str, provider: &impl Provider,
     ) -> impl Future<Output = Result<Self::Response>> + Send {
-        response(provider.clone(), self)
+        response(credential_issuer, provider, self.body)
     }
 }
+
+impl Body for ResponseRequest {}
 
 // TODO: validate  Verifiable Presentation by format
 // Check integrity, authenticity, and holder binding of each Presentation
@@ -71,15 +90,15 @@ async fn verify(provider: impl Provider, request: &ResponseRequest) -> Result<()
 
     // get state by client state key
     let Some(state_key) = &request.state else {
-        return Err(Error::InvalidRequest("client state not found".into()));
+        return Err(Error::InvalidRequest("client state not found".to_string()));
     };
     let Ok(state) = StateStore::get::<State>(&provider, state_key).await else {
-        return Err(Error::InvalidRequest("state not found".into()));
+        return Err(Error::InvalidRequest("state not found".to_string()));
     };
     let saved_req = &state.request_object;
 
     let Some(vp_token) = request.vp_token.clone() else {
-        return Err(Error::InvalidRequest("vp_token not founnd".into()));
+        return Err(Error::InvalidRequest("vp_token not founnd".to_string()));
     };
 
     let mut vps = vec![];
@@ -88,33 +107,35 @@ async fn verify(provider: impl Provider, request: &ResponseRequest) -> Result<()
     for vp_val in &vp_token {
         let (vp, nonce) = match w3c_vc::proof::verify(Verify::Vp(vp_val), provider.clone()).await {
             Ok(Payload::Vp { vp, nonce, .. }) => (vp, nonce),
-            Ok(_) => return Err(Error::InvalidRequest("proof payload is invalid".into())),
+            Ok(_) => return Err(Error::InvalidRequest("proof payload is invalid".to_string())),
             Err(e) => return Err(Error::ServerError(format!("issue verifying VP proof: {e}"))),
         };
 
         // else {
-        //     return Err(Error::InvalidRequest("invalid vp_token".into()));
+        //     return Err(Error::InvalidRequest("invalid vp_token".to_string()));
         // };
         if nonce != saved_req.nonce {
-            return Err(Error::InvalidRequest("nonce does not match".into()));
+            return Err(Error::InvalidRequest("nonce does not match".to_string()));
         }
         vps.push(vp);
     }
 
     let Some(subm) = &request.presentation_submission else {
-        return Err(Error::InvalidRequest("no presentation_submission".into()));
+        return Err(Error::InvalidRequest("no presentation_submission".to_string()));
     };
     let def = match &saved_req.presentation_definition {
         Kind::Object(def) => def,
         Kind::String(_) => {
-            return Err(Error::InvalidRequest("presentation_definition_uri is unsupported".into()));
+            return Err(Error::InvalidRequest(
+                "presentation_definition_uri is unsupported".to_string(),
+            ));
         }
     };
 
     // verify presentation subm matches definition
     // N.B. technically, this is redundant as it is done when looking up state
     if subm.definition_id != def.id {
-        return Err(Error::InvalidRequest("definition_ids do not match".into()));
+        return Err(Error::InvalidRequest("definition_ids do not match".to_string()));
     }
 
     let input_descs = &def.input_descriptors;
@@ -177,7 +198,7 @@ async fn verify(provider: impl Provider, request: &ResponseRequest) -> Result<()
             .await
             .map_err(|e| Error::InvalidRequest(format!("invalid VC proof: {e}")))?
         else {
-            return Err(Error::InvalidRequest("proof payload is invalid".into()));
+            return Err(Error::InvalidRequest("proof payload is invalid".to_string()));
         };
 
         // verify input constraints have been met
@@ -186,12 +207,12 @@ async fn verify(provider: impl Provider, request: &ResponseRequest) -> Result<()
             .satisfied(&vc)
             .map_err(|e| Error::ServerError(format!("issue matching constraints: {e}")))?
         {
-            return Err(Error::InvalidRequest("input constraints not satisfied".into()));
+            return Err(Error::InvalidRequest("input constraints not satisfied".to_string()));
         }
 
         // check VC is valid (hasn't expired, been revoked, etc)
         if vc.valid_until.is_some_and(|exp| exp < chrono::Utc::now()) {
-            return Err(Error::InvalidRequest("credential has expired".into()));
+            return Err(Error::InvalidRequest("credential has expired".to_string()));
         }
 
         // TODO: look up credential status using status.id
@@ -205,25 +226,4 @@ async fn verify(provider: impl Provider, request: &ResponseRequest) -> Result<()
     // it belongs to (i.e., revocation checks), if applicable.
 
     Ok(())
-}
-
-// Process the authorization request
-async fn process(provider: impl Provider, request: &ResponseRequest) -> Result<ResponseResponse> {
-    tracing::debug!("response::process");
-
-    // clear state
-    let Some(state_key) = &request.state else {
-        return Err(Error::InvalidRequest("client state not found".into()));
-    };
-    StateStore::purge(&provider, state_key)
-        .await
-        .map_err(|e| Error::ServerError(format!("issue purging state: {e}")))?;
-
-    Ok(ResponseResponse {
-        // TODO: add response to state using `response_code` so Wallet can fetch full response
-        // TODO: align redirct_uri to spec
-        // redirect_uri: Some(format!("http://localhost:3000/cb#response_code={}", "1234")),
-        redirect_uri: Some("http://localhost:3000/cb".into()),
-        response_code: None,
-    })
 }

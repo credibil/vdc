@@ -3,7 +3,6 @@ source: src/oid4vci/types/authorization.rs
 assertion_line: 538
 expression: request
 ---
-credential_issuer: "https://example.com"
 response_type: code
 client_id: "1234"
 redirect_uri: "http://localhost:3000/callback"

@@ -15,22 +15,33 @@ pub use metadata::*;
 use serde::{Deserialize, Serialize};
 pub use token::*;
 
+pub use crate::oauth::GrantType;
+use crate::oid4vci::endpoint::{AuthorizationHeaders, LanguageHeaders};
+
+/// Credential request headers.
+pub type CredentialHeaders = AuthorizationHeaders;
+
+/// Deferred Credential request headers.
+pub type DeferredHeaders = AuthorizationHeaders;
+
+/// Registration request headers.
+pub type MetadataHeaders = LanguageHeaders;
+
+/// Notification request headers.
+pub type NotificationHeaders = AuthorizationHeaders;
+
+/// Registration request headers.
+pub type RegistrationHeaders = AuthorizationHeaders;
+
 /// Used by the Wallet to notify the Credential Issuer of certain events for
 /// issued Credentials. These events enable the Credential Issuer to take
 /// subsequent actions after issuance.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct NotificationRequest {
-    /// The Credential Issuer for which the notification is intended.
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub credential_issuer: String,
-
-    /// A previously issued Access Token, as extracted from the Authorization
-    /// header of the Credential Request. Used to grant access to register a
-    /// client.
-    #[serde(skip_serializing_if = "String::is_empty", default)]
-    pub access_token: String,
-
-    /// As received from the issuer in the Credential Response.
+    /// The `notification_id` received in the Credential Response or Deferred
+    /// Credential Response. It is used to identify an issuance flow that
+    /// contained one or more Credentials with the same Credential
+    /// Configuration and Credential Dataset.
     pub notification_id: String,
 
     /// Type of the notification event.
@@ -49,19 +60,22 @@ pub struct NotificationRequest {
 /// Used by the Credential Issuer to notify the Wallet of certain events for
 /// issued Credentials. These events enable the Wallet to take subsequent
 /// actions after issuance.
+///
+/// Partial errors (a failure for one of the Credentials in the batch) will be
+/// treated as the entire issuance flow failing.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 #[allow(clippy::enum_variant_names)]
 pub enum NotificationEvent {
-    /// Credential was successfully stored in the Wallet.
+    /// Credential(s) was successfully stored in the Wallet.
     CredentialAccepted,
-
-    /// Used in all other unsuccessful cases.
-    #[default]
-    CredentialFailure,
 
     /// Used when unsuccessful Credential issuance was caused by a user action.
     CredentialDeleted,
+
+    /// Used in any other unsuccessful case.
+    #[default]
+    CredentialFailure,
 }
 
 /// When the Credential Issuer has successfully received the Notification
@@ -70,4 +84,19 @@ pub enum NotificationEvent {
 ///
 /// Use of the HTTP status code 204 (No Content) is RECOMMENDED.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct NotificationResponse {}
+pub struct NotificationResponse;
+
+/// A request for a nonce is made by sending an empty request to the Issuer's
+/// Nonce endpoint (`nonce_endpoint` Credential Issuer Metadata).
+#[derive(Clone, Debug, Default)]
+pub struct NonceRequest;
+
+/// Used by the Issuer to return a new nonce.
+///
+/// The Issuer MUST make the response uncacheable by adding a Cache-Control
+/// header field including the value `no-store`.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+pub struct NonceResponse {
+    /// The nonce value.
+    pub c_nonce: String,
+}

@@ -88,17 +88,19 @@
 //! [OpenID Connect]: (https://openid.net/specs/openid-connect-core-1_0.html)
 //! [RFC6749]: (https://www.rfc-editor.org/rfc/rfc6749.html)
 
+pub mod client;
 pub mod endpoint;
-mod error;
-mod handlers;
 pub mod provider;
-pub mod state;
 pub mod types;
 
-/// Status
-pub mod status {
-    pub use crate::status::bitstring::{DEFAULT_TTL, bitstring, credential};
-    pub use crate::status::issuer::*;
+mod error;
+mod issuer;
+mod server;
+mod state;
+
+/// PKCE
+pub mod pkce {
+    pub use crate::core::pkce::{code_challenge, code_verifier};
 }
 
 /// Proofs
@@ -107,20 +109,13 @@ pub mod proof {
     pub use crate::w3c_vc::proof::{Payload, Type, Verify, verify};
 }
 
-/// PKCE
-pub mod pkce {
-    pub use crate::core::pkce::{code_challenge, code_verifier};
+/// Status
+pub mod status {
+    pub use crate::status::bitstring::{DEFAULT_TTL, bitstring, credential};
+    pub use crate::status::issuer::*;
 }
 
 pub use error::Error;
-
-pub use crate::oauth::GrantType;
-/// Re-export types
-pub use crate::oid4vci::types::*;
-pub use crate::w3c_vc::model::{
-    Bitstring, CredentialStatus, CredentialStatusType, CredentialSubject, StatusMessage,
-    StatusPurpose, VerifiableCredential,
-};
 
 /// Result type for `OpenID` for Verifiable Credential Issuance and Verifiable
 /// Presentations.

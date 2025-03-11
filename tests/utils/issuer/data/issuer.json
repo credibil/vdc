@@ -1,0 +1,317 @@
+{
+    "credential_issuer": "http://credibil.io",
+    "credential_endpoint": "http://credibil.io/credential",
+    "deferred_credential_endpoint": "http://credibil.io/deferred",
+    "display": {
+        "name": "Credibil",
+        "locale": "en-NZ"
+    },
+    "credential_configurations_supported": {
+        "EmployeeID_JWT": {
+            "format": "jwt_vc_json",
+            "scope": "EmployeeIDCredential",
+            "cryptographic_binding_methods_supported": [
+                "did:key",
+                "did:web"
+            ],
+            "credential_signing_alg_values_supported": [
+                "ES256K",
+                "EdDSA"
+            ],
+            "proof_types_supported": {
+                "jwt": {
+                    "proof_signing_alg_values_supported": [
+                        "ES256K",
+                        "EdDSA"
+                    ]
+                }
+            },
+            "display": [
+                {
+                    "name": "Employee ID",
+                    "description": "Credibil employee ID credential",
+                    "locale": "en-NZ",
+                    "logo": {
+                        "uri": "http://credibil.io/assets/employee.png",
+                        "alt_text": "Employee ID Logo"
+                    },
+                    "text_color": "#ffffff",
+                    "background_color": "#323ed2",
+                    "background_image": {
+                        "uri": "http://credibil.io/assets/employee-background.png",
+                        "alt_text": "Employee ID Background"
+                    }
+                }
+            ],
+            "credential_definition": {
+                "type": [
+                    "VerifiableCredential",
+                    "EmployeeIDCredential"
+                ]
+            },
+            "claims": [
+                {
+                    "path": [
+                        "credentialSubject",
+                        "email"
+                    ],
+                    "display": [
+                        {
+                            "name": "Email",
+                            "locale": "en-NZ"
+                        }
+                    ]
+                },
+                {
+                    "path": [
+                        "credentialSubject",
+                        "family_name"
+                    ],
+                    "mandatory": true,
+                    "display": [
+                        {
+                            "name": "Family name",
+                            "locale": "en-NZ"
+                        }
+                    ]
+                },
+                {
+                    "path": [
+                        "credentialSubject",
+                        "given_name"
+                    ],
+                    "mandatory": true,
+                    "display": [
+                        {
+                            "name": "Given name",
+                            "locale": "en-NZ"
+                        }
+                    ]
+                },
+                {
+                    "path": [
+                        "credentialSubject",
+                        "address"
+                    ],
+                    "display": [
+                        {
+                            "name": "Residence",
+                            "locale": "en-NZ"
+                        }
+                    ]
+                },
+                {
+                    "path": [
+                        "credentialSubject",
+                        "address",
+                        "street_address"
+                    ],
+                    "display": [
+                        {
+                            "name": "Street Address",
+                            "locale": "en-NZ"
+                        }
+                    ]
+                },
+                {
+                    "path": [
+                        "credentialSubject",
+                        "address",
+                        "locality"
+                    ],
+                    "display": [
+                        {
+                            "name": "Locality",
+                            "locale": "en-NZ"
+                        }
+                    ]
+                },
+                {
+                    "path": [
+                        "credentialSubject",
+                        "address",
+                        "region"
+                    ],
+                    "display": [
+                        {
+                            "name": "Region",
+                            "locale": "en-NZ"
+                        }
+                    ]
+                },
+                {
+                    "path": [
+                        "credentialSubject",
+                        "address",
+                        "country"
+                    ],
+                    "display": [
+                        {
+                            "name": "Country",
+                            "locale": "en-NZ"
+                        }
+                    ]
+                }
+            ]
+        },
+        "Developer_JWT": {
+            "format": "jwt_vc_json",
+            "scope": "DeveloperCredential",
+            "cryptographic_binding_methods_supported": [
+                "did:key",
+                "did:web"
+            ],
+            "credential_signing_alg_values_supported": [
+                "ES256K",
+                "EdDSA"
+            ],
+            "proof_types_supported": {
+                "jwt": {
+                    "proof_signing_alg_values_supported": [
+                        "ES256K",
+                        "EdDSA"
+                    ]
+                }
+            },
+            "display": [
+                {
+                    "name": "Developer",
+                    "description": "Credibil certified developer credential",
+                    "locale": "en-NZ",
+                    "logo": {
+                        "uri": "http://credibil.io/assets/developer.png",
+                        "alt_text": "Developer Logo"
+                    },
+                    "text_color": "#ffffff",
+                    "background_color": "#010100",
+                    "background_image": {
+                        "uri": "http://credibil.io/assets/developer-background.png",
+                        "alt_text": "Developer Background"
+                    }
+                }
+            ],
+            "credential_definition": {
+                "type": [
+                    "VerifiableCredential",
+                    "DeveloperCredential"
+                ]
+            },
+            "claims": [
+                {
+                    "path": [
+                        "credentialSubject",
+                        "proficiency"
+                    ],
+                    "mandatory": true,
+                    "display": [
+                        {
+                            "name": "Proficiency",
+                            "locale": "en-NZ"
+                        }
+                    ]
+                },
+                {
+                    "path": [
+                        "credentialSubject",
+                        "family_name"
+                    ],
+                    "display": [
+                        {
+                            "name": "Family name",
+                            "locale": "en-NZ"
+                        }
+                    ]
+                },
+                {
+                    "path": [
+                        "credentialSubject",
+                        "given_name"
+                    ],
+                    "display": [
+                        {
+                            "name": "Given name",
+                            "locale": "en-NZ"
+                        }
+                    ]
+                }
+            ]
+        },
+        "org.iso.18013.5.1.mDL": {
+            "format": "mso_mdoc",
+            "doctype": "org.iso.18013.5.1.mDL",
+            "scope": "DriverLicence",
+            "cryptographic_binding_methods_supported": [
+                "did:key",
+                "did:web"
+            ],
+            "credential_signing_alg_values_supported": [
+                "ES256K",
+                "EdDSA"
+            ],
+            "proof_types_supported": {
+                "jwt": {
+                    "proof_signing_alg_values_supported": [
+                        "ES256K",
+                        "EdDSA"
+                    ]
+                }
+            },
+            "display": [
+                {
+                    "name": "Employee ID",
+                    "description": "Credibil employee ID credential",
+                    "locale": "en-NZ",
+                    "logo": {
+                        "uri": "http://credibil.io/assets/employee.png",
+                        "alt_text": "Employee ID Logo"
+                    },
+                    "text_color": "#ffffff",
+                    "background_color": "#323ed2",
+                    "background_image": {
+                        "uri": "http://credibil.io/assets/employee-background.png",
+                        "alt_text": "Employee ID Background"
+                    }
+                }
+            ],
+            "claims": [
+                {
+                    "path": [
+                        "org.iso.18013.5.1",
+                        "given_name"
+                    ],
+                    "display": [
+                        {
+                            "name": "Given name",
+                            "locale": "en-NZ"
+                        }
+                    ]
+                },
+                {
+                    "path": [
+                        "org.iso.18013.5.1",
+                        "family_name"
+                    ],
+                    "display": [
+                        {
+                            "name": "Family name",
+                            "locale": "en-NZ"
+                        }
+                    ]
+                },
+                {
+                    "path": [
+                        "org.iso.18013.5.1",
+                        "birth_date"
+                    ],
+                    "mandatory": true
+                },
+                {
+                    "path": [
+                        "org.iso.18013.5.1.aamva",
+                        "organ_donor"
+                    ]
+                }
+            ]
+        }
+    }
+}

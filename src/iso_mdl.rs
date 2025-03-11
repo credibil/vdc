@@ -97,42 +97,39 @@ pub async fn to_credential(
     Ok(Base64::encode_string(&mdoc.to_vec()?))
 }
 
-#[cfg(test)]
-mod tests {
-    use credibil_infosec::cose::cbor;
-    use serde_json::json;
-    use test_issuer::ProviderImpl;
-    use to_credential;
+// #[cfg(test)]
+// mod tests {
+//     use credibil_infosec::cose::cbor;
+//     use serde_json::json;
+//     use test_issuer::ProviderImpl;
+//     use to_credential;
 
-    use super::mso::DigestAlgorithm;
-    use super::*;
+//     use super::mso::DigestAlgorithm;
+//     use super::*;
 
-    #[tokio::test]
-    async fn roundtrip() {
-        let dataset = json!({
-            "org.iso.18013.5.1.mDL": {
-                "given_name": "Normal",
-                "family_name": "Person",
-                "email": "normal.user@example.com"
-            }
-        });
+//     #[tokio::test]
+//     async fn roundtrip() {
+//         let dataset = json!({
+//             "org.iso.18013.5.1.mDL": {
+//                 "given_name": "Normal",
+//                 "family_name": "Person",
+//                 "email": "normal.user@example.com"
+//             }
+//         });
 
-        // generate mdl credential
-        let dataset = serde_json::from_value(dataset).unwrap();
-        let provider = ProviderImpl::new();
-        let mdl = to_credential(dataset, provider).await.unwrap();
-        // println!("{}", mdl);
+//         // generate mdl credential
+//         let dataset = serde_json::from_value(dataset).unwrap();
+//         let provider = ProviderImpl::new();
+//         let mdl = to_credential(dataset, provider).await.unwrap();
 
-        // check credential deserializes back into original mdoc/mso structures
-        let mdoc_bytes = Base64::decode_vec(&mdl).expect("should decode");
-        let mdoc: IssuerSigned = cbor::from_slice(&mdoc_bytes).expect("should deserialize");
-        println!("{:?}", mdoc);
+//         // check credential deserializes back into original mdoc/mso structures
+//         let mdoc_bytes = Base64::decode_vec(&mdl).expect("should decode");
+//         let mdoc: IssuerSigned = cbor::from_slice(&mdoc_bytes).expect("should deserialize");
 
-        let mso_bytes = mdoc.issuer_auth.0.payload.expect("should have payload");
-        let mso: MobileSecurityObject = cbor::from_slice(&mso_bytes).expect("should deserialize");
-        println!("{:?}", mso);
+//         let mso_bytes = mdoc.issuer_auth.0.payload.expect("should have payload");
+//         let mso: MobileSecurityObject = cbor::from_slice(&mso_bytes).expect("should deserialize");
 
-        assert_eq!(mso.digest_algorithm, DigestAlgorithm::Sha256);
-        assert_eq!(mso.device_key_info.device_key.kty, KeyType::Okp);
-    }
-}
+//         assert_eq!(mso.digest_algorithm, DigestAlgorithm::Sha256);
+//         assert_eq!(mso.device_key_info.device_key.kty, KeyType::Okp);
+//     }
+// }

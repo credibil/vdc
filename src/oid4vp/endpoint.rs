@@ -6,8 +6,6 @@
 
 use std::fmt::Debug;
 
-use serde::Serialize;
-
 use crate::oid4vp::Result;
 use crate::oid4vp::provider::Provider;
 
@@ -21,18 +19,39 @@ use crate::oid4vp::provider::Provider;
 ///
 /// Implementers should look to the Error type and description for more
 /// information on the reason for failure.
-pub async fn handle<T>(
-    owner: &str, message: impl Request<Response = T>, provider: &impl Provider,
-) -> Result<T> {
-    message.validate(owner, provider).await?;
-    message.handle(owner, provider).await
+pub async fn handle<T, U>(
+    owner: &str, request: impl Into<Request<T>>, provider: &impl Provider,
+) -> Result<U>
+where
+    T: Body,
+    Request<T>: Handler<Response = U>,
+{
+    let request: Request<T> = request.into();
+    request.validate(owner, provider).await?;
+    request.handle(owner, provider).await
+}
+
+/// A request to process.
+#[derive(Clone, Debug)]
+pub struct Request<T: Body> {
+    /// The request to process.
+    pub body: T,
+
+    /// Optional headers associated with this request.
+    pub headers: Option<String>,
+}
+
+impl<T: Body> From<T> for Request<T> {
+    fn from(body: T) -> Self {
+        Self { body, headers: None }
+    }
 }
 
 /// Methods common to all messages.
 ///
 /// The primary role of this trait is to provide a common interface for
 /// messages so they can be handled by [`handle`] method.
-pub trait Request: Serialize + Clone + Debug + Send + Sync {
+pub trait Handler: Clone + Debug + Send + Sync {
     /// The inner reply type specific to the implementing message.
     type Response;
 
@@ -52,6 +71,10 @@ pub trait Request: Serialize + Clone + Debug + Send + Sync {
             // if !tenant_gate.active(credential_issuer)? {
             //     return Err(Error::Unauthorized("tenant not active"));
             // }
+            // `credential_issuer` required
+            // if credential_issuer.is_empty() {
+            //     return Err(invalid!("no `credential_issuer` specified"));
+            // }
 
             // // validate the message schema during development
             // #[cfg(debug_assertions)]
@@ -67,4 +90,13 @@ pub trait Request: Serialize + Clone + Debug + Send + Sync {
             Ok(())
         }
     }
+}
+
+pub(crate) use seal::Body;
+pub(crate) mod seal {
+    use std::fmt::Debug;
+
+    /// The `Body` trait is used to restrict the types able to be a Request
+    /// body. It is implemented by all `xxxRequest` types.
+    pub trait Body: Clone + Debug + Send + Sync {}
 }
