@@ -159,10 +159,8 @@ pub struct ProofClaims {
     #[serde(rename = "aud")]
     pub credential_issuer: String,
 
-    /// The time at which the proof was issued, as
-    /// [RFC7519](https://www.rfc-editor.org/rfc/rfc7519) `NumericDate`.
-    ///
-    /// For example, "1541493724".
+    /// The time at which the proof was issued, as a `NumericDate` (seconds
+    /// since 01-01-1970).
     pub iat: i64,
 
     /// A server-provided `c_nonce`.
@@ -200,6 +198,69 @@ impl ProofClaims {
         self.nonce = Some(nonce.into());
         self
     }
+}
+
+/// Claims containing a Wallet's proof of possession of key material that can be
+/// used for binding an issued Credential.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+pub struct AttestationClaims {
+    /// The time at which the proof was issued, as a `NumericDate` (seconds
+    /// since 01-01-1970).
+    pub iat: i64,
+
+    /// The time at which the key attestation and the key(s) it is attesting
+    /// expire, as a `NumericDate` (seconds since 01-01-1970).
+    pub exp: i64,
+
+    /// Attested keys from the same key storage component.
+    pub attested_keys: Vec<PublicKeyJwk>,
+
+    /// Values that assert the attack potential resistance of the key storage
+    /// component and the keys attested to.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_storage: Option<Vec<AttackPotentialResistance>>,
+
+    /// Values that assert the attack potential resistance of the user
+    /// authentication methods allowed to access the private keys of the
+    /// keys attested to.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_authentication: Option<Vec<AttackPotentialResistance>>,
+
+    /// A server-provided `c_nonce`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nonce: Option<String>,
+
+    /// Defines the supported revocation check mechanisms. For example,
+    /// [ietf-oauth-status-list](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-status-list-09)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+}
+
+/// Options for asserting the attack potential resistance of `key_storage` and
+/// `user_authentication` parameters.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum AttackPotentialResistance {
+    /// Used when key storage or user authentication is resistant to attack
+    /// with attack potential "High", equivalent to VAN.5 according to ISO
+    /// 18045.
+    Iso18045High,
+
+    /// Used when key storage or user authentication is resistant to attack
+    /// with attack potential "Moderate", equivalent to VAN.4 according to
+    /// ISO 18045.
+    Iso18045Moderate,
+
+    /// Used when key storage or user authentication is resistant to attack
+    /// with attack potential "Enhanced-Basic", equivalent to VAN.3 according
+    /// to ISO 18045.
+    Iso18045EnhancedBasic,
+
+    /// Used when key storage or user authentication is resistant to attack
+    /// with attack potential "Basic", equivalent to VAN.2 according to ISO
+    /// 18045.
+    #[default]
+    Iso18045EBasic,
 }
 
 /// Contains information about whether the Credential Issuer supports encryption
