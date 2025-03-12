@@ -137,11 +137,6 @@ pub struct Proof {
     /// signatures.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nonce: Option<String>,
-    //---
-    // /// Proof-specific additional fields.
-    // #[serde(flatten)]
-    // #[serde(skip_serializing_if = "Option::is_none")]
-    // pub extra: Option<HashMap<String, Value>>,
 }
 
 /// `Payload` is used to identify the type of proof to be created.
