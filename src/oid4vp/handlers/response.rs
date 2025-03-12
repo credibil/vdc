@@ -26,7 +26,6 @@ use serde_json_path::JsonPath;
 use tracing::instrument;
 
 use crate::core::Kind;
-use crate::core::vc::VerifiableCredential;
 use crate::oid4vp::endpoint::{Body, Handler, Request};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
@@ -34,6 +33,7 @@ use crate::oid4vp::types::{ResponseRequest, ResponseResponse};
 use crate::oid4vp::{Error, Result};
 use crate::w3c_vc;
 use crate::w3c_vc::proof::{Payload, Verify};
+use crate::w3c_vc::vc::VerifiableCredential;
 
 /// Endpoint for the Wallet to respond Verifier's Authorization Request.
 ///

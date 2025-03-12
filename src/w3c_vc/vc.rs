@@ -1,13 +1,5 @@
-//! # W3C Verifiable Credentials Data Model
-//!
-//! An implementation of W3C [Verifiable Credentials Data Model v1.1].
-//!
-//! See [implementation guidelines].
-//!
-//! [Verifiable Credentials Data Model v1.1]: (https://www.w3.org/TR/vc-data-model)
-//! [implementation guidelines]: (https://model.github.io/vc-imp-guide)
+//! # Verifiable Credentials Data Model
 
-use std::clone::Clone;
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Display;
@@ -28,7 +20,6 @@ use crate::w3c_vc::proof::Proof;
 #[serde(rename_all = "camelCase", default)]
 pub struct VerifiableCredential {
     // LATER: add support for @context objects
-    #[allow(rustdoc::bare_urls)]
     /// The @context property is used to map property URIs into short-form
     /// aliases. It is an ordered set where the first item is "`https://www.w3.org/2018/credentials/v1`".
     /// Subsequent items may be composed of any combination of URLs and/or
@@ -36,7 +27,6 @@ pub struct VerifiableCredential {
     #[serde(rename = "@context")]
     pub context: Vec<Kind<Value>>,
 
-    #[allow(rustdoc::bare_urls)]
     /// The id property is OPTIONAL. If present, id property's value MUST be a
     /// single URL, which MAY be dereferenceable. It is RECOMMENDED that the URL
     /// in the id be one which, if dereferenceable, results in a document
@@ -131,8 +121,6 @@ pub struct VerifiableCredential {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub evidence: Option<OneMany<Evidence>>,
 }
-
-// TODO: create structured @context object
 
 impl VerifiableCredential {
     /// Returns a new [`VerifiableCredential`] configured with defaults.

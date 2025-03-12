@@ -7,9 +7,9 @@ use chrono::serde::{ts_seconds, ts_seconds_option};
 use chrono::{DateTime, TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::core::vc::VerifiableCredential;
-use crate::core::vp::VerifiablePresentation;
 use crate::core::{Kind, OneMany};
+use crate::w3c_vc::vc::VerifiableCredential;
+use crate::w3c_vc::vp::VerifiablePresentation;
 
 /// Claims used for Verifiable Credential issuance when format is
 /// "`jwt_vc_json`".

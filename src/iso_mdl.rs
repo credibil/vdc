@@ -22,79 +22,130 @@ use rand::{Rng, rng};
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 
-/// Convert a Credential Dataset to a base64url-encoded, CBOR-encoded, ISO mDL
-/// `IssuerSigned` object.
-///
-/// # Errors
-/// // TODO: add errors
-pub async fn to_credential(
-    dataset: Map<String, Value>, signer: impl Signer,
-) -> anyhow::Result<String> {
-    // populate mdoc and accompanying MSO
-    let mut mdoc = IssuerSigned::new();
-    let mut mso = MobileSecurityObject::new();
+/// Generate an ISO mDL `mso_mdoc` format credential.
+#[derive(Debug)]
+pub struct MsoMdocBuilder<C, S> {
+    claims: C,
+    signer: S,
+}
 
-    for (key, value) in dataset {
-        // namespace is a root-level claim
-        let Some(name_space) = value.as_object() else {
-            return Err(anyhow!("invalid dataset"));
-        };
+/// Builder has no signer.
+#[doc(hidden)]
+pub struct NoSigner;
+/// Builder state has a signer.
+#[doc(hidden)]
+pub struct HasSigner<'a, S: Signer>(pub &'a S);
 
-        let mut id_gen = DigestIdGenerator::new();
+/// Builder has no claims.
+#[doc(hidden)]
+pub struct NoClaims;
+/// Builder has claims.
+#[doc(hidden)]
+pub struct HasClaims(Map<String, Value>);
 
-        // assemble `IssuerSignedItem`s for name space
-        for (k, v) in name_space {
-            let item = Tag24(IssuerSignedItem {
-                digest_id: id_gen.generate(),
-                random: rng().random::<[u8; 16]>().into(),
-                element_identifier: k.clone(),
-                element_value: cbor!(v)?,
-            });
-
-            // digest of `IssuerSignedItem` for MSO
-            let digest = Sha256::digest(&item.to_vec()?).to_vec();
-            mso.value_digests.entry(key.clone()).or_default().insert(item.digest_id, digest);
-
-            // add item to IssuerSigned object
-            mdoc.name_spaces.entry(key.clone()).or_default().push(item);
+impl MsoMdocBuilder<NoClaims, NoSigner> {
+    pub const fn new() -> Self {
+        Self {
+            claims: NoClaims,
+            signer: NoSigner,
         }
     }
+}
 
-    // add public key to MSO
-    mso.device_key_info.device_key = CoseKey {
-        kty: KeyType::Okp,
-        crv: Curve::Ed25519,
-        x: signer.verifying_key().await?,
-        y: None,
-    };
+impl<C> MsoMdocBuilder<C, NoSigner> {
+    /// Set the credential Signer.
+    pub fn signer<S: Signer>(self, signer: &'_ S) -> MsoMdocBuilder<C, HasSigner<'_, S>> {
+        MsoMdocBuilder {
+            claims: self.claims,
+            signer: HasSigner(signer),
+        }
+    }
+}
 
-    // sign
-    let mso_bytes = Tag24(mso).to_vec()?;
-    let signature = signer.sign(&mso_bytes).await;
+impl<S> MsoMdocBuilder<NoClaims, S> {
+    /// Set the claims for the ISO mDL credential.
+    pub fn claims(self, claims: Map<String, Value>) -> MsoMdocBuilder<HasClaims, S> {
+        MsoMdocBuilder {
+            claims: HasClaims(claims),
+            signer: self.signer,
+        }
+    }
+}
 
-    // build COSE_Sign1
-    let algorithm = match signer.algorithm() {
-        Algorithm::EdDSA => iana::Algorithm::EdDSA,
-        Algorithm::ES256K => return Err(anyhow!("unsupported algorithm")),
-    };
+impl<S: Signer> MsoMdocBuilder<HasClaims, HasSigner<'_, S>> {
+    /// Build the ISO mDL credential, returning a base64url-encoded,
+    /// CBOR-encoded, ISO mDL.
+    ///
+    /// # Errors
+    /// TODO: Document errors
+    pub async fn build(self) -> anyhow::Result<String> {
+        // populate mdoc and accompanying MSO
+        let mut mdoc = IssuerSigned::new();
+        let mut mso = MobileSecurityObject::new();
+        let signer = self.signer.0;
 
-    let verification_method = signer.verification_method().await?;
-    let key_id = verification_method.as_bytes().to_vec();
+        for (key, value) in self.claims.0 {
+            // namespace is a root-level claim
+            let Some(name_space) = value.as_object() else {
+                return Err(anyhow!("invalid dataset"));
+            };
 
-    let protected = HeaderBuilder::new().algorithm(algorithm).build();
-    let unprotected = HeaderBuilder::new().key_id(key_id).build();
-    let cose_sign_1 = CoseSign1Builder::new()
-        .protected(protected)
-        .unprotected(unprotected)
-        .payload(mso_bytes)
-        .signature(signature)
-        .build();
+            let mut id_gen = DigestIdGenerator::new();
 
-    // add COSE_Sign1 to IssuerSigned object
-    mdoc.issuer_auth = mso::IssuerAuth(cose_sign_1);
+            // assemble `IssuerSignedItem`s for name space
+            for (k, v) in name_space {
+                let item = Tag24(IssuerSignedItem {
+                    digest_id: id_gen.generate(),
+                    random: rng().random::<[u8; 16]>().into(),
+                    element_identifier: k.clone(),
+                    element_value: cbor!(v)?,
+                });
 
-    // encode CBOR -> Base64Url -> return
-    Ok(Base64::encode_string(&mdoc.to_vec()?))
+                // digest of `IssuerSignedItem` for MSO
+                let digest = Sha256::digest(&item.to_vec()?).to_vec();
+                mso.value_digests.entry(key.clone()).or_default().insert(item.digest_id, digest);
+
+                // add item to IssuerSigned object
+                mdoc.name_spaces.entry(key.clone()).or_default().push(item);
+            }
+        }
+
+        // add public key to MSO
+        mso.device_key_info.device_key = CoseKey {
+            kty: KeyType::Okp,
+            crv: Curve::Ed25519,
+            x: signer.verifying_key().await?,
+            y: None,
+        };
+
+        // sign
+        let mso_bytes = Tag24(mso).to_vec()?;
+        let signature = signer.sign(&mso_bytes).await;
+
+        // build COSE_Sign1
+        let algorithm = match signer.algorithm() {
+            Algorithm::EdDSA => iana::Algorithm::EdDSA,
+            Algorithm::ES256K => return Err(anyhow!("unsupported algorithm")),
+        };
+
+        let verification_method = signer.verification_method().await?;
+        let key_id = verification_method.as_bytes().to_vec();
+
+        let protected = HeaderBuilder::new().algorithm(algorithm).build();
+        let unprotected = HeaderBuilder::new().key_id(key_id).build();
+        let cose_sign_1 = CoseSign1Builder::new()
+            .protected(protected)
+            .unprotected(unprotected)
+            .payload(mso_bytes)
+            .signature(signature)
+            .build();
+
+        // add COSE_Sign1 to IssuerSigned object
+        mdoc.issuer_auth = mso::IssuerAuth(cose_sign_1);
+
+        // encode CBOR -> Base64Url -> return
+        Ok(Base64::encode_string(&mdoc.to_vec()?))
+    }
 }
 
 // #[cfg(test)]

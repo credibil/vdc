@@ -10,8 +10,8 @@ use credibil_infosec::jose::JwsBuilder;
 use credibil_vc::oid4vci::endpoint;
 use credibil_vc::oid4vci::proof::{self, Payload, Type, Verify};
 use credibil_vc::oid4vci::types::{
-    CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, NonceRequest,
-    ProofClaims, ResponseType, TokenGrantType, TokenRequest,
+    CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, CredentialResponse,
+    NonceRequest, ProofClaims, TokenGrantType, TokenRequest,
 };
 use insta::assert_yaml_snapshot as assert_snapshot;
 use utils::issuer::{CREDENTIAL_ISSUER as ALICE_ISSUER, NORMAL_USER, ProviderImpl};
@@ -96,7 +96,7 @@ async fn two_proofs() {
     // --------------------------------------------------
     // Bob extracts and verifies the received credentials
     // --------------------------------------------------
-    let ResponseType::Credentials { credentials, .. } = &response.response else {
+    let CredentialResponse::Credentials { credentials, .. } = &response else {
         panic!("expected single credential");
     };
 

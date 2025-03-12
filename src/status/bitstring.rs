@@ -15,10 +15,10 @@ use credibil_infosec::Signer;
 use flate2::write::GzEncoder;
 use serde_json::{Map, Value};
 
-use crate::core::vc::{CredentialSubject, StatusPurpose, VcBuilder};
 use crate::status::config::ListConfig;
 use crate::status::log::StatusLogEntry;
 use crate::w3c_vc::proof::{self, Payload};
+use crate::w3c_vc::vc::{CredentialSubject, StatusPurpose, VcBuilder};
 
 // TODO: Configurable.
 // TODO: This is minimum length as per spec. May need to be configurable

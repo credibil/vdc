@@ -8,9 +8,9 @@ use credibil_infosec::jose::JwsBuilder;
 use credibil_vc::oid4vci::endpoint;
 use credibil_vc::oid4vci::proof::{self, Payload, Type, Verify};
 use credibil_vc::oid4vci::types::{
-    CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest,
-    DeferredCredentialRequest, DeferredHeaders, NonceRequest, ProofClaims, ResponseType,
-    TokenGrantType, TokenRequest,
+    CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, CredentialResponse,
+    DeferredCredentialRequest, DeferredHeaders, NonceRequest, ProofClaims, TokenGrantType,
+    TokenRequest,
 };
 use insta::assert_yaml_snapshot as assert_snapshot;
 use utils::issuer::{CREDENTIAL_ISSUER as ALICE_ISSUER, PENDING_USER, ProviderImpl};
@@ -88,7 +88,7 @@ async fn deferred() {
     // --------------------------------------------------
     // Bob waits for a brief period and then retrieves the credential
     // --------------------------------------------------
-    let ResponseType::TransactionId { transaction_id } = &response.response else {
+    let CredentialResponse::TransactionId { transaction_id } = &response else {
         panic!("expected transaction_id");
     };
 
@@ -106,7 +106,7 @@ async fn deferred() {
     // --------------------------------------------------
     // Bob extracts and verifies the received credential
     // --------------------------------------------------
-    let ResponseType::Credentials { credentials, .. } = &response.response else {
+    let CredentialResponse::Credentials { credentials, .. } = &response else {
         panic!("expected single credential");
     };
 

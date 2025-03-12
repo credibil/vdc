@@ -4,8 +4,8 @@ use std::fmt::Debug;
 use serde::{Deserialize, Serialize};
 
 use crate::core::Kind;
-use crate::core::vp::VerifiablePresentation;
 use crate::dif_exch::PresentationSubmission;
+use crate::w3c_vc::vp::VerifiablePresentation;
 
 /// Authorization Response request object is used by Wallets to send a VP Token
 /// and Presentation Submission to the Verifier who initiated the verification.

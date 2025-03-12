@@ -10,24 +10,24 @@
 
 use std::fmt::Debug;
 
-use chrono::{DateTime, Utc};
-use credibil_infosec::Signer;
+use chrono::Utc;
 use credibil_infosec::jose::jws::{self, Key};
 
 use crate::core::types::{LangString, Language};
-use crate::core::vc::{CredentialSubject, VerifiableCredential};
 use crate::core::{Kind, generate};
 use crate::oid4vci::endpoint::{Body, Handler, Request};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Deferrance, Expire, Stage, State};
 use crate::oid4vci::types::{
-    AuthorizedDetail, Credential, CredentialConfiguration, CredentialDefinition, CredentialDisplay,
-    CredentialHeaders, CredentialRequest, CredentialResponse, Dataset, Format, Issuer,
-    MultipleProofs, Proof, ProofClaims, RequestBy, ResponseType, SingleProof,
+    AuthorizedDetail, Credential, CredentialConfiguration, CredentialDisplay, CredentialHeaders,
+    CredentialRequest, CredentialResponse, Dataset, Format, Issuer, MultipleProofs, Proof,
+    ProofClaims, RequestBy, SingleProof,
 };
 use crate::oid4vci::{Error, Result};
 use crate::status::issuer::Status;
-use crate::w3c_vc::proof::{self, Payload, Type};
+use crate::w3c_vc::W3cVcBuilder;
+use crate::w3c_vc::proof::Type;
+use crate::w3c_vc::vc::CredentialSubject;
 use crate::{server, verify_key};
 
 /// Credential request handler.
@@ -230,12 +230,11 @@ impl Context {
         &self, provider: &impl Provider, dataset: Dataset,
     ) -> Result<CredentialResponse> {
         // generate the issuance time stamp
-        let issuance_date = Utc::now();
 
         // determine credential format
-        let response = match &self.configuration.format {
+        let credentials = match &self.configuration.format {
             Format::JwtVcJson(w3c) => {
-                let mut vcs = vec![];
+                let mut credentials = vec![];
 
                 for did in &self.holder_dids {
                     let subject = CredentialSubject {
@@ -243,12 +242,56 @@ impl Context {
                         claims: dataset.claims.clone(),
                     };
 
-                    let vc = self.w3c_vc(provider, &w3c.credential_definition, subject).await?;
-                    vcs.push(vc);
+                    // credential type
+                    let Some(credential_type) = w3c.credential_definition.type_.get(1) else {
+                        return Err(server!("Credential type not set"));
+                    };
+
+                    // credential's status lookup information
+                    let Some(subject_id) = &self.state.subject_id else {
+                        return Err(Error::AccessDenied("invalid subject id".to_string()));
+                    };
+                    let status = Status::status(provider, subject_id, "credential_identifier")
+                        .await
+                        .map_err(|e| server!("issue populating credential status: {e}"))?;
+
+                    let credential_issuer = &self.issuer.credential_issuer;
+                    let (name, description) =
+                        self.configuration.display.as_ref().map_or((None, None), create_names);
+
+                    let jwt = W3cVcBuilder::new()
+                        // TODO: generate credential id
+                        .id(format!("{credential_issuer}/credentials/{credential_type}"))
+                        .add_type(credential_type)
+                        .add_name(name)
+                        .add_description(description)
+                        .issuer(credential_issuer)
+                        .add_subject(subject)
+                        .status(status)
+                        .signer(provider)
+                        .build()
+                        .await
+                        .map_err(|e| server!("issue building VC: {e}"))?;
+
+                    credentials.push(Credential {
+                        credential: Kind::String(jwt),
+                    });
                 }
-                self.jwt_vc_json(vcs, provider.clone(), issuance_date).await?
+
+                credentials
             }
-            Format::IsoMdl(_) => self.mso_mdoc(dataset, provider.clone()).await?,
+            Format::IsoMdl(_) => {
+                let mdl = crate::iso_mdl::MsoMdocBuilder::new()
+                    .claims(dataset.claims)
+                    .signer(provider)
+                    .build()
+                    .await
+                    .map_err(|e| server!("issue generating `mso_mdoc` credential: {e}"))?;
+
+                vec![Credential {
+                    credential: Kind::String(mdl),
+                }]
+            }
 
             // TODO: remaining credential formats
             Format::JwtVcJsonLd(_) => todo!(),
@@ -277,88 +320,9 @@ impl Context {
             .await
             .map_err(|e| server!("issue saving state: {e}"))?;
 
-        Ok(CredentialResponse {
-            response,
-            notification_id: Some(notification_id),
-        })
-    }
-
-    // Generate a W3C Verifiable Credential.
-    async fn w3c_vc(
-        &self, provider: &impl Provider, credential_definition: &CredentialDefinition,
-        subject: CredentialSubject,
-    ) -> Result<VerifiableCredential> {
-        // credential type
-        let Some(credential_type) = credential_definition.type_.get(1) else {
-            return Err(server!("Credential type not set"));
-        };
-
-        // credential's status lookup information
-        let Some(subject_id) = &self.state.subject_id else {
-            return Err(Error::AccessDenied("invalid subject id".to_string()));
-        };
-        let status = Status::status(provider, subject_id, "credential_identifier")
-            .await
-            .map_err(|e| server!("issue populating credential status: {e}"))?;
-
-        let credential_issuer = &self.issuer.credential_issuer;
-        let (name, description) =
-            self.configuration.display.as_ref().map_or((None, None), create_names);
-
-        VerifiableCredential::builder()
-            .add_context(Kind::String(format!("{credential_issuer}/credentials/v1")))
-            // TODO: generate credential id
-            .id(format!("{credential_issuer}/credentials/{credential_type}"))
-            .add_type(credential_type)
-            .add_name(name)
-            .add_description(description)
-            .issuer(credential_issuer)
-            .add_subject(subject)
-            .status(status)
-            .build()
-            .map_err(|e| server!("issue building VC: {e}"))
-    }
-
-    // Generate a `jwt_vc_json` format credential .
-    async fn jwt_vc_json(
-        &self, vcs: Vec<VerifiableCredential>, signer: impl Signer, issuance_date: DateTime<Utc>,
-    ) -> Result<ResponseType> {
-        // sign and return JWT(s)
-        let mut credentials = vec![];
-
-        for vc in vcs {
-            let jwt = proof::create(
-                Payload::Vc {
-                    vc: vc.clone(),
-                    issued_at: issuance_date,
-                },
-                &signer,
-            )
-            .await
-            .map_err(|e| server!("issue generating `jwt_vc_json` credential: {e}"))?;
-
-            credentials.push(Credential {
-                credential: Kind::String(jwt),
-            });
-        }
-
-        Ok(ResponseType::Credentials {
+        Ok(CredentialResponse::Credentials {
             credentials,
-            notification_id: None,
-        })
-    }
-
-    // Generate a `mso_mdoc` format credential.
-    async fn mso_mdoc(&self, dataset: Dataset, signer: impl Signer) -> Result<ResponseType> {
-        let mdl = crate::iso_mdl::to_credential(dataset.claims, signer)
-            .await
-            .map_err(|e| server!("issue generating `mso_mdoc` credential: {e}"))?;
-
-        Ok(ResponseType::Credentials {
-            credentials: vec![Credential {
-                credential: Kind::String(mdl),
-            }],
-            notification_id: None,
+            notification_id: Some(notification_id),
         })
     }
 
@@ -380,11 +344,8 @@ impl Context {
             .await
             .map_err(|e| server!("issue saving state: {e}"))?;
 
-        Ok(CredentialResponse {
-            response: ResponseType::TransactionId {
-                transaction_id: txn_id,
-            },
-            notification_id: None,
+        Ok(CredentialResponse::TransactionId {
+            transaction_id: txn_id,
         })
     }
 

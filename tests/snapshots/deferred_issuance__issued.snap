@@ -1,11 +1,9 @@
 ---
 source: tests/deferred_issuance.rs
-assertion_line: 116
+assertion_line: 121
 expression: vc
 ---
-"@context":
-  - "https://www.w3.org/2018/credentials/v1"
-  - "http://credibil.io/credentials/v1"
+"@context": []
 id: "http://credibil.io/credentials/EmployeeIDCredential"
 type:
   - VerifiableCredential

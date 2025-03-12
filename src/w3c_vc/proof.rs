@@ -37,11 +37,11 @@ use credibil_infosec::Signer;
 use credibil_infosec::jose::{jws, jwt};
 use serde::{Deserialize, Serialize};
 
-use crate::core::vc::VerifiableCredential;
-use crate::core::vp::VerifiablePresentation;
 use crate::core::{Kind, OneMany};
 use crate::verify_key;
 use crate::w3c_vc::jose;
+use crate::w3c_vc::vc::VerifiableCredential;
+use crate::w3c_vc::vp::VerifiablePresentation;
 
 // /// Credential format options for the resulting proof.
 // #[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]

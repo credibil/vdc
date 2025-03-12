@@ -9,8 +9,6 @@ pub mod pkce;
 pub mod strings;
 pub mod types;
 pub mod urlencode;
-pub mod vc;
-pub mod vp;
 
 use serde::{Deserialize, Serialize};
 

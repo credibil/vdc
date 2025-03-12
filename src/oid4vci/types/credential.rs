@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use crate::core::Kind;
-use crate::core::vc::VerifiableCredential;
+use crate::w3c_vc::vc::VerifiableCredential;
 
 /// The user information returned by the Subject trait.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -293,25 +293,9 @@ pub struct CredentialResponseEncryption {
 /// Credential. In other cases, the Credential Issuer MAY NOT be able to
 /// immediately issue a requested Credential and will instead return a
 /// `transaction_id` to be used later to retrieve a Credential when it is ready.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct CredentialResponse {
-    /// The Credential Response can be Synchronous or Deferred.
-    #[serde(flatten)]
-    pub response: ResponseType,
-
-    /// Identifies an issued Credential when the Wallet calls the Issuer's
-    /// Notification endpoint. The `notification_id` is included in the
-    /// Notification Request.
-    ///
-    /// Will only be set if credential parameter is set.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub notification_id: Option<String>,
-}
-
-/// The Credential Response can be Synchronous or Deferred.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(untagged)]
-pub enum ResponseType {
+pub enum CredentialResponse {
     /// Contains an array of issued Credentials. The values in the array MAY be
     /// a string or an object, depending on the Credential Format.
     Credentials {
@@ -336,7 +320,7 @@ pub enum ResponseType {
     },
 }
 
-impl Default for ResponseType {
+impl Default for CredentialResponse {
     fn default() -> Self {
         Self::Credentials {
             credentials: vec![Credential {

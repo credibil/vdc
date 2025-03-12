@@ -11,8 +11,8 @@ use credibil_vc::oid4vci::endpoint;
 use credibil_vc::oid4vci::proof::{self, Payload, Type, Verify};
 use credibil_vc::oid4vci::types::{
     AuthorizationDetail, CreateOfferRequest, Credential, CredentialHeaders, CredentialOfferRequest,
-    CredentialRequest, NonceRequest, NotificationEvent, NotificationHeaders, NotificationRequest,
-    ProofClaims, ResponseType, TokenGrantType, TokenRequest,
+    CredentialRequest, CredentialResponse, NonceRequest, NotificationEvent, NotificationHeaders,
+    NotificationRequest, ProofClaims, TokenGrantType, TokenRequest,
 };
 use insta::assert_yaml_snapshot as assert_snapshot;
 use utils::issuer::{CREDENTIAL_ISSUER as ALICE_ISSUER, NORMAL_USER, ProviderImpl};
@@ -90,7 +90,7 @@ async fn offer_val() {
     // --------------------------------------------------
     // Bob extracts and verifies the received credential
     // --------------------------------------------------
-    let ResponseType::Credentials { credentials, .. } = &response.response else {
+    let CredentialResponse::Credentials { credentials, .. } = &response else {
         panic!("expected single credential");
     };
     let Credential { credential } = credentials.first().expect("should have credential");
@@ -222,7 +222,7 @@ async fn two_datasets() {
         // --------------------------------------------------
         // Bob extracts and verifies the received credential
         // --------------------------------------------------
-        let ResponseType::Credentials { credentials, .. } = &response.response else {
+        let CredentialResponse::Credentials { credentials, .. } = &response else {
             panic!("expected single credential");
         };
         let Credential { credential } = credentials.first().expect("should have credential");
@@ -324,7 +324,7 @@ async fn reduce_credentials() {
     // --------------------------------------------------
     // Bob extracts and verifies the received credential
     // --------------------------------------------------
-    let ResponseType::Credentials { credentials, .. } = &response.response else {
+    let CredentialResponse::Credentials { credentials, .. } = &response else {
         panic!("expected single credential");
     };
     let Credential { credential } = credentials.first().expect("should have credential");
@@ -419,7 +419,7 @@ async fn reduce_claims() {
     // --------------------------------------------------
     // Bob extracts and verifies the received credential
     // --------------------------------------------------
-    let ResponseType::Credentials { credentials, .. } = &response.response else {
+    let CredentialResponse::Credentials { credentials, .. } = &response else {
         panic!("expected single credential");
     };
     let Credential { credential } = credentials.first().expect("should have credential");
@@ -507,12 +507,12 @@ async fn notify_accepted() {
     // --------------------------------------------------
     // Bob send a notication advising the credential was accepted
     // --------------------------------------------------
-    let Some(notification_id) = response.notification_id else {
+    let CredentialResponse::Credentials { notification_id, .. } = response else {
         panic!("should have notification id");
     };
 
     let request = NotificationRequest::builder()
-        .notification_id(notification_id)
+        .notification_id(notification_id.unwrap())
         .event(NotificationEvent::CredentialAccepted)
         .event_description("Credential accepted")
         .build();

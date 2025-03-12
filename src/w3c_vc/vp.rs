@@ -15,9 +15,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
-use crate::core::vc::VerifiableCredential;
 use crate::core::{Kind, OneMany};
 use crate::w3c_vc::proof::Proof;
+use crate::w3c_vc::vc::VerifiableCredential;
 
 /// A Verifiable Presentation is used to combine and present credentials to a
 /// Verifer.
