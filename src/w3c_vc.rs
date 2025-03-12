@@ -38,9 +38,13 @@ pub struct HasSigner<'a, S: Signer>(pub &'a S);
 
 impl W3cVcBuilder<NoSigner> {
     pub fn new() -> Self {
-        let mut vc = VerifiableCredential::default();
-        vc.type_ = OneMany::One("VerifiableCredential".to_string());
-        Self { vc, signer: NoSigner }
+        Self {
+            vc: VerifiableCredential {
+                type_: OneMany::One("VerifiableCredential".to_string()),
+                ..Default::default()
+            },
+            signer: NoSigner,
+        }
     }
 }
 
@@ -120,7 +124,7 @@ impl<S> W3cVcBuilder<S> {
 }
 
 impl<S: Signer> W3cVcBuilder<HasSigner<'_, S>> {
-    /// Build the W3C credential, returning a base64url-encoded JSOn JWT.
+    /// Build the W3C credential, returning a base64url-encoded JSON JWT.
     ///
     /// # Errors
     /// TODO: Document errors
@@ -132,5 +136,3 @@ impl<S: Signer> W3cVcBuilder<HasSigner<'_, S>> {
             .map_err(|e| anyhow!("issue generating `jwt_vc_json` credential: {e}"))
     }
 }
-
-

@@ -38,7 +38,7 @@ derive_builder.workspace = true
 ed25519-dalek = "2.1.1"
 fastrand.workspace = true
 flate2 = "1.1.0"
-http = "1.2.0"
+http = "1.3.1"
 image = { version = "0.25.5", default-features = false, features = ["png"] }
 percent-encoding = "2.3.1"
 qrcode = { version = "0.14.1", default-features = false, features = ["image"] }
@@ -105,7 +105,7 @@ anyhow = "1.0.97"
 assert_let_bind = "0.1.1"
 axum = { version = "0.8.1", features = ["macros"] }
 axum-extra = { version = "0.10.0", features = ["typed-header"] }
-base64ct = { version = "1.6.0", features = ["std"] }
+base64ct = { version = "1.7.1", features = ["std"] }
 chrono = { version = "0.4.40", features = ["serde"] }
 credibil-did = "0.1.2"
 credibil-infosec = "0.1.1"
