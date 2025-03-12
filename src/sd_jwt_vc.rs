@@ -13,11 +13,20 @@ use chrono::serde::ts_seconds_option;
 use chrono::{DateTime, Utc};
 use credibil_did::PublicKeyJwk;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+
+// Disclosure:
+//  1. Construct an array ["<b64 Salt>","<Claim Name>","<Claim Value>"].
+//  2. JSON-encode the array.
+//  3. base64url-encode the JSON array.
+//
+// SD-JWT with Disclosures: <Issuer-signed JWT>~<b64 Disclosure 1>~<b64 Disclosure N>~
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 /// Claims that can be included in the payload of SD-JWT VCs.
 pub struct SdJwtVcClaims {
-    /// Claims
+    /// Digests of selective disclosure claims. Each digest is a hash (using
+    /// `_sd_alg` hashing algortith) of the base65url-encoded Disclosure.
     #[serde(rename = "_sd")]
     pub sd: Vec<String>,
 
@@ -74,4 +83,32 @@ pub struct SdJwtVcClaims {
     /// The information on how to read the status of the Verifiable Credential.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<String>,
+}
+
+/// Object property disclosure.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct Disclosure {
+    /// The salt consists of a minimum of 128 bits of cryptographically secure
+    /// random data, base64url-encoded. It must only be revealed to the Holder.
+    pub salt: String,
+
+    /// The name of the claim to be disclosed, as it would appear in a regular JWT.
+    pub claim_name: String,
+
+    /// The value of the claim to be disclosed.
+    pub claim_value: Value,
+}
+
+#[cfg(test)]
+mod tests {
+
+    // use super::*;
+
+    #[test]
+    fn test_claims() {
+
+        // create VC
+
+        // serialize to SD-JWT
+    }
 }

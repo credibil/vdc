@@ -17,9 +17,9 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use super::super::proof::integrity::Proof;
-use super::types::LangString;
+use crate::core::types::LangString;
 use crate::core::{Kind, OneMany};
+use crate::w3c_vc::proof::Proof;
 
 /// `VerifiableCredential` represents a naive implementation of the W3C
 /// Verifiable Credential data model v1.1.

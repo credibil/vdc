@@ -171,16 +171,16 @@ mod state;
 
 /// Proofs
 pub mod proof {
-    pub use crate::w3c_vc::proof::{Payload, W3cFormat, create};
+    pub use crate::w3c_vc::proof::{Payload, create};
 }
 
 // Re-export types
+pub use crate::core::vp::VerifiablePresentation;
 pub use crate::dif_exch::{
     Claims, Constraints, DescriptorMap, Field, Filter, FilterValue, InputDescriptor, PathNested,
     PresentationSubmission,
 };
 pub use crate::oid4vp::types::*;
-pub use crate::w3c_vc::model::VerifiablePresentation;
 
 /// Re-export status traits and types.
 pub mod status {

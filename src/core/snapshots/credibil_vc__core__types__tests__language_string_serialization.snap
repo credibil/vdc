@@ -1,6 +1,6 @@
 ---
-source: src/w3c_vc/model/types.rs
-assertion_line: 180
+source: src/core/types.rs
+assertion_line: 181
 expression: hydrated
 ---
 name:

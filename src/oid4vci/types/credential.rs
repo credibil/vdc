@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use crate::core::Kind;
-use crate::w3c_vc::model::VerifiableCredential;
+use crate::core::vc::VerifiableCredential;
 
 /// The user information returned by the Subject trait.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]

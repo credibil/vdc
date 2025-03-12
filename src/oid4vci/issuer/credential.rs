@@ -14,6 +14,8 @@ use chrono::{DateTime, Utc};
 use credibil_infosec::Signer;
 use credibil_infosec::jose::jws::{self, Key};
 
+use crate::core::types::{LangString, Language};
+use crate::core::vc::{CredentialSubject, VerifiableCredential};
 use crate::core::{Kind, generate};
 use crate::oid4vci::endpoint::{Body, Handler, Request};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
@@ -25,9 +27,7 @@ use crate::oid4vci::types::{
 };
 use crate::oid4vci::{Error, Result};
 use crate::status::issuer::Status;
-use crate::w3c_vc::model::types::{LangString, LangValue};
-use crate::w3c_vc::model::{CredentialSubject, VerifiableCredential};
-use crate::w3c_vc::proof::{self, Payload, Type, W3cFormat};
+use crate::w3c_vc::proof::{self, Payload, Type};
 use crate::{server, verify_key};
 
 /// Credential request handler.
@@ -328,7 +328,6 @@ impl Context {
 
         for vc in vcs {
             let jwt = proof::create(
-                W3cFormat::JwtVcJson,
                 Payload::Vc {
                     vc: vc.clone(),
                     issued_at: issuance_date,
@@ -423,10 +422,10 @@ fn create_names(display: &Vec<CredentialDisplay>) -> (Option<LangString>, Option
     let mut name: Option<LangString> = None;
     let mut description: Option<LangString> = None;
     for d in display {
-        let n = LangValue {
+        let n = Language {
             value: d.name.clone(),
             language: d.locale.clone(),
-            ..LangValue::default()
+            ..Language::default()
         };
         if let Some(nm) = &mut name {
             nm.add(n);
@@ -434,10 +433,10 @@ fn create_names(display: &Vec<CredentialDisplay>) -> (Option<LangString>, Option
             name = Some(LangString::new_object(n));
         }
         if d.description.is_some() {
-            let d = LangValue {
+            let d = Language {
                 value: d.description.clone().unwrap(),
                 language: d.locale.clone(),
-                ..LangValue::default()
+                ..Language::default()
             };
             if let Some(desc) = &mut description {
                 desc.add(d);

@@ -21,7 +21,7 @@ pub mod dif_exch;
 pub mod oauth;
 pub mod sd_jwt_vc;
 pub mod status;
-pub mod w3c_vc;
+mod w3c_vc;
 
 mod iso_mdl;
 

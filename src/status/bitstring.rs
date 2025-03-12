@@ -15,10 +15,10 @@ use credibil_infosec::Signer;
 use flate2::write::GzEncoder;
 use serde_json::{Map, Value};
 
-use super::config::ListConfig;
-use super::log::StatusLogEntry;
-use crate::w3c_vc::model::{CredentialSubject, StatusPurpose, VcBuilder};
-use crate::w3c_vc::proof::{self, Payload, W3cFormat};
+use crate::core::vc::{CredentialSubject, StatusPurpose, VcBuilder};
+use crate::status::config::ListConfig;
+use crate::status::log::StatusLogEntry;
+use crate::w3c_vc::proof::{self, Payload};
 
 // TODO: Configurable.
 // TODO: This is minimum length as per spec. May need to be configurable
@@ -141,7 +141,7 @@ pub async fn credential(
             claims,
         })
         .build()?;
-    let jwt = proof::create(W3cFormat::JwtVcJson, Payload::Vc { vc, issued_at }, signer).await?;
+    let jwt = proof::create(Payload::Vc { vc, issued_at }, signer).await?;
 
     Ok(jwt)
 }

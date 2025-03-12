@@ -7,7 +7,7 @@
 //! a way that is cryptographically secure, privacy respecting, and
 //! machine-verifiable.
 
-pub mod model;
+pub mod jose;
 pub mod proof;
 
 // TODO: move this macro to a more appropriate location (its own crate perhaps).
