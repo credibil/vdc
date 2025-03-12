@@ -33,7 +33,7 @@
 //! "authorization_details":[
 //!     {
 //!         "type": "openid_credential",
-//!         "format": " dc+sd-jwt",
+//!         "format": "dc+sd-jwt",
 //!         "vct": "SD_JWT_VC_example_in_OpenID4VCI"
 //!     }
 //! ]

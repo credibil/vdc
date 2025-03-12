@@ -51,42 +51,31 @@ use crate::core::{Kind, OneMany};
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[allow(clippy::module_name_repetitions)]
 pub struct VcClaims {
-    /// The `credentialSubject.id` property of the Credential. That is, the
-    /// Holder ID the Credential is intended for.
+    /// The Holder ID the Credential is intended for. Typically, the DID of the
+    /// Holder from the Credential's `credentialSubject.id` property.
+    ///
     /// For example, "did:example:ebfeb1f712ebc6f1c276e12ec21".
     pub sub: String,
 
-    /// When the iat (Issued At) and/or exp (Expiration Time) JWT claims are
-    /// present, they represent the issuance and expiration time of the
-    /// signature, respectively. Note that these are different from the
-    /// `validFrom` and valid`U`ntil properties defined in Validity Period,
-    /// which represent the validity of the data that is being secured.
+    /// The `issuer` property of the Credential.
     ///
-    /// Use of the nbf claim is NOT RECOMMENDED, as it makes little sense to
-    /// attempt to assign a future date to a signature.
-    #[serde(with = "ts_seconds_option")]
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub nbf: Option<DateTime<Utc>>,
-
-    /// MUST be the `issuer` property of the Credential.
     /// For example, "did:example:123456789abcdefghi#keys-1".
     pub iss: String,
 
-    /// MUST be the Credential's issuance date, encoded as a UNIX timestamp
-    /// ([RFC7519](https://www.rfc-editor.org/rfc/rfc7519) `NumericDate`).
+    /// The Credential's issuance date, encoded as a UNIX timestamp.
     #[serde(with = "ts_seconds")]
     pub iat: DateTime<Utc>,
 
-    /// MUST be the `id` property of the Credential.
+    /// The `id` property of the Credential.
     pub jti: String,
 
-    /// MUST be the Credential's `validUntil`, encoded as a UNIX timestamp
-    /// ([RFC7519](https://www.rfc-editor.org/rfc/rfc7519) `NumericDate`).
+    /// The expiration time of the signature, encoded as a UNIX timestamp. This
+    /// is NOT the same as the Credential `validUntil`property.
     #[serde(with = "ts_seconds_option")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub exp: Option<DateTime<Utc>>,
 
-    /// The Verifiable Credential.
+    /// The Credential.
     pub vc: VerifiableCredential,
 }
 
@@ -108,7 +97,6 @@ impl VcClaims {
         Self {
             // TODO: find better way to set sub (shouldn't need to be in vc)
             sub: subject.id.clone().unwrap_or_default(),
-            nbf: None,
             iss: issuer_id.clone(),
             iat: issued_at,
             jti: vc.id.clone().unwrap_or_default(),

@@ -476,7 +476,7 @@ pub enum Format {
     /// selective disclosure.
     ///
     /// [I-D.ietf-oauth-sd-jwt-vc]: (https://datatracker.ietf.org/doc/html/draft-ietf-oauth-sd-jwt-vc-01)
-    #[serde(rename = " dc+sd-jwt")]
+    #[serde(rename = "dc+sd-jwt")]
     VcSdJwt(ProfileSdJwt),
 }
 
@@ -493,7 +493,7 @@ impl fmt::Display for Format {
             Self::LdpVc(_) => write!(f, "ldp_vc"),
             Self::JwtVcJsonLd(_) => write!(f, "jwt_vc_json-ld"),
             Self::IsoMdl(_) => write!(f, "mso_mdoc"),
-            Self::VcSdJwt(_) => write!(f, " dc+sd-jwt"),
+            Self::VcSdJwt(_) => write!(f, "dc+sd-jwt"),
         }
     }
 }
