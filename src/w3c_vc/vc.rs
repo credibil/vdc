@@ -5,13 +5,14 @@ use std::fmt;
 use std::fmt::Display;
 
 use anyhow::bail;
+use chrono::serde::{ts_seconds, ts_seconds_option};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use crate::w3c_vc::types::LangString;
 use crate::core::{Kind, OneMany};
 use crate::w3c_vc::proof::Proof;
+use crate::w3c_vc::types::LangString;
 
 /// `VerifiableCredential` represents a naive implementation of the W3C
 /// Verifiable Credential data model v1.1.
@@ -417,6 +418,65 @@ pub struct Evidence {
     #[serde(flatten)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub extra: Option<HashMap<String, String>>,
+}
+
+/// Claims used for Verifiable Credential issuance when format is
+/// "`jwt_vc_json`".
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[allow(clippy::module_name_repetitions)]
+pub struct VcClaims {
+    /// The Holder ID the Credential is intended for. Typically, the DID of the
+    /// Holder from the Credential's `credentialSubject.id` property.
+    ///
+    /// For example, "did:example:ebfeb1f712ebc6f1c276e12ec21".
+    pub sub: String,
+
+    /// The `issuer` property of the Credential.
+    ///
+    /// For example, "did:example:123456789abcdefghi#keys-1".
+    pub iss: String,
+
+    /// The Credential's issuance date, encoded as a UNIX timestamp.
+    #[serde(with = "ts_seconds")]
+    pub iat: DateTime<Utc>,
+
+    /// The `id` property of the Credential.
+    pub jti: String,
+
+    /// The expiration time of the signature, encoded as a UNIX timestamp. This
+    /// is NOT the same as the Credential `validUntil`property.
+    #[serde(with = "ts_seconds_option")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub exp: Option<DateTime<Utc>>,
+
+    /// The Credential.
+    pub vc: VerifiableCredential,
+}
+
+/// Create Verifiable Credential JWT payload from a W3C Verifiable
+/// Credential.
+impl From<VerifiableCredential> for VcClaims {
+    fn from(vc: VerifiableCredential) -> Self {
+        let subject = match &vc.credential_subject {
+            OneMany::One(sub) => sub,
+            OneMany::Many(subs) => &subs[0],
+        };
+
+        let issuer_id = match &vc.issuer {
+            Kind::String(id) => id,
+            Kind::Object(issuer) => &issuer.id,
+        };
+
+        Self {
+            // TODO: find better way to set sub (shouldn't need to be in vc)
+            sub: subject.id.clone().unwrap_or_default(),
+            iss: issuer_id.clone(),
+            iat: Utc::now(),
+            jti: vc.id.clone().unwrap_or_default(),
+            exp: vc.valid_until,
+            vc,
+        }
+    }
 }
 
 /// [`VcBuilder`] is used to build a [`VerifiableCredential`]

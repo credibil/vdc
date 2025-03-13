@@ -39,26 +39,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::core::{Kind, OneMany};
 use crate::verify_key;
-use crate::w3c_vc::jose;
-use crate::w3c_vc::vc::VerifiableCredential;
-use crate::w3c_vc::vp::VerifiablePresentation;
-
-// /// Credential format options for the resulting proof.
-// #[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
-// pub enum W3cFormat {
-//     /// VC signed as a JWT, not using JSON-LD
-//     #[serde(rename = "jwt_vc_json")]
-//     JwtVcJson,
-
-//     /// VC signed as a JWT, using JSON-LD
-//     #[serde(rename = "jwt_vc_json-ld")]
-//     JwtVcJsonLd,
-
-//     /// VC secured using Data Integrity, using JSON-LD, with a proof suite
-//     /// requiring Linked Data canonicalization.
-//     #[serde(rename = "ldp_vc")]
-//     DataIntegrityJsonLd,
-// }
+use crate::w3c_vc::vc::{VcClaims, VerifiableCredential};
+use crate::w3c_vc::vp::{VerifiablePresentation, VpClaims};
 
 /// To be verifiable, a credential must contain at least one proof mechanism,
 /// and details necessary to evaluate that proof.
@@ -172,12 +154,12 @@ pub enum Payload {
 pub async fn create(payload: Payload, signer: &impl Signer) -> anyhow::Result<String> {
     let jwt = match payload {
         Payload::Vc { vc, issued_at } => {
-            let mut claims = jose::VcClaims::from(vc);
+            let mut claims = VcClaims::from(vc);
             claims.iat = issued_at;
             jws::encode(&claims, signer).await?
         }
         Payload::Vp { vp, client_id, nonce } => {
-            let mut claims = jose::VpClaims::from(vp);
+            let mut claims = VpClaims::from(vp);
             claims.aud.clone_from(&client_id);
             claims.nonce.clone_from(&nonce);
             jws::encode(&claims, signer).await?
@@ -210,7 +192,7 @@ pub async fn verify(proof: Verify<'_>, resolver: impl DidResolver) -> anyhow::Re
                 bail!("VerifiableCredential is not a JWT");
             };
 
-            let jwt: jwt::Jwt<jose::VcClaims> = jws::decode(token, verify_key!(resolver)).await?;
+            let jwt: jwt::Jwt<VcClaims> = jws::decode(token, verify_key!(resolver)).await?;
 
             Ok(Payload::Vc {
                 vc: jwt.claims.vc,
@@ -220,8 +202,7 @@ pub async fn verify(proof: Verify<'_>, resolver: impl DidResolver) -> anyhow::Re
         Verify::Vp(value) => {
             match value {
                 Kind::String(token) => {
-                    let jwt: jwt::Jwt<jose::VpClaims> =
-                        jws::decode(token, verify_key!(resolver)).await?;
+                    let jwt: jwt::Jwt<VpClaims> = jws::decode(token, verify_key!(resolver)).await?;
                     Ok(Payload::Vp {
                         vp: jwt.claims.vp,
                         client_id: jwt.claims.aud,

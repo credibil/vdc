@@ -7,7 +7,6 @@
 //! a way that is cryptographically secure, privacy respecting, and
 //! machine-verifiable.
 
-pub mod jose;
 pub mod proof;
 pub mod types;
 pub mod vc;
@@ -19,7 +18,7 @@ use credibil_infosec::jose::jws;
 
 use crate::core::{Kind, OneMany};
 use crate::oid4vci::types::CredentialDisplay;
-use crate::w3c_vc::jose::VcClaims;
+use crate::w3c_vc::vc::VcClaims;
 use crate::w3c_vc::types::{LangString, Language};
 use crate::w3c_vc::vc::{CredentialStatus, CredentialSubject, VerifiableCredential};
 

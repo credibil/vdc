@@ -11,6 +11,8 @@ use std::str::FromStr;
 
 use anyhow::bail;
 use base64ct::{Base64UrlUnpadded, Encoding};
+use chrono::serde::ts_seconds;
+use chrono::{DateTime, TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
@@ -78,6 +80,64 @@ impl VerifiablePresentation {
     #[must_use]
     pub fn builder() -> VpBuilder {
         VpBuilder::new()
+    }
+}
+
+/// To sign, or sign and encrypt the Authorization Response, implementations MAY
+/// use JWT Secured Authorization Response Mode for OAuth 2.0
+/// ([JARM](https://openid.net/specs/oauth-v2-jarm-final.html)).
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+pub struct VpClaims {
+    /// The `holder` property of the Presentation.
+    /// For example, "did:example:123456789abcdefghi".
+    pub iss: String,
+
+    /// The `id` property of the Presentation.
+    ///
+    /// For example, "urn:uuid:3978344f-8596-4c3a-a978-8fcaba3903c5".
+    pub jti: String,
+
+    /// The `client_id` value from the Verifier's Authorization Request.
+    pub aud: String,
+
+    /// The `nonce` value from the Verifier's Authorization Request.
+    pub nonce: String,
+
+    /// The time the Presentation was created, encoded as a UNIX timestamp
+    /// ([RFC7519](https://www.rfc-editor.org/rfc/rfc7519) `NumericDate`).
+    #[serde(with = "ts_seconds")]
+    pub nbf: DateTime<Utc>,
+
+    /// The time the Presentation was created, encoded as a UNIX timestamp
+    /// ([RFC7519](https://www.rfc-editor.org/rfc/rfc7519) `NumericDate`).
+    #[serde(with = "ts_seconds")]
+    pub iat: DateTime<Utc>,
+
+    /// The time the Presentation will expire, encoded as a UNIX timestamp
+    /// ([RFC7519](https://www.rfc-editor.org/rfc/rfc7519) `NumericDate`).
+    #[serde(with = "ts_seconds")]
+    pub exp: DateTime<Utc>,
+
+    /// The Verifiable Presentation.
+    pub vp: VerifiablePresentation,
+}
+
+impl From<VerifiablePresentation> for VpClaims {
+    fn from(vp: VerifiablePresentation) -> Self {
+        Self {
+            iss: vp.holder.clone().unwrap_or_default(),
+            jti: vp.id.clone().unwrap_or_default(),
+            nbf: Utc::now(),
+            iat: Utc::now(),
+
+            // TODO: configure `exp` time
+            exp: Utc::now()
+                .checked_add_signed(TimeDelta::try_hours(1).unwrap_or_default())
+                .unwrap_or_default(),
+            vp,
+
+            ..Self::default()
+        }
     }
 }
 
