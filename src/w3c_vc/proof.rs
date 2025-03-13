@@ -172,7 +172,8 @@ pub enum Payload {
 pub async fn create(payload: Payload, signer: &impl Signer) -> anyhow::Result<String> {
     let jwt = match payload {
         Payload::Vc { vc, issued_at } => {
-            let claims = jose::VcClaims::from_vc(vc, issued_at);
+            let mut claims = jose::VcClaims::from(vc);
+            claims.iat = issued_at;
             jws::encode(&claims, signer).await?
         }
         Payload::Vp { vp, client_id, nonce } => {

@@ -13,15 +13,14 @@ use std::fmt::Debug;
 use chrono::Utc;
 use credibil_infosec::jose::jws::{self, Key};
 
-use crate::core::types::{LangString, Language};
 use crate::core::{Kind, generate};
 use crate::oid4vci::endpoint::{Body, Handler, Request};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Deferrance, Expire, Stage, State};
 use crate::oid4vci::types::{
-    AuthorizedDetail, Credential, CredentialConfiguration, CredentialDisplay, CredentialHeaders,
-    CredentialRequest, CredentialResponse, Dataset, Format, Issuer, MultipleProofs, Proof,
-    ProofClaims, RequestBy, SingleProof,
+    AuthorizedDetail, Credential, CredentialConfiguration, CredentialHeaders, CredentialRequest,
+    CredentialResponse, Dataset, Format, Issuer, MultipleProofs, Proof, ProofClaims, RequestBy,
+    SingleProof,
 };
 use crate::oid4vci::{Error, Result};
 use crate::status::issuer::Status;
@@ -229,49 +228,43 @@ impl Context {
     async fn issue(
         &self, provider: &impl Provider, dataset: Dataset,
     ) -> Result<CredentialResponse> {
-        // generate the issuance time stamp
-
         // determine credential format
         let credentials = match &self.configuration.format {
             Format::JwtVcJson(w3c) => {
+                // credential type
+                let Some(credential_type) = w3c.credential_definition.type_.get(1) else {
+                    return Err(server!("Credential type not set"));
+                };
+
+                // credential's status lookup information
+                let Some(subject_id) = &self.state.subject_id else {
+                    return Err(Error::AccessDenied("invalid subject id".to_string()));
+                };
+                let status = Status::status(provider, subject_id, "credential_identifier")
+                    .await
+                    .map_err(|e| server!("issue populating credential status: {e}"))?;
+
                 let mut credentials = vec![];
 
                 for did in &self.holder_dids {
-                    let subject = CredentialSubject {
-                        id: Some(did.clone()),
-                        claims: dataset.claims.clone(),
-                    };
-
-                    // credential type
-                    let Some(credential_type) = w3c.credential_definition.type_.get(1) else {
-                        return Err(server!("Credential type not set"));
-                    };
-
-                    // credential's status lookup information
-                    let Some(subject_id) = &self.state.subject_id else {
-                        return Err(Error::AccessDenied("invalid subject id".to_string()));
-                    };
-                    let status = Status::status(provider, subject_id, "credential_identifier")
-                        .await
-                        .map_err(|e| server!("issue populating credential status: {e}"))?;
-
-                    let credential_issuer = &self.issuer.credential_issuer;
-                    let (name, description) =
-                        self.configuration.display.as_ref().map_or((None, None), create_names);
-
-                    let jwt = W3cVcBuilder::new()
-                        // TODO: generate credential id
-                        .id(format!("{credential_issuer}/credentials/{credential_type}"))
+                    let mut builder = W3cVcBuilder::new()
                         .add_type(credential_type)
-                        .add_name(name)
-                        .add_description(description)
-                        .issuer(credential_issuer)
-                        .add_subject(subject)
-                        .status(status)
-                        .signer(provider)
+                        .issuer(&self.issuer.credential_issuer)
+                        .add_subject(CredentialSubject {
+                            id: Some(did.clone()),
+                            claims: dataset.claims.clone(),
+                        })
+                        .status(status.clone())
+                        .signer(provider);
+
+                    if let Some(display) = self.configuration.display.as_ref() {
+                        builder = builder.display(&display)
+                    }
+
+                    let jwt = builder
                         .build()
                         .await
-                        .map_err(|e| server!("issue building VC: {e}"))?;
+                        .map_err(|e| server!("issue creating `jwt_vc_json` credential: {e}"))?;
 
                     credentials.push(Credential {
                         credential: Kind::String(jwt),
@@ -286,7 +279,7 @@ impl Context {
                     .signer(provider)
                     .build()
                     .await
-                    .map_err(|e| server!("issue generating `mso_mdoc` credential: {e}"))?;
+                    .map_err(|e| server!("issue creating `mso_mdoc` credential: {e}"))?;
 
                 vec![Credential {
                     credential: Kind::String(mdl),
@@ -375,36 +368,4 @@ impl Context {
 
         Ok(dataset)
     }
-}
-
-// Extract language object name and description from a `CredentialDisplay`
-// vector.
-fn create_names(display: &Vec<CredentialDisplay>) -> (Option<LangString>, Option<LangString>) {
-    let mut name: Option<LangString> = None;
-    let mut description: Option<LangString> = None;
-    for d in display {
-        let n = Language {
-            value: d.name.clone(),
-            language: d.locale.clone(),
-            ..Language::default()
-        };
-        if let Some(nm) = &mut name {
-            nm.add(n);
-        } else {
-            name = Some(LangString::new_object(n));
-        }
-        if d.description.is_some() {
-            let d = Language {
-                value: d.description.clone().unwrap(),
-                language: d.locale.clone(),
-                ..Language::default()
-            };
-            if let Some(desc) = &mut description {
-                desc.add(d);
-            } else {
-                description = Some(LangString::new_object(d));
-            }
-        }
-    }
-    (name, description)
 }

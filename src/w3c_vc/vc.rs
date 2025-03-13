@@ -9,7 +9,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use crate::core::types::LangString;
+use crate::w3c_vc::types::LangString;
 use crate::core::{Kind, OneMany};
 use crate::w3c_vc::proof::Proof;
 

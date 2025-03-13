@@ -44,11 +44,10 @@ pub struct VcClaims {
     pub vc: VerifiableCredential,
 }
 
-impl VcClaims {
     /// Create Verifiable Credential JWT payload from a W3C Verifiable
     /// Credential.
-    #[must_use]
-    pub fn from_vc(vc: VerifiableCredential, issued_at: DateTime<Utc>) -> Self {
+impl From<VerifiableCredential> for VcClaims {
+    fn from(vc: VerifiableCredential) -> Self {
         let subject = match &vc.credential_subject {
             OneMany::One(sub) => sub,
             OneMany::Many(subs) => &subs[0],
@@ -63,13 +62,14 @@ impl VcClaims {
             // TODO: find better way to set sub (shouldn't need to be in vc)
             sub: subject.id.clone().unwrap_or_default(),
             iss: issuer_id.clone(),
-            iat: issued_at,
+            iat: Utc::now(),
             jti: vc.id.clone().unwrap_or_default(),
             exp: vc.valid_until,
             vc,
         }
     }
 }
+
 
 /// To sign, or sign and encrypt the Authorization Response, implementations MAY
 /// use JWT Secured Authorization Response Mode for OAuth 2.0

@@ -9,17 +9,18 @@
 
 pub mod jose;
 pub mod proof;
+pub mod types;
 pub mod vc;
 pub mod vp;
 
 use anyhow::anyhow;
-use chrono::Utc;
 use credibil_infosec::Signer;
 use credibil_infosec::jose::jws;
 
-use crate::core::types::LangString;
 use crate::core::{Kind, OneMany};
+use crate::oid4vci::types::CredentialDisplay;
 use crate::w3c_vc::jose::VcClaims;
+use crate::w3c_vc::types::{LangString, Language};
 use crate::w3c_vc::vc::{CredentialStatus, CredentialSubject, VerifiableCredential};
 
 /// Generate a W3C `jwt_vc_json` format credential.
@@ -59,12 +60,12 @@ impl W3cVcBuilder<NoSigner> {
 }
 
 impl<S> W3cVcBuilder<S> {
-    /// Sets the `id` property
-    #[must_use]
-    pub fn id(mut self, id: impl Into<String>) -> Self {
-        self.vc.id = Some(id.into());
-        self
-    }
+    // /// Sets the `id` property
+    // #[must_use]
+    // pub fn id(mut self, id: impl Into<String>) -> Self {
+    //     self.vc.id = Some(id.into());
+    //     self
+    // }
 
     /// Sets the `type_` property
     #[must_use]
@@ -73,19 +74,34 @@ impl<S> W3cVcBuilder<S> {
         self
     }
 
-    /// Sets the `name` property
+    /// Sets the `display` property
     #[must_use]
-    pub fn add_name(mut self, name: Option<LangString>) -> Self {
-        self.vc.name = name;
+    pub fn display(mut self, display: &[CredentialDisplay]) -> Self {
+        let (name, description) = create_names(display);
+        if let Some(n) = name {
+            self.vc.name = Some(n);
+        }
+
+        if let Some(d) = description {
+            self.vc.description = Some(d);
+        }
+
         self
     }
 
-    /// Sets the `description` property
-    #[must_use]
-    pub fn add_description(mut self, description: Option<LangString>) -> Self {
-        self.vc.description = description;
-        self
-    }
+    // /// Sets the `name` property
+    // #[must_use]
+    // pub fn name(mut self, name: LangString) -> Self {
+    //     self.vc.name = Some(name);
+    //     self
+    // }
+
+    // /// Sets the `description` property
+    // #[must_use]
+    // pub fn description(mut self, description: LangString) -> Self {
+    //     self.vc.description = Some(description);
+    //     self
+    // }
 
     /// Sets the `issuer` property
     #[must_use]
@@ -129,10 +145,55 @@ impl<S: Signer> W3cVcBuilder<HasSigner<'_, S>> {
     /// # Errors
     /// TODO: Document errors
     pub async fn build(self) -> anyhow::Result<String> {
-        let claims = VcClaims::from_vc(self.vc, Utc::now());
+        let mut vc = self.vc;
 
+        // FIXME: generate credential id
+        if let Kind::String(issuer) = &vc.issuer {
+            if let OneMany::Many(credential_type) = &vc.type_ {
+                vc.id = Some(format!("{issuer}/credentials/{}", credential_type[1]));
+            }
+        }
+
+        let claims = VcClaims::from(vc);
         jws::encode(&claims, self.signer.0)
             .await
             .map_err(|e| anyhow!("issue generating `jwt_vc_json` credential: {e}"))
     }
+}
+
+// Extract language object name and description from a `CredentialDisplay`
+// vector.
+fn create_names(display: &[CredentialDisplay]) -> (Option<LangString>, Option<LangString>) {
+    let mut name: Option<LangString> = None;
+    let mut description: Option<LangString> = None;
+
+    for d in display {
+        let n = Language {
+            value: d.name.clone(),
+            language: d.locale.clone(),
+            ..Language::default()
+        };
+
+        if let Some(nm) = &mut name {
+            nm.add(n);
+        } else {
+            name = Some(LangString::new_object(n));
+        }
+
+        if d.description.is_some() {
+            let d = Language {
+                value: d.description.clone().unwrap(),
+                language: d.locale.clone(),
+                ..Language::default()
+            };
+
+            if let Some(desc) = &mut description {
+                desc.add(d);
+            } else {
+                description = Some(LangString::new_object(d));
+            }
+        }
+    }
+
+    (name, description)
 }

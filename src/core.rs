@@ -7,7 +7,6 @@
 pub mod generate;
 pub mod pkce;
 pub mod strings;
-pub mod types;
 pub mod urlencode;
 
 use serde::{Deserialize, Serialize};
