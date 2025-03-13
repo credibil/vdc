@@ -258,7 +258,7 @@ impl Context {
                         .signer(provider);
 
                     if let Some(display) = self.configuration.display.as_ref() {
-                        builder = builder.display(&display)
+                        builder = builder.display(display);
                     }
 
                     let jwt = builder
