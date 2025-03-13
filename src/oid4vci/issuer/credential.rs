@@ -14,6 +14,8 @@ use chrono::Utc;
 use credibil_infosec::jose::jws::{self, Key};
 
 use crate::core::{Kind, generate};
+use crate::dc_sd_jwt::DcSdJwtBuilder;
+use crate::iso_mdl::MsoMdocBuilder;
 use crate::oid4vci::endpoint::{Body, Handler, Request};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Deferrance, Expire, Stage, State};
@@ -274,7 +276,7 @@ impl Context {
                 credentials
             }
             Format::IsoMdl(_) => {
-                let mdl = crate::iso_mdl::MsoMdocBuilder::new()
+                let mdl = MsoMdocBuilder::new()
                     .claims(dataset.claims)
                     .signer(provider)
                     .build()
@@ -285,11 +287,21 @@ impl Context {
                     credential: Kind::String(mdl),
                 }]
             }
+            Format::DcSdJwt(_) => {
+                let mdl = DcSdJwtBuilder::new()
+                    .claims(dataset.claims)
+                    .signer(provider)
+                    .build()
+                    .map_err(|e| server!("issue creating `mso_mdoc` credential: {e}"))?;
+
+                vec![Credential {
+                    credential: Kind::String(mdl),
+                }]
+            }
 
             // TODO: remaining credential formats
             Format::JwtVcJsonLd(_) => todo!(),
             Format::LdpVc(_) => todo!(),
-            Format::VcSdJwt(_) => todo!(),
         };
 
         // update token state with new `c_nonce`

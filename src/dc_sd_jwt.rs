@@ -9,18 +9,103 @@
 //!
 //! [I-D.ietf-oauth-sd-jwt-vc]: https://www.ietf.org/archive/id/draft-ietf-oauth-selective-disclosure-jwt-17.html
 
+use base64ct::{Base64UrlUnpadded, Encoding};
 use chrono::serde::ts_seconds_option;
 use chrono::{DateTime, Utc};
 use credibil_did::PublicKeyJwk;
+use credibil_infosec::Signer;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Map, Value, json};
 
-// Disclosure:
-//  1. Construct an array ["<b64 Salt>","<Claim Name>","<Claim Value>"].
-//  2. JSON-encode the array.
-//  3. base64url-encode the JSON array.
-//
-// SD-JWT with Disclosures: <Issuer-signed JWT>~<b64 Disclosure 1>~<b64 Disclosure N>~
+/// Generate an IETF `dc+sd-jwt` format credential.
+#[derive(Debug)]
+pub struct DcSdJwtBuilder<C, S> {
+    claims: C,
+    signer: S,
+}
+
+/// Builder has no signer.
+#[doc(hidden)]
+pub struct NoSigner;
+/// Builder state has a signer.
+#[doc(hidden)]
+pub struct HasSigner<'a, S: Signer>(pub &'a S);
+
+/// Builder has no claims.
+#[doc(hidden)]
+pub struct NoClaims;
+/// Builder has claims.
+#[doc(hidden)]
+pub struct HasClaims(Map<String, Value>);
+
+impl Default for DcSdJwtBuilder<NoClaims, NoSigner> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl DcSdJwtBuilder<NoClaims, NoSigner> {
+    /// Create a new builder.
+    #[must_use]
+    pub const fn new() -> Self {
+        Self {
+            claims: NoClaims,
+            signer: NoSigner,
+        }
+    }
+}
+
+impl<C> DcSdJwtBuilder<C, NoSigner> {
+    /// Set the credential Signer.
+    #[must_use]
+    pub fn signer<S: Signer>(self, signer: &'_ S) -> DcSdJwtBuilder<C, HasSigner<'_, S>> {
+        DcSdJwtBuilder {
+            claims: self.claims,
+            signer: HasSigner(signer),
+        }
+    }
+}
+
+impl<S> DcSdJwtBuilder<NoClaims, S> {
+    /// Set the claims for the ISO mDL credential.
+    #[must_use]
+    pub fn claims(self, claims: Map<String, Value>) -> DcSdJwtBuilder<HasClaims, S> {
+        DcSdJwtBuilder {
+            claims: HasClaims(claims),
+            signer: self.signer,
+        }
+    }
+}
+
+impl<S: Signer> DcSdJwtBuilder<HasClaims, HasSigner<'_, S>> {
+    /// Build the SD-JWT credential, returning a base64url-encoded, JSON SD-JWT.
+    ///
+    /// # Errors
+    /// TODO: Document errors
+    pub fn build(self) -> anyhow::Result<String> {
+        // Disclosure:
+        //  1. Construct an array ["<b64 Salt>","<Claim Name>","<Claim Value>"].
+        //  2. JSON-encode the array.
+        //  3. base64url-encode the JSON array.
+
+        // create disclosures
+        let mut disclosures = vec![];
+        for (name, value) in self.claims.0 {
+            let salt_bytes = rand::rng().random::<[u8; 32]>();
+            let as_json = serde_json::to_vec(&json!([
+                Base64UrlUnpadded::encode_string(&salt_bytes),
+                name,
+                value
+            ]))?;
+            disclosures.push(Base64UrlUnpadded::encode_string(&as_json));
+        }
+
+        println!("disclosures: {disclosures:?}");
+
+        todo!()
+    }
+}
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 /// Claims that can be included in the payload of SD-JWT VCs.
