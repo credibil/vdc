@@ -473,7 +473,7 @@ impl From<VerifiableCredential> for VcClaims {
             iss: issuer_id.clone(),
             iat: Utc::now(),
             jti: vc.id.clone().unwrap_or_default(),
-            exp: vc.valid_until,
+            exp: None, //vc.valid_until,
             vc,
         }
     }

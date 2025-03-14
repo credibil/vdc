@@ -194,15 +194,15 @@ impl<S: Signer> DcSdJwtBuilder<HasConfig, HasIssuer, HasHolder, HasClaims, HasSi
         // create JWT (and sign)
         let vc_claims = SdJwtVcClaims {
             sd: sd_hashes.clone(),
-            vct: sd_jwt.vct,
             iss: self.issuer.0,
-            nbf: Some(Utc::now()),
-            exp: Some(Utc::now()),
-            // cnf: Some(self.signer.0.verifying_key()),
-            status: None,
-            sub: Some(self.holder.0),
             iat: Some(Utc::now()),
+            // exp: Some(Utc::now()),
+            vct: sd_jwt.vct,
+            sd_alg: Some("sha-256".to_string()),
+            // cnf: Some(self.signer.0.verifying_key()),
 
+            // status: None,
+            // sub: Some(self.holder.0),
             ..SdJwtVcClaims::default()
         };
 
