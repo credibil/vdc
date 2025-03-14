@@ -639,8 +639,6 @@ dependencies = [
 [[package]]
 name = "credibil-infosec"
 version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc028b12b2987f71c30ff9636d54c8e55219591f033af9bc711630206603e6c2"
 dependencies = [
  "aes-gcm",
  "aes-kw",

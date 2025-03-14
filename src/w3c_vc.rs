@@ -213,6 +213,8 @@ impl<S: Signer> W3cVcBuilder<HasConfig, HasIssuer, HasHolder, HasClaims, HasSign
             issuer: Kind::String(self.issuer.0),
             credential_subject: OneMany::One(subject),
             credential_status: self.status,
+            // valid_from: None,
+            // valid_until: None,
             ..VerifiableCredential::default()
         };
 

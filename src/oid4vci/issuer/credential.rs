@@ -8,12 +8,13 @@
 //! formats in one Batch Credential Request. This includes Credentials of the
 //! same type and multiple formats, different types and one format, or both.
 
+use std::collections::HashSet;
 use std::fmt::Debug;
 
 use chrono::Utc;
 use credibil_infosec::jose::jws::{self, Key};
 
-use crate::core::{Kind, generate};
+use crate::core::generate;
 use crate::iso_mdl::MsoMdocBuilder;
 use crate::oid4vci::endpoint::{Body, Handler, Request};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
@@ -42,23 +43,27 @@ pub async fn credential(
     let Ok(state) = StateStore::get::<State>(provider, &request.headers.authorization).await else {
         return Err(Error::AccessDenied("invalid access token".to_string()));
     };
-    let iss =
-        Metadata::issuer(provider, issuer).await.map_err(|e| server!("metadata issue: {e}"))?;
 
-    // create a request context with data accessed more than once
+    // create a request context for data accessed more than once
     let mut ctx = Context {
         state,
-        issuer: iss,
+        issuer: Metadata::issuer(provider, issuer)
+            .await
+            .map_err(|e| server!("metadata issue: {e}"))?,
         ..Context::default()
     };
 
     let request = request.body;
+    let authorized = request.authorized_detail(&ctx)?;
 
-    // authorized credential
-    ctx.authorized = request.authorized_detail(&ctx)?;
+    // check whether issuance should be deferred
+    let dataset = ctx.dataset(provider, &request, &authorized).await?;
+    if dataset.pending {
+        return ctx.defer(provider, request).await;
+    }
 
     // credential configuration
-    let Some(config_id) = ctx.authorized.credential_configuration_id() else {
+    let Some(config_id) = authorized.credential_configuration_id() else {
         return Err(Error::InvalidCredentialRequest("no credential_configuration_id".to_string()));
     };
     let Some(config) = ctx.issuer.credential_configurations_supported.get(config_id) else {
@@ -67,22 +72,6 @@ pub async fn credential(
     ctx.configuration = config.clone();
 
     request.verify(provider, &mut ctx).await?;
-
-    let dataset = ctx.dataset(provider, &request).await?;
-
-    // defer issuance as claims are pending (approval)
-    if dataset.pending {
-        return ctx.defer(provider, request).await;
-    }
-
-    // delete nonces
-    for nonce in &ctx.nonces {
-        StateStore::purge(provider, nonce)
-            .await
-            .map_err(|e| server!("issue deleting nonce: {e}"))?;
-    }
-
-    // issue VC
     ctx.issue(provider, dataset).await
 }
 
@@ -102,10 +91,8 @@ impl Body for CredentialRequest {}
 struct Context {
     state: State,
     issuer: Issuer,
-    authorized: AuthorizedDetail,
     configuration: CredentialConfiguration,
     holder_dids: Vec<String>,
-    nonces: Vec<String>,
 }
 
 impl CredentialRequest {
@@ -147,15 +134,16 @@ impl CredentialRequest {
                 },
             };
 
-            for proof_jwt in proof_jwts {
+            // the same c_nonce should be used for all proofs
+            let mut nonces = HashSet::new();
+            for proof in proof_jwts {
                 // TODO: ProofClaims cannot use `client_id` if the access token was
                 // obtained in a pre-auth flow with anonymous access to the token
                 // endpoint
-
                 // TODO: check proof is signed with supported algorithm (from proof_type)
 
                 let jwt: jws::Jwt<ProofClaims> =
-                    match jws::decode(proof_jwt, verify_key!(provider)).await {
+                    match jws::decode(proof, verify_key!(provider)).await {
                         Ok(jwt) => jwt,
                         Err(e) => {
                             return Err(Error::InvalidProof(format!("issue decoding JWT: {e}")));
@@ -166,30 +154,35 @@ impl CredentialRequest {
                 if jwt.header.typ != Type::Openid4VciProofJwt.to_string() {
                     return Err(Error::InvalidProof("invalid proof type".to_string()));
                 }
+                if jwt.claims.credential_issuer != ctx.issuer.credential_issuer {
+                    return Err(Error::InvalidProof("invalid proof issuer".to_string()));
+                }
 
-                // previously issued c_nonce
+                // c_nonce issued by token endpoint
                 let c_nonce = jwt.claims.nonce.as_ref().ok_or_else(|| {
                     Error::InvalidProof("proof JWT nonce claim is missing".to_string())
                 })?;
-                StateStore::get::<String>(provider, c_nonce)
-                    .await
-                    .map_err(|e| server!("proof nonce claim is invalid: {e}"))?;
-
-                // save nonce for deletion when not defering issuance
-                ctx.nonces.push(c_nonce.clone());
+                nonces.insert(c_nonce.clone());
 
                 // Key ID
                 let Key::KeyId(kid) = &jwt.header.key else {
                     return Err(Error::InvalidProof("Proof JWT 'kid' is missing".to_string()));
                 };
-
-                // FIXME: save extracted DID for later use when issuing credential
+                // FIXME: do we need to resolve DID document?
                 let Some(did) = kid.split('#').next() else {
                     return Err(Error::InvalidProof("Proof JWT DID is invalid".to_string()));
                 };
-
-                // TODO: support multiple DID bindings
                 ctx.holder_dids.push(did.to_string());
+            }
+
+            // should only be a single c_nonce, but just in case...
+            for c_nonce in nonces {
+                StateStore::get::<String>(provider, &c_nonce)
+                    .await
+                    .map_err(|e| server!("proof nonce claim is invalid: {e}"))?;
+                StateStore::purge(provider, &c_nonce)
+                    .await
+                    .map_err(|e| server!("issue deleting proof nonce: {e}"))?;
             }
         }
 
@@ -259,7 +252,7 @@ impl Context {
                         .map_err(|e| server!("issue creating `jwt_vc_json` credential: {e}"))?;
 
                     credentials.push(Credential {
-                        credential: Kind::String(jwt),
+                        credential: jwt.into(),
                     });
                 }
 
@@ -277,8 +270,9 @@ impl Context {
                         .build()
                         .await
                         .map_err(|e| server!("issue creating `mso_mdoc` credential: {e}"))?;
+
                     credentials.push(Credential {
-                        credential: Kind::String(mdl),
+                        credential: mdl.into(),
                     });
                 }
                 credentials
@@ -294,14 +288,15 @@ impl Context {
                         .signer(provider)
                         .build()
                         .map_err(|e| server!("issue creating `dc+sd-jwt` credential: {e}"))?;
+
                     credentials.push(Credential {
-                        credential: Kind::String(jwt),
+                        credential: jwt.into(),
                     });
                 }
                 credentials
             }
 
-            // TODO: remaining credential formats
+            // TODO: oustanding credential formats
             Format::JwtVcJsonLd(_) => todo!(),
             Format::LdpVc(_) => todo!(),
         };
@@ -358,7 +353,7 @@ impl Context {
 
     // Get credential dataset for the request
     async fn dataset(
-        &self, provider: &impl Provider, request: &CredentialRequest,
+        &self, provider: &impl Provider, request: &CredentialRequest, authorized: &AuthorizedDetail,
     ) -> Result<Dataset> {
         let RequestBy::Identifier(identifier) = &request.credential else {
             return Err(Error::InvalidCredentialRequest(
@@ -376,7 +371,7 @@ impl Context {
             .map_err(|e| server!("issue populating claims: {e}"))?;
 
         // only include previously requested/authorized claims
-        if let Some(claims) = &self.authorized.authorization_detail.claims {
+        if let Some(claims) = &authorized.authorization_detail.claims {
             dataset.claims.retain(|k, _| claims.iter().any(|c| c.path.contains(k)));
         }
 

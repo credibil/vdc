@@ -83,7 +83,6 @@ async fn offer_val() {
             authorization: token.access_token.clone(),
         },
     };
-
     let response =
         endpoint::handle(ALICE_ISSUER, request, &provider).await.expect("should return credential");
 

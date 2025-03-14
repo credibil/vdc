@@ -126,6 +126,7 @@ uuid = { version = "1.15.1", features = ["fast-rng", "v4"] }
 [patch.crates-io]
 # credibil-did = { path = "../did" }
 credibil-did = { git = "https://github.com/credibil/did.git" }
+credibil-infosec={path="../infosec"}
 
 [profile.release]
 # optimize for small code size
