@@ -19,7 +19,7 @@ pub mod oid4vp;
 pub mod core;
 pub mod dif_exch;
 pub mod oauth;
-pub mod dc_sd_jwt;
+pub mod sd_jwt;
 pub mod status;
 mod w3c_vc;
 

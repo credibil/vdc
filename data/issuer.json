@@ -314,9 +314,9 @@
                 }
             ]
         },
-        "SD_JWT_VC_example_in_OpenID4VCI": {
+        "SD_JWT_VC_example": {
             "format": "dc+sd-jwt",
-            "scope": "SD_JWT_VC_example_in_OpenID4VCI",
+            "scope": "SD_JWT_VC_example",
             "cryptographic_binding_methods_supported": [
                 "jwk"
             ],
@@ -342,7 +342,7 @@
                     ]
                 }
             },
-            "vct": "SD_JWT_VC_example_in_OpenID4VCI",
+            "vct": "SD_JWT_VC_example",
             "claims": [
                 {
                     "path": [

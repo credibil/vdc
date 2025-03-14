@@ -14,7 +14,6 @@ use chrono::Utc;
 use credibil_infosec::jose::jws::{self, Key};
 
 use crate::core::{Kind, generate};
-use crate::dc_sd_jwt::DcSdJwtBuilder;
 use crate::iso_mdl::MsoMdocBuilder;
 use crate::oid4vci::endpoint::{Body, Handler, Request};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
@@ -25,10 +24,10 @@ use crate::oid4vci::types::{
     SingleProof,
 };
 use crate::oid4vci::{Error, Result};
+use crate::sd_jwt::DcSdJwtBuilder;
 use crate::status::issuer::Status;
 use crate::w3c_vc::W3cVcBuilder;
 use crate::w3c_vc::proof::Type;
-use crate::w3c_vc::vc::CredentialSubject;
 use crate::{server, verify_key};
 
 /// Credential request handler.
@@ -232,35 +231,26 @@ impl Context {
     ) -> Result<CredentialResponse> {
         // determine credential format
         let credentials = match &self.configuration.format {
-            Format::JwtVcJson(w3c) => {
-                // credential type
-                let Some(credential_type) = w3c.credential_definition.type_.get(1) else {
-                    return Err(server!("Credential type not set"));
-                };
-
-                // credential's status lookup information
-                let Some(subject_id) = &self.state.subject_id else {
-                    return Err(Error::AccessDenied("invalid subject id".to_string()));
-                };
-                let status = Status::status(provider, subject_id, "credential_identifier")
-                    .await
-                    .map_err(|e| server!("issue populating credential status: {e}"))?;
-
+            Format::JwtVcJson(_) => {
                 let mut credentials = vec![];
-
                 for did in &self.holder_dids {
                     let mut builder = W3cVcBuilder::new()
-                        .add_type(credential_type)
+                        .config(self.configuration.clone())
                         .issuer(&self.issuer.credential_issuer)
-                        .add_subject(CredentialSubject {
-                            id: Some(did.clone()),
-                            claims: dataset.claims.clone(),
-                        })
-                        .status(status.clone())
+                        .holder(did)
+                        .claims(dataset.claims.clone())
                         .signer(provider);
 
-                    if let Some(display) = self.configuration.display.as_ref() {
-                        builder = builder.display(display);
+                    // credential's status lookup
+                    let Some(subject_id) = &self.state.subject_id else {
+                        return Err(Error::AccessDenied("invalid subject id".to_string()));
+                    };
+                    if let Some(status) =
+                        Status::status(provider, subject_id, "credential_identifier")
+                            .await
+                            .map_err(|e| server!("issue populating credential status: {e}"))?
+                    {
+                        builder = builder.status(status);
                     }
 
                     let jwt = builder
@@ -276,27 +266,39 @@ impl Context {
                 credentials
             }
             Format::IsoMdl(_) => {
-                let mdl = MsoMdocBuilder::new()
-                    .claims(dataset.claims)
-                    .signer(provider)
-                    .build()
-                    .await
-                    .map_err(|e| server!("issue creating `mso_mdoc` credential: {e}"))?;
-
-                vec![Credential {
-                    credential: Kind::String(mdl),
-                }]
+                let mut credentials = vec![];
+                for _ in &self.holder_dids {
+                    let mdl = MsoMdocBuilder::new()
+                        // .config(self.configuration.clone())
+                        // .issuer(self.issuer.credential_issuer.clone())
+                        // .holder(did)
+                        .claims(dataset.claims.clone())
+                        .signer(provider)
+                        .build()
+                        .await
+                        .map_err(|e| server!("issue creating `mso_mdoc` credential: {e}"))?;
+                    credentials.push(Credential {
+                        credential: Kind::String(mdl),
+                    });
+                }
+                credentials
             }
             Format::DcSdJwt(_) => {
-                let mdl = DcSdJwtBuilder::new()
-                    .claims(dataset.claims)
-                    .signer(provider)
-                    .build()
-                    .map_err(|e| server!("issue creating `mso_mdoc` credential: {e}"))?;
-
-                vec![Credential {
-                    credential: Kind::String(mdl),
-                }]
+                let mut credentials = vec![];
+                for did in &self.holder_dids {
+                    let jwt = DcSdJwtBuilder::new()
+                        .config(self.configuration.clone())
+                        .issuer(self.issuer.credential_issuer.clone())
+                        .holder(did.clone())
+                        .claims(dataset.claims.clone())
+                        .signer(provider)
+                        .build()
+                        .map_err(|e| server!("issue creating `dc+sd-jwt` credential: {e}"))?;
+                    credentials.push(Credential {
+                        credential: Kind::String(jwt),
+                    });
+                }
+                credentials
             }
 
             // TODO: remaining credential formats
