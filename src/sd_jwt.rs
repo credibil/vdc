@@ -202,7 +202,7 @@ impl<S: Signer> DcSdJwtBuilder<HasConfig, HasIssuer, HasHolder, HasClaims, HasSi
             // cnf: Some(self.signer.0.verifying_key()),
 
             // status: None,
-            // sub: Some(self.holder.0),
+            sub: Some(self.holder.0),
             ..SdJwtVcClaims::default()
         };
 
