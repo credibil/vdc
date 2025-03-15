@@ -38,7 +38,6 @@ use credibil_infosec::jose::{jws, jwt};
 use serde::{Deserialize, Serialize};
 
 use crate::core::{Kind, OneMany};
-use crate::verify_key;
 use crate::w3c_vc::vc::{VcClaims, VerifiableCredential};
 use crate::w3c_vc::vp::{VerifiablePresentation, VpClaims};
 
@@ -180,19 +179,25 @@ pub enum Verify<'a> {
     Vp(&'a Kind<VerifiablePresentation>),
 }
 
+use crate::core::did_jwk;
+
 /// Verify a proof.
 ///
 /// # Errors
 /// TODO: document errors
 #[allow(clippy::unused_async)]
-pub async fn verify(proof: Verify<'_>, resolver: impl DidResolver) -> anyhow::Result<Payload> {
+pub async fn verify<R>(proof: Verify<'_>, resolver: R) -> anyhow::Result<Payload>
+where
+    R: DidResolver + Send + Sync,
+{
+    let resolver = async |kid: String| did_jwk(&kid, &resolver).await;
+
     match proof {
         Verify::Vc(value) => {
             let Kind::String(token) = value else {
                 bail!("VerifiableCredential is not a JWT");
             };
-
-            let jwt: jwt::Jwt<VcClaims> = jws::decode(token, verify_key!(resolver)).await?;
+            let jwt: jwt::Jwt<VcClaims> = jws::decode(token, resolver).await?;
 
             Ok(Payload::Vc {
                 vc: jwt.claims.vc,
@@ -202,7 +207,7 @@ pub async fn verify(proof: Verify<'_>, resolver: impl DidResolver) -> anyhow::Re
         Verify::Vp(value) => {
             match value {
                 Kind::String(token) => {
-                    let jwt: jwt::Jwt<VpClaims> = jws::decode(token, verify_key!(resolver)).await?;
+                    let jwt: jwt::Jwt<VpClaims> = jws::decode(token, resolver).await?;
                     Ok(Payload::Vp {
                         vp: jwt.claims.vp,
                         client_id: jwt.claims.aud,

@@ -14,21 +14,23 @@ use base64ct::{Base64UrlUnpadded, Encoding};
 use chrono::serde::ts_seconds_option;
 use chrono::{DateTime, Utc};
 use credibil_did::PublicKeyJwk;
-use credibil_infosec::Signer;
+use credibil_infosec::{Jws, Signer};
 use rand::{Rng, rng};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 
 use crate::oid4vci::types::{CredentialConfiguration, Format};
+use crate::server;
 
 /// Generate an IETF `dc+sd-jwt` format credential.
 #[derive(Debug)]
-pub struct DcSdJwtBuilder<G, I, H, C, S> {
+pub struct DcSdJwtBuilder<G, I, K, C, S> {
     config: G,
     issuer: I,
-    holder: H,
+    key_binding: K,
     claims: C,
+    holder: Option<String>,
     // status: Option<OneMany<CredentialStatus>>,
     signer: S,
 }
@@ -47,12 +49,12 @@ pub struct NoIssuer;
 #[doc(hidden)]
 pub struct HasIssuer(String);
 
-/// Builder has no holder.
+/// Builder has no key_binding.
 #[doc(hidden)]
-pub struct NoHolder;
-/// Builder has holder.
+pub struct NoKeyBinding;
+/// Builder has key_binding.
 #[doc(hidden)]
-pub struct HasHolder(String);
+pub struct HasKeyBinding(PublicKeyJwk);
 
 /// Builder has no claims.
 #[doc(hidden)]
@@ -68,108 +70,126 @@ pub struct NoSigner;
 #[doc(hidden)]
 pub struct HasSigner<'a, S: Signer>(pub &'a S);
 
-impl Default for DcSdJwtBuilder<NoConfig, NoIssuer, NoHolder, NoClaims, NoSigner> {
+impl Default for DcSdJwtBuilder<NoConfig, NoIssuer, NoKeyBinding, NoClaims, NoSigner> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DcSdJwtBuilder<NoConfig, NoIssuer, NoHolder, NoClaims, NoSigner> {
+impl DcSdJwtBuilder<NoConfig, NoIssuer, NoKeyBinding, NoClaims, NoSigner> {
     /// Create a new builder.
     #[must_use]
     pub const fn new() -> Self {
         Self {
             config: NoConfig,
             issuer: NoIssuer,
-            holder: NoHolder,
+            key_binding: NoKeyBinding,
             claims: NoClaims,
+            holder: None,
             signer: NoSigner,
         }
     }
 }
 
 // Credential configuration
-impl<I, H, C, S> DcSdJwtBuilder<NoConfig, I, H, C, S> {
+impl<I, K, C, S> DcSdJwtBuilder<NoConfig, I, K, C, S> {
     /// Set the claims for the ISO mDL credential.
     #[must_use]
-    pub fn config(self, cfg: CredentialConfiguration) -> DcSdJwtBuilder<HasConfig, I, H, C, S> {
+    pub fn config(self, cfg: CredentialConfiguration) -> DcSdJwtBuilder<HasConfig, I, K, C, S> {
         DcSdJwtBuilder {
             config: HasConfig(cfg),
             issuer: self.issuer,
-            holder: self.holder,
+            key_binding: self.key_binding,
             claims: self.claims,
+            holder: self.holder,
             signer: self.signer,
         }
     }
 }
 
 // Issuer
-impl<G, H, C, S> DcSdJwtBuilder<G, NoIssuer, H, C, S> {
+impl<G, K, C, S> DcSdJwtBuilder<G, NoIssuer, K, C, S> {
     /// Set the claims for the ISO mDL credential.
     #[must_use]
-    pub fn issuer(self, issuer: impl Into<String>) -> DcSdJwtBuilder<G, HasIssuer, H, C, S> {
+    pub fn issuer(self, issuer: impl Into<String>) -> DcSdJwtBuilder<G, HasIssuer, K, C, S> {
         DcSdJwtBuilder {
             config: self.config,
             issuer: HasIssuer(issuer.into()),
-            holder: self.holder,
+            key_binding: self.key_binding,
             claims: self.claims,
+            holder: self.holder,
             signer: self.signer,
         }
     }
 }
 
-// Holder
-impl<G, I, C, S> DcSdJwtBuilder<G, I, NoHolder, C, S> {
+// KeyBinding
+impl<G, I, C, S> DcSdJwtBuilder<G, I, NoKeyBinding, C, S> {
     /// Set the claims for the ISO mDL credential.
     #[must_use]
-    pub fn holder(self, holder: impl Into<String>) -> DcSdJwtBuilder<G, I, HasHolder, C, S> {
+    pub fn key_binding(
+        self, key_binding: PublicKeyJwk,
+    ) -> DcSdJwtBuilder<G, I, HasKeyBinding, C, S> {
         DcSdJwtBuilder {
             config: self.config,
             issuer: self.issuer,
-            holder: HasHolder(holder.into()),
+            key_binding: HasKeyBinding(key_binding),
             claims: self.claims,
+            holder: self.holder,
             signer: self.signer,
         }
     }
 }
 
 // Claims
-impl<G, I, H, S> DcSdJwtBuilder<G, I, H, NoClaims, S> {
+impl<G, I, K, S> DcSdJwtBuilder<G, I, K, NoClaims, S> {
     /// Set the claims for the ISO mDL credential.
     #[must_use]
-    pub fn claims(self, claims: Map<String, Value>) -> DcSdJwtBuilder<G, I, H, HasClaims, S> {
+    pub fn claims(self, claims: Map<String, Value>) -> DcSdJwtBuilder<G, I, K, HasClaims, S> {
         DcSdJwtBuilder {
             config: self.config,
             issuer: self.issuer,
-            holder: self.holder,
+            key_binding: self.key_binding,
             claims: HasClaims(claims),
+            holder: self.holder,
             signer: self.signer,
         }
     }
 }
 
+// Optional fields
+impl<G, I, K, C, S> DcSdJwtBuilder<G, I, K, C, S> {
+    /// Set the credential Holder.
+    #[must_use]
+    pub fn holder(mut self, holder: impl Into<String>) -> Self {
+        self.holder = Some(holder.into());
+        self
+    }
+}
+
 // Signer
-impl<G, I, H, C> DcSdJwtBuilder<G, I, H, C, NoSigner> {
+impl<G, I, K, C> DcSdJwtBuilder<G, I, K, C, NoSigner> {
     /// Set the credential Signer.
     #[must_use]
-    pub fn signer<S: Signer>(self, signer: &'_ S) -> DcSdJwtBuilder<G, I, H, C, HasSigner<'_, S>> {
+    pub fn signer<S: Signer>(self, signer: &'_ S) -> DcSdJwtBuilder<G, I, K, C, HasSigner<'_, S>> {
         DcSdJwtBuilder {
             config: self.config,
             issuer: self.issuer,
-            holder: self.holder,
+            key_binding: self.key_binding,
             claims: self.claims,
+            holder: self.holder,
             signer: HasSigner(signer),
         }
     }
 }
 
-impl<S: Signer> DcSdJwtBuilder<HasConfig, HasIssuer, HasHolder, HasClaims, HasSigner<'_, S>> {
+impl<S: Signer> DcSdJwtBuilder<HasConfig, HasIssuer, HasKeyBinding, HasClaims, HasSigner<'_, S>> {
     /// Build the SD-JWT credential, returning a base64url-encoded, JSON SD-JWT
     /// with the format `<Issuer-signed JWT>~<Disclosure 1>~<Disclosure 2>~...~`
     ///
     /// # Errors
     /// TODO: Document errors
-    pub fn build(self) -> Result<String> {
+    pub async fn build(self) -> Result<String> {
         let Format::DcSdJwt(sd_jwt) = self.config.0.format else {
             return Err(anyhow!("Credential configuration format is invalid"));
         };
@@ -192,24 +212,31 @@ impl<S: Signer> DcSdJwtBuilder<HasConfig, HasIssuer, HasHolder, HasClaims, HasSi
         }
 
         // create JWT (and sign)
-        let vc_claims = SdJwtVcClaims {
+        let claims = SdJwtVcClaims {
             sd: sd_hashes.clone(),
             iss: self.issuer.0,
             iat: Some(Utc::now()),
             // exp: Some(Utc::now()),
             vct: sd_jwt.vct,
             sd_alg: Some("sha-256".to_string()),
-            // cnf: Some(self.signer.0.verifying_key()),
-
+            cnf: Some(Binding::Jwk(self.key_binding.0)),
             // status: None,
-            sub: Some(self.holder.0),
+            sub: self.holder,
+
             ..SdJwtVcClaims::default()
         };
 
-        let jwt = serde_json::to_string(&vc_claims)?;
+        let jws = Jws::builder()
+            .typ("dc+sd-jwt")
+            .payload(claims)
+            .add_signer(self.signer.0)
+            .build()
+            .await
+            .map_err(|e| server!("issue signing SD-JWT: {e}"))?
+            .to_string();
 
         // concatenate disclosures
-        let sd_jwt = format!("{jwt}~{}", disclosures.join("~"));
+        let sd_jwt = format!("{jws}~{}", disclosures.join("~"));
 
         Ok(sd_jwt)
     }
@@ -264,25 +291,32 @@ pub struct SdJwtVcClaims {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sub: Option<String>,
 
-    /// Contains a public key associated with the Holder (as presented to the
-    /// Issuer via proof-of-possession of key material) in order to provide
+    /// Contains a public key associated with the key binding (as presented to 
+    /// the Issuer via proof-of-possession of key material) in order to provide
     /// confirmation of cryptographic Key Binding.
     ///
     /// The Key Binding JWT in the SD-JWT presentation must be secured by the
     /// key identified in this claim.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub cnf: Option<PublicKeyJwk>,
+    pub cnf: Option<Binding>,
 
     /// The information on how to read the status of the Verifiable Credential.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<String>,
 }
 
+/// The type of binding between the SD-JWT and the public key.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Binding {
+    /// The public key is bound to the SD-JWT using a JWK.
+    Jwk(PublicKeyJwk),
+}
+
 #[cfg(test)]
 mod tests {
-
     use anyhow::Result;
-    use credibil_infosec::{Algorithm, Signer};
+    use credibil_infosec::{Algorithm, Curve, KeyType, PublicKeyJwk, Signer};
     use ed25519_dalek::{Signer as _, SigningKey};
     use rand_core::OsRng;
     use serde_json::json;
@@ -290,8 +324,8 @@ mod tests {
     use super::DcSdJwtBuilder;
     use crate::oid4vci::types::{CredentialConfiguration, Format, ProfileSdJwt};
 
-    #[test]
-    fn test_claims() {
+    #[tokio::test]
+    async fn test_claims() {
         let cfg = CredentialConfiguration {
             format: Format::DcSdJwt(ProfileSdJwt {
                 vct: "https://credentials.example.com/identity_credential".to_string(),
@@ -306,15 +340,25 @@ mod tests {
         });
         let claims = claims_json.as_object().unwrap();
 
+        let jwk = PublicKeyJwk {
+            kty: KeyType::Okp,
+            crv: Curve::Ed25519,
+            x: "x".to_string(),
+            ..PublicKeyJwk::default()
+        };
+
         // serialize to SD-JWT
-        let x = DcSdJwtBuilder::new()
+        let jwt = DcSdJwtBuilder::new()
             .config(cfg)
             .issuer("https://example.com")
-            .holder("did:example:123")
+            .key_binding(jwk)
             .claims(claims.clone())
             .signer(&Keyring::new())
-            .build();
-        println!("x: {:?}", x);
+            .build()
+            .await
+            .expect("should build");
+
+        println!("{jwt}");
     }
 
     #[derive(Clone, Debug)]
@@ -344,7 +388,7 @@ mod tests {
         }
 
         async fn verification_method(&self) -> Result<String> {
-            unimplemented!()
+            Ok("did:example:123#key-1".to_string())
         }
     }
 }

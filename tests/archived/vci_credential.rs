@@ -53,7 +53,7 @@ async fn identifier() {
         nonce: Some(c_nonce.into()),
     };
     let jws = JwsBuilder::new()
-        .jwt_type(Type::Openid4VciProofJwt)
+        .typ(Type::Openid4VciProofJwt)
         .payload(claims)
         .add_signer(&test_holder::ProviderImpl)
         .build()
@@ -145,7 +145,7 @@ async fn format() {
         nonce: Some(c_nonce.into()),
     };
     let jws = JwsBuilder::new()
-        .jwt_type(Type::Openid4VciProofJwt)
+        .typ(Type::Openid4VciProofJwt)
         .payload(claims)
         .add_signer(&test_holder::ProviderImpl)
         .build()
@@ -242,7 +242,7 @@ async fn iso_mdl() {
         nonce: Some(c_nonce.into()),
     };
     let jws = JwsBuilder::new()
-        .jwt_type(Type::Openid4VciProofJwt)
+        .typ(Type::Openid4VciProofJwt)
         .payload(claims)
         .add_signer(&test_holder::ProviderImpl)
         .build()

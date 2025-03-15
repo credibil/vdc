@@ -14,7 +14,7 @@ use std::fmt::Debug;
 use chrono::Utc;
 use credibil_infosec::jose::jws::{self, Key};
 
-use crate::core::generate;
+use crate::core::{did_jwk, generate};
 use crate::iso_mdl::MsoMdocBuilder;
 use crate::oid4vci::endpoint::{Body, Handler, Request};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
@@ -26,10 +26,10 @@ use crate::oid4vci::types::{
 };
 use crate::oid4vci::{Error, Result};
 use crate::sd_jwt::DcSdJwtBuilder;
+use crate::server;
 use crate::status::issuer::Status;
 use crate::w3c_vc::W3cVcBuilder;
 use crate::w3c_vc::proof::Type;
-use crate::{server, verify_key};
 
 /// Credential request handler.
 ///
@@ -92,7 +92,7 @@ struct Context {
     state: State,
     issuer: Issuer,
     configuration: CredentialConfiguration,
-    holder_dids: Vec<String>,
+    proof_kids: Vec<String>,
 }
 
 impl CredentialRequest {
@@ -136,19 +136,20 @@ impl CredentialRequest {
 
             // the same c_nonce should be used for all proofs
             let mut nonces = HashSet::new();
+            let resolver = async |kid: String| did_jwk(&kid, provider).await;
+
             for proof in proof_jwts {
                 // TODO: ProofClaims cannot use `client_id` if the access token was
                 // obtained in a pre-auth flow with anonymous access to the token
                 // endpoint
                 // TODO: check proof is signed with supported algorithm (from proof_type)
 
-                let jwt: jws::Jwt<ProofClaims> =
-                    match jws::decode(proof, verify_key!(provider)).await {
-                        Ok(jwt) => jwt,
-                        Err(e) => {
-                            return Err(Error::InvalidProof(format!("issue decoding JWT: {e}")));
-                        }
-                    };
+                let jwt: jws::Jwt<ProofClaims> = match jws::decode(proof, resolver).await {
+                    Ok(jwt) => jwt,
+                    Err(e) => {
+                        return Err(Error::InvalidProof(format!("issue decoding JWT: {e}")));
+                    }
+                };
 
                 // proof type
                 if jwt.header.typ != Type::Openid4VciProofJwt.to_string() {
@@ -164,15 +165,11 @@ impl CredentialRequest {
                 })?;
                 nonces.insert(c_nonce.clone());
 
-                // Key ID
+                // extract Key ID for use when building credential
                 let Key::KeyId(kid) = &jwt.header.key else {
                     return Err(Error::InvalidProof("Proof JWT 'kid' is missing".to_string()));
                 };
-                // FIXME: do we need to resolve DID document?
-                let Some(did) = kid.split('#').next() else {
-                    return Err(Error::InvalidProof("Proof JWT DID is invalid".to_string()));
-                };
-                ctx.holder_dids.push(did.to_string());
+                ctx.proof_kids.push(kid.to_string());
             }
 
             // should only be a single c_nonce, but just in case...
@@ -226,7 +223,12 @@ impl Context {
         let credentials = match &self.configuration.format {
             Format::JwtVcJson(_) => {
                 let mut credentials = vec![];
-                for did in &self.holder_dids {
+                for kid in &self.proof_kids {
+                    // FIXME: do we need to resolve DID document?
+                    let Some(did) = kid.split('#').next() else {
+                        return Err(Error::InvalidProof("Proof JWT DID is invalid".to_string()));
+                    };
+
                     let mut builder = W3cVcBuilder::new()
                         .config(self.configuration.clone())
                         .issuer(&self.issuer.credential_issuer)
@@ -260,7 +262,7 @@ impl Context {
             }
             Format::IsoMdl(_) => {
                 let mut credentials = vec![];
-                for _ in &self.holder_dids {
+                for _ in &self.proof_kids {
                     let mdl = MsoMdocBuilder::new()
                         // .config(self.configuration.clone())
                         // .issuer(self.issuer.credential_issuer.clone())
@@ -279,18 +281,28 @@ impl Context {
             }
             Format::DcSdJwt(_) => {
                 let mut credentials = vec![];
-                for did in &self.holder_dids {
-                    let jwt = DcSdJwtBuilder::new()
+
+                for kid in &self.proof_kids {
+                    let jwk = did_jwk(kid, provider).await.map_err(|e| {
+                        server!("issue retrieving JWK for `dc+sd-jwt` credential: {e}")
+                    })?;
+                    let Some(did) = kid.split('#').next() else {
+                        return Err(Error::InvalidProof("Proof JWT DID is invalid".to_string()));
+                    };
+
+                    let sd_jwt = DcSdJwtBuilder::new()
                         .config(self.configuration.clone())
                         .issuer(self.issuer.credential_issuer.clone())
-                        .holder(did.clone())
                         .claims(dataset.claims.clone())
+                        .key_binding(jwk)
+                        .holder(did)
                         .signer(provider)
                         .build()
+                        .await
                         .map_err(|e| server!("issue creating `dc+sd-jwt` credential: {e}"))?;
 
                     credentials.push(Credential {
-                        credential: jwt.into(),
+                        credential: sd_jwt.into(),
                     });
                 }
                 credentials

@@ -60,7 +60,7 @@ async fn offer_val() {
 
     // proof of possession of key material
     let jws = JwsBuilder::new()
-        .jwt_type(Type::Openid4VciProofJwt)
+        .typ(Type::Openid4VciProofJwt)
         .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
         .build()
@@ -193,7 +193,7 @@ async fn two_datasets() {
 
         // proof of possession of key material
         let jws = JwsBuilder::new()
-            .jwt_type(Type::Openid4VciProofJwt)
+            .typ(Type::Openid4VciProofJwt)
             .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(nonce.c_nonce))
             .add_signer(&*BOB_KEYRING)
             .build()
@@ -296,7 +296,7 @@ async fn reduce_credentials() {
 
     // proof of possession of key material
     let jws = JwsBuilder::new()
-        .jwt_type(Type::Openid4VciProofJwt)
+        .typ(Type::Openid4VciProofJwt)
         .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
         .build()
@@ -388,7 +388,7 @@ async fn reduce_claims() {
 
     // proof of possession of key material
     let jws = JwsBuilder::new()
-        .jwt_type(Type::Openid4VciProofJwt)
+        .typ(Type::Openid4VciProofJwt)
         .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
         .build()
@@ -476,7 +476,7 @@ async fn notify_accepted() {
 
     // proof of possession of key material
     let jws = JwsBuilder::new()
-        .jwt_type(Type::Openid4VciProofJwt)
+        .typ(Type::Openid4VciProofJwt)
         .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
         .build()

@@ -58,7 +58,7 @@ async fn deferred() {
 
     // proof of possession of key material
     let jws = JwsBuilder::new()
-        .jwt_type(Type::Openid4VciProofJwt)
+        .typ(Type::Openid4VciProofJwt)
         .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
         .build()

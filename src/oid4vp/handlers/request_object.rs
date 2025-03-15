@@ -49,7 +49,7 @@ pub async fn request_object(
     }
 
     let jws = JwsBuilder::new()
-        .jwt_type(Type::OauthAuthzReqJwt)
+        .typ(Type::OauthAuthzReqJwt)
         .payload(&req_obj)
         .add_signer(provider)
         .build()

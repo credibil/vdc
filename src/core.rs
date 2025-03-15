@@ -9,6 +9,8 @@ pub mod pkce;
 pub mod strings;
 pub mod urlencode;
 
+use anyhow::{Result, anyhow};
+use credibil_did::{DidResolver, PublicKeyJwk, Resource};
 use serde::{Deserialize, Serialize};
 
 /// `Kind` allows serde to serialize/deserialize a string or an object.
@@ -121,4 +123,18 @@ impl<T: Clone + Default + PartialEq> OneMany<T> {
             Self::Many(many) => many.is_empty(),
         }
     }
+}
+
+/// Retrieve the JWK specified by the provided DID URL.
+pub(crate) async fn did_jwk<R>(did_url: &str, resolver: &R) -> Result<PublicKeyJwk>
+where
+    R: DidResolver + Send + Sync,
+{
+    let deref = credibil_did::dereference(did_url, None, resolver.clone())
+        .await
+        .map_err(|e| anyhow!("issue dereferencing DID URL: {e}"))?;
+    let Some(Resource::VerificationMethod(vm)) = deref.content_stream else {
+        return Err(anyhow!("Verification method not found"));
+    };
+    vm.method_type.jwk().map_err(|e| anyhow!("JWK not found: {e}"))
 }
