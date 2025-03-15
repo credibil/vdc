@@ -105,7 +105,7 @@ anyhow = "1.0.97"
 assert_let_bind = "0.1.1"
 axum = { version = "0.8.1", features = ["macros"] }
 axum-extra = { version = "0.10.0", features = ["typed-header"] }
-base64ct = { version = "1.7.1", features = ["std"] }
+base64ct = { version = "1.7.3", features = ["std"] }
 chrono = { version = "0.4.40", features = ["serde"] }
 credibil-did = "0.1.2"
 credibil-infosec = "0.1.1"
@@ -117,16 +117,16 @@ rand = "0.9.0"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140", features = ["alloc"] }
 test-verifier = { path = "crates/test-verifier" }
-tokio = { version = "1.44.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.44.1", features = ["macros", "rt-multi-thread"] }
 tower-http = { version = "0.6.2", features = ["cors", "set-header", "trace"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter", "fmt"] }
-uuid = { version = "1.15.1", features = ["fast-rng", "v4"] }
+uuid = { version = "1.16.0", features = ["fast-rng", "v4"] }
 
 [patch.crates-io]
 # credibil-did = { path = "../did" }
 credibil-did = { git = "https://github.com/credibil/did.git" }
-credibil-infosec={path="../infosec"}
+credibil-infosec = { path = "../infosec" }
 
 [profile.release]
 # optimize for small code size
