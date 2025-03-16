@@ -9,6 +9,8 @@ pub mod pkce;
 pub mod strings;
 pub mod urlencode;
 
+use anyhow::{Result, anyhow};
+use credibil_did::{DidResolver, PublicKeyJwk, Resource};
 use serde::{Deserialize, Serialize};
 
 /// `Kind` allows serde to serialize/deserialize a string or an object.
@@ -22,26 +24,32 @@ pub enum Kind<T> {
     Object(T),
 }
 
-impl<T: Default> Default for Kind<T> {
+impl<T> Default for Kind<T> {
     fn default() -> Self {
         Self::String(String::new())
     }
 }
 
-impl<T: Default> Kind<T> {
+impl<T> From<String> for Kind<T> {
+    fn from(value: String) -> Self {
+        Self::String(value)
+    }
+}
+
+impl<T> Kind<T> {
     /// Returns `true` if the quota is a single object.
-    pub const fn is_string(&self) -> bool {
+    pub const fn as_string(&self) -> Option<&str> {
         match self {
-            Self::String(_) => true,
-            Self::Object(_) => false,
+            Self::String(s) => Some(s.as_str()),
+            Self::Object(_) => None,
         }
     }
 
     /// Returns `true` if the quota contains an array of objects.
-    pub const fn is_object(&self) -> bool {
+    pub const fn as_object(&self) -> Option<&T> {
         match self {
-            Self::String(_) => false,
-            Self::Object(_) => true,
+            Self::String(_) => None,
+            Self::Object(o) => Some(o),
         }
     }
 }
@@ -64,20 +72,26 @@ impl<T: Default> Default for OneMany<T> {
     }
 }
 
+impl<T> From<T> for OneMany<T> {
+    fn from(value: T) -> Self {
+        Self::One(value)
+    }
+}
+
 impl<T: Clone + Default + PartialEq> OneMany<T> {
     /// Returns `true` if the quota is a single object.
-    pub const fn is_one(&self) -> bool {
+    pub const fn as_one(&self) -> Option<&T> {
         match self {
-            Self::One(_) => true,
-            Self::Many(_) => false,
+            Self::One(o) => Some(o),
+            Self::Many(_) => None,
         }
     }
 
     /// Returns `true` if the quota contains an array of objects.
-    pub const fn is_many(&self) -> bool {
+    pub const fn as_many(&self) -> Option<&[T]> {
         match self {
-            Self::One(_) => false,
-            Self::Many(_) => true,
+            Self::One(_) => None,
+            Self::Many(m) => Some(m.as_slice()),
         }
     }
 
@@ -109,4 +123,22 @@ impl<T: Clone + Default + PartialEq> OneMany<T> {
             Self::Many(many) => many.is_empty(),
         }
     }
+}
+
+/// Retrieve the JWK specified by the provided DID URL.
+///
+/// # Errors
+///
+/// TODO: Document errors
+pub async fn did_jwk<R>(did_url: &str, resolver: &R) -> Result<PublicKeyJwk>
+where
+    R: DidResolver + Send + Sync,
+{
+    let deref = credibil_did::dereference(did_url, None, resolver.clone())
+        .await
+        .map_err(|e| anyhow!("issue dereferencing DID URL: {e}"))?;
+    let Some(Resource::VerificationMethod(vm)) = deref.content_stream else {
+        return Err(anyhow!("Verification method not found"));
+    };
+    vm.method_type.jwk().map_err(|e| anyhow!("JWK not found: {e}"))
 }

@@ -21,19 +21,20 @@
 //! If the Response Type value is "code" (Authorization Code Grant Type), the VP
 //! Token is provided in the Token Response.
 
+use credibil_infosec::jose::{Jwt, jws};
 use serde_json::Value;
 use serde_json_path::JsonPath;
 use tracing::instrument;
 
-use crate::core::Kind;
+use crate::core::{Kind, did_jwk};
 use crate::oid4vp::endpoint::{Body, Handler, Request};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
 use crate::oid4vp::types::{ResponseRequest, ResponseResponse};
 use crate::oid4vp::{Error, Result};
 use crate::w3c_vc;
-use crate::w3c_vc::model::VerifiableCredential;
 use crate::w3c_vc::proof::{Payload, Verify};
+use crate::w3c_vc::vc::{VerifiableCredential, W3cVcClaims};
 
 /// Endpoint for the Wallet to respond Verifier's Authorization Request.
 ///
@@ -184,21 +185,19 @@ async fn verify(provider: impl Provider, request: &ResponseRequest) -> Result<()
             )));
         };
 
-        let vc_kind: Kind<VerifiableCredential> = match vc_node {
-            Value::String(token) => Kind::String(token.to_string()),
+        let vc: VerifiableCredential = match vc_node {
+            Value::String(token) => {
+                let resolver = async |kid: String| did_jwk(&kid, &provider).await;
+                let jwt: Jwt<W3cVcClaims> =
+                    jws::decode(token, resolver).await.expect("should decode");
+                jwt.claims.vc
+            }
             Value::Object(_) => {
                 let vc: VerifiableCredential = serde_json::from_value(vc_node.clone())
                     .map_err(|e| Error::ServerError(format!("issue deserializing vc: {e}")))?;
-                Kind::Object(vc)
+                vc
             }
             _ => return Err(Error::InvalidRequest(format!("unexpected VC format: {vc_node}"))),
-        };
-
-        let Payload::Vc { vc, .. } = w3c_vc::proof::verify(Verify::Vc(&vc_kind), provider.clone())
-            .await
-            .map_err(|e| Error::InvalidRequest(format!("invalid VC proof: {e}")))?
-        else {
-            return Err(Error::InvalidRequest("proof payload is invalid".to_string()));
         };
 
         // verify input constraints have been met

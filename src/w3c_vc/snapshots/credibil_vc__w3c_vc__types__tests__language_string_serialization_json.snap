@@ -1,6 +1,6 @@
 ---
-source: src/w3c_vc/model/types.rs
-assertion_line: 184
+source: src/w3c_vc/types.rs
+assertion_line: 185
 expression: serialized
 ---
 description:

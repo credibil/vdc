@@ -17,6 +17,7 @@ pub use token::*;
 
 pub use crate::oauth::GrantType;
 use crate::oid4vci::endpoint::{AuthorizationHeaders, LanguageHeaders};
+pub use crate::w3c_vc::vc::{VerifiableCredential, W3cVcClaims};
 
 /// Credential request headers.
 pub type CredentialHeaders = AuthorizationHeaders;

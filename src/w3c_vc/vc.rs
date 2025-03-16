@@ -1,25 +1,17 @@
-//! # W3C Verifiable Credentials Data Model
-//!
-//! An implementation of W3C [Verifiable Credentials Data Model v1.1].
-//!
-//! See [implementation guidelines].
-//!
-//! [Verifiable Credentials Data Model v1.1]: (https://www.w3.org/TR/vc-data-model)
-//! [implementation guidelines]: (https://model.github.io/vc-imp-guide)
+//! # Verifiable Credentials Data Model
 
-use std::clone::Clone;
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Display;
 
-use anyhow::bail;
+use chrono::serde::{ts_seconds, ts_seconds_option};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use super::super::proof::integrity::Proof;
-use super::types::LangString;
 use crate::core::{Kind, OneMany};
+use crate::w3c_vc::proof::Proof;
+use crate::w3c_vc::types::LangString;
 
 /// `VerifiableCredential` represents a naive implementation of the W3C
 /// Verifiable Credential data model v1.1.
@@ -28,7 +20,6 @@ use crate::core::{Kind, OneMany};
 #[serde(rename_all = "camelCase", default)]
 pub struct VerifiableCredential {
     // LATER: add support for @context objects
-    #[allow(rustdoc::bare_urls)]
     /// The @context property is used to map property URIs into short-form
     /// aliases. It is an ordered set where the first item is "`https://www.w3.org/2018/credentials/v1`".
     /// Subsequent items may be composed of any combination of URLs and/or
@@ -36,7 +27,6 @@ pub struct VerifiableCredential {
     #[serde(rename = "@context")]
     pub context: Vec<Kind<Value>>,
 
-    #[allow(rustdoc::bare_urls)]
     /// The id property is OPTIONAL. If present, id property's value MUST be a
     /// single URL, which MAY be dereferenceable. It is RECOMMENDED that the URL
     /// in the id be one which, if dereferenceable, results in a document
@@ -132,8 +122,6 @@ pub struct VerifiableCredential {
     pub evidence: Option<OneMany<Evidence>>,
 }
 
-// TODO: create structured @context object
-
 impl VerifiableCredential {
     /// Returns a new [`VerifiableCredential`] configured with defaults.
     ///
@@ -141,16 +129,17 @@ impl VerifiableCredential {
     ///
     /// Fails with `Error::ServerError` if any of the VC's mandatory fields are
     /// not set.
-    pub fn new() -> anyhow::Result<Self> {
-        Self::builder().try_into()
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
     }
 
-    /// Returns a new [`VcBuilder`], which can be used to build a
-    /// [`VerifiableCredential`]
-    #[must_use]
-    pub fn builder() -> VcBuilder {
-        VcBuilder::new()
-    }
+    // /// Returns a new [`VcBuilder`], which can be used to build a
+    // /// [`VerifiableCredential`]
+    // #[must_use]
+    // pub fn builder() -> VcBuilder {
+    //     VcBuilder::new()
+    // }
 }
 
 impl crate::dif_exch::Claims for VerifiableCredential {
@@ -431,151 +420,62 @@ pub struct Evidence {
     pub extra: Option<HashMap<String, String>>,
 }
 
-/// [`VcBuilder`] is used to build a [`VerifiableCredential`]
-#[derive(Clone, Debug, Default)]
+/// Claims used for Verifiable Credential issuance when format is
+/// "`jwt_vc_json`".
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[allow(clippy::module_name_repetitions)]
-pub struct VcBuilder {
-    vc: VerifiableCredential,
+pub struct W3cVcClaims {
+    /// The Holder ID the Credential is intended for. Typically, the DID of the
+    /// Holder from the Credential's `credentialSubject.id` property.
+    ///
+    /// For example, "did:example:ebfeb1f712ebc6f1c276e12ec21".
+    pub sub: String,
+
+    /// The `issuer` property of the Credential.
+    ///
+    /// For example, "did:example:123456789abcdefghi#keys-1".
+    pub iss: String,
+
+    /// The Credential's issuance date, encoded as a UNIX timestamp.
+    #[serde(with = "ts_seconds")]
+    pub iat: DateTime<Utc>,
+
+    /// The `id` property of the Credential.
+    pub jti: String,
+
+    /// The expiration time of the signature, encoded as a UNIX timestamp. This
+    /// is NOT the same as the Credential `validUntil`property.
+    #[serde(with = "ts_seconds_option")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub exp: Option<DateTime<Utc>>,
+
+    /// The Credential.
+    pub vc: VerifiableCredential,
 }
 
-impl VcBuilder {
-    /// Returns a new [`VcBuilder`]
-    pub fn new() -> Self {
-        tracing::debug!("VcBuilder::new");
-
-        let mut builder: Self = Self::default();
-
-        // set some sensibile defaults
-        builder.vc.context.push(Kind::String("https://www.w3.org/2018/credentials/v1".to_string()));
-        builder.vc.type_ = OneMany::One("VerifiableCredential".to_string());
-
-        builder
-    }
-
-    /// Sets the `@context` property
-    #[must_use]
-    pub fn add_context(mut self, context: Kind<Value>) -> Self {
-        self.vc.context.push(context);
-        self
-    }
-
-    /// Sets the `id` property
-    #[must_use]
-    pub fn id(mut self, id: impl Into<String>) -> Self {
-        self.vc.id = Some(id.into());
-        self
-    }
-
-    /// Sets the `type_` property
-    #[must_use]
-    pub fn add_type(mut self, type_: impl Into<String>) -> Self {
-        self.vc.type_.add(type_.into());
-        self
-    }
-
-    /// Sets the `name` property
-    #[must_use]
-    pub fn add_name(mut self, name: Option<LangString>) -> Self {
-        self.vc.name = name;
-        self
-    }
-
-    /// Sets the `description` property
-    #[must_use]
-    pub fn add_description(mut self, description: Option<LangString>) -> Self {
-        self.vc.description = description;
-        self
-    }
-
-    /// Sets the `issuer` property
-    #[must_use]
-    pub fn issuer(mut self, issuer: impl Into<String>) -> Self {
-        self.vc.issuer = Kind::String(issuer.into());
-        self
-    }
-
-    /// Adds one or more `credential_subject` properties.
-    #[must_use]
-    pub fn add_subject(mut self, subj: CredentialSubject) -> Self {
-        let one_set = match self.vc.credential_subject {
-            OneMany::One(one) => {
-                if one == CredentialSubject::default() {
-                    OneMany::One(subj)
-                } else {
-                    OneMany::Many(vec![one, subj])
-                }
-            }
-            OneMany::Many(mut set) => {
-                set.push(subj);
-                OneMany::Many(set)
-            }
+/// Create Verifiable Credential JWT payload from a W3C Verifiable
+/// Credential.
+impl From<VerifiableCredential> for W3cVcClaims {
+    fn from(vc: VerifiableCredential) -> Self {
+        let subject = match &vc.credential_subject {
+            OneMany::One(sub) => sub,
+            OneMany::Many(subs) => &subs[0],
         };
 
-        self.vc.credential_subject = one_set;
-        self
-    }
-
-    /// Adds one or more `proof` properties.
-    #[must_use]
-    pub fn add_proof(mut self, proof: Proof) -> Self {
-        let one_set = match self.vc.proof {
-            None => OneMany::One(proof),
-            Some(OneMany::One(one)) => OneMany::Many(vec![one, proof]),
-            Some(OneMany::Many(mut set)) => {
-                set.push(proof);
-                OneMany::Many(set)
-            }
+        let issuer_id = match &vc.issuer {
+            Kind::String(id) => id,
+            Kind::Object(issuer) => &issuer.id,
         };
 
-        self.vc.proof = Some(one_set);
-        self
-    }
-
-    /// Sets the `credential_status` property.
-    #[must_use]
-    pub fn status(mut self, status: Option<OneMany<CredentialStatus>>) -> Self {
-        self.vc.credential_status = status;
-        self
-    }
-
-    /// Turns this builder into a [`VerifiableCredential`]
-    ///
-    /// # Errors
-    ///
-    /// Fails with `Error::ServerError` if any of the VC's mandatory fields are
-    /// not set.
-    pub fn build(self) -> anyhow::Result<VerifiableCredential> {
-        tracing::debug!("VcBuilder::build");
-
-        if self.vc.context.len() < 2 {
-            bail!("no context set");
+        Self {
+            // TODO: find better way to set sub (shouldn't need to be in vc)
+            sub: subject.id.clone().unwrap_or_default(),
+            iss: issuer_id.clone(),
+            iat: Utc::now(),
+            jti: vc.id.clone().unwrap_or_default(),
+            exp: None, //vc.valid_until,
+            vc,
         }
-        if self.vc.type_.len() < 2 {
-            bail!("no type set");
-        }
-
-        if let Kind::String(id) = &self.vc.issuer {
-            if id.is_empty() {
-                bail!("no issuer.id set");
-            }
-        }
-
-        if let OneMany::One(subj) = &self.vc.credential_subject {
-            if *subj == CredentialSubject::default() {
-                bail!("no credential_subject set");
-            }
-        }
-
-        Ok(self.vc)
-    }
-}
-
-impl TryFrom<VcBuilder> for VerifiableCredential {
-    type Error = anyhow::Error;
-
-    fn try_from(builder: VcBuilder) -> anyhow::Result<Self, Self::Error> {
-        tracing::debug!("VerifiableCredential::try_from");
-        builder.build()
     }
 }
 

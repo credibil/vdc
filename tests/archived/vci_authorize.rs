@@ -28,7 +28,7 @@ async fn authorize_configuration_id() {
         .state("1234")
         .code_challenge(pkce::code_challenge(&verifier))
         .with_authorization_detail(
-            AuthorizationDetailBuilder::new().credential_configuration_id("EmployeeID_JWT").build(),
+            AuthorizationDetailBuilder::new().credential_configuration_id("EmployeeID_W3C_VC").build(),
         )
         .subject_id(NORMAL_USER)
         .build();
@@ -134,7 +134,7 @@ async fn authorize_claims() {
         "code_challenge_method": "S256",
         "authorization_details": [{
             "type": "openid_credential",
-            "credential_configuration_id": "EmployeeID_JWT",
+            "credential_configuration_id": "EmployeeID_W3C_VC",
             "credential_definition": {
                 "credentialSubject": {
                     "email": {},

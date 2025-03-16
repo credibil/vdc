@@ -57,7 +57,6 @@ impl Keyring {
             DidMethod::Key => DidKey::create(&keyring, options).expect("should create"),
             DidMethod::Web => DidWeb::create(&url, &keyring, options).expect("should create"),
         };
-
         DID_STORE.lock().expect("should lock").insert(url, document);
 
         keyring

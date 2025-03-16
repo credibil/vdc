@@ -1,12 +1,13 @@
 use std::fmt::Debug;
 
-use chrono::Utc;
+use chrono::serde::ts_seconds;
+use chrono::{DateTime, Utc};
 use credibil_infosec::jose::jwk::PublicKeyJwk;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use crate::core::Kind;
-use crate::w3c_vc::model::VerifiableCredential;
+use crate::w3c_vc::vc::VerifiableCredential;
 
 /// The user information returned by the Subject trait.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -159,9 +160,9 @@ pub struct ProofClaims {
     #[serde(rename = "aud")]
     pub credential_issuer: String,
 
-    /// The time at which the proof was issued, as a `NumericDate` (seconds
-    /// since 01-01-1970).
-    pub iat: i64,
+    /// The time at which the proof was issued.
+    #[serde(with = "ts_seconds")]
+    pub iat: DateTime<Utc>,
 
     /// A server-provided `c_nonce`.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -173,7 +174,7 @@ impl ProofClaims {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            iat: Utc::now().timestamp(),
+            iat: Utc::now(),
             ..Self::default()
         }
     }
@@ -206,11 +207,13 @@ impl ProofClaims {
 pub struct AttestationClaims {
     /// The time at which the proof was issued, as a `NumericDate` (seconds
     /// since 01-01-1970).
-    pub iat: i64,
+    #[serde(with = "ts_seconds")]
+    pub iat: DateTime<Utc>,
 
     /// The time at which the key attestation and the key(s) it is attesting
     /// expire, as a `NumericDate` (seconds since 01-01-1970).
-    pub exp: i64,
+    #[serde(with = "ts_seconds")]
+    pub exp: DateTime<Utc>,
 
     /// Attested keys from the same key storage component.
     pub attested_keys: Vec<PublicKeyJwk>,
@@ -290,25 +293,9 @@ pub struct CredentialResponseEncryption {
 /// Credential. In other cases, the Credential Issuer MAY NOT be able to
 /// immediately issue a requested Credential and will instead return a
 /// `transaction_id` to be used later to retrieve a Credential when it is ready.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct CredentialResponse {
-    /// The Credential Response can be Synchronous or Deferred.
-    #[serde(flatten)]
-    pub response: ResponseType,
-
-    /// Identifies an issued Credential when the Wallet calls the Issuer's
-    /// Notification endpoint. The `notification_id` is included in the
-    /// Notification Request.
-    ///
-    /// Will only be set if credential parameter is set.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub notification_id: Option<String>,
-}
-
-/// The Credential Response can be Synchronous or Deferred.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(untagged)]
-pub enum ResponseType {
+pub enum CredentialResponse {
     /// Contains an array of issued Credentials. The values in the array MAY be
     /// a string or an object, depending on the Credential Format.
     Credentials {
@@ -333,7 +320,7 @@ pub enum ResponseType {
     },
 }
 
-impl Default for ResponseType {
+impl Default for CredentialResponse {
     fn default() -> Self {
         Self::Credentials {
             credentials: vec![Credential {

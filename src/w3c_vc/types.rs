@@ -15,7 +15,7 @@ use crate::core::{Kind, OneMany};
 /// <https://www.w3.org/TR/vc-data-model-2.0/#language-and-base-direction>
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(transparent)]
-pub struct LangString(Kind<OneMany<LangValue>>);
+pub struct LangString(Kind<OneMany<Language>>);
 
 impl LangString {
     /// Create a new `LangString` from a simple string.
@@ -26,17 +26,17 @@ impl LangString {
 
     /// Create a new `LangString` from a single language object.
     #[must_use]
-    pub const fn new_object(value: LangValue) -> Self {
+    pub const fn new_object(value: Language) -> Self {
         Self(Kind::Object(OneMany::One(value)))
     }
 
     /// Add a language object to the `LangString`.
-    pub fn add(&mut self, value: LangValue) {
+    pub fn add(&mut self, value: Language) {
         match &self.0 {
             Kind::String(s) => {
-                let existing = LangValue {
+                let existing = Language {
                     value: s.clone(),
-                    ..LangValue::default()
+                    ..Language::default()
                 };
                 self.0 = Kind::Object(OneMany::Many(vec![existing, value]));
             }
@@ -97,16 +97,17 @@ impl LangString {
 }
 
 impl Deref for LangString {
-    type Target = Kind<OneMany<LangValue>>;
+    type Target = Kind<OneMany<Language>>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-/// `LangValue` is a description of a string in a specific language.
+/// `Language` is a description of a string in a specific language.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct LangValue {
+#[allow(clippy::struct_field_names)]
+pub struct Language {
     /// Value of the string
     #[serde(rename = "@value")]
     pub value: String,

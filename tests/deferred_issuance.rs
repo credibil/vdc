@@ -4,14 +4,14 @@ mod utils;
 
 use std::sync::LazyLock;
 
-use credibil_infosec::jose::JwsBuilder;
-use credibil_vc::oid4vci::endpoint;
-use credibil_vc::oid4vci::proof::{self, Payload, Type, Verify};
+use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
+use credibil_vc::core::did_jwk;
 use credibil_vc::oid4vci::types::{
-    CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest,
-    DeferredCredentialRequest, DeferredHeaders, NonceRequest, ProofClaims, ResponseType,
-    TokenGrantType, TokenRequest,
+    CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, CredentialResponse,
+    DeferredCredentialRequest, DeferredHeaders, NonceRequest, ProofClaims, TokenGrantType,
+    TokenRequest, W3cVcClaims,
 };
+use credibil_vc::oid4vci::{JwtType, endpoint};
 use insta::assert_yaml_snapshot as assert_snapshot;
 use utils::issuer::{CREDENTIAL_ISSUER as ALICE_ISSUER, PENDING_USER, ProviderImpl};
 use utils::wallet::{self, Keyring};
@@ -29,7 +29,7 @@ async fn deferred() {
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
         .subject_id(PENDING_USER)
-        .with_credential("EmployeeID_JWT")
+        .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
         endpoint::handle(ALICE_ISSUER, request, &provider).await.expect("should create offer");
@@ -58,7 +58,7 @@ async fn deferred() {
 
     // proof of possession of key material
     let jws = JwsBuilder::new()
-        .jwt_type(Type::Openid4VciProofJwt)
+        .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
         .build()
@@ -88,7 +88,7 @@ async fn deferred() {
     // --------------------------------------------------
     // Bob waits for a brief period and then retrieves the credential
     // --------------------------------------------------
-    let ResponseType::TransactionId { transaction_id } = &response.response else {
+    let CredentialResponse::TransactionId { transaction_id } = &response else {
         panic!("expected transaction_id");
     };
 
@@ -106,19 +106,18 @@ async fn deferred() {
     // --------------------------------------------------
     // Bob extracts and verifies the received credential
     // --------------------------------------------------
-    let ResponseType::Credentials { credentials, .. } = &response.response else {
+    let CredentialResponse::Credentials { credentials, .. } = &response else {
         panic!("expected single credential");
     };
 
     let Credential { credential } = credentials.first().expect("should have credential");
 
     // verify the credential proof
-    let Ok(Payload::Vc { vc, .. }) = proof::verify(Verify::Vc(credential), provider.clone()).await
-    else {
-        panic!("should be valid VC");
-    };
+    let token = credential.as_string().expect("should be a string");
+    let resolver = async |kid: String| did_jwk(&kid, &provider).await;
+    let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
 
-    assert_snapshot!("issued", vc, {
+    assert_snapshot!("issued", jwt.claims.vc, {
         ".validFrom" => "[validFrom]",
         ".credentialSubject" => insta::sorted_redaction(),
         ".credentialSubject.id" => "[id]"

@@ -8,28 +8,27 @@
 //! formats in one Batch Credential Request. This includes Credentials of the
 //! same type and multiple formats, different types and one format, or both.
 
+use std::collections::HashSet;
 use std::fmt::Debug;
 
-use chrono::{DateTime, Utc};
-use credibil_infosec::Signer;
+use chrono::Utc;
 use credibil_infosec::jose::jws::{self, Key};
-use tracing::instrument;
 
-use crate::core::{Kind, generate};
+use crate::core::{did_jwk, generate};
+use crate::iso_mdl::MsoMdocBuilder;
 use crate::oid4vci::endpoint::{Body, Handler, Request};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Deferrance, Expire, Stage, State};
 use crate::oid4vci::types::{
-    AuthorizedDetail, Credential, CredentialConfiguration, CredentialDefinition, CredentialDisplay,
-    CredentialHeaders, CredentialRequest, CredentialResponse, Dataset, Format, Issuer,
-    MultipleProofs, Proof, ProofClaims, RequestBy, ResponseType, SingleProof,
+    AuthorizedDetail, Credential, CredentialConfiguration, CredentialHeaders, CredentialRequest,
+    CredentialResponse, Dataset, Format, Issuer, MultipleProofs, Proof, ProofClaims, RequestBy,
+    SingleProof,
 };
-use crate::oid4vci::{Error, Result};
+use crate::oid4vci::{Error, JwtType, Result};
+use crate::sd_jwt::DcSdJwtBuilder;
+use crate::server;
 use crate::status::issuer::Status;
-use crate::w3c_vc::model::types::{LangString, LangValue};
-use crate::w3c_vc::model::{CredentialSubject, VerifiableCredential};
-use crate::w3c_vc::proof::{self, Payload, Type, W3cFormat};
-use crate::{server, verify_key};
+use crate::w3c_vc::W3cVcBuilder;
 
 /// Credential request handler.
 ///
@@ -37,32 +36,33 @@ use crate::{server, verify_key};
 ///
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
-#[instrument(level = "debug", skip(provider))]
-pub(crate) async fn credential(
+pub async fn credential(
     issuer: &str, provider: &impl Provider, request: Request<CredentialRequest, CredentialHeaders>,
 ) -> Result<CredentialResponse> {
-    tracing::debug!("credential");
-
     let Ok(state) = StateStore::get::<State>(provider, &request.headers.authorization).await else {
         return Err(Error::AccessDenied("invalid access token".to_string()));
     };
-    let iss =
-        Metadata::issuer(provider, issuer).await.map_err(|e| server!("metadata issue: {e}"))?;
 
-    // create a request context with data accessed more than once
+    // create a request context for data accessed more than once
     let mut ctx = Context {
         state,
-        issuer: iss,
+        issuer: Metadata::issuer(provider, issuer)
+            .await
+            .map_err(|e| server!("metadata issue: {e}"))?,
         ..Context::default()
     };
 
     let request = request.body;
+    let authorized = request.authorized_detail(&ctx)?;
 
-    // authorized credential
-    ctx.authorized = request.authorized_detail(&ctx)?;
+    // check whether issuance should be deferred
+    let dataset = ctx.dataset(provider, &request, &authorized).await?;
+    if dataset.pending {
+        return ctx.defer(provider, request).await;
+    }
 
     // credential configuration
-    let Some(config_id) = ctx.authorized.credential_configuration_id() else {
+    let Some(config_id) = authorized.credential_configuration_id() else {
         return Err(Error::InvalidCredentialRequest("no credential_configuration_id".to_string()));
     };
     let Some(config) = ctx.issuer.credential_configurations_supported.get(config_id) else {
@@ -71,22 +71,6 @@ pub(crate) async fn credential(
     ctx.configuration = config.clone();
 
     request.verify(provider, &mut ctx).await?;
-
-    let dataset = ctx.dataset(provider, &request).await?;
-
-    // defer issuance as claims are pending (approval)
-    if dataset.pending {
-        return ctx.defer(provider, request).await;
-    }
-
-    // delete nonces
-    for nonce in &ctx.nonces {
-        StateStore::purge(provider, nonce)
-            .await
-            .map_err(|e| server!("issue deleting nonce: {e}"))?;
-    }
-
-    // issue VC
     ctx.issue(provider, dataset).await
 }
 
@@ -106,10 +90,8 @@ impl Body for CredentialRequest {}
 struct Context {
     state: State,
     issuer: Issuer,
-    authorized: AuthorizedDetail,
     configuration: CredentialConfiguration,
-    holder_dids: Vec<String>,
-    nonces: Vec<String>,
+    proof_kids: Vec<String>,
 }
 
 impl CredentialRequest {
@@ -151,49 +133,52 @@ impl CredentialRequest {
                 },
             };
 
-            for proof_jwt in proof_jwts {
+            // the same c_nonce should be used for all proofs
+            let mut nonces = HashSet::new();
+            let resolver = async |kid: String| did_jwk(&kid, provider).await;
+
+            for proof in proof_jwts {
                 // TODO: ProofClaims cannot use `client_id` if the access token was
                 // obtained in a pre-auth flow with anonymous access to the token
                 // endpoint
-
                 // TODO: check proof is signed with supported algorithm (from proof_type)
-                
-                let jwt: jws::Jwt<ProofClaims> =
-                    match jws::decode(proof_jwt, verify_key!(provider)).await {
-                        Ok(jwt) => jwt,
-                        Err(e) => {
-                            return Err(Error::InvalidProof(format!("issue decoding JWT: {e}")));
-                        }
-                    };
+
+                let jwt: jws::Jwt<ProofClaims> = match jws::decode(proof, resolver).await {
+                    Ok(jwt) => jwt,
+                    Err(e) => {
+                        return Err(Error::InvalidProof(format!("issue decoding JWT: {e}")));
+                    }
+                };
 
                 // proof type
-                if jwt.header.typ != Type::Openid4VciProofJwt.to_string() {
+                if jwt.header.typ != JwtType::ProofJwt.to_string() {
                     return Err(Error::InvalidProof("invalid proof type".to_string()));
                 }
+                if jwt.claims.credential_issuer != ctx.issuer.credential_issuer {
+                    return Err(Error::InvalidProof("invalid proof issuer".to_string()));
+                }
 
-                // previously issued c_nonce
+                // c_nonce issued by token endpoint
                 let c_nonce = jwt.claims.nonce.as_ref().ok_or_else(|| {
                     Error::InvalidProof("proof JWT nonce claim is missing".to_string())
                 })?;
-                StateStore::get::<String>(provider, c_nonce)
-                    .await
-                    .map_err(|e| server!("proof nonce claim is invalid: {e}"))?;
+                nonces.insert(c_nonce.clone());
 
-                // save nonce for deletion when not defering issuance
-                ctx.nonces.push(c_nonce.clone());
-
-                // Key ID
+                // extract Key ID for use when building credential
                 let Key::KeyId(kid) = &jwt.header.key else {
                     return Err(Error::InvalidProof("Proof JWT 'kid' is missing".to_string()));
                 };
+                ctx.proof_kids.push(kid.to_string());
+            }
 
-                // FIXME: save extracted DID for later use when issuing credential
-                let Some(did) = kid.split('#').next() else {
-                    return Err(Error::InvalidProof("Proof JWT DID is invalid".to_string()));
-                };
-
-                // TODO: support multiple DID bindings
-                ctx.holder_dids.push(did.to_string());
+            // should only be a single c_nonce, but just in case...
+            for c_nonce in nonces {
+                StateStore::get::<String>(provider, &c_nonce)
+                    .await
+                    .map_err(|e| server!("proof nonce claim is invalid: {e}"))?;
+                StateStore::purge(provider, &c_nonce)
+                    .await
+                    .map_err(|e| server!("issue deleting proof nonce: {e}"))?;
             }
         }
 
@@ -233,32 +218,87 @@ impl Context {
     async fn issue(
         &self, provider: &impl Provider, dataset: Dataset,
     ) -> Result<CredentialResponse> {
-        // generate the issuance time stamp
-        let issuance_date = Utc::now();
+        let mut credentials = vec![];
 
-        // determine credential format
-        let response = match &self.configuration.format {
-            Format::JwtVcJson(w3c) => {
-                let mut vcs = vec![];
+        // create a credential for each proof
+        for kid in &self.proof_kids {
+            let credential = match &self.configuration.format {
+                Format::JwtVcJson(_) => {
+                    // FIXME: do we need to resolve DID document?
+                    let Some(did) = kid.split('#').next() else {
+                        return Err(Error::InvalidProof("Proof JWT DID is invalid".to_string()));
+                    };
+                    let mut builder = W3cVcBuilder::new()
+                        .config(self.configuration.clone())
+                        .issuer(&self.issuer.credential_issuer)
+                        .holder(did)
+                        .claims(dataset.claims.clone())
+                        .signer(provider);
 
-                for did in &self.holder_dids {
-                    let subject = CredentialSubject {
-                        id: Some(did.clone()),
-                        claims: dataset.claims.clone(),
+                    // credential's status lookup
+                    let Some(subject_id) = &self.state.subject_id else {
+                        return Err(Error::AccessDenied("invalid subject id".to_string()));
+                    };
+                    if let Some(status) =
+                        Status::status(provider, subject_id, "credential_identifier")
+                            .await
+                            .map_err(|e| server!("issue populating credential status: {e}"))?
+                    {
+                        builder = builder.status(status);
+                    }
+
+                    let jwt = builder
+                        .build()
+                        .await
+                        .map_err(|e| server!("issue creating `jwt_vc_json` credential: {e}"))?;
+                    Credential {
+                        credential: jwt.into(),
+                    }
+                }
+
+                Format::IsoMdl(_) => {
+                    let mdl = MsoMdocBuilder::new()
+                        .claims(dataset.claims.clone())
+                        .signer(provider)
+                        .build()
+                        .await
+                        .map_err(|e| server!("issue creating `mso_mdoc` credential: {e}"))?;
+                    Credential {
+                        credential: mdl.into(),
+                    }
+                }
+
+                Format::DcSdJwt(_) => {
+                    // TODO: cache the result of jwk when verifying proof (`verify` method)
+                    let jwk = did_jwk(kid, provider).await.map_err(|e| {
+                        server!("issue retrieving JWK for `dc+sd-jwt` credential: {e}")
+                    })?;
+                    let Some(did) = kid.split('#').next() else {
+                        return Err(Error::InvalidProof("Proof JWT DID is invalid".to_string()));
                     };
 
-                    let vc = self.w3c_vc(provider, &w3c.credential_definition, subject).await?;
-                    vcs.push(vc);
+                    let sd_jwt = DcSdJwtBuilder::new()
+                        .config(self.configuration.clone())
+                        .issuer(self.issuer.credential_issuer.clone())
+                        .claims(dataset.claims.clone())
+                        .key_binding(jwk)
+                        .holder(did)
+                        .signer(provider)
+                        .build()
+                        .await
+                        .map_err(|e| server!("issue creating `dc+sd-jwt` credential: {e}"))?;
+                    Credential {
+                        credential: sd_jwt.into(),
+                    }
                 }
-                self.jwt_vc_json(vcs, provider.clone(), issuance_date).await?
-            }
-            Format::IsoMdl(_) => self.mso_mdoc(dataset, provider.clone()).await?,
 
-            // TODO: remaining credential formats
-            Format::JwtVcJsonLd(_) => todo!(),
-            Format::LdpVc(_) => todo!(),
-            Format::VcSdJwt(_) => todo!(),
-        };
+                // TODO: oustanding credential formats
+                Format::JwtVcJsonLd(_) => todo!(),
+                Format::LdpVc(_) => todo!(),
+            };
+
+            credentials.push(credential);
+        }
 
         // update token state with new `c_nonce`
         let mut state = self.state.clone();
@@ -281,89 +321,9 @@ impl Context {
             .await
             .map_err(|e| server!("issue saving state: {e}"))?;
 
-        Ok(CredentialResponse {
-            response,
-            notification_id: Some(notification_id),
-        })
-    }
-
-    // Generate a W3C Verifiable Credential.
-    async fn w3c_vc(
-        &self, provider: &impl Provider, credential_definition: &CredentialDefinition,
-        subject: CredentialSubject,
-    ) -> Result<VerifiableCredential> {
-        // credential type
-        let Some(credential_type) = credential_definition.type_.get(1) else {
-            return Err(server!("Credential type not set"));
-        };
-
-        // credential's status lookup information
-        let Some(subject_id) = &self.state.subject_id else {
-            return Err(Error::AccessDenied("invalid subject id".to_string()));
-        };
-        let status = Status::status(provider, subject_id, "credential_identifier")
-            .await
-            .map_err(|e| server!("issue populating credential status: {e}"))?;
-
-        let credential_issuer = &self.issuer.credential_issuer;
-        let (name, description) =
-            self.configuration.display.as_ref().map_or((None, None), create_names);
-
-        VerifiableCredential::builder()
-            .add_context(Kind::String(format!("{credential_issuer}/credentials/v1")))
-            // TODO: generate credential id
-            .id(format!("{credential_issuer}/credentials/{credential_type}"))
-            .add_type(credential_type)
-            .add_name(name)
-            .add_description(description)
-            .issuer(credential_issuer)
-            .add_subject(subject)
-            .status(status)
-            .build()
-            .map_err(|e| server!("issue building VC: {e}"))
-    }
-
-    // Generate a `jwt_vc_json` format credential .
-    async fn jwt_vc_json(
-        &self, vcs: Vec<VerifiableCredential>, signer: impl Signer, issuance_date: DateTime<Utc>,
-    ) -> Result<ResponseType> {
-        // sign and return JWT(s)
-        let mut credentials = vec![];
-
-        for vc in vcs {
-            let jwt = proof::create(
-                W3cFormat::JwtVcJson,
-                Payload::Vc {
-                    vc: vc.clone(),
-                    issued_at: issuance_date.timestamp(),
-                },
-                &signer,
-            )
-            .await
-            .map_err(|e| server!("issue generating `jwt_vc_json` credential: {e}"))?;
-
-            credentials.push(Credential {
-                credential: Kind::String(jwt),
-            });
-        }
-
-        Ok(ResponseType::Credentials {
+        Ok(CredentialResponse::Credentials {
             credentials,
-            notification_id: None,
-        })
-    }
-
-    // Generate a `mso_mdoc` format credential.
-    async fn mso_mdoc(&self, dataset: Dataset, signer: impl Signer) -> Result<ResponseType> {
-        let mdl = crate::iso_mdl::to_credential(dataset.claims, signer)
-            .await
-            .map_err(|e| server!("issue generating `mso_mdoc` credential: {e}"))?;
-
-        Ok(ResponseType::Credentials {
-            credentials: vec![Credential {
-                credential: Kind::String(mdl),
-            }],
-            notification_id: None,
+            notification_id: Some(notification_id),
         })
     }
 
@@ -385,17 +345,14 @@ impl Context {
             .await
             .map_err(|e| server!("issue saving state: {e}"))?;
 
-        Ok(CredentialResponse {
-            response: ResponseType::TransactionId {
-                transaction_id: txn_id,
-            },
-            notification_id: None,
+        Ok(CredentialResponse::TransactionId {
+            transaction_id: txn_id,
         })
     }
 
     // Get credential dataset for the request
     async fn dataset(
-        &self, provider: &impl Provider, request: &CredentialRequest,
+        &self, provider: &impl Provider, request: &CredentialRequest, authorized: &AuthorizedDetail,
     ) -> Result<Dataset> {
         let RequestBy::Identifier(identifier) = &request.credential else {
             return Err(Error::InvalidCredentialRequest(
@@ -413,42 +370,10 @@ impl Context {
             .map_err(|e| server!("issue populating claims: {e}"))?;
 
         // only include previously requested/authorized claims
-        if let Some(claims) = &self.authorized.authorization_detail.claims {
+        if let Some(claims) = &authorized.authorization_detail.claims {
             dataset.claims.retain(|k, _| claims.iter().any(|c| c.path.contains(k)));
         }
 
         Ok(dataset)
     }
-}
-
-// Extract language object name and description from a `CredentialDisplay`
-// vector.
-fn create_names(display: &Vec<CredentialDisplay>) -> (Option<LangString>, Option<LangString>) {
-    let mut name: Option<LangString> = None;
-    let mut description: Option<LangString> = None;
-    for d in display {
-        let n = LangValue {
-            value: d.name.clone(),
-            language: d.locale.clone(),
-            ..LangValue::default()
-        };
-        if let Some(nm) = &mut name {
-            nm.add(n);
-        } else {
-            name = Some(LangString::new_object(n));
-        }
-        if d.description.is_some() {
-            let d = LangValue {
-                value: d.description.clone().unwrap(),
-                language: d.locale.clone(),
-                ..LangValue::default()
-            };
-            if let Some(desc) = &mut description {
-                desc.add(d);
-            } else {
-                description = Some(LangString::new_object(d));
-            }
-        }
-    }
-    (name, description)
 }

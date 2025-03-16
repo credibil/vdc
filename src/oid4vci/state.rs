@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::oauth::CodeChallengeMethod;
 use crate::oid4vci::types::{AuthorizedDetail, CredentialOffer, CredentialRequest, RequestObject};
-use crate::w3c_vc::model::VerifiableCredential;
+use crate::w3c_vc::vc::VerifiableCredential;
 
 /// State is used to persist request information between issuance steps in the
 /// Credential issuance process.

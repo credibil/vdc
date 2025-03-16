@@ -7,9 +7,9 @@
         "locale": "en-NZ"
     },
     "credential_configurations_supported": {
-        "EmployeeID_JWT": {
+        "EmployeeID_W3C_VC": {
             "format": "jwt_vc_json",
-            "scope": "EmployeeIDCredential",
+            "scope": "EmployeeID",
             "cryptographic_binding_methods_supported": [
                 "did:key",
                 "did:web"
@@ -154,9 +154,9 @@
                 }
             ]
         },
-        "Developer_JWT": {
+        "Developer_W3C_VC": {
             "format": "jwt_vc_json",
-            "scope": "DeveloperCredential",
+            "scope": "Developer",
             "cryptographic_binding_methods_supported": [
                 "did:key",
                 "did:web"
@@ -238,7 +238,6 @@
         },
         "org.iso.18013.5.1.mDL": {
             "format": "mso_mdoc",
-            "doctype": "org.iso.18013.5.1.mDL",
             "scope": "DriverLicence",
             "cryptographic_binding_methods_supported": [
                 "did:key",
@@ -273,6 +272,7 @@
                     }
                 }
             ],
+            "doctype": "org.iso.18013.5.1.mDL",
             "claims": [
                 {
                     "path": [
@@ -309,6 +309,137 @@
                     "path": [
                         "org.iso.18013.5.1.aamva",
                         "organ_donor"
+                    ]
+                }
+            ]
+        },
+        "Identity_SD_JWT": {
+            "format": "dc+sd-jwt",
+            "scope": "Identity",
+            "cryptographic_binding_methods_supported": [
+                "jwk"
+            ],
+            "credential_signing_alg_values_supported": [
+                "ES256"
+            ],
+            "display": [
+                {
+                    "name": "Identity Credential",
+                    "logo": {
+                        "uri": "https://university.example.edu/public/logo.png",
+                        "alt_text": "a square logo of a university"
+                    },
+                    "locale": "en-US",
+                    "background_color": "#12107c",
+                    "text_color": "#FFFFFF"
+                }
+            ],
+            "proof_types_supported": {
+                "jwt": {
+                    "proof_signing_alg_values_supported": [
+                        "ES256"
+                    ]
+                }
+            },
+            "vct": "Identity_SD_JWT",
+            "claims": [
+                {
+                    "path": [
+                        "given_name"
+                    ],
+                    "display": [
+                        {
+                            "name": "Given Name",
+                            "locale": "en-US"
+                        },
+                        {
+                            "name": "Vorname",
+                            "locale": "de-DE"
+                        }
+                    ]
+                },
+                {
+                    "path": [
+                        "family_name"
+                    ],
+                    "display": [
+                        {
+                            "name": "Surname",
+                            "locale": "en-US"
+                        },
+                        {
+                            "name": "Nachname",
+                            "locale": "de-DE"
+                        }
+                    ]
+                },
+                {
+                    "path": [
+                        "email"
+                    ]
+                },
+                {
+                    "path": [
+                        "phone_number"
+                    ]
+                },
+                {
+                    "path": [
+                        "address"
+                    ],
+                    "display": [
+                        {
+                            "name": "Place of residence",
+                            "locale": "en-US"
+                        },
+                        {
+                            "name": "Wohnsitz",
+                            "locale": "de-DE"
+                        }
+                    ]
+                },
+                {
+                    "path": [
+                        "address",
+                        "street_address"
+                    ]
+                },
+                {
+                    "path": [
+                        "address",
+                        "locality"
+                    ]
+                },
+                {
+                    "path": [
+                        "address",
+                        "region"
+                    ]
+                },
+                {
+                    "path": [
+                        "address",
+                        "country"
+                    ]
+                },
+                {
+                    "path": [
+                        "birthdate"
+                    ]
+                },
+                {
+                    "path": [
+                        "is_over_18"
+                    ]
+                },
+                {
+                    "path": [
+                        "is_over_21"
+                    ]
+                },
+                {
+                    "path": [
+                        "is_over_65"
                     ]
                 }
             ]

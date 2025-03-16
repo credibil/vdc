@@ -1,74 +1,13 @@
-//! # Invoke Endpoint
+//! # Create Offer Handler
 //!
-//! The Invoke endpoint is used to initiate Pre-authorized credential issuance
-//! flow. Credential Issuers can use this endpoint to generate a Credential
-//! Offer which can be used to initiate issuance with a Wallet.
-//!
-//! When a Credential Issuer is already interacting with a user and wishes to
-//! initate a Credential issuance, they can 'send' the user's Wallet a
-//! Credential Offer.
-//!
-//! The diagram illustrates this Credential Issuer initiated flow:
-//!
-//! ```text
-//! +--------------+   +-----------+                                    +-------------------+
-//! | User         |   |   Wallet  |                                    | Credential Issuer |
-//! +--------------+   +-----------+                                    +-------------------+
-//!         |                |                                                    |
-//!         |                |  (1) User provides  information required           |
-//!         |                |      for the issuance of a certain Credential      |
-//!         |-------------------------------------------------------------------->|
-//!         |                |                                                    |
-//!         |                |  (2) Credential Offer (Pre-Authorized Code)        |
-//!         |                |<---------------------------------------------------|
-//!         |                |  (3) Obtains Issuer's Credential Issuer metadata   |
-//!         |                |<-------------------------------------------------->|
-//!         |   interacts    |                                                    |
-//!         |--------------->|                                                    |
-//!         |                |                                                    |
-//!         |                |  (4) Token Request (Pre-Authorized Code, pin)      |
-//!         |                |--------------------------------------------------->|
-//!         |                |      Token Response (access_token)                 |
-//!         |                |<---------------------------------------------------|
-//!         |                |                                                    |
-//!         |                |  (5) Credential Request (access_token, proof(s))   |
-//!         |                |--------------------------------------------------->|
-//!         |                |      Credential Response                           |
-//!         |                |      (credential(s))                               |
-//!         |                |<---------------------------------------------------|
-//! ```
-//!
-//! While JSON-based, the Offer can be sent to the Wallet's Credential Offer
-//! Handler URL as an HTTP GET request, an HTTP redirect, or a QR code.
-//!
-//! Below is a non-normative example of a Credential Offer Object for a
-//! Pre-Authorized Code Stage (with a credential type reference):
-//!
-//! ```json
-//! {
-//!     "credential_issuer": "https://credential-issuer.example.com",
-//!     "credential_configuration_ids": [
-//!         "UniversityDegree_LDP_VC"
-//!     ],
-//!     "grants": {
-//!         "urn:ietf:params:oauth:grant-type:pre-authorized_code": {
-//!             "pre-authorized_code": "adhjhdjajkdkhjhdj",
-//!             "tx_code": {
-//!                 "input_mode":"numeric",
-//!                 "length":6,
-//!                 "description":"Please provide the one-time code that was sent via e-mail"
-//!             }
-//!        }
-//!     }
-//! }
-//! ```
+//! The `create_offer` handler generates and returns a Credential Offer for
+//! use in invoking a credential issuance flow with a wallet.
 //!
 //! See <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-offer-endpoint>
 
 use std::vec;
 
 use chrono::Utc;
-use tracing::instrument;
 
 use crate::core::generate;
 use crate::oauth::GrantType;
@@ -89,18 +28,10 @@ struct Context {
     server: Server,
 }
 
-/// Invoke request handler generates and returns a Credential Offer.
-///
-/// # Errors
-///
-/// Returns an `OpenID4VP` error if the request is invalid or if the provider is
-/// not available.
-#[instrument(level = "debug", skip(provider))]
+/// Credential Offer request handler generates and returns a Credential Offer.
 async fn create_offer(
     issuer: &str, provider: &impl Provider, request: CreateOfferRequest,
 ) -> Result<CreateOfferResponse> {
-    tracing::debug!("create_offer");
-
     let iss = Metadata::issuer(provider, issuer)
         .await
         .map_err(|e| server!("issue getting issuer metadata: {e}"))?;

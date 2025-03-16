@@ -5,7 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::w3c_vc::model::StatusPurpose;
+use crate::w3c_vc::vc::StatusPurpose;
 
 /// Entry in a log of issued credentials and their current status.
 #[derive(Debug, Deserialize, Serialize)]

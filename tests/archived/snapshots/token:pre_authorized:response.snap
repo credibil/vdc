@@ -10,6 +10,6 @@ c_nonce: "[c_nonce]"
 c_nonce_expires_in: 600
 authorization_details:
   - type: openid_credential
-    credential_configuration_id: EmployeeID_JWT
+    credential_configuration_id: EmployeeID_W3C_VC
     credential_identifiers:
       - PHLEmployeeID

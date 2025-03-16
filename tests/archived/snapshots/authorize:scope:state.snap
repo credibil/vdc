@@ -12,7 +12,7 @@ stage:
     code_challenge_method: S256
     items:
       - Scope: EmployeeIDCredential
-        credential_configuration_id: EmployeeID_JWT
+        credential_configuration_id: EmployeeID_W3C_VC
         credential_identifiers:
           - PHLEmployeeID
 expires_at: "[expires_at]"

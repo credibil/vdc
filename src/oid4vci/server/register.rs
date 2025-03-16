@@ -1,7 +1,5 @@
 //! # Dynamic Client Registration Endpoint
 
-use tracing::instrument;
-
 use crate::oid4vci::Result;
 use crate::oid4vci::endpoint::{Body, Handler, Request};
 use crate::oid4vci::provider::{Provider, StateStore};
@@ -13,15 +11,12 @@ use crate::server;
 ///
 /// # Errors
 ///
-/// Returns an `OpenID4VP` error if the request is invalid or if the provider is
+/// Returns an `OpenID4VCI` error if the request is invalid or if the provider is
 /// not available.
-#[instrument(level = "debug", skip(provider))]
 async fn register(
-    issuer: &str, provider: &impl Provider,
+    _issuer: &str, provider: &impl Provider,
     request: Request<RegistrationRequest, RegistrationHeaders>,
 ) -> Result<RegistrationResponse> {
-    tracing::debug!("register");
-
     // verify access token
     StateStore::get::<State>(provider, &request.headers.authorization)
         .await

@@ -10,7 +10,7 @@ display:
   name: Credibil
   locale: en-NZ
 credential_configurations_supported:
-  Developer_JWT:
+  Developer_W3C_VC:
     format: jwt_vc_json
     credential_definition:
       type:
@@ -57,7 +57,7 @@ credential_configurations_supported:
           uri: "http://credibil.io/assets/developer-background.png"
           alt_text: Developer Background
         text_color: "#ffffff"
-  EmployeeID_JWT:
+  EmployeeID_W3C_VC:
     format: jwt_vc_json
     credential_definition:
       type:

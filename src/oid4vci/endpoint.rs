@@ -6,9 +6,13 @@
 
 use std::fmt::Debug;
 
+use http::HeaderMap;
+use http::header::ACCEPT_LANGUAGE;
+use tracing::instrument;
+
 use crate::invalid;
-use crate::oid4vci::Result;
 use crate::oid4vci::provider::Provider;
+use crate::oid4vci::{Error, Result};
 
 /// Handle incoming messages.
 ///
@@ -20,8 +24,9 @@ use crate::oid4vci::provider::Provider;
 ///
 /// Implementers should look to the Error type and description for more
 /// information on the reason for failure.
+#[instrument(level = "debug", skip(provider))]
 pub async fn handle<B, H, U>(
-    issuer: &str, request: impl Into<Request<B, H>>, provider: &impl Provider,
+    issuer: &str, request: impl Into<Request<B, H>> + Debug, provider: &impl Provider,
 ) -> Result<U>
 where
     B: Body,
@@ -133,4 +138,18 @@ pub struct AuthorizationHeaders {
 pub struct LanguageHeaders {
     /// The `accept-language` header.
     pub accept_language: String,
+}
+
+impl TryFrom<HeaderMap> for LanguageHeaders {
+    type Error = Error;
+
+    fn try_from(headers: HeaderMap) -> Result<Self> {
+        let accept_language = headers
+            .get(ACCEPT_LANGUAGE)
+            .ok_or_else(|| invalid!("missing `accept-language` header"))?
+            .to_str()
+            .map_err(|_| invalid!("invalid `accept-language` header"))?
+            .to_string();
+        Ok(Self { accept_language })
+    }
 }

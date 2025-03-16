@@ -4,7 +4,7 @@ assertion_line: 549
 expression: object.authorization_details
 ---
 - type: openid_credential
-  credential_configuration_id: EmployeeID_JWT
+  credential_configuration_id: EmployeeID_W3C_VC
   claims:
     - path:
         - given_name

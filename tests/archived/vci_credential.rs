@@ -33,7 +33,7 @@ async fn identifier() {
             details: vec![AuthorizedDetail {
                 authorization_detail: AuthorizationDetail {
                     credential: AuthorizationCredential::ConfigurationId {
-                        credential_configuration_id: "EmployeeID_JWT".to_string(),
+                        credential_configuration_id: "EmployeeID_W3C_VC".to_string(),
                     },
                     ..AuthorizationDetail::default()
                 },
@@ -53,7 +53,7 @@ async fn identifier() {
         nonce: Some(c_nonce.into()),
     };
     let jws = JwsBuilder::new()
-        .jwt_type(Type::Openid4VciProofJwt)
+        .typ(Type::ProofJwt)
         .payload(claims)
         .add_signer(&test_holder::ProviderImpl)
         .build()
@@ -124,7 +124,7 @@ async fn format() {
             details: vec![AuthorizedDetail {
                 authorization_detail: AuthorizationDetail {
                     credential: AuthorizationCredential::ConfigurationId {
-                        credential_configuration_id: "EmployeeID_JWT".to_string(),
+                        credential_configuration_id: "EmployeeID_W3C_VC".to_string(),
                     },
                     ..AuthorizationDetail::default()
                 },
@@ -145,7 +145,7 @@ async fn format() {
         nonce: Some(c_nonce.into()),
     };
     let jws = JwsBuilder::new()
-        .jwt_type(Type::Openid4VciProofJwt)
+        .typ(Type::ProofJwt)
         .payload(claims)
         .add_signer(&test_holder::ProviderImpl)
         .build()
@@ -242,7 +242,7 @@ async fn iso_mdl() {
         nonce: Some(c_nonce.into()),
     };
     let jws = JwsBuilder::new()
-        .jwt_type(Type::Openid4VciProofJwt)
+        .typ(Type::ProofJwt)
         .payload(claims)
         .add_signer(&test_holder::ProviderImpl)
         .build()

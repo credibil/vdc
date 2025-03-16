@@ -105,8 +105,8 @@ pub mod pkce {
 
 /// Proofs
 pub mod proof {
-    pub use crate::w3c_vc::proof::jose::VcClaims;
     pub use crate::w3c_vc::proof::{Payload, Type, Verify, verify};
+    pub use crate::w3c_vc::vc::W3cVcClaims;
 }
 
 /// Status
@@ -115,8 +115,46 @@ pub mod status {
     pub use crate::status::issuer::*;
 }
 
+use std::fmt::Display;
+
 pub use error::Error;
+use serde::{Deserialize, Serialize};
 
 /// Result type for `OpenID` for Verifiable Credential Issuance and Verifiable
 /// Presentations.
 pub type Result<T, E = Error> = std::result::Result<T, E>;
+
+/// The JWT `typ` header parameter.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub enum JwtType {
+    /// General purpose JWT type.
+    #[default]
+    #[serde(rename = "jwt")]
+    Jwt,
+
+    /// JWT `typ` for Wallet's Proof of possession of key material.
+    #[serde(rename = "openid4vci-proof+jwt")]
+    ProofJwt,
+
+    /// JWT `typ` for SD-JWT credentials.
+    #[serde(rename = "dc+sd-jwt")]
+    SdJwt,
+
+}
+
+impl From<JwtType> for String {
+    fn from(t: JwtType) -> Self {
+        match t {
+            JwtType::Jwt => "jwt".to_string(),
+            JwtType::ProofJwt => "openid4vci-proof+jwt".to_string(),
+            JwtType::SdJwt => "dc+sd-jwt".to_string(),
+        }
+    }
+}
+
+impl Display for JwtType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s: String = self.clone().into();
+        write!(f, "{s}")
+    }
+}

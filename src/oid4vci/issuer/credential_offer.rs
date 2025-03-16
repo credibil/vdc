@@ -14,8 +14,6 @@
 //!
 //! [JWT VC Issuance Profile]: (https://identity.foundation/jwt-vc-issuance-profile)
 
-use tracing::instrument;
-
 use crate::oid4vci::Result;
 use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request};
 use crate::oid4vci::provider::{Provider, StateStore};
@@ -30,12 +28,9 @@ use crate::{invalid, server};
 ///
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
-#[instrument(level = "debug", skip(provider))]
 async fn credential_offer(
-    issuer: &str, provider: &impl Provider, request: CredentialOfferRequest,
+    _issuer: &str, provider: &impl Provider, request: CredentialOfferRequest,
 ) -> Result<CredentialOfferResponse> {
-    tracing::debug!("credential_offer");
-
     // retrieve and then purge Credential Offer from state
     let state = StateStore::get::<State>(provider, &request.id)
         .await

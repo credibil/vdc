@@ -28,37 +28,96 @@
 //! [ECDSA Cryptosuites v1.0]: https://www.w3.org/TR/vc-di-ecdsa
 //! [BBS Cryptosuites v1.0]: https://w3c.github.io/vc-di-bbs
 
-mod controller;
-pub mod integrity;
-pub mod jose;
-
 use std::fmt::Display;
 
 use anyhow::bail;
+use chrono::{DateTime, Utc};
 use credibil_did::DidResolver;
 use credibil_infosec::Signer;
 use credibil_infosec::jose::{jws, jwt};
 use serde::{Deserialize, Serialize};
 
-use super::model::{VerifiableCredential, VerifiablePresentation};
-use crate::core::{Kind, OneMany};
-use crate::verify_key;
+use crate::core::{Kind, OneMany, did_jwk};
+use crate::w3c_vc::vc::{VerifiableCredential, W3cVcClaims};
+use crate::w3c_vc::vp::{VerifiablePresentation, VpClaims};
 
-/// Credential format options for the resulting proof.
-#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
-pub enum W3cFormat {
-    /// VC signed as a JWT, not using JSON-LD
-    #[serde(rename = "jwt_vc_json")]
-    JwtVcJson,
+/// To be verifiable, a credential must contain at least one proof mechanism,
+/// and details necessary to evaluate that proof.
+///
+/// A proof may be external (an enveloping proof) or internal (an embedded
+/// proof).
+///
+/// Enveloping proofs are implemented using JOSE and COSE, while embedded proofs
+/// are implemented using the `Proof` object described here.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", default)]
+#[allow(clippy::struct_field_names)]
+pub struct Proof {
+    /// An optional identifier for the proof. MUST be a URL, such as a UUID as a
+    /// URN e.g. "`urn:uuid:6a1676b8-b51f-11ed-937b-d76685a20ff5`".
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
 
-    /// VC signed as a JWT, using JSON-LD
-    #[serde(rename = "jwt_vc_json-ld")]
-    JwtVcJsonLd,
+    /// The specific proof type. MUST map to a URL. Examples include
+    /// "`DataIntegrityProof`" and "`Ed25519Signature2020`". The type determines
+    /// the other fields required to secure and verify the proof.
+    ///
+    /// When set to "`DataIntegrityProof`", the `cryptosuite` and the
+    /// `proofValue` properties MUST be set.
+    #[serde(rename = "type")]
+    pub type_: String,
 
-    /// VC secured using Data Integrity, using JSON-LD, with a proof suite
-    /// requiring Linked Data canonicalization.
-    #[serde(rename = "ldp_vc")]
-    DataIntegrityJsonLd,
+    /// The value of the cryptosuite property identifies the cryptographic
+    /// suite. If subtypes are supported, it MUST be the <https://w3id.org/security#cryptosuiteString>
+    /// subtype of string.
+    ///
+    /// For example, 'ecdsa-rdfc-2019', 'eddsa-2022'
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cryptosuite: Option<String>,
+
+    /// The reason for the proof. MUST map to a URL. The proof purpose acts as a
+    /// safeguard to prevent the proof from being misused.
+    pub proof_purpose: String,
+
+    /// Used to verify the proof. MUST map to a URL. For example, a link to a
+    /// public key that is used by a verifier during the verification
+    /// process. e.g did:example:123456789abcdefghi#keys-1.
+    pub verification_method: String,
+
+    /// The date-time the proof was created. MUST be an XMLSCHEMA11-2 date-time.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created: Option<DateTime<Utc>>,
+
+    /// The date-time the proof expires. MUST be an XMLSCHEMA11-2 date-time.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expires: Option<DateTime<Utc>>,
+
+    /// One or more security domains in which the proof is meant to be used.
+    /// MUST be either a string, or a set of strings. SHOULD be used by the
+    /// verifier to ensure the proof is used in the correct security domain.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub domain: Option<OneMany<String>>,
+
+    /// Used to mitigate replay attacks. SHOULD be included if a domain is
+    /// specified.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub challenge: Option<String>,
+
+    /// Contains the data needed to verify the proof using the
+    /// verificationMethod specified. MUST be a MULTIBASE-encoded binary
+    /// value.
+    pub proof_value: String,
+
+    /// Each value identifies another data integrity proof that MUST verify
+    /// before the current proof is processed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub previous_proof: Option<OneMany<String>>,
+
+    /// Supplied by the proof creator. Can be used to increase privacy by
+    /// decreasing linkability that results from deterministically generated
+    /// signatures.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nonce: Option<String>,
 }
 
 /// `Payload` is used to identify the type of proof to be created.
@@ -71,7 +130,7 @@ pub enum Payload {
         vc: VerifiableCredential,
 
         /// The issuance date and time of the Credential.
-        issued_at: i64,
+        issued_at: DateTime<Utc>,
     },
 
     /// A Verifiable Presentation proof encoded as a JWT.
@@ -91,47 +150,26 @@ pub enum Payload {
 ///
 /// # Errors
 /// TODO: document errors
-pub async fn create(
-    format: W3cFormat, payload: Payload, signer: &impl Signer,
-) -> anyhow::Result<String> {
-    if format != W3cFormat::JwtVcJson && format != W3cFormat::JwtVcJsonLd {
-        return Err(anyhow::anyhow!("Unsupported proof format"));
-    }
-
+pub async fn create(payload: Payload, signer: &impl Signer) -> anyhow::Result<String> {
     let jwt = match payload {
         Payload::Vc { vc, issued_at } => {
-            let claims = jose::VcClaims::from_vc(vc, issued_at);
+            let mut claims = W3cVcClaims::from(vc);
+            claims.iat = issued_at;
             jws::encode(&claims, signer).await?
         }
         Payload::Vp { vp, client_id, nonce } => {
-            let mut claims = jose::VpClaims::from(vp);
+            let mut claims = VpClaims::from(vp);
             claims.aud.clone_from(&client_id);
             claims.nonce.clone_from(&nonce);
             jws::encode(&claims, signer).await?
         }
     };
 
-    // TODO: add data integrity proof payload
-    // let proof = Proof {
-    //     id: Some(format!("urn:uuid:{}", Uuid::new_v4())),
-    //     type_: Signer::algorithm(provider).proof_type(),
-    //     verification_method: Signer::verification_method(provider),
-    //     created: Some(Utc::now()),
-    //     expires:
-    // Utc::now().checked_add_signed(TimeDelta::try_hours(1).unwrap_or_default()),
-    //     ..Proof::default()
-    // };
-
-    // Ok(serde_json::to_value(jwt)?)
     Ok(jwt)
 }
 
 /// Data type to verify.
 pub enum Verify<'a> {
-    /// A Verifiable Credential proof either encoded as a JWT or with an
-    /// embedded a Data Integrity Proof.
-    Vc(&'a Kind<VerifiableCredential>),
-
     /// A Verifiable Presentation proof either encoded as a JWT or with an
     /// embedded a Data Integrity Proof.
     Vp(&'a Kind<VerifiablePresentation>),
@@ -142,43 +180,34 @@ pub enum Verify<'a> {
 /// # Errors
 /// TODO: document errors
 #[allow(clippy::unused_async)]
-pub async fn verify(proof: Verify<'_>, resolver: impl DidResolver) -> anyhow::Result<Payload> {
-    match proof {
-        Verify::Vc(value) => {
-            let Kind::String(token) = value else {
-                bail!("VerifiableCredential is not a JWT");
-            };
-            let jwt: jwt::Jwt<jose::VcClaims> = jws::decode(token, verify_key!(resolver)).await?;
-            Ok(Payload::Vc {
-                vc: jwt.claims.vc,
-                issued_at: jwt.claims.iat,
+pub async fn verify<R>(proof: Verify<'_>, resolver: R) -> anyhow::Result<Payload>
+where
+    R: DidResolver + Send + Sync,
+{
+    let resolver = async |kid: String| did_jwk(&kid, &resolver).await;
+    let Verify::Vp(value) = proof;
+
+    match value {
+        Kind::String(token) => {
+            let jwt: jwt::Jwt<VpClaims> = jws::decode(token, resolver).await?;
+            Ok(Payload::Vp {
+                vp: jwt.claims.vp,
+                client_id: jwt.claims.aud,
+                nonce: jwt.claims.nonce,
             })
         }
-        Verify::Vp(value) => {
-            match value {
-                Kind::String(token) => {
-                    let jwt: jwt::Jwt<jose::VpClaims> =
-                        jws::decode(token, verify_key!(resolver)).await?;
-                    Ok(Payload::Vp {
-                        vp: jwt.claims.vp,
-                        client_id: jwt.claims.aud,
-                        nonce: jwt.claims.nonce,
-                    })
-                }
-                Kind::Object(vp) => {
-                    // TODO: Implement embedded proof verification
-                    let Some(OneMany::One(proof)) = &vp.proof else {
-                        bail!("invalid VerifiablePresentation proof")
-                    };
-                    let challenge = proof.challenge.clone().unwrap_or_default();
+        Kind::Object(vp) => {
+            // TODO: Implement embedded proof verification
+            let Some(OneMany::One(proof)) = &vp.proof else {
+                bail!("invalid VerifiablePresentation proof")
+            };
+            let challenge = proof.challenge.clone().unwrap_or_default();
 
-                    Ok(Payload::Vp {
-                        vp: vp.clone(),
-                        nonce: challenge,
-                        client_id: String::new(),
-                    })
-                }
-            }
+            Ok(Payload::Vp {
+                vp: vp.clone(),
+                nonce: challenge,
+                client_id: String::new(),
+            })
         }
     }
 }
@@ -191,10 +220,6 @@ pub enum Type {
     #[serde(rename = "jwt")]
     Jwt,
 
-    /// JWT `typ` for Wallet's Proof of possession of key material.
-    #[serde(rename = "openid4vci-proof+jwt")]
-    Openid4VciProofJwt,
-
     /// JWT `typ` for Authorization Request Object.
     #[serde(rename = "oauth-authz-req+jwt")]
     OauthAuthzReqJwt,
@@ -204,7 +229,6 @@ impl From<Type> for String {
     fn from(t: Type) -> Self {
         match t {
             Type::Jwt => "jwt".to_string(),
-            Type::Openid4VciProofJwt => "openid4vci-proof+jwt".to_string(),
             Type::OauthAuthzReqJwt => "oauth-authz-req+jwt".to_string(),
         }
     }

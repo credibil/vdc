@@ -28,7 +28,7 @@ async fn request() {
         "code_challenge_method": "S256",
         "authorization_details": [{
             "type": "openid_credential",
-            "credential_configuration_id": "EmployeeID_JWT",
+            "credential_configuration_id": "EmployeeID_W3C_VC",
         }],
         "subject_id": NORMAL_USER,
         "wallet_issuer": CREDENTIAL_ISSUER

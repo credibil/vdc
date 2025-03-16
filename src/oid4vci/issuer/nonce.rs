@@ -8,7 +8,6 @@
 //! Request proofs will support the Nonce Endpoint.
 
 use chrono::Utc;
-use tracing::instrument;
 
 use crate::core::generate;
 use crate::oid4vci::Result;
@@ -24,12 +23,7 @@ use crate::server;
 ///
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
-#[instrument(level = "debug", skip(provider))]
-async fn nonce(
-    issuer: &str, provider: &impl Provider, request: NonceRequest,
-) -> Result<NonceResponse> {
-    tracing::debug!("nonce");
-
+async fn nonce(_issuer: &str, provider: &impl Provider, _: NonceRequest) -> Result<NonceResponse> {
     let c_nonce = generate::nonce();
     let expire_at = Utc::now() + Expire::Authorized.duration();
 

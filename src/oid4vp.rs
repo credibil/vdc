@@ -171,7 +171,7 @@ mod state;
 
 /// Proofs
 pub mod proof {
-    pub use crate::w3c_vc::proof::{Payload, W3cFormat, create};
+    pub use crate::w3c_vc::proof::{Payload, create};
 }
 
 // Re-export types
@@ -180,7 +180,7 @@ pub use crate::dif_exch::{
     PresentationSubmission,
 };
 pub use crate::oid4vp::types::*;
-pub use crate::w3c_vc::model::VerifiablePresentation;
+pub use crate::w3c_vc::vp::VerifiablePresentation;
 
 /// Re-export status traits and types.
 pub mod status {

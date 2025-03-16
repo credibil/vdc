@@ -8,15 +8,13 @@
 //! valid for the issuance of the Credential previously requested at the
 //! Credential Endpoint or the Batch Credential Endpoint.
 
-use tracing::instrument;
-
 use crate::oid4vci::endpoint::{Body, Handler, Request};
 use crate::oid4vci::issuer::credential::credential;
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::{Stage, State};
 use crate::oid4vci::types::{
-    CredentialHeaders, DeferredCredentialRequest, DeferredCredentialResponse, DeferredHeaders,
-    ResponseType,
+    CredentialHeaders, CredentialResponse, DeferredCredentialRequest, DeferredCredentialResponse,
+    DeferredHeaders,
 };
 use crate::oid4vci::{Error, Result};
 use crate::{invalid, server};
@@ -27,13 +25,10 @@ use crate::{invalid, server};
 ///
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
-#[instrument(level = "debug", skip(provider))]
 async fn deferred(
     issuer: &str, provider: &impl Provider,
     request: Request<DeferredCredentialRequest, DeferredHeaders>,
 ) -> Result<DeferredCredentialResponse> {
-    tracing::debug!("deferred");
-
     let transaction_id = &request.body.transaction_id;
 
     // retrieve deferred credential request from state
@@ -57,7 +52,7 @@ async fn deferred(
     let response = credential(issuer, provider, req).await?;
 
     // is issuance still pending?
-    if let ResponseType::TransactionId { .. } = response.response {
+    if let CredentialResponse::TransactionId { .. } = response {
         // TODO: make retry interval configurable
         return Err(Error::IssuancePending(5));
     }

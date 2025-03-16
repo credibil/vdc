@@ -26,7 +26,7 @@ async fn issuance(provider: ProviderImpl, #[case] issue: Issuance) {
 
     let value = json! ({
         "credential_issuer": CREDENTIAL_ISSUER,
-        "credential_configuration_ids": ["EmployeeID_JWT"],
+        "credential_configuration_ids": ["EmployeeID_W3C_VC"],
         "subject_id": subject_id,
         "grant_types": ["urn:ietf:params:oauth:grant-type:pre-authorized_code"],
         "tx_code_required": true,
@@ -54,7 +54,7 @@ async fn format(provider: ProviderImpl, #[case] credential_format: Format) {
 
     let value = json!({
         "credential_issuer": CREDENTIAL_ISSUER,
-        "credential_configuration_ids": ["EmployeeID_JWT"],
+        "credential_configuration_ids": ["EmployeeID_W3C_VC"],
         "subject_id": NORMAL_USER,
          "grant_types": ["urn:ietf:params:oauth:grant-type:pre-authorized_code"],
         "tx_code_required": true,
@@ -81,7 +81,7 @@ async fn authorization(provider: ProviderImpl) {
 
     let value = json!({
         "credential_issuer": CREDENTIAL_ISSUER,
-        "credential_configuration_ids": ["EmployeeID_JWT"],
+        "credential_configuration_ids": ["EmployeeID_W3C_VC"],
         "subject_id": NORMAL_USER,
         "tx_code_required": true,
         "send_type": SendType::ByVal,
@@ -109,7 +109,7 @@ async fn offer_type(provider: ProviderImpl, #[case] send_type: SendType) {
 
     let value = json!({
         "credential_issuer": CREDENTIAL_ISSUER,
-        "credential_configuration_ids": ["EmployeeID_JWT"],
+        "credential_configuration_ids": ["EmployeeID_W3C_VC"],
         "subject_id": NORMAL_USER,
         "grant_types": ["urn:ietf:params:oauth:grant-type:pre-authorized_code"],
         "tx_code_required": true,
