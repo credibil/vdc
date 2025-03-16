@@ -1,7 +1,7 @@
 ---
-source: tests/pre_authorized.rs
-assertion_line: 433
-expression: vc
+source: tests/vci_deferred.rs
+assertion_line: 120
+expression: jwt.claims.vc
 ---
 "@context": []
 id: "http://credibil.io/credentials/EmployeeIDCredential"
@@ -16,7 +16,11 @@ description:
   "@language": en-NZ
 issuer: "http://credibil.io"
 credentialSubject:
+  address:
+    locality: Wellington
+    street_address: 123 Fake St
+  email: pending.user@example.com
   family_name: Person
-  given_name: Normal
+  given_name: Pending
   id: "[id]"
 validFrom: "[validFrom]"

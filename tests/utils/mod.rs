@@ -3,6 +3,7 @@
 
 mod auth;
 pub mod issuer;
+pub mod verifier;
 pub mod wallet;
 
 use std::fmt::Display;

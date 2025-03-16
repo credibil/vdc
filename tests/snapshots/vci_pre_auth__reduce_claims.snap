@@ -1,11 +1,9 @@
 ---
-source: tests/deferred_issuance.rs
-assertion_line: 101
-expression: vc
+source: tests/vci_pre_auth.rs
+assertion_line: 426
+expression: jwt.claims.vc
 ---
-"@context":
-  - "https://www.w3.org/2018/credentials/v1"
-  - "http://credibil.io/credentials/v1"
+"@context": []
 id: "http://credibil.io/credentials/EmployeeIDCredential"
 type:
   - VerifiableCredential
@@ -18,10 +16,6 @@ description:
   "@language": en-NZ
 issuer: "http://credibil.io"
 credentialSubject:
-  address:
-    locality: Wellington
-    street_address: 123 Fake St
-  email: normal.user@example.com
   family_name: Person
   given_name: Normal
   id: "[id]"

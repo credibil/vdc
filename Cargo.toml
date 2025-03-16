@@ -61,7 +61,6 @@ insta.workspace = true
 multibase = "0.9"
 rand_core = "0.6.4"
 rstest = "0.25.0"
-test-verifier.workspace = true
 tokio.workspace = true
 x25519-dalek = { version = "2.0.1", features = ["static_secrets"] }
 
@@ -70,7 +69,6 @@ x25519-dalek = { version = "2.0.1", features = ["static_secrets"] }
 # -----------------------------------------------
 [workspace]
 members = [
-    "crates/*",
     "examples/issuer",
     "examples/verifier",
 ]
@@ -116,7 +114,6 @@ insta = { version = "1.42.2", features = ["redactions", "yaml"] }
 rand = "0.9.0"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140", features = ["alloc"] }
-test-verifier = { path = "crates/test-verifier" }
 tokio = { version = "1.44.1", features = ["macros", "rt-multi-thread"] }
 tower-http = { version = "0.6.2", features = ["cors", "set-header", "trace"] }
 tracing = "0.1.41"

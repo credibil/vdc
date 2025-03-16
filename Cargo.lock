@@ -687,7 +687,6 @@ dependencies = [
  "serde_json",
  "serde_json_path",
  "sha2 0.10.8",
- "test-verifier",
  "thiserror 2.0.12",
  "tokio",
  "tracing",
@@ -2852,22 +2851,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
-name = "test-verifier"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "base64ct",
- "chrono",
- "credibil-did",
- "credibil-infosec",
- "credibil-vc",
- "ed25519-dalek",
- "serde",
- "serde_json",
- "uuid",
-]
-
-[[package]]
 name = "thiserror"
 version = "1.0.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3198,16 +3181,23 @@ checksum = "3ef4c4aa54d5d05a279399bfa921ec387b7aba77caf7a682ae8d86785b8fdad2"
 name = "verifier"
 version = "0.0.0"
 dependencies = [
+ "anyhow",
  "axum",
  "axum-extra",
+ "base64ct",
+ "chrono",
+ "credibil-did",
+ "credibil-infosec",
  "credibil-vc",
+ "ed25519-dalek",
+ "rand_core 0.6.4",
  "serde",
  "serde_json",
- "test-verifier",
  "tokio",
  "tower-http",
  "tracing",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]

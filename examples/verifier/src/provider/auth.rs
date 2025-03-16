@@ -21,7 +21,7 @@ pub struct Keyring {
 }
 
 impl Keyring {
-    pub fn new(method: DidMethod) -> Self {
+    pub fn new() -> Self {
         // generate key pair
         let signing_key = SigningKey::generate(&mut OsRng);
         let verifying_key = signing_key.verifying_key();

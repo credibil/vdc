@@ -1,7 +1,7 @@
 ---
-source: tests/credentials.rs
-assertion_line: 115
-expression: vc
+source: tests/vci_issuance.rs
+assertion_line: 117
+expression: jwt.claims.vc
 ---
 "@context": []
 id: "http://credibil.io/credentials/EmployeeIDCredential"

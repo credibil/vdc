@@ -32,7 +32,7 @@ impl Keyring {
     }
 
     pub fn did_key() -> Self {
-        Self::new(DidMethod::Web)
+        Self::new(DidMethod::Key)
     }
 
     pub fn new(method: DidMethod) -> Self {

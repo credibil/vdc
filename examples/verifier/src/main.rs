@@ -4,6 +4,8 @@
 //! [Verifiable Credential HTTP API](
 //! https://identity.foundation/verifiable-credential/spec/#http-api).
 
+mod provider;
+
 use std::collections::HashMap;
 
 use axum::extract::{Path, State};
@@ -19,7 +21,7 @@ use credibil_vc::oid4vp::{
 };
 use serde::Serialize;
 use serde_json::json;
-use test_verifier::ProviderImpl;
+use provider::ProviderImpl;
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;

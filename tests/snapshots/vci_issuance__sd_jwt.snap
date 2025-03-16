@@ -1,6 +1,6 @@
 ---
-source: tests/credentials.rs
-assertion_line: 210
+source: tests/vci_issuance.rs
+assertion_line: 208
 expression: jwt
 ---
 header:

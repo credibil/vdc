@@ -1,5 +1,3 @@
-pub mod keystore;
-
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
@@ -9,23 +7,25 @@ use credibil_did::{DidResolver, Document};
 use credibil_infosec::{self, Algorithm, PublicKey, Receiver, SharedSecret, Signer};
 use credibil_vc::oid4vp::provider::{Metadata, Provider, StateStore};
 use credibil_vc::oid4vp::types::{Verifier, Wallet};
-pub use keystore::Keystore;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use uuid::Uuid;
 
+use super::auth::Keyring;
+
 pub const VERIFIER_ID: &str = "http://localhost:8080";
 
-#[derive(Default, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct ProviderImpl {
     verifiers: Arc<Mutex<HashMap<String, Verifier>>>,
+    keyring: Keyring,
     state: Arc<Mutex<HashMap<String, Vec<u8>>>>,
 }
 
 impl ProviderImpl {
     #[must_use]
     pub fn new() -> Self {
-        let json = include_bytes!("../data/verifier.json");
+        let json = include_bytes!("./data/verifier.json");
         let verifier: Verifier = serde_json::from_slice(json).expect("should serialize");
 
         Self {
@@ -34,6 +34,7 @@ impl ProviderImpl {
                 verifier,
             )]))),
             state: Arc::new(Mutex::new(HashMap::new())),
+            keyring: Keyring::did_web(),
         }
     }
 }
@@ -87,27 +88,26 @@ impl StateStore for ProviderImpl {
 }
 
 impl DidResolver for ProviderImpl {
-    async fn resolve(&self, _url: &str) -> anyhow::Result<Document> {
-        serde_json::from_slice(include_bytes!("../data/did-web.json"))
-            .map_err(|e| anyhow!("issue deserializing document: {e}"))
+    async fn resolve(&self, url: &str) -> anyhow::Result<Document> {
+        self.keyring.resolve(url).await
     }
 }
 
 impl Signer for ProviderImpl {
     async fn try_sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
-        Keystore::try_sign(msg)
+        self.keyring.try_sign(msg).await
     }
 
     async fn verifying_key(&self) -> Result<Vec<u8>> {
-        Keystore::public_key()
+        self.keyring.verifying_key().await
     }
 
     fn algorithm(&self) -> Algorithm {
-        Keystore::algorithm()
+        self.keyring.algorithm()
     }
 
     async fn verification_method(&self) -> Result<String> {
-        Ok(Keystore::verification_method())
+        self.keyring.verification_method().await
     }
 }
 
