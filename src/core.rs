@@ -126,7 +126,11 @@ impl<T: Clone + Default + PartialEq> OneMany<T> {
 }
 
 /// Retrieve the JWK specified by the provided DID URL.
-pub(crate) async fn did_jwk<R>(did_url: &str, resolver: &R) -> Result<PublicKeyJwk>
+///
+/// # Errors
+///
+/// TODO: Document errors
+pub async fn did_jwk<R>(did_url: &str, resolver: &R) -> Result<PublicKeyJwk>
 where
     R: DidResolver + Send + Sync,
 {

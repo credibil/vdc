@@ -13,7 +13,7 @@ stage:
     items:
       - AuthorizationDetail:
           type: openid_credential
-          credential_configuration_id: EmployeeID_JWT
+          credential_configuration_id: EmployeeID_W3C_VC
           credential_definition:
             credentialSubject:
               address:
@@ -22,7 +22,7 @@ stage:
               email: {}
               family_name: {}
               given_name: {}
-        credential_configuration_id: EmployeeID_JWT
+        credential_configuration_id: EmployeeID_W3C_VC
         credential_identifiers:
           - PHLEmployeeID
 expires_at: "[expires_at]"

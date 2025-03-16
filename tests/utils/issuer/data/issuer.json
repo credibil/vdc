@@ -7,9 +7,9 @@
         "locale": "en-NZ"
     },
     "credential_configurations_supported": {
-        "EmployeeID_JWT": {
+        "EmployeeID_W3C_VC": {
             "format": "jwt_vc_json",
-            "scope": "EmployeeIDCredential",
+            "scope": "EmployeeID",
             "cryptographic_binding_methods_supported": [
                 "did:key",
                 "did:web"
@@ -154,9 +154,9 @@
                 }
             ]
         },
-        "Developer_JWT": {
+        "Developer_W3C_VC": {
             "format": "jwt_vc_json",
-            "scope": "DeveloperCredential",
+            "scope": "Developer",
             "cryptographic_binding_methods_supported": [
                 "did:key",
                 "did:web"
@@ -238,7 +238,6 @@
         },
         "org.iso.18013.5.1.mDL": {
             "format": "mso_mdoc",
-            "doctype": "org.iso.18013.5.1.mDL",
             "scope": "DriverLicence",
             "cryptographic_binding_methods_supported": [
                 "did:key",
@@ -273,6 +272,7 @@
                     }
                 }
             ],
+            "doctype": "org.iso.18013.5.1.mDL",
             "claims": [
                 {
                     "path": [
@@ -313,9 +313,9 @@
                 }
             ]
         },
-        "SD_JWT_VC_example_in_OpenID4VCI": {
+        "Identity_SD_JWT": {
             "format": "dc+sd-jwt",
-            "scope": "SD_JWT_VC_example_in_OpenID4VCI",
+            "scope": "Identity",
             "cryptographic_binding_methods_supported": [
                 "jwk"
             ],
@@ -324,7 +324,7 @@
             ],
             "display": [
                 {
-                    "name": "IdentityCredential",
+                    "name": "Identity Credential",
                     "logo": {
                         "uri": "https://university.example.edu/public/logo.png",
                         "alt_text": "a square logo of a university"
@@ -341,7 +341,7 @@
                     ]
                 }
             },
-            "vct": "SD_JWT_VC_example_in_OpenID4VCI",
+            "vct": "Identity_SD_JWT",
             "claims": [
                 {
                     "path": [

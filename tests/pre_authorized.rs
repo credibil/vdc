@@ -5,15 +5,15 @@ mod utils;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
-use credibil_infosec::jose::JwsBuilder;
+use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
 use credibil_vc::OneMany;
-use credibil_vc::oid4vci::endpoint;
-use credibil_vc::oid4vci::proof::{self, Payload, Type, Verify};
+use credibil_vc::core::did_jwk;
 use credibil_vc::oid4vci::types::{
     AuthorizationDetail, CreateOfferRequest, Credential, CredentialHeaders, CredentialOfferRequest,
     CredentialRequest, CredentialResponse, NonceRequest, NotificationEvent, NotificationHeaders,
-    NotificationRequest, ProofClaims, TokenGrantType, TokenRequest,
+    NotificationRequest, ProofClaims, TokenGrantType, TokenRequest, W3cVcClaims,
 };
+use credibil_vc::oid4vci::{JwtType, endpoint};
 use insta::assert_yaml_snapshot as assert_snapshot;
 use utils::issuer::{CREDENTIAL_ISSUER as ALICE_ISSUER, NORMAL_USER, ProviderImpl};
 use utils::wallet::{self, Keyring};
@@ -31,7 +31,7 @@ async fn offer_val() {
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
         .subject_id(NORMAL_USER)
-        .with_credential("EmployeeID_JWT")
+        .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
         endpoint::handle(ALICE_ISSUER, request, &provider).await.expect("should create offer");
@@ -41,12 +41,12 @@ async fn offer_val() {
     // --------------------------------------------------
     let offer = response.offer_type.as_object().expect("should have offer").clone();
     let grants = offer.grants.expect("should have grant");
-    let pre_auth_grant = grants.pre_authorized_code.expect("should have pre-authorized code grant");
+    let grant = grants.pre_authorized_code.expect("should have pre-authorized code grant");
 
     let request = TokenRequest::builder()
         .grant_type(TokenGrantType::PreAuthorizedCode {
-            pre_authorized_code: pre_auth_grant.pre_authorized_code,
-            tx_code: response.tx_code.clone(),
+            pre_authorized_code: grant.pre_authorized_code,
+            tx_code: response.tx_code,
         })
         .build();
     let token =
@@ -60,7 +60,7 @@ async fn offer_val() {
 
     // proof of possession of key material
     let jws = JwsBuilder::new()
-        .typ(Type::Openid4VciProofJwt)
+        .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
         .build()
@@ -94,13 +94,11 @@ async fn offer_val() {
     };
     let Credential { credential } = credentials.first().expect("should have credential");
 
-    // verify the credential proof
-    let Ok(Payload::Vc { vc, .. }) = proof::verify(Verify::Vc(credential), provider.clone()).await
-    else {
-        panic!("should be valid VC");
-    };
+    let token = credential.as_string().expect("should be a string");
+    let resolver = async |kid: String| did_jwk(&kid, &provider).await;
+    let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
 
-    assert_snapshot!("offer_val", vc, {
+    assert_snapshot!("offer_val", jwt.claims.vc, {
         ".validFrom" => "[validFrom]",
         ".credentialSubject" => insta::sorted_redaction(),
         ".credentialSubject.id" => "[id]"
@@ -118,7 +116,7 @@ async fn offer_ref() {
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
         .subject_id(NORMAL_USER)
-        .with_credential("EmployeeID_JWT")
+        .with_credential("EmployeeID_W3C_VC")
         .by_ref(true)
         .build();
     let create_offer =
@@ -138,11 +136,11 @@ async fn offer_ref() {
 
     // validate offer
     let offer = response.credential_offer;
-    assert_eq!(offer.credential_configuration_ids, vec!["EmployeeID_JWT".to_string()]);
+    assert_eq!(offer.credential_configuration_ids, vec!["EmployeeID_W3C_VC".to_string()]);
 
     let grants = offer.grants.expect("should have grant");
-    let pre_auth_grant = grants.pre_authorized_code.expect("should have pre-authorized code grant");
-    assert_eq!(pre_auth_grant.pre_authorized_code.len(), 43);
+    let grant = grants.pre_authorized_code.expect("should have pre-authorized code grant");
+    assert_eq!(grant.pre_authorized_code.len(), 43);
 }
 
 // Should return two credential datasets for a single credential
@@ -156,7 +154,7 @@ async fn two_datasets() {
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
         .subject_id(NORMAL_USER)
-        .with_credential("Developer_JWT")
+        .with_credential("Developer_W3C_VC")
         .build();
     let response =
         endpoint::handle(ALICE_ISSUER, request, &provider).await.expect("should create offer");
@@ -166,11 +164,11 @@ async fn two_datasets() {
     // --------------------------------------------------
     let offer = response.offer_type.as_object().expect("should have offer").clone();
     let grants = offer.grants.expect("should have grant");
-    let pre_auth_grant = grants.pre_authorized_code.expect("should have pre-authorized code grant");
+    let grant = grants.pre_authorized_code.expect("should have pre-authorized code grant");
 
     let request = TokenRequest::builder()
         .grant_type(TokenGrantType::PreAuthorizedCode {
-            pre_authorized_code: pre_auth_grant.pre_authorized_code,
+            pre_authorized_code: grant.pre_authorized_code,
             tx_code: response.tx_code.clone(),
         })
         .build();
@@ -193,7 +191,7 @@ async fn two_datasets() {
 
         // proof of possession of key material
         let jws = JwsBuilder::new()
-            .typ(Type::Openid4VciProofJwt)
+            .typ(JwtType::ProofJwt)
             .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(nonce.c_nonce))
             .add_signer(&*BOB_KEYRING)
             .build()
@@ -227,14 +225,12 @@ async fn two_datasets() {
         let Credential { credential } = credentials.first().expect("should have credential");
 
         // verify the credential proof
-        let Ok(Payload::Vc { vc, .. }) =
-            proof::verify(Verify::Vc(credential), provider.clone()).await
-        else {
-            panic!("should be valid VC");
-        };
+        let token = credential.as_string().expect("should be a string");
+        let resolver = async |kid: String| did_jwk(&kid, &provider).await;
+        let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
 
         // validate the credential subject
-        let OneMany::One(subject) = vc.credential_subject else {
+        let OneMany::One(subject) = jwt.claims.vc.credential_subject else {
             panic!("should have single subject");
         };
         assert_eq!(subject.claims["name"], expected[identifier.as_str()][0]);
@@ -253,8 +249,8 @@ async fn reduce_credentials() {
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
         .subject_id(NORMAL_USER)
-        .with_credential("Developer_JWT")
-        .with_credential("EmployeeID_JWT")
+        .with_credential("Developer_W3C_VC")
+        .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
         endpoint::handle(ALICE_ISSUER, request, &provider).await.expect("should create offer");
@@ -268,16 +264,16 @@ async fn reduce_credentials() {
     // --------------------------------------------------
     let offer = response.offer_type.as_object().expect("should have offer").clone();
     let grants = offer.grants.expect("should have grant");
-    let pre_auth_grant = grants.pre_authorized_code.expect("should have pre-authorized code grant");
+    let grant = grants.pre_authorized_code.expect("should have pre-authorized code grant");
 
     let request = TokenRequest::builder()
         // .client_id(BOB_CLIENT)
         .grant_type(TokenGrantType::PreAuthorizedCode {
-            pre_authorized_code: pre_auth_grant.pre_authorized_code,
+            pre_authorized_code: grant.pre_authorized_code,
             tx_code: response.tx_code.clone(),
         })
         .with_authorization_detail(
-            AuthorizationDetail::builder().configuration_id("EmployeeID_JWT").build(),
+            AuthorizationDetail::builder().configuration_id("EmployeeID_W3C_VC").build(),
         )
         .build();
     let token =
@@ -296,7 +292,7 @@ async fn reduce_credentials() {
 
     // proof of possession of key material
     let jws = JwsBuilder::new()
-        .typ(Type::Openid4VciProofJwt)
+        .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
         .build()
@@ -329,13 +325,12 @@ async fn reduce_credentials() {
     let Credential { credential } = credentials.first().expect("should have credential");
 
     // verify the credential proof
-    let Ok(Payload::Vc { vc, .. }) = proof::verify(Verify::Vc(credential), provider.clone()).await
-    else {
-        panic!("should be valid VC");
-    };
+    let token = credential.as_string().expect("should be a string");
+    let resolver = async |kid: String| did_jwk(&kid, &provider).await;
+    let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
 
     // validate the credential subject
-    let OneMany::One(subject) = vc.credential_subject else {
+    let OneMany::One(subject) = jwt.claims.vc.credential_subject else {
         panic!("should have single subject");
     };
     assert_eq!(subject.claims["given_name"], "Normal");
@@ -352,7 +347,7 @@ async fn reduce_claims() {
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
         .subject_id(NORMAL_USER)
-        .with_credential("EmployeeID_JWT")
+        .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
         endpoint::handle(ALICE_ISSUER, request, &provider).await.expect("should create offer");
@@ -362,16 +357,16 @@ async fn reduce_claims() {
     // --------------------------------------------------
     let offer = response.offer_type.as_object().expect("should have offer").clone();
     let grants = offer.grants.expect("should have grant");
-    let pre_auth_grant = grants.pre_authorized_code.expect("should have pre-authorized code grant");
+    let grant = grants.pre_authorized_code.expect("should have pre-authorized code grant");
 
     let request = TokenRequest::builder()
         .grant_type(TokenGrantType::PreAuthorizedCode {
-            pre_authorized_code: pre_auth_grant.pre_authorized_code,
+            pre_authorized_code: grant.pre_authorized_code,
             tx_code: response.tx_code.clone(),
         })
         .with_authorization_detail(
             AuthorizationDetail::builder()
-                .configuration_id("EmployeeID_JWT")
+                .configuration_id("EmployeeID_W3C_VC")
                 .with_claim(&vec!["credentialSubject", "given_name"])
                 .with_claim(&vec!["credentialSubject", "family_name"])
                 .build(),
@@ -388,7 +383,7 @@ async fn reduce_claims() {
 
     // proof of possession of key material
     let jws = JwsBuilder::new()
-        .typ(Type::Openid4VciProofJwt)
+        .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
         .build()
@@ -424,12 +419,11 @@ async fn reduce_claims() {
     let Credential { credential } = credentials.first().expect("should have credential");
 
     // verify the credential proof
-    let Ok(Payload::Vc { vc, .. }) = proof::verify(Verify::Vc(credential), provider.clone()).await
-    else {
-        panic!("should be valid VC");
-    };
+    let token = credential.as_string().expect("should be a string");
+    let resolver = async |kid: String| did_jwk(&kid, &provider).await;
+    let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
 
-    assert_snapshot!("reduce_claims", vc, {
+    assert_snapshot!("reduce_claims", jwt.claims.vc, {
         ".validFrom" => "[validFrom]",
         ".credentialSubject" => insta::sorted_redaction(),
         ".credentialSubject.id" => "[id]"
@@ -447,7 +441,7 @@ async fn notify_accepted() {
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
         .subject_id(NORMAL_USER)
-        .with_credential("EmployeeID_JWT")
+        .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
         endpoint::handle(ALICE_ISSUER, request, &provider).await.expect("should create offer");
@@ -457,11 +451,11 @@ async fn notify_accepted() {
     // --------------------------------------------------
     let offer = response.offer_type.as_object().expect("should have offer").clone();
     let grants = offer.grants.expect("should have grant");
-    let pre_auth_grant = grants.pre_authorized_code.expect("should have pre-authorized code grant");
+    let grant = grants.pre_authorized_code.expect("should have pre-authorized code grant");
 
     let request = TokenRequest::builder()
         .grant_type(TokenGrantType::PreAuthorizedCode {
-            pre_authorized_code: pre_auth_grant.pre_authorized_code,
+            pre_authorized_code: grant.pre_authorized_code,
             tx_code: response.tx_code.clone(),
         })
         .build();
@@ -476,7 +470,7 @@ async fn notify_accepted() {
 
     // proof of possession of key material
     let jws = JwsBuilder::new()
-        .typ(Type::Openid4VciProofJwt)
+        .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
         .build()

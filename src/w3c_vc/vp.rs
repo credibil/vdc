@@ -293,15 +293,16 @@ mod tests {
         subj.id = Some("did:example:ebfeb1f712ebc6f1c276e12ec21".to_string());
         subj.claims = json!({"employeeID": "1234567890"}).as_object().unwrap().clone();
 
-        let vc = VerifiableCredential::builder()
-            .add_context(Kind::String(
-                "https://www.w3.org/2018/credentials/examples/v1".to_string(),
-            ))
-            .id("https://example.com/credentials/3732")
-            .add_type("EmployeeIDCredential")
-            .issuer("https://example.com/issuers/14")
-            .add_subject(subj)
-            .build()?;
+        let vc = VerifiableCredential {
+            id: Some("https://example.com/credentials/3732".to_string()),
+            type_: OneMany::Many(vec![
+                "VerifiableCredential".to_string(),
+                "EmployeeIDCredential".to_string(),
+            ]),
+            issuer: Kind::String("https://example.com/issuers/14".to_string()),
+            credential_subject: OneMany::One(subj),
+            ..VerifiableCredential::default()
+        };
 
         VerifiablePresentation::builder()
             .add_context(Kind::String(

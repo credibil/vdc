@@ -13,8 +13,8 @@ stage:
     items:
       - AuthorizationDetail:
           type: openid_credential
-          credential_configuration_id: EmployeeID_JWT
-        credential_configuration_id: EmployeeID_JWT
+          credential_configuration_id: EmployeeID_W3C_VC
+        credential_configuration_id: EmployeeID_W3C_VC
         credential_identifiers:
           - PHLEmployeeID
 expires_at: "[expires_at]"

@@ -9,7 +9,7 @@ pre-authorized_code: WQHhDmQ3ZygxyOPlBjunlA
 tx_code: "111222"
 authorization_details:
   - type: openid_credential
-    credential_configuration_id: EmployeeID_JWT
+    credential_configuration_id: EmployeeID_W3C_VC
     locations:
       - "https://example.com"
     claims:

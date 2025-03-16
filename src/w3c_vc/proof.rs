@@ -37,8 +37,8 @@ use credibil_infosec::Signer;
 use credibil_infosec::jose::{jws, jwt};
 use serde::{Deserialize, Serialize};
 
-use crate::core::{Kind, OneMany};
-use crate::w3c_vc::vc::{VcClaims, VerifiableCredential};
+use crate::core::{Kind, OneMany, did_jwk};
+use crate::w3c_vc::vc::{VerifiableCredential, W3cVcClaims};
 use crate::w3c_vc::vp::{VerifiablePresentation, VpClaims};
 
 /// To be verifiable, a credential must contain at least one proof mechanism,
@@ -153,7 +153,7 @@ pub enum Payload {
 pub async fn create(payload: Payload, signer: &impl Signer) -> anyhow::Result<String> {
     let jwt = match payload {
         Payload::Vc { vc, issued_at } => {
-            let mut claims = VcClaims::from(vc);
+            let mut claims = W3cVcClaims::from(vc);
             claims.iat = issued_at;
             jws::encode(&claims, signer).await?
         }
@@ -170,16 +170,10 @@ pub async fn create(payload: Payload, signer: &impl Signer) -> anyhow::Result<St
 
 /// Data type to verify.
 pub enum Verify<'a> {
-    /// A Verifiable Credential proof either encoded as a JWT or with an
-    /// embedded a Data Integrity Proof.
-    Vc(&'a Kind<VerifiableCredential>),
-
     /// A Verifiable Presentation proof either encoded as a JWT or with an
     /// embedded a Data Integrity Proof.
     Vp(&'a Kind<VerifiablePresentation>),
 }
-
-use crate::core::did_jwk;
 
 /// Verify a proof.
 ///
@@ -191,43 +185,29 @@ where
     R: DidResolver + Send + Sync,
 {
     let resolver = async |kid: String| did_jwk(&kid, &resolver).await;
+    let Verify::Vp(value) = proof;
 
-    match proof {
-        Verify::Vc(value) => {
-            let Kind::String(token) = value else {
-                bail!("VerifiableCredential is not a JWT");
-            };
-            let jwt: jwt::Jwt<VcClaims> = jws::decode(token, resolver).await?;
-
-            Ok(Payload::Vc {
-                vc: jwt.claims.vc,
-                issued_at: jwt.claims.iat,
+    match value {
+        Kind::String(token) => {
+            let jwt: jwt::Jwt<VpClaims> = jws::decode(token, resolver).await?;
+            Ok(Payload::Vp {
+                vp: jwt.claims.vp,
+                client_id: jwt.claims.aud,
+                nonce: jwt.claims.nonce,
             })
         }
-        Verify::Vp(value) => {
-            match value {
-                Kind::String(token) => {
-                    let jwt: jwt::Jwt<VpClaims> = jws::decode(token, resolver).await?;
-                    Ok(Payload::Vp {
-                        vp: jwt.claims.vp,
-                        client_id: jwt.claims.aud,
-                        nonce: jwt.claims.nonce,
-                    })
-                }
-                Kind::Object(vp) => {
-                    // TODO: Implement embedded proof verification
-                    let Some(OneMany::One(proof)) = &vp.proof else {
-                        bail!("invalid VerifiablePresentation proof")
-                    };
-                    let challenge = proof.challenge.clone().unwrap_or_default();
+        Kind::Object(vp) => {
+            // TODO: Implement embedded proof verification
+            let Some(OneMany::One(proof)) = &vp.proof else {
+                bail!("invalid VerifiablePresentation proof")
+            };
+            let challenge = proof.challenge.clone().unwrap_or_default();
 
-                    Ok(Payload::Vp {
-                        vp: vp.clone(),
-                        nonce: challenge,
-                        client_id: String::new(),
-                    })
-                }
-            }
+            Ok(Payload::Vp {
+                vp: vp.clone(),
+                nonce: challenge,
+                client_id: String::new(),
+            })
         }
     }
 }
@@ -240,10 +220,6 @@ pub enum Type {
     #[serde(rename = "jwt")]
     Jwt,
 
-    /// JWT `typ` for Wallet's Proof of possession of key material.
-    #[serde(rename = "openid4vci-proof+jwt")]
-    Openid4VciProofJwt,
-
     /// JWT `typ` for Authorization Request Object.
     #[serde(rename = "oauth-authz-req+jwt")]
     OauthAuthzReqJwt,
@@ -253,7 +229,6 @@ impl From<Type> for String {
     fn from(t: Type) -> Self {
         match t {
             Type::Jwt => "jwt".to_string(),
-            Type::Openid4VciProofJwt => "openid4vci-proof+jwt".to_string(),
             Type::OauthAuthzReqJwt => "oauth-authz-req+jwt".to_string(),
         }
     }

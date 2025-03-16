@@ -138,7 +138,7 @@ impl Wallet {
             nonce: Some("token_resp.c_nonce".to_string()),
         };
         let jws = JwsBuilder::new()
-            .typ(Type::Openid4VciProofJwt)
+            .typ(Type::ProofJwt)
             .payload(claims)
             .add_signer(&test_holder::ProviderImpl)
             .build()

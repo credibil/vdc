@@ -20,6 +20,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 
+use crate::oid4vci::JwtType;
 use crate::oid4vci::types::{CredentialConfiguration, Format};
 use crate::server;
 
@@ -203,7 +204,6 @@ impl<S: Signer> DcSdJwtBuilder<HasConfig, HasIssuer, HasKeyBinding, HasClaims, H
         for (name, value) in self.claims.0 {
             let salt = Base64UrlUnpadded::encode_string(&rng().random::<[u8; 16]>());
             let sd_json = serde_json::to_vec(&json!([salt, name, value]))?;
-
             let disclosure = Base64UrlUnpadded::encode_string(&sd_json);
             let sd_hash = Base64UrlUnpadded::encode_string(Sha256::digest(&disclosure).as_slice());
 
@@ -212,7 +212,7 @@ impl<S: Signer> DcSdJwtBuilder<HasConfig, HasIssuer, HasKeyBinding, HasClaims, H
         }
 
         // create JWT (and sign)
-        let claims = SdJwtVcClaims {
+        let claims = SdJwtClaims {
             sd: sd_hashes.clone(),
             iss: self.issuer.0,
             iat: Some(Utc::now()),
@@ -223,11 +223,11 @@ impl<S: Signer> DcSdJwtBuilder<HasConfig, HasIssuer, HasKeyBinding, HasClaims, H
             // status: None,
             sub: self.holder,
 
-            ..SdJwtVcClaims::default()
+            ..SdJwtClaims::default()
         };
 
         let jws = Jws::builder()
-            .typ("dc+sd-jwt")
+            .typ(JwtType::SdJwt)
             .payload(claims)
             .add_signer(self.signer.0)
             .build()
@@ -244,7 +244,8 @@ impl<S: Signer> DcSdJwtBuilder<HasConfig, HasIssuer, HasKeyBinding, HasClaims, H
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 /// Claims that can be included in the payload of SD-JWT VCs.
-pub struct SdJwtVcClaims {
+#[serde(default)]
+pub struct SdJwtClaims {
     /// Digests of selective disclosure claims. Each digest is a hash (using
     /// `_sd_alg` hashing algortith) of the base65url-encoded Disclosure.
     #[serde(rename = "_sd")]
@@ -291,7 +292,7 @@ pub struct SdJwtVcClaims {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sub: Option<String>,
 
-    /// Contains a public key associated with the key binding (as presented to 
+    /// Contains a public key associated with the key binding (as presented to
     /// the Issuer via proof-of-possession of key material) in order to provide
     /// confirmation of cryptographic Key Binding.
     ///

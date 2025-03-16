@@ -6,7 +6,7 @@ expression: "&response"
 credential_offer:
   credential_issuer: "http://credibil.io"
   credential_configuration_ids:
-    - EmployeeID_JWT
+    - EmployeeID_W3C_VC
   grants:
     "urn:ietf:params:oauth:grant-type:pre-authorized_code":
       pre-authorized_code: "[pre-authorized_code]"

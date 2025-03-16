@@ -24,12 +24,11 @@ use crate::oid4vci::types::{
     CredentialResponse, Dataset, Format, Issuer, MultipleProofs, Proof, ProofClaims, RequestBy,
     SingleProof,
 };
-use crate::oid4vci::{Error, Result};
+use crate::oid4vci::{Error, JwtType, Result};
 use crate::sd_jwt::DcSdJwtBuilder;
 use crate::server;
 use crate::status::issuer::Status;
 use crate::w3c_vc::W3cVcBuilder;
-use crate::w3c_vc::proof::Type;
 
 /// Credential request handler.
 ///
@@ -152,7 +151,7 @@ impl CredentialRequest {
                 };
 
                 // proof type
-                if jwt.header.typ != Type::Openid4VciProofJwt.to_string() {
+                if jwt.header.typ != JwtType::ProofJwt.to_string() {
                     return Err(Error::InvalidProof("invalid proof type".to_string()));
                 }
                 if jwt.claims.credential_issuer != ctx.issuer.credential_issuer {
@@ -219,16 +218,16 @@ impl Context {
     async fn issue(
         &self, provider: &impl Provider, dataset: Dataset,
     ) -> Result<CredentialResponse> {
-        // determine credential format
-        let credentials = match &self.configuration.format {
-            Format::JwtVcJson(_) => {
-                let mut credentials = vec![];
-                for kid in &self.proof_kids {
+        let mut credentials = vec![];
+
+        // create a credential for each proof
+        for kid in &self.proof_kids {
+            let credential = match &self.configuration.format {
+                Format::JwtVcJson(_) => {
                     // FIXME: do we need to resolve DID document?
                     let Some(did) = kid.split('#').next() else {
                         return Err(Error::InvalidProof("Proof JWT DID is invalid".to_string()));
                     };
-
                     let mut builder = W3cVcBuilder::new()
                         .config(self.configuration.clone())
                         .issuer(&self.issuer.credential_issuer)
@@ -252,37 +251,25 @@ impl Context {
                         .build()
                         .await
                         .map_err(|e| server!("issue creating `jwt_vc_json` credential: {e}"))?;
-
-                    credentials.push(Credential {
+                    Credential {
                         credential: jwt.into(),
-                    });
+                    }
                 }
 
-                credentials
-            }
-            Format::IsoMdl(_) => {
-                let mut credentials = vec![];
-                for _ in &self.proof_kids {
+                Format::IsoMdl(_) => {
                     let mdl = MsoMdocBuilder::new()
-                        // .config(self.configuration.clone())
-                        // .issuer(self.issuer.credential_issuer.clone())
-                        // .holder(did)
                         .claims(dataset.claims.clone())
                         .signer(provider)
                         .build()
                         .await
                         .map_err(|e| server!("issue creating `mso_mdoc` credential: {e}"))?;
-
-                    credentials.push(Credential {
+                    Credential {
                         credential: mdl.into(),
-                    });
+                    }
                 }
-                credentials
-            }
-            Format::DcSdJwt(_) => {
-                let mut credentials = vec![];
 
-                for kid in &self.proof_kids {
+                Format::DcSdJwt(_) => {
+                    // TODO: cache the result of jwk when verifying proof (`verify` method)
                     let jwk = did_jwk(kid, provider).await.map_err(|e| {
                         server!("issue retrieving JWK for `dc+sd-jwt` credential: {e}")
                     })?;
@@ -300,18 +287,18 @@ impl Context {
                         .build()
                         .await
                         .map_err(|e| server!("issue creating `dc+sd-jwt` credential: {e}"))?;
-
-                    credentials.push(Credential {
+                    Credential {
                         credential: sd_jwt.into(),
-                    });
+                    }
                 }
-                credentials
-            }
 
-            // TODO: oustanding credential formats
-            Format::JwtVcJsonLd(_) => todo!(),
-            Format::LdpVc(_) => todo!(),
-        };
+                // TODO: oustanding credential formats
+                Format::JwtVcJsonLd(_) => todo!(),
+                Format::LdpVc(_) => todo!(),
+            };
+
+            credentials.push(credential);
+        }
 
         // update token state with new `c_nonce`
         let mut state = self.state.clone();

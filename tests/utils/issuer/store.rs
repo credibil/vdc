@@ -110,6 +110,7 @@ impl ClientStore {
 }
 
 #[derive(Default, Clone, Debug, Deserialize)]
+#[serde(default)]
 struct Credential {
     configuration_id: String,
     claims: Map<String, Value>,

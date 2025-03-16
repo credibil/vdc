@@ -20,7 +20,11 @@ use serde_json::{Map, Value};
 use crate::core::{Kind, OneMany};
 use crate::oid4vci::types::{CredentialConfiguration, CredentialDisplay, Format};
 use crate::w3c_vc::types::{LangString, Language};
-use crate::w3c_vc::vc::{CredentialStatus, CredentialSubject, VcClaims, VerifiableCredential};
+use crate::w3c_vc::vc::{CredentialStatus, CredentialSubject, VerifiableCredential, W3cVcClaims};
+
+// pub async fn verify_vc(){
+
+// }
 
 /// Generate a W3C `jwt_vc_json` format credential.
 #[derive(Debug)]
@@ -219,7 +223,7 @@ impl<S: Signer> W3cVcBuilder<HasConfig, HasIssuer, HasHolder, HasClaims, HasSign
         };
 
         // encode to JWT
-        jws::encode(&VcClaims::from(vc), self.signer.0)
+        jws::encode(&W3cVcClaims::from(vc), self.signer.0)
             .await
             .map_err(|e| anyhow!("issue generating `jwt_vc_json` credential: {e}"))
     }

@@ -10,15 +10,15 @@ use base64ct::{Base64UrlUnpadded, Encoding};
 use bitvec::bits;
 use bitvec::order::Lsb0;
 use bitvec::view::BitView;
-use chrono::Utc;
 use credibil_infosec::Signer;
+use credibil_infosec::jose::jws;
 use flate2::write::GzEncoder;
 use serde_json::{Map, Value};
 
 use crate::status::config::ListConfig;
 use crate::status::log::StatusLogEntry;
-use crate::w3c_vc::proof::{self, Payload};
-use crate::w3c_vc::vc::{CredentialSubject, StatusPurpose, VcBuilder};
+use crate::w3c_vc::vc::{CredentialSubject, StatusPurpose, VerifiableCredential, W3cVcClaims};
+use crate::{Kind, OneMany};
 
 // TODO: Configurable.
 // TODO: This is minimum length as per spec. May need to be configurable
@@ -96,6 +96,8 @@ pub fn bitstring(config: &ListConfig, issued: &[StatusLogEntry]) -> anyhow::Resu
     Ok(encoded)
 }
 
+// TODO: create builder for bitstring credential.
+
 /// Generates a bitstring status list credential for the given status type.
 ///
 /// The credential is suitable for publishing on an endpoint for verifiers to
@@ -130,18 +132,21 @@ pub async fn credential(
     let cache_time = ttl.unwrap_or(DEFAULT_TTL);
     claims.insert("ttl".to_string(), Value::Number(cache_time.into()));
 
-    let issued_at = Utc::now();
-
-    let vc = VcBuilder::new()
-        .id(id.clone())
-        .add_type("BitstringStatusListCredential")
-        .issuer(credential_issuer)
-        .add_subject(CredentialSubject {
+    let vc = VerifiableCredential {
+        id: Some(id.clone()),
+        type_: OneMany::Many(vec![
+            "VerifiableCredential".to_string(),
+            "BitstringStatusListCredential".to_string(),
+        ]),
+        issuer: Kind::String(credential_issuer.to_string()),
+        credential_subject: OneMany::One(CredentialSubject {
             id: Some(format!("{id}#list")),
             claims,
-        })
-        .build()?;
-    let jwt = proof::create(Payload::Vc { vc, issued_at }, signer).await?;
+        }),
+        ..VerifiableCredential::default()
+    };
 
-    Ok(jwt)
+    jws::encode(&W3cVcClaims::from(vc), signer)
+        .await
+        .map_err(|e| anyhow!("issue generating `jwt_vc_json` credential: {e}"))
 }

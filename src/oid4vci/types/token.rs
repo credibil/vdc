@@ -300,7 +300,7 @@ mod tests {
             authorization_details: Some(vec![AuthorizationDetail {
                 type_: AuthorizationDetailType::OpenIdCredential,
                 credential: AuthorizationCredential::ConfigurationId {
-                    credential_configuration_id: "EmployeeID_JWT".to_string(),
+                    credential_configuration_id: "EmployeeID_W3C_VC".to_string(),
                 },
                 claims: Some(vec![
                     ClaimsDescription {

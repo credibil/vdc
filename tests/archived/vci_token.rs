@@ -15,7 +15,6 @@ use insta::assert_yaml_snapshot as assert_snapshot;
 use serde_json::json;
 use test_issuer::{CLIENT_ID, CREDENTIAL_ISSUER, NORMAL_USER};
 
-
 #[tokio::test]
 async fn authorized() {
     utils::init_tracer();
@@ -33,7 +32,7 @@ async fn authorized() {
                 authorization_detail: AuthorizationDetail {
                     type_: AuthorizationDetailType::OpenIdCredential,
                     credential: AuthorizationCredential::ConfigurationId {
-                        credential_configuration_id: "EmployeeID_JWT".to_string(),
+                        credential_configuration_id: "EmployeeID_W3C_VC".to_string(),
                     },
                     ..AuthorizationDetail::default()
                 },
@@ -101,7 +100,7 @@ async fn authorization_details() {
                 authorization_detail: AuthorizationDetail {
                     type_: AuthorizationDetailType::OpenIdCredential,
                     credential: AuthorizationCredential::ConfigurationId {
-                        credential_configuration_id: "EmployeeID_JWT".to_string(),
+                        credential_configuration_id: "EmployeeID_W3C_VC".to_string(),
                     },
                     ..AuthorizationDetail::default()
                 },
