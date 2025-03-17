@@ -29,7 +29,7 @@ use crate::core::did_jwk;
 use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
-use crate::oid4vp::types::{RequestType, ResponseRequest, ResponseResponse};
+use crate::oid4vp::types::{AuthorzationResponse, RedirectResponse, RequestType};
 use crate::oid4vp::{Error, Result};
 use crate::w3c_vc;
 use crate::w3c_vc::proof::{Payload, Verify};
@@ -42,8 +42,8 @@ use crate::w3c_vc::vc::{VerifiableCredential, W3cVcClaims};
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
 async fn response(
-    _verifier: &str, provider: &impl Provider, request: ResponseRequest,
-) -> Result<ResponseResponse> {
+    _verifier: &str, provider: &impl Provider, request: AuthorzationResponse,
+) -> Result<RedirectResponse> {
     // TODO: handle case where Wallet returns error instead of submission
     verify(provider.clone(), &request).await?;
 
@@ -55,7 +55,7 @@ async fn response(
         .await
         .map_err(|e| Error::ServerError(format!("issue purging state: {e}")))?;
 
-    Ok(ResponseResponse {
+    Ok(RedirectResponse {
         // TODO: add response to state using `response_code` so Wallet can fetch full response
         // TODO: align redirct_uri to spec
         // redirect_uri: Some(format!("http://localhost:3000/cb#response_code={}", "1234")),
@@ -64,8 +64,8 @@ async fn response(
     })
 }
 
-impl Handler for Request<ResponseRequest, NoHeaders> {
-    type Response = ResponseResponse;
+impl Handler for Request<AuthorzationResponse, NoHeaders> {
+    type Response = RedirectResponse;
 
     fn handle(
         self, verifier: &str, provider: &impl Provider,
@@ -74,7 +74,7 @@ impl Handler for Request<ResponseRequest, NoHeaders> {
     }
 }
 
-impl Body for ResponseRequest {}
+impl Body for AuthorzationResponse {}
 
 // TODO: validate  Verifiable Presentation by format
 // Check integrity, authenticity, and holder binding of each Presentation
@@ -82,7 +82,7 @@ impl Body for ResponseRequest {}
 
 // Verfiy the vp_token and presentation subm
 #[allow(clippy::too_many_lines)]
-async fn verify(provider: impl Provider, request: &ResponseRequest) -> Result<()> {
+async fn verify(provider: impl Provider, request: &AuthorzationResponse) -> Result<()> {
     tracing::debug!("response::verify");
 
     // get state by client state key

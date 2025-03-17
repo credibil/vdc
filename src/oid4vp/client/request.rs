@@ -1,8 +1,8 @@
 //! # Request Builder
 
-//  use crate::oid4vp::types::CreateRequestRequest;
+//  use crate::oid4vp::types::GenerateRequest;
 
-// impl CreateRequestRequest {
+// impl GenerateRequest {
 //     /// Create a new `CreateRequestRequestBuilder`.
 //     #[must_use]
 //     pub fn builder() -> CreateRequestRequestBuilder<NoCredential, NoSubjectId, PreAuthorized> {
@@ -155,10 +155,10 @@ pub struct CreateRequestRequestBuilder {
 // impl<P> CreateRequestRequestBuilder<Credential, NoSubjectId, P> {
 //     /// Build the Create Offer request without a pre-authorized code grant.
 //     #[must_use]
-//     pub fn build(self) -> CreateRequestRequest {
+//     pub fn build(self) -> GenerateRequest {
 //         let send_type = if self.by_ref { SendType::ByRef } else { SendType::ByVal };
 
-//         let mut request = CreateRequestRequest {
+//         let mut request = GenerateRequest {
 //             subject_id: None,
 //             credential_configuration_ids: self.credential_configuration_ids.0,
 //             grant_types: None,

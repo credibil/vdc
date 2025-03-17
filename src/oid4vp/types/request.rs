@@ -20,7 +20,7 @@ use crate::oid4vp::types::{Format, VpFormat};
 /// Authorization Request Object.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
-pub struct CreateRequestRequest {
+pub struct GenerateRequest {
     /// The reason the Verifier is requesting the Verifiable Presentation.
     pub purpose: String,
 
@@ -70,7 +70,7 @@ pub enum DeviceFlow {
 /// The response to the originator of the Request Object Request.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[allow(clippy::large_enum_variant)]
-pub enum CreateRequestResponse {
+pub enum GenerateResponse {
     /// The generated Authorization Request Object, ready to send to the Wallet.
     #[serde(rename = "request_object")]
     Object(RequestObject),
@@ -81,14 +81,14 @@ pub enum CreateRequestResponse {
     Uri(String),
 }
 
-impl Default for CreateRequestResponse {
+impl Default for GenerateResponse {
     fn default() -> Self {
         Self::Uri(String::new())
     }
 }
 
-impl CreateRequestResponse {
-    /// Convenience method to convert the `CreateRequestResponse` to a QR code.
+impl GenerateResponse {
+    /// Convenience method to convert the `GenerateResponse` to a QR code.
     ///
     /// If the `request_object` is set, the method will generate a QR code for
     /// that in favour of the `request_uri`.
@@ -134,26 +134,10 @@ impl CreateRequestResponse {
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct RequestObject {
     /// The type of response expected from the Wallet (as Authorization Server).
-    ///
-    /// If Response Type is:
-    ///  - "`vp_token`": a VP Token is returned in an Authorization Response.
-    ///  - "`vp_token id_token`" AND the `scope` parameter contains "`openid`":
-    ///    a VP Token and a Self-Issued ID Token are returned in an
-    ///    Authorization Response.
-    ///  - "`code`": a VP Token is returned in a Token Response.
-    ///
-    /// The default Response Mode is "fragment": response parameters are encoded
-    /// in the fragment added to the `redirect_uri` when redirecting back to the
-    /// Verifier.
     pub response_type: ResponseType,
 
     /// The Verifier's `client_id`.
     pub client_id: String,
-
-    /// The URI to redirect to the Verifier's redirection endpoint as
-    /// established during client registration.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub redirect_uri: Option<String>,
 
     /// The nonce is used to securely bind the requested Verifiable
     /// Presentation(s) provided by the Wallet to the particular
@@ -161,56 +145,14 @@ pub struct RequestObject {
     pub nonce: String,
 
     /// The Wallet MAY allow Verifiers to request presentation of Verifiable
-    /// Credentials by utilizing a pre-defined scope value. Defined in
-    /// [RFC6749].
-    ///
-    /// [RFC6749]: (https://www.rfc-editor.org/rfc/rfc6749.html)
+    /// Credentials by utilizing a pre-defined scope value.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scope: Option<String>,
 
-    /// While the `response_type` parameter informs the Authorization Server
-    /// (Wallet) of the desired authorization flow, the `response_mode`
-    /// parameter informs it of the mechanism to use when returning an
-    /// Authorization Response.
-    ///
-    /// A Response Mode of "`direct_post`" allows the Wallet to send the
-    /// Authorization Response to an endpoint controlled by the Verifier as
-    /// an HTTPS POST request.
-    ///
-    /// If not set, the default value is "`fragment`".
-    ///
-    /// Response parameters are returned using the
-    /// "application/x-www-form-urlencoded" content type. The flow can end
-    /// with an HTTPS POST request from the Wallet to the Verifier, or it
-    /// can end with a redirect that follows the HTTPS POST request,
-    /// if the Verifier responds with a redirect URI to the Wallet.
-    ///
-    /// Response Mode "`direct_post.jwt`" causes the Wallet to send the
-    /// Authorization Response as an HTTPS POST request (as for
-    /// "`direct_post`") except the Wallet sets a `response` parameter to a
-    /// JWT containing the Authorization Response. See [JARM] for more
-    /// detail.
-    ///
-    /// [JARM]: (https://openid.net/specs/oauth-v2-jarm-final.html)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub response_mode: Option<String>,
-
-    /// OPTIONAL. MUST be set when the Response Mode "`direct_post`" is used.
-    ///
-    /// The URI to which the Wallet MUST send the Authorization Response using
-    /// an HTTPS POST request as defined by the Response Mode
-    /// "`direct_post`".
-    ///
-    /// When `response_uri` is set, `redirect_uri` MUST NOT be set. If set when
-    /// Response Mode is "`direct_post`", the Wallet MUST return an
-    /// "`invalid_request`" error.
-    ///
-    /// Note: If the Client Identifier scheme `redirect_uri` is used in
-    /// conjunction with the Response Mode "`direct_post`", and the
-    /// `response_uri` parameter is present, the `client_id` value MUST be
-    /// equal to the `response_uri` value.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub response_uri: Option<String>,
+    /// Inform the Wallet of the mechanism to use when returning an
+    /// Authorization Response. Defaults to "`fragment`".
+    #[serde(flatten)]
+    pub response_mode: ResponseMode,
 
     /// State is used to maintain state between the Authorization Request and
     /// subsequent callback from the Wallet ('Authorization Server').
@@ -225,14 +167,18 @@ pub struct RequestObject {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub client_metadata: Option<VerifierMetadata>,
 
-    /// The HTTP method to be used when the `request_uri` parameter is included
-    /// in the same request.
+    /// The HTTP method to be used by the Wallet when sending a request to the
+    /// `request_uri` endpoint.
+    ///
+    /// The endpoint is called by the Wallet when it wants to provide the
+    /// Verifier details about its technical capabilities so it can generate a
+    /// an accceptable request.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub request_uri_method: Option<UriMethod>,
 
-    /// An array of base64url encoded JSON objects, each containing a parameter
-    /// set with details about the transaction that the Verifier is requesting
-    /// the End-User to authorize.
+    /// An array of base64url-encoded JSON objects, each containing details
+    /// about the transaction that the Verifier is requesting the End-User to
+    /// authorize.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub transaction_data: Option<Vec<TransactionData>>,
 }
@@ -319,13 +265,56 @@ pub enum ResponseType {
     VpToken,
 
     /// A VP Token and a Self-Issued ID Token are returned in an Authorization
-    /// Response (if `scope` is set to "openid").
+    /// Response (provided `scope` is set to "openid").
     #[serde(rename = "vp_token id_token")]
     VpTokenIdToken,
 
     /// A VP Token is returned in a Token Response
     #[serde(rename = "code")]
     Code,
+}
+
+/// Inform the Wallet of the mechanism to use when returning an Authorization
+/// Response.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(tag = "response_mode")]
+pub enum ResponseMode {
+    /// The Wallet sends the Authorization Response to an endpoint controlled by
+    /// the Verifier as an HTTPS POST request.
+    #[serde(rename = "direct_post")]
+    DirectPost {
+        /// The URI to which the Wallet sends the Authorization Response.
+        response_uri: String,
+    },
+
+    /// The Wallet sends the Authorization Response as an HTTPS POST request
+    /// except the Wallet sets a `response` parameter to a JWT containing the
+    /// Authorization Response.
+    ///
+    /// See [JARM](https://openid.net/specs/oauth-v2-jarm-final.html) for more
+    /// detail.
+    #[serde(rename = "direct_post.jwt")]
+    DirectPostJwt {
+        /// The URI to which the Wallet sends the Authorization Response.
+        response_uri: String,
+    },
+
+    /// The Wallet sends the Authorization Response as a URI fragment to the
+    ///  Verifier's redirection endpoint (as established during client
+    /// registration).
+    #[serde(rename = "fragment")]
+    Fragment {
+        /// The Verifier's redirection endpoint.
+        redirect_uri: String,
+    },
+}
+
+impl Default for ResponseMode {
+    fn default() -> Self {
+        Self::Fragment {
+            redirect_uri: String::new(),
+        }
+    }
 }
 
 /// OAuth 2 client metadata used for registering clients of the issuance and
@@ -515,5 +504,37 @@ impl<'de> Deserialize<'de> for RequestObjectResponse {
         }
 
         deserializer.deserialize_any(VisitorImpl)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    #[ignore = "development only"]
+    fn serialize_request_object() {
+        let request_object = RequestObject {
+            response_type: ResponseType::VpToken,
+            client_id: "client_id".to_string(),
+            nonce: "nonce".to_string(),
+            scope: Some("scope".to_string()),
+            response_mode: ResponseMode::Fragment {
+                redirect_uri: "redirect_uri".to_string(),
+            },
+            state: Some("state".to_string()),
+            request_type: RequestType::Definition(PresentationDefinition::default()),
+            client_metadata: Some(VerifierMetadata::default()),
+            request_uri_method: Some(UriMethod::GET),
+            transaction_data: Some(vec![TransactionData::default()]),
+        };
+
+        let serialized = serde_json::to_string_pretty(&request_object).unwrap();
+        println!("{serialized}");
+
+        // let deserialized: RequestObject = serde_json::from_str(&serialized).unwrap();
+
+        // assert_eq!(request_object, deserialized);
     }
 }

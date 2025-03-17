@@ -16,8 +16,7 @@ use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::{Expire, State};
 use crate::oid4vp::types::{
-    CreateRequestRequest, CreateRequestResponse, DeviceFlow, RequestObject, RequestType,
-    ResponseType,
+    DeviceFlow, GenerateRequest, GenerateResponse, RequestObject, RequestType, ResponseType,
 };
 use crate::oid4vp::{Error, Result};
 
@@ -27,9 +26,9 @@ use crate::oid4vp::{Error, Result};
 ///
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
-async fn create_request(
-    verifier: &str, provider: &impl Provider, request: CreateRequestRequest,
-) -> Result<CreateRequestResponse> {
+async fn generate(
+    verifier: &str, provider: &impl Provider, request: GenerateRequest,
+) -> Result<GenerateResponse> {
     verify(&request).await?;
 
     // TODO: build dynamically...
@@ -64,13 +63,19 @@ async fn create_request(
     // Response Mode "direct_post" is RECOMMENDED for cross-device flows.
     // TODO: replace hard-coded endpoints with Provider-set values
     let response = if request.device_flow == DeviceFlow::CrossDevice {
-        req_obj.response_mode = Some("direct_post".to_string());
+        // req_obj.response_mode = Some("direct_post".to_string());
+        // req_obj.response_uri = Some(format!("{verifier}/post"));
+
+        req_obj.response_mode = crate::oid4vp::types::ResponseMode::DirectPost {
+            response_uri: format!("{verifier}/post"),
+        };
+
         req_obj.client_id = format!("{verifier}/post");
-        req_obj.response_uri = Some(format!("{verifier}/post"));
-        CreateRequestResponse::Uri(format!("{verifier}/request/{uri_token}"))
+
+        GenerateResponse::Uri(format!("{verifier}/request/{uri_token}"))
     } else {
         req_obj.client_id = format!("{verifier}/callback");
-        CreateRequestResponse::Object(req_obj.clone())
+        GenerateResponse::Object(req_obj.clone())
     };
 
     // save request object in state
@@ -86,20 +91,20 @@ async fn create_request(
     Ok(response)
 }
 
-impl Handler for Request<CreateRequestRequest, NoHeaders> {
-    type Response = CreateRequestResponse;
+impl Handler for Request<GenerateRequest, NoHeaders> {
+    type Response = GenerateResponse;
 
     fn handle(
         self, verifier: &str, provider: &impl Provider,
     ) -> impl Future<Output = Result<Self::Response>> + Send {
-        create_request(verifier, provider, self.body)
+        generate(verifier, provider, self.body)
     }
 }
 
-impl Body for CreateRequestRequest {}
+impl Body for GenerateRequest {}
 
 #[allow(clippy::unused_async)]
-async fn verify(request: &CreateRequestRequest) -> Result<()> {
+async fn verify(request: &GenerateRequest) -> Result<()> {
     tracing::debug!("create_request::verify");
 
     if request.input_descriptors.is_empty() {

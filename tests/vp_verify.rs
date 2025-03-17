@@ -3,7 +3,7 @@
 mod utils;
 
 // use credibil_vc::oid4vp::endpoint;
-// use credibil_vc::oid4vp::types::CreateRequestRequest;
+// use credibil_vc::oid4vp::types::GenerateRequest;
 // use insta::assert_yaml_snapshot as assert_snapshot;
 // use serde_json::json;
 use utils::verifier::ProviderImpl;
@@ -16,7 +16,7 @@ async fn same_device() {
     // --------------------------------------------------
     // Alice creates a presentation requesto to send to Bob
     // --------------------------------------------------
-    // let request = CreateRequestRequest::builder()
+    // let request = GenerateRequest::builder()
     //     .subject_id(NORMAL_USER)
     //     .with_credential("EmployeeID_W3C_VC")
     //     .build();
@@ -41,8 +41,8 @@ async fn same_device() {
     //     "device_flow": "SameDevice"
     // });
 
-    // let mut request: CreateRequestRequest =
-    //     serde_json::from_value::<CreateRequestRequest>(body).expect("should deserialize");
+    // let mut request: GenerateRequest =
+    //     serde_json::from_value::<GenerateRequest>(body).expect("should deserialize");
     // request.client_id = "http://localhost:8080".to_string();
 
     // let response = endpoint::handle("http://localhost:8080", request, &provider).await.expect("ok");

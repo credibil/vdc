@@ -16,8 +16,8 @@ use axum::{Form, Json, Router};
 use axum_extra::TypedHeader;
 use axum_extra::headers::Host;
 use credibil_vc::oid4vp::{
-    self, CreateRequestRequest, CreateRequestResponse, RequestObjectRequest, RequestObjectResponse,
-    ResponseRequest, ResponseResponse, endpoint,
+    self, AuthorzationResponse, GenerateRequest, GenerateResponse, RedirectResponse,
+    RequestObjectRequest, RequestObjectResponse, endpoint,
 };
 use provider::ProviderImpl;
 use serde::Serialize;
@@ -54,8 +54,8 @@ async fn main() {
 #[axum::debug_handler]
 async fn create_request(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
-    Json(request): Json<CreateRequestRequest>,
-) -> AxResult<CreateRequestResponse> {
+    Json(request): Json<GenerateRequest>,
+) -> AxResult<GenerateResponse> {
     endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
 }
 
@@ -75,12 +75,12 @@ async fn response(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
     Form(request): Form<HashMap<String, String>>,
 ) -> impl IntoResponse {
-    let Ok(req) = ResponseRequest::form_decode(&request) else {
-        tracing::error!("unable to turn HashMap {request:?} into ResponseRequest");
-        return (StatusCode::BAD_REQUEST, "unable to turn request into ResponseRequest")
+    let Ok(req) = AuthorzationResponse::form_decode(&request) else {
+        tracing::error!("unable to turn HashMap {request:?} into AuthorzationResponse");
+        return (StatusCode::BAD_REQUEST, "unable to turn request into AuthorzationResponse")
             .into_response();
     };
-    let response: AxResult<ResponseResponse> =
+    let response: AxResult<RedirectResponse> =
         match endpoint::handle(&format!("http://{host}"), req, &provider).await {
             Ok(r) => Ok(r).into(),
             Err(e) => {

@@ -97,11 +97,11 @@ mod tests {
 
     use crate::core::Kind;
     use crate::dif_exch::{DescriptorMap, PathNested, PresentationSubmission};
-    use crate::oid4vp::types::ResponseRequest;
+    use crate::oid4vp::types::AuthorzationResponse;
 
     #[test]
     fn response_request_form_encode() {
-        let request = ResponseRequest {
+        let request = AuthorzationResponse {
             vp_token: Some(vec![Kind::String("eyJ.etc".to_string())]),
             presentation_submission: Some(PresentationSubmission {
                 id: "07b0d07c-f51e-4909-a1ab-d35e2cef20b0".to_string(),
@@ -122,7 +122,7 @@ mod tests {
         assert_snapshot!("response_request_form_encoded", &map, {
             "." => insta::sorted_redaction(),
         });
-        let req = ResponseRequest::form_decode(&map).expect("should expand from hashmap");
+        let req = AuthorzationResponse::form_decode(&map).expect("should expand from hashmap");
         assert_snapshot!("response_request_form_decoded", &req);
     }
 }

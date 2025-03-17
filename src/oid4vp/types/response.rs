@@ -10,7 +10,7 @@ use crate::w3c_vc::vp::VerifiablePresentation;
 /// Authorization Response request object is used by Wallets to send a VP Token
 /// and Presentation Submission to the Verifier who initiated the verification.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct ResponseRequest {
+pub struct AuthorzationResponse {
     /// One or more Verifiable Presentations represented as base64url encoded
     /// strings and/or JSON objects. The VP format determines the encoding.
     /// The encoding follows the same format-based rules as for Credential
@@ -35,8 +35,8 @@ pub struct ResponseRequest {
     pub state: Option<String>,
 }
 
-impl ResponseRequest {
-    /// Create a `HashMap` representation of the `ResponseRequest` suitable for
+impl AuthorzationResponse {
+    /// Create a `HashMap` representation of the `AuthorzationResponse` suitable for
     /// use in an HTML form post.
     ///
     /// # Errors
@@ -61,11 +61,11 @@ impl ResponseRequest {
         Ok(map)
     }
 
-    /// Create a `ResponseRequest` from a `HashMap` representation.
+    /// Create a `AuthorzationResponse` from a `HashMap` representation.
     ///
     /// Suitable for
     /// use in a verifier's response endpoint that receives a form post before
-    /// passing the `ResponseRequest` to the `response` handler.
+    /// passing the `AuthorzationResponse` to the `response` handler.
     ///
     /// # Errors
     /// Will return an error if any nested objects cannot be deserialized from
@@ -89,10 +89,10 @@ impl ResponseRequest {
     }
 }
 
-/// Authorization Response response object is used to return a `redirect_uri` to
+/// Authorization Response object is used to return a `redirect_uri` to
 /// the Wallet following successful processing of the presentation submission.
 #[derive(Debug, Deserialize, Serialize)]
-pub struct ResponseResponse {
+pub struct RedirectResponse {
     /// When the redirect parameter is used the Wallet MUST send the User Agent
     /// to the provided URI. The redirect URI allows the Verifier to
     /// continue the interaction with the End-User on the device where the

@@ -11,7 +11,7 @@ use credibil_vc::oid4vp::endpoint;
 use credibil_vc::oid4vp::provider::StateStore;
 use credibil_vc::oid4vp::state::{Expire, State};
 use credibil_vc::oid4vp::types::{
-    ClientIdScheme, RequestObject, ResponseRequest, ResponseType, Verifier,
+    ClientIdScheme, RequestObject, AuthorzationResponse, ResponseType, Verifier,
 };
 use serde_json::{Value, json};
 
@@ -63,7 +63,7 @@ async fn send_response() {
         "state": state_key,
     });
 
-    let request = serde_json::from_value::<ResponseRequest>(body).expect("should deserialize");
+    let request = serde_json::from_value::<AuthorzationResponse>(body).expect("should deserialize");
     let response = endpoint::handle("http://localhost:8080", request, &provider).await.expect("ok");
 
     let redirect = response.redirect_uri.as_ref().expect("has redirect_uri");
