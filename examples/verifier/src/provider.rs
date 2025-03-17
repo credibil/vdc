@@ -14,7 +14,7 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use uuid::Uuid;
 
-pub const VERIFIER_ID: &str = "http://localhost:8080";
+// pub const VERIFIER_ID: &str = "http://localhost:8080";
 
 #[derive(Clone, Debug)]
 pub struct ProviderImpl {

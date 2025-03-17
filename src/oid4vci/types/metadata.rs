@@ -259,29 +259,11 @@ pub struct CredentialConfiguration {
     pub scope: Option<String>,
 
     /// Identifies how the Credential should be bound to the identifier of the
-    /// End-User who possesses the Credential. Is case sensitive.
-    ///
-    /// Support for keys in JWK format [RFC7517] is indicated by the value
-    /// "`jwk`". Support for keys expressed as a COSE Key object [RFC8152]
-    /// (for example, used in [ISO.18013-5]) is indicated by the value
-    /// "`cose_key`".
-    ///
-    /// When Cryptographic Binding Method is a DID, valid values MUST be a
-    /// "did:" prefix followed by a method-name using a syntax as defined in
-    /// Section 3.1 of [DID-Core], but without a ":" and method-specific-id.
-    /// For example, support for the DID method with a method-name "example"
-    /// would be represented by "did:example". Support for all DID methods
-    /// listed in Section 13 of [DID Specification Registries] is indicated
-    /// by sending a DID without any method-name.
-    ///
-    /// [RFC7517]: (https://www.rfc-editor.org/rfc/rfc7517)
-    /// [RFC8152]: (https://www.rfc-editor.org/rfc/rfc8152)
-    /// [ISO.18013-5]: (https://www.iso.org/standard/69084.html)
-    /// [DID-Core]: (https://www.w3.org/TR/did-core/)
-    /// [DID Specification Registries]: (https://www.w3.org/TR/did-spec-registries/)
+    /// End-User who possesses the Credential.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub cryptographic_binding_methods_supported: Option<Vec<String>>,
+    pub cryptographic_binding_methods_supported: Option<Vec<BindingMethod>>,
 
+    // FIXME: use credibil_infosec::SigningAlgorithm
     /// Case sensitive strings that identify the cryptographic suites supported
     /// for the `cryptographic_binding_methods_supported`. Cryptographic
     /// algorithms for Credentials in `jwt_vc` format should use algorithm
@@ -340,6 +322,27 @@ pub struct CredentialConfiguration {
     /// One or more claims description objects.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub claims: Option<Vec<ClaimsDescription>>,
+}
+
+/// Supported methods for binding the Credential to the identifier of the
+/// End-User who possesses the Credential.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+pub enum BindingMethod {
+    /// DID Web.
+    #[serde(rename = "did:web")]
+    DidWeb,
+
+    /// DID Web Version History.
+    #[serde(rename = "did:webvh")]
+    DidWebvh,
+
+    /// DID Key.
+    #[serde(rename = "did:key")]
+    DidKey,
+
+    /// Public key JWK.
+    #[serde(rename = "jwk")]
+    Jwk,
 }
 
 impl CredentialConfiguration {

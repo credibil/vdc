@@ -6,6 +6,8 @@
 
 use std::fmt::Debug;
 
+use tracing::instrument;
+
 use crate::oid4vp::Result;
 use crate::oid4vp::provider::Provider;
 
@@ -19,31 +21,40 @@ use crate::oid4vp::provider::Provider;
 ///
 /// Implementers should look to the Error type and description for more
 /// information on the reason for failure.
-pub async fn handle<T, U>(
-    owner: &str, request: impl Into<Request<T>>, provider: &impl Provider,
+#[instrument(level = "debug", skip(provider))]
+pub async fn handle<B, H, U>(
+    verifier: &str, request: impl Into<Request<B, H>> + Debug, provider: &impl Provider,
 ) -> Result<U>
 where
-    T: Body,
-    Request<T>: Handler<Response = U>,
+    B: Body,
+    H: Headers,
+    Request<B, H>: Handler<Response = U>,
 {
-    let request: Request<T> = request.into();
-    request.validate(owner, provider).await?;
-    request.handle(owner, provider).await
+    let request: Request<B, H> = request.into();
+    request.validate(verifier, provider).await?;
+    request.handle(verifier, provider).await
 }
 
 /// A request to process.
 #[derive(Clone, Debug)]
-pub struct Request<T: Body> {
+pub struct Request<B, H>
+where
+    B: Body,
+    H: Headers,
+{
     /// The request to process.
-    pub body: T,
+    pub body: B,
 
-    /// Optional headers associated with this request.
-    pub headers: Option<String>,
+    /// Headers associated with this request.
+    pub headers: H,
 }
 
-impl<T: Body> From<T> for Request<T> {
-    fn from(body: T) -> Self {
-        Self { body, headers: None }
+impl<B: Body> From<B> for Request<B, NoHeaders> {
+    fn from(body: B) -> Self {
+        Self {
+            body,
+            headers: NoHeaders,
+        }
     }
 }
 
@@ -57,7 +68,7 @@ pub trait Handler: Clone + Debug + Send + Sync {
 
     /// Routes the message to the concrete handler used to process the message.
     fn handle(
-        self, credential_issuer: &str, provider: &impl Provider,
+        self, issuer: &str, provider: &impl Provider,
     ) -> impl Future<Output = Result<Self::Response>> + Send;
 
     /// Perform initial validation of the message.
@@ -92,11 +103,20 @@ pub trait Handler: Clone + Debug + Send + Sync {
     }
 }
 
-pub(crate) use seal::Body;
+pub(crate) use seal::{Body, Headers};
 pub(crate) mod seal {
     use std::fmt::Debug;
 
-    /// The `Body` trait is used to restrict the types able to be a Request
-    /// body. It is implemented by all `xxxRequest` types.
+    /// The `Body` trait is used to restrict the types able to implement
+    /// request body. It is implemented by all `xxxRequest` types.
     pub trait Body: Clone + Debug + Send + Sync {}
+
+    /// The `Headers` trait is used to restrict the types able to implement
+    /// request headers.
+    pub trait Headers: Clone + Debug + Send + Sync {}
 }
+
+/// Implement empty headers for use by handlers that do not require headers.
+#[derive(Clone, Debug)]
+pub struct NoHeaders;
+impl Headers for NoHeaders {}

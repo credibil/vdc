@@ -19,9 +19,9 @@ use credibil_vc::oid4vp::{
     self, CreateRequestRequest, CreateRequestResponse, RequestObjectRequest, RequestObjectResponse,
     ResponseRequest, ResponseResponse, endpoint,
 };
+use provider::ProviderImpl;
 use serde::Serialize;
 use serde_json::json;
-use provider::ProviderImpl;
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
@@ -38,7 +38,7 @@ async fn main() {
 
     let router = Router::new()
         .route("/create_request", post(create_request))
-        .route("/request/{object_id}", get(request_object))
+        .route("/request/{id}", get(request_object))
         .route("/callback", get(response))
         .route("/post", post(response))
         .layer(TraceLayer::new_for_http())
@@ -54,9 +54,8 @@ async fn main() {
 #[axum::debug_handler]
 async fn create_request(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
-    Json(mut request): Json<CreateRequestRequest>,
+    Json(request): Json<CreateRequestRequest>,
 ) -> AxResult<CreateRequestResponse> {
-    request.client_id = format!("http://{host}");
     endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
 }
 
@@ -64,12 +63,9 @@ async fn create_request(
 #[axum::debug_handler]
 async fn request_object(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
-    Path(object_id): Path<String>,
+    Path(id): Path<String>,
 ) -> AxResult<RequestObjectResponse> {
-    let request = RequestObjectRequest {
-        client_id: format!("http://{host}"),
-        id: object_id,
-    };
+    let request = RequestObjectRequest { id };
     endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
 }
 

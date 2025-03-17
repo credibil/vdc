@@ -5,9 +5,7 @@
 //! As the Verifier is a client to the Wallet's Authorization Server, this
 //! endpoint returns Client metadata as defined in [RFC7591](https://www.rfc-editor.org/rfc/rfc7591).
 
-use tracing::instrument;
-
-use crate::oid4vp::endpoint::{Body, Handler, Request};
+use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request};
 use crate::oid4vp::provider::{Metadata, Provider};
 use crate::oid4vp::types::{MetadataRequest, MetadataResponse};
 use crate::oid4vp::{Error, Result};
@@ -18,10 +16,9 @@ use crate::oid4vp::{Error, Result};
 ///
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
-#[instrument(level = "debug", skip(provider))]
-async fn metadata(provider: &impl Provider, request: MetadataRequest) -> Result<MetadataResponse> {
-    tracing::debug!("metadata");
-
+async fn metadata(
+    _verifier: &str, provider: &impl Provider, request: MetadataRequest,
+) -> Result<MetadataResponse> {
     Ok(MetadataResponse {
         client: Metadata::verifier(provider, &request.client_id)
             .await
@@ -29,13 +26,13 @@ async fn metadata(provider: &impl Provider, request: MetadataRequest) -> Result<
     })
 }
 
-impl Handler for Request<MetadataRequest> {
+impl Handler for Request<MetadataRequest, NoHeaders> {
     type Response = MetadataResponse;
 
     fn handle(
-        self, _credential_issuer: &str, provider: &impl Provider,
+        self, verifier: &str, provider: &impl Provider,
     ) -> impl Future<Output = Result<Self::Response>> + Send {
-        metadata(provider, self.body)
+        metadata(verifier, provider, self.body)
     }
 }
 

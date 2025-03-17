@@ -1,99 +1,35 @@
-//! # Create Request Endpoint
+//! # Create Request handler
 //!
 //! This endpoint is used to prepare an [RFC6749](https://www.rfc-editor.org/rfc/rfc6749.html)
-//! Authorization Request to use to request Verifiable Presentations from an
-//! End-User's Wallet.
-//!
-//! While based on the [OpenID4VP](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html)
-//! specification, the endpoint only implements a subset of the specification
-//! requirements as recommended in the [JWT VC Presentation Profile](https://identity.foundation/jwt-vc-presentation-profile).
-//! Aside from reducing complexity, the profile enables greater presentation
-//! interoperability between Wallets and Verifiers.
-//!
-//! The Verifier requests an Authorization Request be prepared by articulating
-//! the Credential(s) desired using a Credential Definition and, optionally,
-//! specifying the device flow that will be used.
-//!
-//! # Example
-//!
-//! ```json
-//! {
-//!     "purpose": "To verify employment",
-//!     "input_descriptors": [{
-//!         "id": "employment",
-//!         "constraints": {
-//!             "fields": [{
-//!                 "path":["$.type"],
-//!                 "filter": {
-//!                     "type": "string",
-//!                     "const": "EmployeeIDCredential"
-//!                 }
-//!             }]
-//!         }
-//!     }],
-//!     "device_flow": "CrossDevice"
-//! }
-//! ```
-//!
-//! The prepared Authorization Request Object may be sent by value or by
-//! reference as defined in JWT-Secured Authorization Request (JAR) [RFC9101](https://www.rfc-editor.org/rfc/rfc9101).
-//! If sent by value, the Request Object is sent directly to the Wallet as a URL
-//! fragment in the Authorization Request. If by reference, the Authorization
-//! Request will contain a `request_uri` pointing to the prepared Request
-//! Object.
+//! Authorization Request to use when requesting a Verifiable Presentation from
+//! a Wallet.
 
 use std::collections::HashMap;
 
 use chrono::Utc;
 use credibil_infosec::Algorithm;
-use tracing::instrument;
 use uuid::Uuid;
 
-use crate::core::{Kind, generate};
+use crate::core::generate;
 use crate::dif_exch::{ClaimFormat, PresentationDefinition};
-use crate::oid4vp::endpoint::{Body, Handler, Request};
-use crate::oid4vp::provider::{Metadata, Provider, StateStore};
+use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request};
+use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::{Expire, State};
 use crate::oid4vp::types::{
-    ClientIdScheme, CreateRequestRequest, CreateRequestResponse, DeviceFlow, RequestObject,
+    CreateRequestRequest, CreateRequestResponse, DeviceFlow, RequestObject, RequestType,
     ResponseType,
 };
 use crate::oid4vp::{Error, Result};
 
-// TODO: request supported Client Identifier schemes from the Wallet
-// TODO: add support for other Client Identifier schemes
-
-// StaticConfigurationValues
-// {
-//   "authorization_endpoint": "openid4vp:",
-//   "response_types_supported": [
-//     "vp_token"
-//   ],
-//   "vp_formats_supported": {
-//     "jwt_vp_json": {
-//       "alg_values_supported": ["ES256"]
-//     },
-//     "jwt_vc_json": {
-//       "alg_values_supported": ["ES256"]
-//     }
-//   },
-//   "request_object_signing_alg_values_supported": [
-//     "ES256"
-//   ]
-// }
-
-/// Initiate an Authorization Request flow.
+/// Create an Authorization Request.
 ///
 /// # Errors
 ///
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
-#[instrument(level = "debug", skip(provider))]
 async fn create_request(
-    provider: &impl Provider, request: CreateRequestRequest,
+    verifier: &str, provider: &impl Provider, request: CreateRequestRequest,
 ) -> Result<CreateRequestResponse> {
-    tracing::debug!("create_request");
-
     verify(&request).await?;
 
     // TODO: build dynamically...
@@ -102,7 +38,7 @@ async fn create_request(
         proof_type: None,
     };
 
-    let pres_def = PresentationDefinition {
+    let definition = PresentationDefinition {
         id: Uuid::new_v4().to_string(),
         purpose: Some(request.purpose.clone()),
         input_descriptors: request.input_descriptors.clone(),
@@ -112,17 +48,16 @@ async fn create_request(
     let uri_token = generate::uri_token();
 
     // get client metadata
-    let Ok(verifier_meta) = Metadata::verifier(provider, &request.client_id).await else {
-        return Err(Error::InvalidRequest("invalid client_id".to_string()));
-    };
+    // let Ok(verifier_meta) = Metadata::verifier(provider, verifier).await else {
+    //     return Err(Error::InvalidRequest("invalid client_id".to_string()));
+    // };
 
     let mut req_obj = RequestObject {
         response_type: ResponseType::VpToken,
         state: Some(uri_token.clone()),
         nonce: generate::nonce(),
-        presentation_definition: Kind::Object(pres_def),
-        client_metadata: verifier_meta,
-        client_id_scheme: Some(ClientIdScheme::RedirectUri),
+        request_type: RequestType::Definition(definition),
+        client_metadata: None, //Some(verifier_meta),
         ..Default::default()
     };
 
@@ -132,11 +67,11 @@ async fn create_request(
     // TODO: replace hard-coded endpoints with Provider-set values
     if request.device_flow == DeviceFlow::CrossDevice {
         req_obj.response_mode = Some("direct_post".to_string());
-        req_obj.client_id = format!("{}/post", request.client_id);
-        req_obj.response_uri = Some(format!("{}/post", request.client_id));
-        response.request_uri = Some(format!("{}/request/{uri_token}", request.client_id));
+        req_obj.client_id = format!("{verifier}/post");
+        req_obj.response_uri = Some(format!("{verifier}/post"));
+        response.request_uri = Some(format!("{verifier}/request/{uri_token}"));
     } else {
-        req_obj.client_id = format!("{}/callback", request.client_id);
+        req_obj.client_id = format!("{verifier}/callback");
         response.request_object = Some(req_obj.clone());
     }
 
@@ -153,13 +88,13 @@ async fn create_request(
     Ok(response)
 }
 
-impl Handler for Request<CreateRequestRequest> {
+impl Handler for Request<CreateRequestRequest, NoHeaders> {
     type Response = CreateRequestResponse;
 
     fn handle(
-        self, _credential_issuer: &str, provider: &impl Provider,
+        self, verifier: &str, provider: &impl Provider,
     ) -> impl Future<Output = Result<Self::Response>> + Send {
-        create_request(provider, self.body)
+        create_request(verifier, provider, self.body)
     }
 }
 

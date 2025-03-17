@@ -11,8 +11,17 @@ use utils::verifier::ProviderImpl;
 
 #[tokio::test]
 async fn same_device() {
-    utils::init_tracer();
     let _provider = ProviderImpl::new();
+
+    // --------------------------------------------------
+    // Alice creates a presentation requesto to send to Bob
+    // --------------------------------------------------
+    // let request = CreateRequestRequest::builder()
+    //     .subject_id(NORMAL_USER)
+    //     .with_credential("EmployeeID_W3C_VC")
+    //     .build();
+    // let response =
+    //     endpoint::handle(ALICE_ISSUER, request, &provider).await.expect("should create offer");
 
     // // create offer to 'send' to the app
     // let body = json!({

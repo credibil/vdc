@@ -24,13 +24,12 @@
 use credibil_infosec::jose::{Jwt, jws};
 use serde_json::Value;
 use serde_json_path::JsonPath;
-use tracing::instrument;
 
-use crate::core::{Kind, did_jwk};
-use crate::oid4vp::endpoint::{Body, Handler, Request};
+use crate::core::did_jwk;
+use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
-use crate::oid4vp::types::{ResponseRequest, ResponseResponse};
+use crate::oid4vp::types::{RequestType, ResponseRequest, ResponseResponse};
 use crate::oid4vp::{Error, Result};
 use crate::w3c_vc;
 use crate::w3c_vc::proof::{Payload, Verify};
@@ -42,12 +41,9 @@ use crate::w3c_vc::vc::{VerifiableCredential, W3cVcClaims};
 ///
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
-#[instrument(level = "debug", skip(provider))]
 async fn response(
-    credential_issuer: &str, provider: &impl Provider, request: ResponseRequest,
+    _verifier: &str, provider: &impl Provider, request: ResponseRequest,
 ) -> Result<ResponseResponse> {
-    tracing::debug!("response");
-
     // TODO: handle case where Wallet returns error instead of submission
     verify(provider.clone(), &request).await?;
 
@@ -68,13 +64,13 @@ async fn response(
     })
 }
 
-impl Handler for Request<ResponseRequest> {
+impl Handler for Request<ResponseRequest, NoHeaders> {
     type Response = ResponseResponse;
 
     fn handle(
-        self, credential_issuer: &str, provider: &impl Provider,
+        self, verifier: &str, provider: &impl Provider,
     ) -> impl Future<Output = Result<Self::Response>> + Send {
-        response(credential_issuer, provider, self.body)
+        response(verifier, provider, self.body)
     }
 }
 
@@ -124,9 +120,9 @@ async fn verify(provider: impl Provider, request: &ResponseRequest) -> Result<()
     let Some(subm) = &request.presentation_submission else {
         return Err(Error::InvalidRequest("no presentation_submission".to_string()));
     };
-    let def = match &saved_req.presentation_definition {
-        Kind::Object(def) => def,
-        Kind::String(_) => {
+    let def = match &saved_req.request_type {
+        RequestType::Definition(def) => def,
+        _ => {
             return Err(Error::InvalidRequest(
                 "presentation_definition_uri is unsupported".to_string(),
             ));

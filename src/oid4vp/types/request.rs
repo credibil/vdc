@@ -1,29 +1,26 @@
+use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Debug;
 use std::io::Cursor;
 
 use anyhow::{Result, anyhow};
 use base64ct::{Base64, Encoding};
+use credibil_infosec::PublicKeyJwk;
 pub use credibil_infosec::Signer;
 use qrcode::QrCode;
 use serde::de::{self, Deserializer, Visitor};
 use serde::ser::{SerializeMap, Serializer};
 use serde::{Deserialize, Serialize};
 
-use crate::core::{Kind, urlencode};
+use crate::core::urlencode;
 use crate::dif_exch::{InputDescriptor, PresentationDefinition};
-use crate::oid4vp::types::Verifier;
+use crate::oid4vp::types::{Format, VpFormat};
 
 /// The Request Object Request is created by the Verifier to generate an
 /// Authorization Request Object.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct CreateRequestRequest {
-    #[allow(rustdoc::bare_urls)]
-    /// The Verifier ID. It MUST be a valid URI. For example,
-    /// `"https://credibil.io"` or `"did:ion:EiDyOQbbZAa3aiRzeCkV7LOx3SERjjH93EXoIM3UoN4oWg"`.
-    pub client_id: String,
-
     /// The reason the Verifier is requesting the Verifiable Presentation.
     pub purpose: String,
 
@@ -149,13 +146,26 @@ pub struct RequestObject {
     /// Verifier.
     pub response_type: ResponseType,
 
-    /// The Verifier ID. MUST be a valid URI.
+    /// The Verifier's `client_id`.
     pub client_id: String,
 
     /// The URI to redirect to the Verifier's redirection endpoint as
     /// established during client registration.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub redirect_uri: Option<String>,
+
+    /// The nonce is used to securely bind the requested Verifiable
+    /// Presentation(s) provided by the Wallet to the particular
+    /// transaction. Returned in the VP's Proof.challenge parameter.
+    pub nonce: String,
+
+    /// The Wallet MAY allow Verifiers to request presentation of Verifiable
+    /// Credentials by utilizing a pre-defined scope value. Defined in
+    /// [RFC6749].
+    ///
+    /// [RFC6749]: (https://www.rfc-editor.org/rfc/rfc6749.html)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scope: Option<String>,
 
     /// While the `response_type` parameter informs the Authorization Server
     /// (Wallet) of the desired authorization flow, the `response_mode`
@@ -201,162 +211,30 @@ pub struct RequestObject {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub response_uri: Option<String>,
 
-    /// The Wallet MAY allow Verifiers to request presentation of Verifiable
-    /// Credentials by utilizing a pre-defined scope value. Defined in
-    /// [RFC6749].
-    ///
-    /// [RFC6749]: (https://www.rfc-editor.org/rfc/rfc6749.html)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub scope: Option<String>,
-
-    /// The nonce is used to securely bind the requested Verifiable
-    /// Presentation(s) provided by the Wallet to the particular
-    /// transaction. Returned in the VP's Proof.challenge parameter.
-    pub nonce: String,
-
     /// State is used to maintain state between the Authorization Request and
     /// subsequent callback from the Wallet ('Authorization Server').
     #[serde(skip_serializing_if = "Option::is_none")]
     pub state: Option<String>,
 
-    /// The Presentation Definition
-    pub presentation_definition: Kind<PresentationDefinition>,
-
-    /// The `client_id_scheme` is used to specify how the Wallet should to
-    /// obtain and validate Verifier metadata. The following values indicate
-    /// how the Wallet should interpret the value of the `client_id`
-    /// parameter.
-    ///
-    /// - If not set, the Wallet MUST behave as specified in [RFC6749].
-    /// - If the same Client Identifier is used with different Client Identifier
-    ///   schemes, those occurences MUST be treated as different Verifiers. The
-    ///   Verifier needs to determine which Client Identifier schemes the Wallet
-    ///   supports prior to sending the Authorization Request in order to choose
-    ///   a supported scheme.
-    ///
-    /// [RFC6749]: (https://www.rfc-editor.org/rfc/rfc6749.html)
-    /// [RFC5280]: (https://www.rfc-editor.org/rfc/rfc5280)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub client_id_scheme: Option<ClientIdScheme>,
+    /// The type of request used to request Verifiable Presentations.
+    #[serde(flatten)]
+    pub request_type: RequestType,
 
     /// Client Metadata contains Verifier metadata values.
-    pub client_metadata: Verifier,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_metadata: Option<VerifierMetadata>,
+
+    /// The HTTP method to be used when the `request_uri` parameter is included
+    /// in the same request.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request_uri_method: Option<UriMethod>,
+
+    /// An array of base64url encoded JSON objects, each containing a parameter
+    /// set with details about the transaction that the Verifier is requesting
+    /// the End-User to authorize.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transaction_data: Option<Vec<TransactionData>>,
 }
-
-/// The type of response expected from the Wallet (as Authorization Server).
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub enum ResponseType {
-    /// A VP Token is returned in an Authorization Response
-    #[default]
-    #[serde(rename = "vp_token")]
-    VpToken,
-
-    /// A VP Token and a Self-Issued ID Token are returned in an Authorization
-    /// Response (if `scope` is set to "openid").
-    #[serde(rename = "vp_token id_token")]
-    VpTokenIdToken,
-
-    /// A VP Token is returned in a Token Response
-    #[serde(rename = "code")]
-    Code,
-}
-
-/// The type of response expected from the Wallet (as Authorization Server).
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub enum ClientIdScheme {
-    /// The Client Identifier is the redirect URI (or response URI).
-    /// The Authorization Request MUST NOT be signed, the Verifier MAY omit the
-    /// `redirect_uri` parameter, and all Verifier metadata parameters MUST be
-    /// passed using the `client_metadata` parameter.
-    /// If used in conjunction with the Response Mode "`direct_post`", and the
-    /// `response_uri` parameter is present, the `client_id` value MUST be equal
-    /// to the `response_uri` value.
-    #[default]
-    #[serde(rename = "redirect_uri")]
-    RedirectUri,
-
-    /// The Client Identifier is a DID.
-    /// The request MUST be signed with a private key associated with the DID. A
-    /// public key to verify the signature MUST be obtained from the
-    /// `verificationMethod` property of a DID Document. Since DID Document may
-    /// include multiple public keys, a particular public key used to sign the
-    /// request in question MUST be identified by the `kid` in the JOSE Header.
-    /// To obtain the DID Document, the Wallet MUST use DID  Resolution defined
-    /// by the DID method used by the Verifier. All Verifier metadata other than
-    /// the public key MUST be obtained from the `client_metadata` parameter.
-    #[serde(rename = "did")]
-    Did,
-    // ---------------------------------------------------------------------
-    // Unsupported schemes
-    // ---------------------------------------------------------------------
-    // /// The Verifier authenticates using a JWT.
-    // /// The Client Identifier MUST equal the `sub` claim value in the Verifier
-    // /// attestation JWT. The request MUST be signed with the private key corresponding
-    // /// to the public key in the `cnf` claim in the Verifier attestation JWT. This
-    // /// serves as proof of possesion of this key. The Verifier attestation JWT MUST be
-    // /// added to the `jwt` JOSE Header of the request object. The Wallet
-    // /// MUST validate the signature on the Verifier attestation JWT. The `iss` claim
-    // /// of the Verifier Attestation JWT MUST identify a party the Wallet trusts
-    // /// for issuing Verifier Attestation JWTs. If the Wallet cannot establish trust,
-    // /// it MUST refuse the request. If the issuer of the Verifier Attestation JWT
-    // /// adds a `redirect_uris` claim to the attestation, the Wallet MUST ensure the
-    // /// `redirect_uri` request parameter value exactly matches one of the `redirect_uris`
-    // /// claim entries. All Verifier metadata other than the public key MUST be
-    // /// obtained from the `client_metadata`.
-    // #[serde(rename = "verifier_attestation")]
-    // VerifierAttestation,
-
-    // /// The Client Identifier is already known to the Wallet.
-    // /// This value represents the [RFC6749] default behavior, i.e. the Client
-    // /// Identifier needs to be known to the Wallet in advance of the Authorization
-    // /// Request. Verifier metadata is obtained from metadata endpoint
-    // /// [RFC7591] or out-of-band an mechanism.
-    // #[serde(rename = "pre-registered")]
-    // PreRegistered,
-
-    // /// The Client Identifier is an OpenID.Federation Entity ID.
-    // /// OpenID.Federation processing rules are followed, OpenID.Federation automatic
-    // /// registration is used, the request may contain a `trust_chain` parameter, the
-    // /// Wallet only obtains Verifier metadata from Entity Statement(s),
-    // /// `client_metadata`.
-    // #[serde(rename = "entity_id")]
-    // EntityId,
-
-    // /// The Client Identifier is a DNS name.
-    // /// The DNS name MUST match a dNSName Subject Alternative Name (SAN) [RFC5280]
-    // /// entry in the leaf certificate passed with the request.
-    // #[serde(rename = "x509_san_dns")]
-    // X509SanDns,
-
-    // /// The Client Identifier is a URI.
-    // /// The URI MUST match a uniformResourceIdentifier Subject Alternative Name (SAN)
-    // /// [RFC5280] entry in the leaf certificate passed with the request.
-    // #[serde(rename = "x509_san_uri")]
-    // X509SanUri,
-}
-
-// /// The type of Presentation Definition returned by the `RequestObject`:
-// either an object /// or a URI.
-// #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
-// #[allow(clippy::module_name_repetitions)]
-// pub enum PresentationDefinitionType {
-//     /// A Presentation Definition object embedded in the `RequestObject`.
-//     #[serde(rename = "presentation_definition")]
-//     Object(PresentationDefinition),
-
-//     /// A URI pointing to where a Presentation Definition object can be
-//     /// retrieved. This parameter MUST be set when neither
-//     /// `presentation_definition` nor a Presentation Definition scope value
-//     /// are set.
-//     #[serde(rename = "presentation_definition_uri")]
-//     Uri(String),
-// }
-
-// impl Default for PresentationDefinitionType {
-//     fn default() -> Self {
-//         Self::Object(PresentationDefinition::default())
-//     }
-// }
 
 impl RequestObject {
     /// Generate qrcode for Request Object.
@@ -405,6 +283,131 @@ impl RequestObject {
     }
 }
 
+/// The type of Presentation Definition returned by the `RequestObject`:
+/// either an object or a URI.
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub enum RequestType {
+    /// A JSON-encoded DCQL query.
+    #[serde(rename = "dcql_query")]
+    DcqlQuery(String),
+
+    /// A Presentation Definition object embedded in the `RequestObject`.
+    #[serde(rename = "presentation_definition")]
+    Definition(PresentationDefinition),
+
+    /// A URI pointing to where a Presentation Definition object can be
+    /// retrieved. This parameter MUST be set when neither
+    /// `presentation_definition` nor a Presentation Definition scope value
+    /// are set.
+    #[serde(rename = "presentation_definition_uri")]
+    DefinitionUri(String),
+}
+
+impl Default for RequestType {
+    fn default() -> Self {
+        Self::DcqlQuery(String::new())
+    }
+}
+
+/// The type of response expected from the Wallet (as Authorization Server).
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+pub enum ResponseType {
+    /// A VP Token is returned in an Authorization Response
+    #[default]
+    #[serde(rename = "vp_token")]
+    VpToken,
+
+    /// A VP Token and a Self-Issued ID Token are returned in an Authorization
+    /// Response (if `scope` is set to "openid").
+    #[serde(rename = "vp_token id_token")]
+    VpTokenIdToken,
+
+    /// A VP Token is returned in a Token Response
+    #[serde(rename = "code")]
+    Code,
+}
+
+/// OAuth 2 client metadata used for registering clients of the issuance and
+/// wallet authorization servers.
+///
+/// In the case of Issuance, the Wallet is the Client and the Issuer is the
+/// Authorization Server.
+///
+/// In the case of Presentation, the Wallet is the Authorization Server and the
+/// Verifier is the Client.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+pub struct VerifierMetadata {
+    /// Public keys, such as those used by the Wallet as an input to a key
+    /// agreement that may be used for encryption of the Authorization Response
+    /// or where the Wallet will require the public key of the Verifier to
+    /// generate the Verifiable Presentation. This allows the Verifier to pass
+    /// ephemeral keys specific to this Authorization Request. Public keys
+    /// included in this parameter MUST NOT be used to verify the signature of
+    /// signed Authorization Requests.
+    pub jwks: Option<String>,
+
+    /// An object defining the formats and proof types of Verifiable
+    /// Presentations and Verifiable Credentials that a Verifier supports.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vp_formats: Option<HashMap<Format, VpFormat>>,
+
+    // FIXME: use credibil_infosec::SigningAlgorithm
+    /// <https://openid.net/specs/oauth-v2-jarm-final.html>
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authorization_signed_response_alg: Option<String>,
+
+    // FIXME: use credibil_infosec::EncryptionAlgorithm
+    /// <https://openid.net/specs/oauth-v2-jarm-final.html>
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authorization_encrypted_response_alg: Option<String>,
+
+    // FIXME: use credibil_infosec::EncryptionEncoding
+    /// <https://openid.net/specs/oauth-v2-jarm-final.html>
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authorization_encrypted_response_enc: Option<String>,
+}
+
+/// JSON Web Key Set (JWKS) containing the public keys of the Verifier.
+pub struct Jwks {
+    /// The keys in the set.
+    pub keys: Vec<PublicKeyJwk>,
+}
+
+/// HTTP method options available for use when the `request_uri` parameter is
+/// included in the same request.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum UriMethod {
+    /// GET method.
+    #[default]
+    GET,
+
+    /// POST method.
+    POST,
+}
+
+/// Details about the transaction that the Verifier is requesting the End-User
+/// to authorize.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
+pub struct TransactionData {
+    /// The name of the parameter set.
+    #[serde(rename = "type")]
+    pub type_: String,
+
+    /// Credential IDs requested that can be used to authorize the transaction.
+    /// In [DIF.PresentationExchange], the string matches the id field in the
+    /// Input Descriptor. In the Digital Credentials Query Language, the string
+    /// matches the id field in the Credential Query.
+    pub credential_ids: Vec<String>,
+
+    /// Hash algorithm identifiers, one of which MUST be used to calculate
+    /// hashes in `transaction_data_hashes` in the response.
+    ///
+    /// Defaults to "sha-256" when not set.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transaction_data_hashes_alg: Option<Vec<String>>,
+}
+
 /// The Request Object Request is used (indirectly) by the Wallet to retrieve a
 /// previously generated Authorization Request Object.
 ///
@@ -413,10 +416,6 @@ impl RequestObject {
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct RequestObjectRequest {
-    /// The ID of the Verifier to retrieve the Authorization Request Object for.
-    #[serde(default)]
-    pub client_id: String,
-
     /// The unique identifier of the the previously generated Request Object.
     pub id: String,
 }

@@ -2,10 +2,10 @@
 
 mod authorization;
 mod credential;
-mod offer_request;
-mod token_request;
+mod offer;
+mod token;
 
 pub use authorization::{AuthorizationDetailBuilder, AuthorizationRequestBuilder};
 pub use credential::CredentialRequestBuilder;
-pub use offer_request::CreateOfferRequestBuilder;
-pub use token_request::TokenRequestBuilder;
+pub use offer::CreateOfferRequestBuilder;
+pub use token::TokenRequestBuilder;

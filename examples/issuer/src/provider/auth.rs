@@ -4,7 +4,7 @@ use std::sync::{Arc, LazyLock, Mutex};
 use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_did::document::{CreateOptions, Document};
-use credibil_did::{DidKey, DidOperator, DidResolver, DidWeb, KeyPurpose};
+use credibil_did::{DidOperator, DidResolver, DidWeb, KeyPurpose};
 use credibil_infosec::{Algorithm, Curve, KeyType, PublicKeyJwk, Signer};
 use credibil_vc::core::generate;
 use ed25519_dalek::{Signer as _, SigningKey};
@@ -21,7 +21,7 @@ pub struct Keyring {
 }
 
 impl Keyring {
-    pub fn new(method: DidMethod) -> Self {
+    pub fn new() -> Self {
         // generate key pair
         let signing_key = SigningKey::generate(&mut OsRng);
         let verifying_key = signing_key.verifying_key();
