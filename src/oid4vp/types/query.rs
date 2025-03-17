@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::oid4vci::types::Format;
+use crate::oid4vci::types::FormatProfile;
 
 /// DCQL query for requesting Verifiable Presentations.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
@@ -23,10 +23,10 @@ pub struct CredentialQuery {
     pub id: String,
 
     /// The format of the requested Credential
-    pub format: Format,
+    pub format: FormatProfile,
 
     // /// Additional properties requested that apply to the metadata of the
-    // /// Credential. Properties are specific to Credential Format.
+    // /// Credential. Properties are specific to Credential Format Profile.
     // #[serde(skip_serializing_if = "Option::is_none")]
     // pub meta: Option<MetadataQuery>,
     //

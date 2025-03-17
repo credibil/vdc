@@ -29,7 +29,7 @@ use crate::core::did_jwk;
 use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
-use crate::oid4vp::types::{AuthorzationResponse, RedirectResponse, Query};
+use crate::oid4vp::types::{AuthorzationResponse, Query, RedirectResponse};
 use crate::oid4vp::{Error, Result};
 use crate::w3c_vc;
 use crate::w3c_vc::proof::{Payload, Verify};

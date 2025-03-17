@@ -1,4 +1,4 @@
-//! Credential Format Tests
+//! Credential Format Profile Tests
 
 //! Pre-Authorized Code Flow Tests
 

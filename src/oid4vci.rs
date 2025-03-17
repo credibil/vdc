@@ -139,7 +139,6 @@ pub enum JwtType {
     /// JWT `typ` for SD-JWT credentials.
     #[serde(rename = "dc+sd-jwt")]
     SdJwt,
-
 }
 
 impl From<JwtType> for String {

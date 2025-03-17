@@ -293,7 +293,7 @@ fn verify_claims(issuer: &Issuer, detail: &AuthorizationDetail) -> Result<()> {
         AuthorizationCredential::ConfigurationId {
             credential_configuration_id,
         } => credential_configuration_id,
-        AuthorizationCredential::Format(fmt) => {
+        AuthorizationCredential::FormatProfile(fmt) => {
             issuer.credential_configuration_id(fmt).map_err(|e| server!("issuer issue: {e}"))?
         }
     };

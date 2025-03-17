@@ -342,7 +342,7 @@ impl Context {
                 AuthorizationCredential::ConfigurationId {
                     credential_configuration_id,
                 } => credential_configuration_id,
-                AuthorizationCredential::Format(fmt) => {
+                AuthorizationCredential::FormatProfile(fmt) => {
                     let config_id = self
                         .issuer
                         .credential_configuration_id(fmt)

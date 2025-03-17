@@ -7,7 +7,7 @@ use credibil_infosec::jose::JwsBuilder;
 use credibil_vc::oid4vci::proof::{self, Payload, Type, Verify};
 use credibil_vc::oid4vci::types::{
     AuthorizationRequest, AuthorizationResponse, Credential, CredentialOfferRequest,
-    CredentialRequest, DeferredCredentialRequest, DeferredCredentialResponse, Format, OfferType,
+    CredentialRequest, DeferredCredentialRequest, DeferredCredentialResponse, FormatProfile, OfferType,
     ProofClaims, ResponseType, TokenGrantType, TokenRequest, TokenResponse,
 };
 use credibil_vc::oid4vci::{Error, Result, endpoint};
@@ -22,7 +22,7 @@ pub const REDIRECT_URI: &str = "http://localhost:3000/callback";
 #[derive(Default)]
 pub struct Wallet {
     pub provider: ProviderImpl,
-    pub format: Format,
+    pub format: FormatProfile,
     pub tx_code: Option<String>,
 }
 

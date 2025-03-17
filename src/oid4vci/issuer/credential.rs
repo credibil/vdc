@@ -21,8 +21,8 @@ use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Deferrance, Expire, Stage, State};
 use crate::oid4vci::types::{
     AuthorizedDetail, Credential, CredentialConfiguration, CredentialHeaders, CredentialRequest,
-    CredentialResponse, Dataset, Format, Issuer, MultipleProofs, Proof, ProofClaims, RequestBy,
-    SingleProof,
+    CredentialResponse, Dataset, FormatProfile, Issuer, MultipleProofs, Proof, ProofClaims,
+    RequestBy, SingleProof,
 };
 use crate::oid4vci::{Error, JwtType, Result};
 use crate::sd_jwt::DcSdJwtBuilder;
@@ -222,8 +222,8 @@ impl Context {
 
         // create a credential for each proof
         for kid in &self.proof_kids {
-            let credential = match &self.configuration.format {
-                Format::JwtVcJson(_) => {
+            let credential = match &self.configuration.profile {
+                FormatProfile::JwtVcJson { .. } => {
                     // FIXME: do we need to resolve DID document?
                     let Some(did) = kid.split('#').next() else {
                         return Err(Error::InvalidProof("Proof JWT DID is invalid".to_string()));
@@ -256,7 +256,7 @@ impl Context {
                     }
                 }
 
-                Format::IsoMdl(_) => {
+                FormatProfile::IsoMdl { .. } => {
                     let mdl = MsoMdocBuilder::new()
                         .claims(dataset.claims.clone())
                         .signer(provider)
@@ -268,7 +268,7 @@ impl Context {
                     }
                 }
 
-                Format::DcSdJwt(_) => {
+                FormatProfile::DcSdJwt { .. } => {
                     // TODO: cache the result of jwk when verifying proof (`verify` method)
                     let jwk = did_jwk(kid, provider).await.map_err(|e| {
                         server!("issue retrieving JWK for `dc+sd-jwt` credential: {e}")
@@ -293,8 +293,8 @@ impl Context {
                 }
 
                 // TODO: oustanding credential formats
-                Format::JwtVcJsonLd(_) => todo!(),
-                Format::LdpVc(_) => todo!(),
+                FormatProfile::JwtVcJsonLd { .. } => todo!(),
+                FormatProfile::LdpVc { .. } => todo!(),
             };
 
             credentials.push(credential);

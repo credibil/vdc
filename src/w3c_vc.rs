@@ -18,7 +18,7 @@ use credibil_infosec::jose::jws;
 use serde_json::{Map, Value};
 
 use crate::core::{Kind, OneMany};
-use crate::oid4vci::types::{CredentialConfiguration, CredentialDisplay, Format};
+use crate::oid4vci::types::{CredentialConfiguration, CredentialDisplay, FormatProfile};
 use crate::w3c_vc::types::{LangString, Language};
 use crate::w3c_vc::vc::{CredentialStatus, CredentialSubject, VerifiableCredential, W3cVcClaims};
 
@@ -186,12 +186,15 @@ impl<S: Signer> W3cVcBuilder<HasConfig, HasIssuer, HasHolder, HasClaims, HasSign
     /// # Errors
     /// TODO: Document errors
     pub async fn build(self) -> anyhow::Result<String> {
-        let Format::JwtVcJson(jwt_vc) = self.config.0.format else {
+        let FormatProfile::JwtVcJson {
+            credential_definition,
+        } = self.config.0.profile
+        else {
             return Err(anyhow!("Credential configuration format is invalid"));
         };
 
         // credential ID
-        let id = if let Some(identifier) = jwt_vc.credential_definition.type_.get(1) {
+        let id = if let Some(identifier) = credential_definition.type_.get(1) {
             // FIXME: generate credential id
             Some(format!("{}/credentials/{}", self.issuer.0, identifier))
         } else {
@@ -211,7 +214,7 @@ impl<S: Signer> W3cVcBuilder<HasConfig, HasIssuer, HasHolder, HasClaims, HasSign
         // create VC
         let vc = VerifiableCredential {
             id,
-            type_: OneMany::Many(jwt_vc.credential_definition.type_),
+            type_: OneMany::Many(credential_definition.type_),
             name,
             description,
             issuer: Kind::String(self.issuer.0),

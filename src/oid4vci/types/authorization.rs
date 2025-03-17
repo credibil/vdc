@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use super::ClaimsDescription;
 use crate::core::urlencode;
 use crate::oauth;
-use crate::oid4vci::types::Format;
+use crate::oid4vci::types::FormatProfile;
 
 /// An Authorization Request type.
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
@@ -400,7 +400,7 @@ pub enum AuthorizationCredential {
     /// Identifies the credential to authorize using format-specific parameters.
     /// The requested format should resolve to a single supported credential in
     /// the `credential_configurations_supported` map in the Issuer Metadata.
-    Format(Format),
+    FormatProfile(FormatProfile),
 }
 
 impl Default for AuthorizationCredential {
@@ -429,8 +429,8 @@ impl PartialEq for AuthorizationCredential {
                 };
                 credential_configuration_id == other_id
             }
-            Self::Format(format) => {
-                let Self::Format(other_format) = &other else {
+            Self::FormatProfile(format) => {
+                let Self::FormatProfile(other_format) = &other else {
                     return false;
                 };
                 format == other_format
@@ -492,7 +492,7 @@ mod tests {
     use super::*;
     use crate::core::urlencode;
     use crate::oauth;
-    use crate::oid4vci::types::{ClaimsDescription, CredentialDefinition, ProfileW3c};
+    use crate::oid4vci::types::{ClaimsDescription, CredentialDefinition};
 
     #[test]
     fn authorization_configuration_id() {
@@ -557,7 +557,7 @@ mod tests {
             code_challenge_method: oauth::CodeChallengeMethod::S256,
             authorization_details: Some(vec![AuthorizationDetail {
                 type_: AuthorizationDetailType::OpenIdCredential,
-                credential: AuthorizationCredential::Format(Format::JwtVcJson(ProfileW3c {
+                credential: AuthorizationCredential::FormatProfile(FormatProfile::JwtVcJson {
                     credential_definition: CredentialDefinition {
                         type_: vec![
                             "VerifiableCredential".to_string(),
@@ -565,7 +565,7 @@ mod tests {
                         ],
                         ..CredentialDefinition::default()
                     },
-                })),
+                }),
 
                 ..AuthorizationDetail::default()
             }]),

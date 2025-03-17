@@ -6,7 +6,7 @@ mod utils;
 mod wallet;
 
 use credibil_vc::oid4vci::endpoint;
-use credibil_vc::oid4vci::types::{CreateOfferRequest, Format, ProfileW3c, SendType};
+use credibil_vc::oid4vci::types::{CreateOfferRequest, FormatProfile, ProfileW3c, SendType};
 use rstest::rstest;
 use serde_json::json;
 use test_issuer::{CREDENTIAL_ISSUER, NORMAL_USER, PENDING_USER, ProviderImpl};
@@ -39,7 +39,7 @@ async fn issuance(provider: ProviderImpl, #[case] issue: Issuance) {
     let wallet = wallet::Wallet {
         provider,
         tx_code: response.tx_code,
-        format: Format::JwtVcJson(ProfileW3c::default()),
+        format: FormatProfile::JwtVcJson(ProfileW3c::default()),
     };
 
     wallet.issuer_initiated(response.offer_type).await.expect("should get credential");
@@ -47,8 +47,8 @@ async fn issuance(provider: ProviderImpl, #[case] issue: Issuance) {
 
 /// Credential format variants
 #[rstest]
-#[case(Format::JwtVcJson(ProfileW3c::default()))]
-async fn format(provider: ProviderImpl, #[case] credential_format: Format) {
+#[case(FormatProfile::JwtVcJson(ProfileW3c::default()))]
+async fn format(provider: ProviderImpl, #[case] credential_format: FormatProfile) {
     utils::init_tracer();
     snapshot!("issuer:{credential_format}");
 
@@ -93,7 +93,7 @@ async fn authorization(provider: ProviderImpl) {
     let wallet = wallet::Wallet {
         provider: provider.clone(),
         tx_code: response.tx_code,
-        format: Format::JwtVcJson(ProfileW3c::default()),
+        format: FormatProfile::JwtVcJson(ProfileW3c::default()),
     };
 
     wallet.issuer_initiated(response.offer_type).await.expect("should get credential");
@@ -122,7 +122,7 @@ async fn offer_type(provider: ProviderImpl, #[case] send_type: SendType) {
     let wallet = wallet::Wallet {
         provider: provider.clone(),
         tx_code: response.tx_code,
-        format: Format::JwtVcJson(ProfileW3c::default()),
+        format: FormatProfile::JwtVcJson(ProfileW3c::default()),
     };
 
     wallet.issuer_initiated(response.offer_type).await.expect("should get credential");
