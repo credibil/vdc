@@ -4,19 +4,14 @@
 //! Authorization Request to use when requesting a Verifiable Presentation from
 //! a Wallet.
 
-use std::collections::HashMap;
-
 use chrono::Utc;
-use credibil_infosec::Algorithm;
-use uuid::Uuid;
 
 use crate::core::generate;
-use crate::dif_exch::{ClaimFormat, PresentationDefinition};
 use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::{Expire, State};
 use crate::oid4vp::types::{
-    DeviceFlow, GenerateRequest, GenerateResponse, RequestObject, RequestType, ResponseType,
+    DeviceFlow, GenerateRequest, GenerateResponse, Query, RequestObject, ResponseType,
 };
 use crate::oid4vp::{Error, Result};
 
@@ -29,21 +24,12 @@ use crate::oid4vp::{Error, Result};
 async fn generate(
     verifier: &str, provider: &impl Provider, request: GenerateRequest,
 ) -> Result<GenerateResponse> {
-    verify(&request).await?;
-
     // TODO: build dynamically...
-    let fmt = ClaimFormat {
-        alg: Some(vec![Algorithm::EdDSA.to_string()]),
-        proof_type: None,
-    };
+    // let fmt = ClaimFormat {
+    //     alg: Some(vec![Algorithm::EdDSA.to_string()]),
+    //     proof_type: None,
+    // };
 
-    let definition = PresentationDefinition {
-        id: Uuid::new_v4().to_string(),
-        purpose: Some(request.purpose.clone()),
-        input_descriptors: request.input_descriptors.clone(),
-        format: Some(HashMap::from([("jwt_vc".to_string(), fmt)])),
-        name: None,
-    };
     let uri_token = generate::uri_token();
 
     // get client metadata
@@ -55,7 +41,7 @@ async fn generate(
         response_type: ResponseType::VpToken,
         state: Some(uri_token.clone()),
         nonce: generate::nonce(),
-        request_type: RequestType::Definition(definition),
+        query: Query::Dcql(request.query),
         client_metadata: None, //Some(verifier_meta),
         ..Default::default()
     };
@@ -102,13 +88,3 @@ impl Handler for Request<GenerateRequest, NoHeaders> {
 }
 
 impl Body for GenerateRequest {}
-
-#[allow(clippy::unused_async)]
-async fn verify(request: &GenerateRequest) -> Result<()> {
-    tracing::debug!("create_request::verify");
-
-    if request.input_descriptors.is_empty() {
-        return Err(Error::InvalidRequest("no credentials specified".to_string()));
-    }
-    Ok(())
-}

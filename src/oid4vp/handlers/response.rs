@@ -29,7 +29,7 @@ use crate::core::did_jwk;
 use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
-use crate::oid4vp::types::{AuthorzationResponse, RedirectResponse, RequestType};
+use crate::oid4vp::types::{AuthorzationResponse, RedirectResponse, Query};
 use crate::oid4vp::{Error, Result};
 use crate::w3c_vc;
 use crate::w3c_vc::proof::{Payload, Verify};
@@ -120,7 +120,7 @@ async fn verify(provider: impl Provider, request: &AuthorzationResponse) -> Resu
     let Some(subm) = &request.presentation_submission else {
         return Err(Error::InvalidRequest("no presentation_submission".to_string()));
     };
-    let RequestType::Definition(def) = &saved_req.request_type else {
+    let Query::Definition(def) = &saved_req.query else {
         return Err(Error::InvalidRequest(
             "presentation_definition_uri is unsupported".to_string(),
         ));

@@ -13,7 +13,8 @@ use serde::ser::{SerializeMap, Serializer};
 use serde::{Deserialize, Serialize};
 
 use crate::core::urlencode;
-use crate::dif_exch::{InputDescriptor, PresentationDefinition};
+use crate::dif_exch::PresentationDefinition;
+use crate::oid4vp::DcqlQuery;
 use crate::oid4vp::types::{Format, VpFormat};
 
 /// The Request Object Request is created by the Verifier to generate an
@@ -21,19 +22,15 @@ use crate::oid4vp::types::{Format, VpFormat};
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct GenerateRequest {
-    /// The reason the Verifier is requesting the Verifiable Presentation.
-    pub purpose: String,
+    /// The DCQL query to use to request the Verifiable Presentation.
+    pub query: DcqlQuery,
 
-    /// Input Descriptors describing the information required from the
-    /// Holder.
-    pub input_descriptors: Vec<InputDescriptor>,
+    /// The Client ID
+    pub client_id: String,
 
     /// The Verifier can specify whether Authorization Requests and Responses
     /// are to be passed between endpoints on the same device or across devices
     pub device_flow: DeviceFlow,
-
-    /// The Client ID
-    pub client_id_scheme: String,
 }
 
 /// Used to specify whether Authorization Requests and Responses are to be
@@ -44,19 +41,6 @@ pub enum DeviceFlow {
     /// Request as a QR Code which the User scans with the Wallet. In
     /// response, the Verifiable Presentations are sent to a URL controlled
     /// by the Verifier using HTTPS POST.
-    ///
-    /// To initiate this flow, the Verifier specifies a Response Type of
-    /// "`vp_token`" and a Response Mode of "`direct_post`" in the Request
-    /// Object.
-    ///
-    /// In order to keep the size of the QR Code small and be able to sign and
-    /// optionally encrypt the Request Object, the Authorization Request only
-    /// contains a Request URI which the wallet uses to retrieve the actual
-    /// Authorization Request data.
-    ///
-    /// It is RECOMMENDED that Response Mode "`direct_post`" and `request_uri`
-    /// are used for cross-device flows, as Authorization Request size might
-    /// be large and may not fit in a QR code.
     #[default]
     CrossDevice,
 
@@ -154,14 +138,9 @@ pub struct RequestObject {
     #[serde(flatten)]
     pub response_mode: ResponseMode,
 
-    /// State is used to maintain state between the Authorization Request and
-    /// subsequent callback from the Wallet ('Authorization Server').
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub state: Option<String>,
-
-    /// The type of request used to request Verifiable Presentations.
+    /// The query used to request Verifiable Presentations.
     #[serde(flatten)]
-    pub request_type: RequestType,
+    pub query: Query,
 
     /// Client Metadata contains Verifier metadata values.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -181,6 +160,11 @@ pub struct RequestObject {
     /// authorize.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub transaction_data: Option<Vec<TransactionData>>,
+
+    /// State is used to maintain state between the Authorization Request and
+    /// subsequent callback from the Wallet ('Authorization Server').
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub state: Option<String>,
 }
 
 impl RequestObject {
@@ -233,10 +217,10 @@ impl RequestObject {
 /// The type of Presentation Definition returned by the `RequestObject`:
 /// either an object or a URI.
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
-pub enum RequestType {
+pub enum Query {
     /// A JSON-encoded DCQL query.
     #[serde(rename = "dcql_query")]
-    DcqlQuery(String),
+    Dcql(DcqlQuery),
 
     /// A Presentation Definition object embedded in the `RequestObject`.
     #[serde(rename = "presentation_definition")]
@@ -250,9 +234,9 @@ pub enum RequestType {
     DefinitionUri(String),
 }
 
-impl Default for RequestType {
+impl Default for Query {
     fn default() -> Self {
-        Self::DcqlQuery(String::new())
+        Self::Dcql(DcqlQuery::default())
     }
 }
 
@@ -317,23 +301,15 @@ impl Default for ResponseMode {
     }
 }
 
-/// OAuth 2 client metadata used for registering clients of the issuance and
-/// wallet authorization servers.
-///
-/// In the case of Issuance, the Wallet is the Client and the Issuer is the
-/// Authorization Server.
-///
-/// In the case of Presentation, the Wallet is the Authorization Server and the
-/// Verifier is the Client.
+/// Verifier metadata when sent directly in the `RequestObject`.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct VerifierMetadata {
-    /// Public keys, such as those used by the Wallet as an input to a key
-    /// agreement that may be used for encryption of the Authorization Response
-    /// or where the Wallet will require the public key of the Verifier to
-    /// generate the Verifiable Presentation. This allows the Verifier to pass
-    /// ephemeral keys specific to this Authorization Request. Public keys
-    /// included in this parameter MUST NOT be used to verify the signature of
-    /// signed Authorization Requests.
+    /// Public keys, such as those used by the Wallet for encryption of the
+    /// Authorization Response or where the Wallet will require the public key
+    /// of the Verifier to generate the Verifiable Presentation.
+    ///
+    /// This allows the Verifier to pass ephemeral keys specific to this
+    /// Authorization Request.
     pub jwks: Option<String>,
 
     /// An object defining the formats and proof types of Verifiable
@@ -524,7 +500,7 @@ mod tests {
                 redirect_uri: "redirect_uri".to_string(),
             },
             state: Some("state".to_string()),
-            request_type: RequestType::Definition(PresentationDefinition::default()),
+            query: Query::Definition(PresentationDefinition::default()),
             client_metadata: Some(VerifierMetadata::default()),
             request_uri_method: Some(UriMethod::GET),
             transaction_data: Some(vec![TransactionData::default()]),
