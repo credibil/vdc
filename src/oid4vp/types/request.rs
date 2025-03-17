@@ -69,6 +69,7 @@ pub enum DeviceFlow {
 
 /// The response to the originator of the Request Object Request.
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[allow(clippy::large_enum_variant)]
 pub enum CreateRequestResponse {
     /// The generated Authorization Request Object, ready to send to the Wallet.
     #[serde(rename = "request_object")]

@@ -120,13 +120,10 @@ async fn verify(provider: impl Provider, request: &ResponseRequest) -> Result<()
     let Some(subm) = &request.presentation_submission else {
         return Err(Error::InvalidRequest("no presentation_submission".to_string()));
     };
-    let def = match &saved_req.request_type {
-        RequestType::Definition(def) => def,
-        _ => {
-            return Err(Error::InvalidRequest(
-                "presentation_definition_uri is unsupported".to_string(),
-            ));
-        }
+    let RequestType::Definition(def) = &saved_req.request_type else {
+        return Err(Error::InvalidRequest(
+            "presentation_definition_uri is unsupported".to_string(),
+        ));
     };
 
     // verify presentation subm matches definition
