@@ -68,17 +68,22 @@ pub enum DeviceFlow {
 }
 
 /// The response to the originator of the Request Object Request.
-// TODO: Should this be an enum?
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct CreateRequestResponse {
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum CreateRequestResponse {
     /// The generated Authorization Request Object, ready to send to the Wallet.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub request_object: Option<RequestObject>,
+    #[serde(rename = "request_object")]
+    Object(RequestObject),
 
     /// A URI pointing to a location where the Authorization Request Object can
     /// be retrieved by the Wallet.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub request_uri: Option<String>,
+    #[serde(rename = "request_uri")]
+    Uri(String),
+}
+
+impl Default for CreateRequestResponse {
+    fn default() -> Self {
+        Self::Uri(String::new())
+    }
 }
 
 impl CreateRequestResponse {
@@ -95,29 +100,24 @@ impl CreateRequestResponse {
     /// set or the respective field cannot be represented as a base64-encoded PNG
     /// image of a QR code.
     pub fn to_qrcode(&self, endpoint: Option<&str>) -> anyhow::Result<String> {
-        if let Some(req_obj) = &self.request_object {
-            let Some(endpoint) = endpoint else {
-                return Err(anyhow!("no endpoint provided for object-type response"));
-            };
-            req_obj.to_qrcode(endpoint)
-        } else {
-            let Some(request_uri) = &self.request_uri else {
-                return Err(anyhow!("response has no request object or request uri"));
-            };
-            // generate qr code
-            let qr_code =
-                QrCode::new(request_uri).map_err(|e| anyhow!("Failed to create QR code: {e}"))?;
-
-            // write image to buffer
-            let img_buf = qr_code.render::<image::Luma<u8>>().build();
-            let mut buffer: Vec<u8> = Vec::new();
-            let mut writer = Cursor::new(&mut buffer);
-            img_buf
-                .write_to(&mut writer, image::ImageFormat::Png)
-                .map_err(|e| anyhow!("Failed to create QR code: {e}"))?;
-
-            // base64 encode image
-            Ok(format!("data:image/png;base64,{}", Base64::encode_string(buffer.as_slice())))
+        match self {
+            Self::Object(req_obj) => {
+                let Some(endpoint) = endpoint else {
+                    return Err(anyhow!("no endpoint provided for object-type response"));
+                };
+                req_obj.to_qrcode(endpoint)
+            }
+            Self::Uri(uri) => {
+                let qr_code =
+                    QrCode::new(uri).map_err(|e| anyhow!("Failed to create QR code: {e}"))?;
+                let img_buf = qr_code.render::<image::Luma<u8>>().build();
+                let mut buffer: Vec<u8> = Vec::new();
+                let mut writer = Cursor::new(&mut buffer);
+                img_buf
+                    .write_to(&mut writer, image::ImageFormat::Png)
+                    .map_err(|e| anyhow!("Failed to create QR code: {e}"))?;
+                Ok(format!("data:image/png;base64,{}", Base64::encode_string(buffer.as_slice())))
+            }
         }
     }
 }
@@ -369,7 +369,7 @@ pub struct VerifierMetadata {
 
 /// JSON Web Key Set (JWKS) containing the public keys of the Verifier.
 pub struct Jwks {
-    /// The keys in the set.
+    /// Keys in the set.
     pub keys: Vec<PublicKeyJwk>,
 }
 

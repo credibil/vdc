@@ -61,19 +61,17 @@ async fn create_request(
         ..Default::default()
     };
 
-    let mut response = CreateRequestResponse::default();
-
     // Response Mode "direct_post" is RECOMMENDED for cross-device flows.
     // TODO: replace hard-coded endpoints with Provider-set values
-    if request.device_flow == DeviceFlow::CrossDevice {
+    let response = if request.device_flow == DeviceFlow::CrossDevice {
         req_obj.response_mode = Some("direct_post".to_string());
         req_obj.client_id = format!("{verifier}/post");
         req_obj.response_uri = Some(format!("{verifier}/post"));
-        response.request_uri = Some(format!("{verifier}/request/{uri_token}"));
+        CreateRequestResponse::Uri(format!("{verifier}/request/{uri_token}"))
     } else {
         req_obj.client_id = format!("{verifier}/callback");
-        response.request_object = Some(req_obj.clone());
-    }
+        CreateRequestResponse::Object(req_obj.clone())
+    };
 
     // save request object in state
     let state = State {
