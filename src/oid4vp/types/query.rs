@@ -45,7 +45,7 @@ pub struct CredentialQuery {
 /// Used to request one or more credentials.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct CredentialSetQuery {
-    /// One or more sets of Credential Query identifiers.
+    /// One or more sets of Credential Query identifiers (i.e. `CredentialQuery.id`).
     pub options: Vec<Vec<String>>,
 
     /// Specifies whether the set of Credentials identified by this query set
@@ -119,37 +119,31 @@ impl DcqlQuery {
             return self.credentials.iter().any(|cq| cq.is_match(credential).is_some());
         };
 
-        // a set of Credentials that match to one of the CredentialSetQuery `options`
+        // credential must match EVERY set where `required` is true
+        'sets: for query_set in credential_sets {
+            // TODO: include optional queries
+            if !query_set.required.unwrap_or(true) {
+                continue;
+            }
 
-        // match credential:
-        //  - CredentialSetQuery objects where `required` is true/omitted
-        //  - any of the other Credential Set Queries.
-
-        for credential_set in credential_sets {
-            let mut matched = false;
-
-            for option in &credential_set.options {
-                let mut option_matched = true;
-
+            // credential must match ONE option
+            for option in &query_set.options {
+                // get CredentialQuery
                 for cq_id in option {
-                    if !self.credentials.iter().any(|cq| cq.id == *cq_id) {
-                        option_matched = false;
-                        break;
+                    let Some(cq) = self.credentials.iter().find(|cq| cq.id == *cq_id) else {
+                        continue;
+                    };
+                    if cq.is_match(credential).is_some() {
+                        continue 'sets;
                     }
                 }
-
-                if option_matched {
-                    matched = true;
-                    break;
-                }
             }
 
-            if !matched {
-                return false;
-            }
+            // credential did not match any option
+            return false;
         }
 
-        false
+        true
     }
 }
 
