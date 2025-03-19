@@ -77,20 +77,6 @@ pub struct ClaimQuery {
     pub values: Option<Vec<Value>>,
 }
 
-impl ClaimQuery {
-    /// Determine whether the specified claim matches the `ClaimQuery`.
-    #[must_use]
-    pub fn matches(&self, claim: &Claim) -> bool {
-        if self.path == claim.path {
-            let Some(values) = &self.values else {
-                return true;
-            };
-            return values.iter().all(|v| claim.values.contains(v));
-        }
-        false
-    }
-}
-
 /// Credential metadata query parameters. Properties are specific to Credential
 /// Format Profile.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
@@ -106,29 +92,6 @@ pub enum MetadataQuery {
         /// Allowed values when querying for SD-JWT Credentials.
         vct_values: Vec<String>,
     },
-}
-
-impl MetadataQuery {
-    fn is_match(&self, meta: &CredentialConfiguration) -> bool {
-        match &self {
-            MetadataQuery::IsoMdl { doctype_value } => {
-                if let FormatProfile::IsoMdl { doctype } = &meta.profile {
-                    if doctype != doctype_value {
-                        return false;
-                    }
-                }
-            }
-            MetadataQuery::SdJwt { vct_values } => {
-                if let FormatProfile::DcSdJwt { vct } = &meta.profile {
-                    if !vct_values.contains(vct) {
-                        return false;
-                    }
-                }
-            }
-        }
-
-        true
-    }
 }
 
 /// A generic credential claim.
@@ -152,11 +115,40 @@ pub trait Credential {
 impl DcqlQuery {
     /// Determines whether the specified credential matches the query.
     pub fn is_match(&self, credential: &impl Credential) -> bool {
-        for cq in &self.credentials {
-            if cq.is_match(credential).is_some() {
-                return true;
+        let Some(credential_sets) = &self.credential_sets else {
+            return self.credentials.iter().any(|cq| cq.is_match(credential).is_some());
+        };
+
+        // a set of Credentials that match to one of the CredentialSetQuery `options`
+
+        // match credential:
+        //  - CredentialSetQuery objects where `required` is true/omitted
+        //  - any of the other Credential Set Queries.
+
+        for credential_set in credential_sets {
+            let mut matched = false;
+
+            for option in &credential_set.options {
+                let mut option_matched = true;
+
+                for cq_id in option {
+                    if !self.credentials.iter().any(|cq| cq.id == *cq_id) {
+                        option_matched = false;
+                        break;
+                    }
+                }
+
+                if option_matched {
+                    matched = true;
+                    break;
+                }
+            }
+
+            if !matched {
+                return false;
             }
         }
+
         false
     }
 }
@@ -177,9 +169,7 @@ impl CredentialQuery {
         }
 
         // claims match
-        let Some(claims) = self.match_claims(credential) else {
-            return None;
-        };
+        let claims = self.match_claims(credential)?;
 
         Some(claims)
     }
@@ -226,5 +216,42 @@ impl CredentialQuery {
         }
 
         None
+    }
+}
+
+impl ClaimQuery {
+    /// Determine whether the specified claim matches the `ClaimQuery`.
+    #[must_use]
+    pub fn matches(&self, claim: &Claim) -> bool {
+        if self.path == claim.path {
+            let Some(values) = &self.values else {
+                return true;
+            };
+            return values.iter().all(|v| claim.values.contains(v));
+        }
+        false
+    }
+}
+
+impl MetadataQuery {
+    fn is_match(&self, meta: &CredentialConfiguration) -> bool {
+        match &self {
+            Self::IsoMdl { doctype_value } => {
+                if let FormatProfile::IsoMdl { doctype } = &meta.profile {
+                    if doctype != doctype_value {
+                        return false;
+                    }
+                }
+            }
+            Self::SdJwt { vct_values } => {
+                if let FormatProfile::DcSdJwt { vct } = &meta.profile {
+                    if !vct_values.contains(vct) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        true
     }
 }
