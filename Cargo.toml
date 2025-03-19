@@ -56,7 +56,7 @@ uuid.workspace = true
 
 [dev-dependencies]
 assert_let_bind.workspace = true
-async-std = { version = "1.13.0", features = ["attributes"] }
+async-std = { version = "1.13.1", features = ["attributes"] }
 insta.workspace = true
 multibase = "0.9"
 rand_core = "0.6.4"
