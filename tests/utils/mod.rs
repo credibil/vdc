@@ -1,8 +1,8 @@
 #![allow(missing_docs)]
 #![allow(dead_code)]
 
-mod kms;
 pub mod issuer;
+mod kms;
 pub mod verifier;
 pub mod wallet;
 

@@ -214,37 +214,44 @@ impl CredentialQuery {
         };
 
         // when no claim sets are specified, return claims matching claim queries
+        // N.B. every claim query must match at least one claim
         let Some(claim_sets) = &self.claim_sets else {
-            let mut matched = vec![];
-            for claim in credential.claims() {
-                if claim_queries.iter().any(|cq| cq.matches(&claim)) {
-                    matched.push(claim);
-                }
-            }
-            return Some(matched);
+            return Self::match_claim_queries(claim_queries, credential);
         };
 
-        // return the claims specified by the first matched claim set
+        // find the first claim set where all claim queries are matched
         for claim_set in claim_sets {
-            let mut matched = vec![];
-
-            // find the first matching claim set
+            let mut queries = Vec::<ClaimQuery>::new();
             for id in claim_set {
-                // get claim query by id
-                if let Some(claim_query) =
-                    claim_queries.iter().find(|cq| cq.id.as_ref() == Some(id))
-                {
-                    for claim in credential.claims() {
-                        if claim_query.matches(&claim) {
-                            matched.push(claim);
-                        }
-                    }
+                if let Some(cq) = claim_queries.iter().find(|cq| cq.id.as_ref() == Some(id)) {
+                    queries.push(cq.clone());
                 }
             }
 
-            if !matched.is_empty() {
+            if let Some(matched) = Self::match_claim_queries(&queries, credential) {
                 return Some(matched);
             }
+        }
+
+        None
+    }
+
+    fn match_claim_queries(
+        queries: &[ClaimQuery], credential: &impl Credential,
+    ) -> Option<Vec<Claim>> {
+        let mut matched = vec![];
+
+        for cq in queries {
+            for claim in credential.claims() {
+                if cq.matches(&claim) {
+                    matched.push(claim);
+                    break;
+                }
+            }
+        }
+
+        if matched.len() == queries.len() {
+            return Some(matched);
         }
 
         None
@@ -296,8 +303,7 @@ mod tests {
     use super::*;
     use crate::oid4vci::types::{CredentialConfiguration, FormatProfile};
 
-    // Request a Credential in the format `mso_mdoc` with the claims
-    // vehicle_holder and first_name
+    // Request a Credential with the claims `vehicle_holder` and `first_name`
     #[test]
     fn multiple_claims() {
         let query_json = json!({
@@ -305,7 +311,7 @@ mod tests {
                 "id": "my_credential",
                 "format": "mso_mdoc",
                 "meta": {
-                    "doctype_value": "org.iso.18013.5.1.mDL"
+                    "doctype_value": "org.iso.7367.1.mVRC"
                 },
                 "claims": [
                     {"path": ["org.iso.7367.1", "vehicle_holder"]},
@@ -315,7 +321,7 @@ mod tests {
         });
         let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
 
-        let credential = mso_mdoc();
+        let credential = vehicle_registration();
         assert!(query.is_match(&credential));
     }
 
@@ -352,10 +358,16 @@ mod tests {
         });
         let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
 
-        let credential = mso_mdoc();
+        let credential = vehicle_registration();
         assert!(query.is_match(&credential));
     }
 
+    // Make a complex query where the Wallet is requested to deliver:
+    //  - The `pid` credential
+    //  - OR the `other_pid` credential,
+    //  - OR both `pid_reduced_cred_1` and `pid_reduced_cred_2`.
+    //
+    // Additionally, the `nice_to_have` credential may optionally be delivered.
     #[test]
     #[ignore]
     fn complex_query() {
@@ -388,22 +400,202 @@ mod tests {
         });
         let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
 
-        let credential = mso_mdoc();
+        let credential = vehicle_registration();
         assert!(query.is_match(&credential));
     }
 
-    fn mso_mdoc() -> impl Credential {
+    // Request an ID and address from any credential.
+    #[test]
+    #[ignore]
+    fn any_credential() {
+        let query_json = json!({
+            "credentials": [
+                {
+                    "id": "mdl-id",
+                    "format": "mso_mdoc",
+                    "meta": {
+                        "doctype_value": "org.iso.18013.5.1.mDL"
+                    },
+                    "claims": [
+                        {
+                            "id": "given_name",
+                            "path": ["org.iso.18013.5.1", "given_name"]
+                        },
+                        {
+                            "id": "family_name",
+                            "path": ["org.iso.18013.5.1", "family_name"]
+                        },
+                        {
+                            "id": "portrait",
+                            "path": ["org.iso.18013.5.1", "portrait"]
+                        }
+                    ]
+                },
+                {
+                    "id": "mdl-address",
+                    "format": "mso_mdoc",
+                    "meta": {
+                        "doctype_value": "org.iso.18013.5.1.mDL"
+                    },
+                    "claims": [
+                        {
+                        "id": "resident_address",
+                        "path": ["org.iso.18013.5.1", "resident_address"]
+                        },
+                        {
+                        "id": "resident_country",
+                        "path": ["org.iso.18013.5.1", "resident_country"]
+                        }
+                    ]
+                },
+                {
+                    "id": "photo_card-id",
+                    "format": "mso_mdoc",
+                    "meta": {
+                        "doctype_value": "org.iso.23220.photoid.1"
+                    },
+                    "claims": [
+                        {
+                            "id": "given_name",
+                            "path": ["org.iso.18013.5.1", "given_name"]
+                        },
+                        {
+                            "id": "family_name",
+                            "path": ["org.iso.18013.5.1", "family_name"]
+                        },
+                        {
+                            "id": "portrait",
+                            "path": ["org.iso.18013.5.1", "portrait"]
+                        }
+                    ]
+                },
+                {
+                    "id": "photo_card-address",
+                    "format": "mso_mdoc",
+                    "meta": {
+                        "doctype_value": "org.iso.23220.photoid.1"
+                    },
+                    "claims": [
+                        {
+                        "id": "resident_address",
+                        "path": ["org.iso.18013.5.1", "resident_address"]
+                        },
+                        {
+                        "id": "resident_country",
+                        "path": ["org.iso.18013.5.1", "resident_country"]
+                        }
+                    ]
+                }
+            ],
+            "credential_sets": [
+                {
+                    "purpose": "Identification",
+                    "options": [
+                        [ "mdl-id" ],
+                        [ "photo_card-id" ]
+                    ]
+                },
+                {
+                    "purpose": "Proof of address",
+                    "required": false,
+                    "options": [
+                        [ "mdl-address"],
+                        ["photo_card-address" ]
+                    ]
+                }
+            ]
+        });
+        let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
+
+        let credential = vehicle_registration();
+        assert!(query.is_match(&credential));
+    }
+
+    // Requests the mandatory claims `last_name` and `date_of_birth`, and
+    // either the claim `postal_code`, or, if that is not available, both of
+    // the claims `locality` and `region`.
+    #[test]
+    #[ignore]
+    fn alt_claims() {
+        let query_json = json!({
+            "credentials": [
+                {
+                    "id": "pid",
+                    "format": "dc+sd-jwt",
+                    "meta": {
+                        "vct_values": [ "https://credentials.example.com/identity_credential" ]
+                    },
+                    "claims": [
+                        {"id": "a", "path": ["last_name"]},
+                        {"id": "b", "path": ["postal_code"]},
+                        {"id": "c", "path": ["locality"]},
+                        {"id": "d", "path": ["region"]},
+                        {"id": "e", "path": ["date_of_birth"]}
+                    ],
+                    "claim_sets": [
+                        ["a", "c", "d", "e"],
+                        ["a", "b", "e"]
+                    ]
+                }
+            ]
+        });
+        let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
+
+        let credential = vehicle_registration();
+        assert!(query.is_match(&credential));
+    }
+
+    // Requests a credential using specific values for the `last_name` and `postal_code` claims.
+    #[test]
+    #[ignore]
+    fn specific_values() {
+        let query_json = json!({
+            "credentials": [
+                {
+                    "id": "my_credential",
+                    "format": "dc+sd-jwt",
+                    "meta": {
+                        "vct_values": [ "https://credentials.example.com/identity_credential" ]
+                    },
+                    "claims": [
+                        {
+                            "path": ["last_name"],
+                            "values": ["Doe"]
+                        },
+                        {"path": ["first_name"]},
+                        {"path": ["address", "street_address"]},
+                        {
+                            "path": ["postal_code"],
+                            "values": ["90210", "90211"]
+                        }
+                    ]
+                }
+            ]
+        });
+        let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
+
+        let credential = vehicle_registration();
+        assert!(query.is_match(&credential));
+    }
+
+    fn vehicle_registration() -> impl Credential {
         CredentialImpl {
             configuration: CredentialConfiguration {
                 profile: FormatProfile::IsoMdl {
-                    doctype: "org.iso.18013.5.1.mDL".to_string(),
+                    doctype: "org.iso.7367.1.mVRC".to_string(),
                 },
                 ..CredentialConfiguration::default()
             },
-            claims: vec![Claim {
-                path: vec!["org.iso.18013.5.1".to_string(), "first_name".to_string()],
-                values: vec![Value::String("Alice".to_string())],
-            }],
+            claims: vec![
+                Claim {
+                    path: vec!["org.iso.7367.1".to_string(), "vehicle_holder".to_string()],
+                    values: vec![Value::String("Alice Holder".to_string())],
+                },
+                Claim {
+                    path: vec!["org.iso.18013.5.1".to_string(), "first_name".to_string()],
+                    values: vec![Value::String("Alice".to_string())],
+                },
+            ],
         }
     }
 
