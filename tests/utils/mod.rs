@@ -1,7 +1,7 @@
 #![allow(missing_docs)]
 #![allow(dead_code)]
 
-mod auth;
+mod kms;
 pub mod issuer;
 pub mod verifier;
 pub mod wallet;

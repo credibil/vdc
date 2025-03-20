@@ -11,7 +11,7 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use uuid::Uuid;
 
-use super::auth::Keyring;
+use super::kms::Keyring;
 
 pub const VERIFIER_ID: &str = "http://localhost:8080";
 

@@ -15,7 +15,7 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 
 use self::store::{ClientStore, DatasetStore, IssuerStore, ServerStore};
-use super::auth::Keyring;
+use super::kms::Keyring;
 
 pub const CREDENTIAL_ISSUER: &str = "http://credibil.io";
 pub const NORMAL_USER: &str = "normal_user";

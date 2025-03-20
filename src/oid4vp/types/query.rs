@@ -6,6 +6,25 @@ use serde_json::Value;
 use crate::oid4vci::types::{CredentialConfiguration, FormatProfile};
 // use crate::oid4vp::Result;
 
+/// Implemented by credentials to support DCQL queries.
+pub trait Credential {
+    /// Returns the Credential's format.
+    fn meta(&self) -> &CredentialConfiguration;
+
+    /// Returns the Credential's claims.
+    fn claims(&self) -> Vec<Claim>;
+}
+
+/// A generic credential claim to use with DCQL queries.
+#[derive(Clone, Debug)]
+pub struct Claim {
+    /// The path to the claim within the credential.
+    pub path: Vec<String>,
+
+    /// The claim's values.
+    pub values: Vec<Value>,
+}
+
 /// DCQL query for requesting Verifiable Presentations.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct DcqlQuery {
@@ -25,7 +44,7 @@ pub struct CredentialQuery {
     pub id: String,
 
     /// The format of the requested Credential
-    pub format: FormatProfile,
+    pub format: CredentialFormat,
 
     /// Additional properties requested that apply to the metadata of the
     /// Credential. Properties are specific to Credential Format Profile.
@@ -80,6 +99,7 @@ pub struct ClaimQuery {
 /// Credential metadata query parameters. Properties are specific to Credential
 /// Format Profile.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(untagged)]
 pub enum MetadataQuery {
     /// ISO-MDL format credential metadata.
     IsoMdl {
@@ -94,22 +114,34 @@ pub enum MetadataQuery {
     },
 }
 
-/// A generic credential claim.
-pub struct Claim {
-    /// The path to the claim within the credential.
-    pub path: Vec<String>,
+/// The format of the requested Credential.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+pub enum CredentialFormat {
+    /// A W3C Verifiable Credential.
+    ///
+    /// When this format is specified, Credential Offer, Authorization Details,
+    /// Credential Request, and Credential Issuer metadata, including
+    /// `credential_definition` object, MUST NOT be processed using JSON-LD
+    /// rules.
+    #[serde(rename = "jwt_vc_json")]
+    #[default]
+    JwtVcJson,
 
-    /// The claim's values.
-    pub values: Vec<Value>,
-}
+    /// A W3C Verifiable Credential not  using JSON-LD.
+    #[serde(rename = "ldp-vc")]
+    LdpVc,
 
-/// A trait implemented by credentials so they can be queried by DCQL.
-pub trait Credential {
-    /// Returns the Credential's format.
-    fn meta(&self) -> CredentialConfiguration;
+    /// A W3C Verifiable Credential using JSON-LD.
+    #[serde(rename = "jwt_vc_json-ld")]
+    JwtVcJsonLd,
 
-    /// Returns the Credential's claims.
-    fn claims(&self) -> Vec<Claim>;
+    /// An ISO mDL (ISO.18013-5) mobile driving licence format credential.
+    #[serde(rename = "mso_mdoc")]
+    IsoMdl,
+
+    /// An IETF SD-JWT format credential.
+    #[serde(rename = "dc+sd-jwt")]
+    DcSdJwt,
 }
 
 impl DcqlQuery {
@@ -128,7 +160,7 @@ impl DcqlQuery {
 
             // credential must match ONE option
             for option in &query_set.options {
-                // get CredentialQuery
+                // match a CredentialQuery in the option set
                 for cq_id in option {
                     let Some(cq) = self.credentials.iter().find(|cq| cq.id == *cq_id) else {
                         continue;
@@ -151,13 +183,19 @@ impl CredentialQuery {
     /// Determines whether the specified credential matches the query.
     pub fn is_match(&self, credential: &impl Credential) -> Option<Vec<Claim>> {
         // format match
-        if self.format != credential.meta().profile {
+        let format = match &credential.meta().profile {
+            FormatProfile::IsoMdl { .. } => CredentialFormat::IsoMdl,
+            FormatProfile::DcSdJwt { .. } => CredentialFormat::DcSdJwt,
+            FormatProfile::JwtVcJson { .. } => CredentialFormat::JwtVcJson,
+            _ => return None,
+        };
+        if self.format != format {
             return None;
         }
 
         // metadata match
         if let Some(meta) = &self.meta {
-            if !meta.is_match(&credential.meta()) {
+            if !meta.is_match(credential.meta()) {
                 return None;
             }
         }
@@ -247,5 +285,140 @@ impl MetadataQuery {
         }
 
         true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use serde_json::json;
+
+    use super::*;
+    use crate::oid4vci::types::{CredentialConfiguration, FormatProfile};
+
+    // Request a Credential in the format `mso_mdoc` with the claims
+    // vehicle_holder and first_name
+    #[test]
+    fn multiple_claims() {
+        let query_json = json!({
+            "credentials": [{
+                "id": "my_credential",
+                "format": "mso_mdoc",
+                "meta": {
+                    "doctype_value": "org.iso.18013.5.1.mDL"
+                },
+                "claims": [
+                    {"path": ["org.iso.7367.1", "vehicle_holder"]},
+                    {"path": ["org.iso.18013.5.1", "first_name"]}
+                ]
+            }]
+        });
+        let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
+
+        let credential = mso_mdoc();
+        assert!(query.is_match(&credential));
+    }
+
+    // Request multiple Credentials all of which should be returned.
+    #[test]
+    #[ignore]
+    fn multiple_credentials() {
+        let query_json = json!({
+            "credentials": [
+                {
+                    "id": "pid",
+                    "format": "dc+sd-jwt",
+                    "meta": {
+                        "vct_values": ["https://credentials.example.com/identity_credential"]
+                    },
+                    "claims": [
+                        {"path": ["given_name"]},
+                        {"path": ["family_name"]},
+                        {"path": ["address", "street_address"]}
+                    ]
+                },
+                {
+                    "id": "mdl",
+                    "format": "mso_mdoc",
+                    "meta": {
+                        "doctype_value": "org.iso.7367.1.mVRC"
+                    },
+                    "claims": [
+                        {"path": ["org.iso.7367.1", "vehicle_holder"]},
+                        {"path": ["org.iso.18013.5.1", "first_name"]}
+                    ]
+                }
+            ]
+        });
+        let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
+
+        let credential = mso_mdoc();
+        assert!(query.is_match(&credential));
+    }
+
+    #[test]
+    #[ignore]
+    fn complex_query() {
+        let query_json = json!({
+            "credentials": [
+                {
+                    "id": "pid",
+                    "format": "dc+sd-jwt",
+                    "meta": {
+                        "vct_values": ["https://credentials.example.com/identity_credential"]
+                    },
+                    "claims": [
+                        {"path": ["given_name"]},
+                        {"path": ["family_name"]},
+                        {"path": ["address", "street_address"]}
+                    ]
+                },
+                {
+                    "id": "mdl",
+                    "format": "mso_mdoc",
+                    "meta": {
+                        "doctype_value": "org.iso.7367.1.mVRC"
+                    },
+                    "claims": [
+                        {"path": ["org.iso.7367.1", "vehicle_holder"]},
+                        {"path": ["org.iso.18013.5.1", "first_name"]}
+                    ]
+                }
+            ]
+        });
+        let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
+
+        let credential = mso_mdoc();
+        assert!(query.is_match(&credential));
+    }
+
+    fn mso_mdoc() -> impl Credential {
+        CredentialImpl {
+            configuration: CredentialConfiguration {
+                profile: FormatProfile::IsoMdl {
+                    doctype: "org.iso.18013.5.1.mDL".to_string(),
+                },
+                ..CredentialConfiguration::default()
+            },
+            claims: vec![Claim {
+                path: vec!["org.iso.18013.5.1".to_string(), "first_name".to_string()],
+                values: vec![Value::String("Alice".to_string())],
+            }],
+        }
+    }
+
+    struct CredentialImpl {
+        configuration: CredentialConfiguration,
+        claims: Vec<Claim>,
+    }
+
+    impl Credential for CredentialImpl {
+        fn meta(&self) -> &CredentialConfiguration {
+            &self.configuration
+        }
+
+        fn claims(&self) -> Vec<Claim> {
+            self.claims.clone()
+        }
     }
 }
