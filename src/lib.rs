@@ -21,9 +21,9 @@ pub mod dif_exch;
 pub mod oauth;
 pub mod sd_jwt;
 pub mod status;
-mod w3c_vc;
 
-mod iso_mdl;
+mod mso_mdoc;
+mod w3c_vc;
 
 /// Re-export DID resolution
 pub mod did {

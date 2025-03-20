@@ -15,7 +15,7 @@ use chrono::Utc;
 use credibil_infosec::jose::jws::{self, Key};
 
 use crate::core::{did_jwk, generate};
-use crate::iso_mdl::MsoMdocBuilder;
+use crate::mso_mdoc::MsoMdocBuilder;
 use crate::oid4vci::endpoint::{Body, Handler, Request};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Deferrance, Expire, Stage, State};
@@ -256,7 +256,7 @@ impl Context {
                     }
                 }
 
-                FormatProfile::IsoMdl { .. } => {
+                FormatProfile::MsoMdoc { .. } => {
                     let mdl = MsoMdocBuilder::new()
                         .claims(dataset.claims.clone())
                         .signer(provider)

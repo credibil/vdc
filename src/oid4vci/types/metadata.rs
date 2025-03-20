@@ -459,7 +459,7 @@ pub enum FormatProfile {
 
     /// An ISO mDL (ISO.18013-5) mobile driving licence format credential.
     #[serde(rename = "mso_mdoc")]
-    IsoMdl {
+    MsoMdoc {
         /// The Credential type, as defined in ISO.18013-5.
         doctype: String,
     },
@@ -488,7 +488,7 @@ impl fmt::Display for FormatProfile {
             Self::JwtVcJson { .. } => write!(f, "jwt_vc_json"),
             Self::LdpVc { .. } => write!(f, "ldp_vc"),
             Self::JwtVcJsonLd { .. } => write!(f, "jwt_vc_json-ld"),
-            Self::IsoMdl { .. } => write!(f, "mso_mdoc"),
+            Self::MsoMdoc { .. } => write!(f, "mso_mdoc"),
             Self::DcSdJwt { .. } => write!(f, "dc+sd-jwt"),
         }
     }
@@ -533,8 +533,8 @@ impl fmt::Display for FormatProfile {
 //                     false
 //                 }
 //             }
-//             Self::IsoMdl { doctype } => {
-//                 if let Self::IsoMdl {
+//             Self::MsoMdoc { doctype } => {
+//                 if let Self::MsoMdoc {
 //                     doctype: other_doctype,
 //                 } = other
 //                 {
