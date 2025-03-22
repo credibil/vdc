@@ -151,24 +151,29 @@ impl DcqlQuery {
             return self.credentials.iter().any(|cq| cq.is_match(credential).is_some());
         };
 
-        // credential must match EVERY set where `required` is true
-        'sets: for query_set in credential_sets {
+        // must match one of the `required` options
+        for query_set in credential_sets {
             // TODO: include optional queries
             if !query_set.required.unwrap_or(true) {
                 continue;
             }
 
-            // credential must match ONE option
-            for option in &query_set.options {
-                // match a CredentialQuery in the option set
+            // match ONE `required` option
+            'options: for option in &query_set.options {
+                let mut matched = vec![];
+
+                // match ALL credential queries in the option set
                 for cq_id in option {
                     let Some(cq) = self.credentials.iter().find(|cq| cq.id == *cq_id) else {
-                        continue;
+                        continue 'options;
                     };
                     if cq.is_match(credential).is_some() {
-                        continue 'sets;
+                        // add to matched credentials
+                        matched.push(credential);
                     }
                 }
+
+                return matched.len() == option.len();
             }
 
             // credential did not match any option
@@ -458,7 +463,11 @@ mod tests {
         });
         let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
 
+        // should match all VCs below
         let vc = identity_vc();
+        assert!(query.is_match(&vc));
+
+        let vc = identity2_vc();
         assert!(query.is_match(&vc));
     }
 
@@ -662,16 +671,93 @@ mod tests {
                     values: vec![Value::String("90210".to_string())],
                 },
                 Claim {
-                    path: vec!["address".to_string(), "region".to_string()],
-                    values: vec![Value::String("CA".to_string())],
-                },
-                Claim {
                     path: vec!["address".to_string(), "locality".to_string()],
                     values: vec![Value::String("Hollywood".to_string())],
+                },
+                Claim {
+                    path: vec!["address".to_string(), "region".to_string()],
+                    values: vec![Value::String("CA".to_string())],
                 },
             ],
         }
     }
+
+    fn identity2_vc() -> impl Credential {
+        CredentialImpl {
+            configuration: CredentialConfiguration {
+                profile: FormatProfile::DcSdJwt {
+                    vct: "https://othercredentials.example/pid".to_string(),
+                },
+                ..CredentialConfiguration::default()
+            },
+            claims: vec![
+                Claim {
+                    path: vec!["given_name".to_string()],
+                    values: vec![Value::String("Bob".to_string())],
+                },
+                Claim {
+                    path: vec!["family_name".to_string()],
+                    values: vec![Value::String("Doe".to_string())],
+                },
+                Claim {
+                    path: vec!["address".to_string(), "street_address".to_string()],
+                    values: vec![Value::String("34 Drake St.".to_string())],
+                },
+                Claim {
+                    path: vec!["address".to_string(), "postal_code".to_string()],
+                    values: vec![Value::String("1010".to_string())],
+                },
+                Claim {
+                    path: vec!["address".to_string(), "locality".to_string()],
+                    values: vec![Value::String("Auckland".to_string())],
+                },
+                Claim {
+                    path: vec!["address".to_string(), "region".to_string()],
+                    values: vec![Value::String("Auckland".to_string())],
+                },
+            ],
+        }
+    }
+
+    // fn residence_vc() -> impl Credential {
+    //     CredentialImpl {
+    //         configuration: CredentialConfiguration {
+    //             profile: FormatProfile::DcSdJwt {
+    //                 vct: "https://cred.example/residence_credential".to_string(),
+    //             },
+    //             ..CredentialConfiguration::default()
+    //         },
+    //         claims: vec![
+    //             Claim {
+    //                 path: vec!["address".to_string(), "postal_code".to_string()],
+    //                 values: vec![Value::String("90210".to_string())],
+    //             },
+    //             Claim {
+    //                 path: vec!["address".to_string(), "locality".to_string()],
+    //                 values: vec![Value::String("Hollywood".to_string())],
+    //             },
+    //             Claim {
+    //                 path: vec!["address".to_string(), "region".to_string()],
+    //                 values: vec![Value::String("CA".to_string())],
+    //             },
+    //         ],
+    //     }
+    // }
+
+    // fn rewards_vc() -> impl Credential {
+    //     CredentialImpl {
+    //         configuration: CredentialConfiguration {
+    //             profile: FormatProfile::DcSdJwt {
+    //                 vct: "https://company.example/company_rewards".to_string(),
+    //             },
+    //             ..CredentialConfiguration::default()
+    //         },
+    //         claims: vec![Claim {
+    //             path: vec!["rewards_number".to_string()],
+    //             values: vec![Value::String("12345".to_string())],
+    //         }],
+    //     }
+    // }
 
     fn licence_vc() -> impl Credential {
         CredentialImpl {
