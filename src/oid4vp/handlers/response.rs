@@ -26,7 +26,7 @@ use serde_json::Value;
 use serde_json_path::JsonPath;
 
 use crate::core::did_jwk;
-use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request};
+use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
 use crate::oid4vp::types::{AuthorzationResponse, Query, RedirectResponse};
@@ -69,7 +69,7 @@ impl Handler for Request<AuthorzationResponse, NoHeaders> {
 
     fn handle(
         self, verifier: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<Self::Response>> + Send {
+    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send  {
         response(verifier, provider, self.body)
     }
 }

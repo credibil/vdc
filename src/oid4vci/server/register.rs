@@ -1,7 +1,7 @@
 //! # Dynamic Client Registration Endpoint
 
 use crate::oid4vci::Result;
-use crate::oid4vci::endpoint::{Body, Handler, Request};
+use crate::oid4vci::endpoint::{Body, Handler, Request, Response};
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::State;
 use crate::oid4vci::types::{RegistrationHeaders, RegistrationRequest, RegistrationResponse};
@@ -34,7 +34,7 @@ impl Handler for Request<RegistrationRequest, RegistrationHeaders> {
 
     fn handle(
         self, issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<Self::Response>> + Send {
+    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
         register(issuer, provider, self)
     }
 }

@@ -17,7 +17,7 @@
 //! `/.well-known/oauth-authorization-server/issuer1`.
 
 use crate::oid4vci::Result;
-use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request};
+use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vci::provider::{Metadata, Provider};
 use crate::oid4vci::types::{OAuthServerRequest, OAuthServerResponse};
 use crate::server;
@@ -45,7 +45,7 @@ impl Handler for Request<OAuthServerRequest, NoHeaders> {
 
     fn handle(
         self, issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<Self::Response>> + Send {
+    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
         metadata(issuer, provider, self.body)
     }
 }

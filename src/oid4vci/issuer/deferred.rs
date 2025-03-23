@@ -8,7 +8,7 @@
 //! valid for the issuance of the Credential previously requested at the
 //! Credential Endpoint or the Batch Credential Endpoint.
 
-use crate::oid4vci::endpoint::{Body, Handler, Request};
+use crate::oid4vci::endpoint::{Body, Handler, Request, Response};
 use crate::oid4vci::issuer::credential::credential;
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::{Stage, State};
@@ -70,7 +70,7 @@ impl Handler for Request<DeferredCredentialRequest, DeferredHeaders> {
 
     fn handle(
         self, issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<Self::Response>> + Send {
+    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
         deferred(issuer, provider, self)
     }
 }

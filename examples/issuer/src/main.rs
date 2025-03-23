@@ -10,7 +10,7 @@ use std::sync::LazyLock;
 use axum::extract::{Path, State};
 use axum::http::header::AUTHORIZATION;
 use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
-use axum::response::{Html, IntoResponse, Redirect, Response};
+use axum::response::{Html, IntoResponse, Redirect};
 use axum::routing::{get, post};
 use axum::{Form, Json, Router};
 use axum_extra::TypedHeader;
@@ -82,7 +82,7 @@ async fn main() {
 async fn create_offer(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
     Json(req): Json<CreateOfferRequest>,
-) -> AxResult<CreateOfferResponse> {
+) -> HttpResult<CreateOfferResponse> {
     endpoint::handle(&format!("http://{host}"), req, &provider).await.into()
 }
 
@@ -91,7 +91,7 @@ async fn create_offer(
 async fn credential_offer(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
     Path(offer_id): Path<String>,
-) -> AxResult<CredentialOfferResponse> {
+) -> HttpResult<CredentialOfferResponse> {
     let request = CredentialOfferRequest { id: offer_id };
     endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
 }
@@ -101,7 +101,7 @@ async fn credential_offer(
 #[axum::debug_handler]
 async fn metadata(
     headers: HeaderMap, State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
-) -> AxResult<MetadataResponse> {
+) -> HttpResult<MetadataResponse> {
     let request = endpoint::Request {
         body: MetadataRequest,
         headers: headers.try_into().expect("should find language header"),
@@ -113,7 +113,7 @@ async fn metadata(
 #[axum::debug_handler]
 async fn oauth_server(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
-) -> AxResult<OAuthServerResponse> {
+) -> HttpResult<OAuthServerResponse> {
     let req = OAuthServerRequest {
         // Issuer should be derived from path component if necessary
         issuer: None,
@@ -171,7 +171,10 @@ async fn authorize(
     };
 
     match endpoint::handle(&format!("http://{host}"), req, &provider).await {
-        Ok(v) => (StatusCode::FOUND, Redirect::to(&format!("{redirect_uri}?code={}", v.code)))
+        Ok(v) => (
+            StatusCode::FOUND,
+            Redirect::to(&format!("{redirect_uri}?code={}", v.body.code)),
+        )
             .into_response(),
         Err(e) => {
             let err_params = e.to_querystring();
@@ -223,7 +226,7 @@ async fn par(
     }
 
     // process request
-    let axresponse: AxResult<PushedAuthorizationResponse> =
+    let axresponse: HttpResult<PushedAuthorizationResponse> =
         endpoint::handle(&format!("http://{host}"), req, &provider).await.into();
     axresponse.into_response()
 }
@@ -285,7 +288,7 @@ async fn token(
             .into_response();
     };
 
-    let response: AxResult<TokenResponse> =
+    let response: HttpResult<TokenResponse> =
         match endpoint::handle(&format!("http://{host}"), tr, &provider).await {
             Ok(v) => Ok(v).into(),
             Err(e) => {
@@ -301,7 +304,7 @@ async fn token(
 async fn credential(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>, Json(request): Json<CredentialRequest>,
-) -> AxResult<CredentialResponse> {
+) -> HttpResult<CredentialResponse> {
     let request = endpoint::Request {
         body: request,
         headers: CredentialHeaders {
@@ -318,7 +321,7 @@ async fn deferred_credential(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     Json(request): Json<DeferredCredentialRequest>,
-) -> AxResult<DeferredCredentialResponse> {
+) -> HttpResult<DeferredCredentialResponse> {
     let request = endpoint::Request {
         body: request,
         headers: CredentialHeaders {
@@ -355,7 +358,7 @@ async fn notification(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     Json(request): Json<NotificationRequest>,
-) -> AxResult<NotificationResponse> {
+) -> HttpResult<NotificationResponse> {
     let mut headers = HeaderMap::new();
     headers.insert(AUTHORIZATION, auth.token().parse().unwrap());
     let request = endpoint::Request {
@@ -368,27 +371,27 @@ async fn notification(
 }
 
 // ----------------------------------------------------------------------------
-// Axum Response
+// HTTP Response
 // ----------------------------------------------------------------------------
 
 /// Wrapper for `axum::Response`
-pub struct AxResult<T>(oid4vci::Result<T>);
+pub struct HttpResult<T>(oid4vci::Result<endpoint::Response<T>>);
 
-impl<T> IntoResponse for AxResult<T>
+impl<T> IntoResponse for HttpResult<T>
 where
     T: Serialize,
 {
-    fn into_response(self) -> Response {
+    fn into_response(self) -> axum::response::Response {
         match self.0 {
-            Ok(v) => (StatusCode::OK, Json(json!(v))),
+            Ok(v) => (StatusCode::OK, Json(json!(v.body))),
             Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(e.to_json())),
         }
         .into_response()
     }
 }
 
-impl<T> From<oid4vci::Result<T>> for AxResult<T> {
-    fn from(val: oid4vci::Result<T>) -> Self {
+impl<T> From<oid4vci::Result<endpoint::Response<T>>> for HttpResult<T> {
+    fn from(val: oid4vci::Result<endpoint::Response<T>>) -> Self {
         Self(val)
     }
 }

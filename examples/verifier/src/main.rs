@@ -55,7 +55,7 @@ async fn main() {
 async fn create_request(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
     Json(request): Json<GenerateRequest>,
-) -> AxResult<GenerateResponse> {
+) -> HttpResult<GenerateResponse> {
     endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
 }
 
@@ -64,7 +64,7 @@ async fn create_request(
 async fn request_object(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
     Path(id): Path<String>,
-) -> AxResult<RequestObjectResponse> {
+) -> HttpResult<RequestObjectResponse> {
     let request = RequestObjectRequest { id };
     endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
 }
@@ -80,7 +80,7 @@ async fn response(
         return (StatusCode::BAD_REQUEST, "unable to turn request into AuthorzationResponse")
             .into_response();
     };
-    let response: AxResult<RedirectResponse> =
+    let response: HttpResult<RedirectResponse> =
         match endpoint::handle(&format!("http://{host}"), req, &provider).await {
             Ok(r) => Ok(r).into(),
             Err(e) => {
@@ -96,23 +96,23 @@ async fn response(
 // ----------------------------------------------------------------------------
 
 /// Axum response wrapper
-pub struct AxResult<T>(oid4vp::Result<T>);
+pub struct HttpResult<T>(oid4vp::Result<endpoint::Response<T>>);
 
-impl<T> IntoResponse for AxResult<T>
+impl<T> IntoResponse for HttpResult<T>
 where
     T: Serialize,
 {
     fn into_response(self) -> Response {
         match self.0 {
-            Ok(v) => (StatusCode::OK, Json(json!(v))),
+            Ok(v) => (StatusCode::OK, Json(json!(v.body))),
             Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(e.to_json())),
         }
         .into_response()
     }
 }
 
-impl<T> From<oid4vp::Result<T>> for AxResult<T> {
-    fn from(val: oid4vp::Result<T>) -> Self {
+impl<T> From<oid4vp::Result<endpoint::Response<T>>> for HttpResult<T> {
+    fn from(val: oid4vp::Result<endpoint::Response<T>>) -> Self {
         Self(val)
     }
 }

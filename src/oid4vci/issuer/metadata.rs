@@ -24,7 +24,7 @@
 //! ```
 
 use crate::oid4vci::Result;
-use crate::oid4vci::endpoint::{Body, Handler, Headers, Request};
+use crate::oid4vci::endpoint::{Body, Handler, Headers, Request, Response};
 use crate::oid4vci::provider::{Metadata, Provider};
 use crate::oid4vci::types::{MetadataHeaders, MetadataRequest, MetadataResponse};
 use crate::server;
@@ -42,6 +42,7 @@ async fn metadata(
     let credential_issuer = Metadata::issuer(provider, issuer)
         .await
         .map_err(|e| server!("issue getting metadata: {e}"))?;
+
     Ok(MetadataResponse { credential_issuer })
 }
 
@@ -50,7 +51,7 @@ impl Handler for Request<MetadataRequest, MetadataHeaders> {
 
     fn handle(
         self, issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<Self::Response>> + Send {
+    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
         metadata(issuer, provider, self)
     }
 }

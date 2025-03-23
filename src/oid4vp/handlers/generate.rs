@@ -7,7 +7,7 @@
 use chrono::Utc;
 
 use crate::core::generate;
-use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request};
+use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::{Expire, State};
 use crate::oid4vp::types::{
@@ -82,7 +82,7 @@ impl Handler for Request<GenerateRequest, NoHeaders> {
 
     fn handle(
         self, verifier: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<Self::Response>> + Send {
+    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send  {
         generate(verifier, provider, self.body)
     }
 }

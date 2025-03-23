@@ -46,7 +46,7 @@ async fn offer_val() {
     let request = TokenRequest::builder()
         .grant_type(TokenGrantType::PreAuthorizedCode {
             pre_authorized_code: grant.pre_authorized_code,
-            tx_code: response.tx_code,
+            tx_code: response.tx_code.clone(),
         })
         .build();
     let token =
@@ -61,7 +61,7 @@ async fn offer_val() {
     // proof of possession of key material
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
-        .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(nonce.c_nonce))
+        .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(&nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
         .build()
         .await
@@ -71,7 +71,7 @@ async fn offer_val() {
     // --------------------------------------------------
     // Bob requests a credential
     // --------------------------------------------------
-    let details = &token.authorization_details.expect("should have authorization details");
+    let details = &token.authorization_details.as_ref().expect("should have authorization details");
     let request = CredentialRequest::builder()
         .credential_identifier(&details[0].credential_identifiers[0])
         .with_proof(jwt)
@@ -89,7 +89,7 @@ async fn offer_val() {
     // --------------------------------------------------
     // Bob extracts and verifies the received credential
     // --------------------------------------------------
-    let CredentialResponse::Credentials { credentials, .. } = &response else {
+    let CredentialResponse::Credentials { credentials, .. } = &*response else {
         panic!("expected single credential");
     };
     let Credential { credential } = credentials.first().expect("should have credential");
@@ -135,7 +135,7 @@ async fn offer_ref() {
         endpoint::handle(ALICE_ISSUER, request, &provider).await.expect("should fetch offer");
 
     // validate offer
-    let offer = response.credential_offer;
+    let offer = response.credential_offer.clone();
     assert_eq!(offer.credential_configuration_ids, vec!["EmployeeID_W3C_VC".to_string()]);
 
     let grants = offer.grants.expect("should have grant");
@@ -178,7 +178,7 @@ async fn two_datasets() {
     // --------------------------------------------------
     // Bob receives the token and prepares 2 credential requests
     // --------------------------------------------------
-    let details = &token.authorization_details.expect("should have authorization details");
+    let details = &token.authorization_details.as_ref().expect("should have authorization details");
     let expected = HashMap::from([
         ("OpenSourceDeveloper", vec!["A. Mazing", "Hacker"]),
         ("PHLDeveloper", vec!["A. Developer", "Lead"]),
@@ -192,7 +192,7 @@ async fn two_datasets() {
         // proof of possession of key material
         let jws = JwsBuilder::new()
             .typ(JwtType::ProofJwt)
-            .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(nonce.c_nonce))
+            .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(&nonce.c_nonce))
             .add_signer(&*BOB_KEYRING)
             .build()
             .await
@@ -219,7 +219,7 @@ async fn two_datasets() {
         // --------------------------------------------------
         // Bob extracts and verifies the received credential
         // --------------------------------------------------
-        let CredentialResponse::Credentials { credentials, .. } = &response else {
+        let CredentialResponse::Credentials { credentials, .. } = &*response else {
             panic!("expected single credential");
         };
         let Credential { credential } = credentials.first().expect("should have credential");
@@ -282,7 +282,7 @@ async fn reduce_credentials() {
     // --------------------------------------------------
     // Bob receives the token and prepares a credential request
     // --------------------------------------------------
-    let details = &token.authorization_details.expect("should have authorization details");
+    let details = &token.authorization_details.as_ref().expect("should have authorization details");
     assert_eq!(details[0].credential_identifiers.len(), 1);
 
     let identifier = &details[0].credential_identifiers[0];
@@ -293,7 +293,7 @@ async fn reduce_credentials() {
     // proof of possession of key material
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
-        .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(nonce.c_nonce))
+        .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(&nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
         .build()
         .await
@@ -319,7 +319,7 @@ async fn reduce_credentials() {
     // --------------------------------------------------
     // Bob extracts and verifies the received credential
     // --------------------------------------------------
-    let CredentialResponse::Credentials { credentials, .. } = &response else {
+    let CredentialResponse::Credentials { credentials, .. } = &*response else {
         panic!("expected single credential");
     };
     let Credential { credential } = credentials.first().expect("should have credential");
@@ -384,7 +384,7 @@ async fn reduce_claims() {
     // proof of possession of key material
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
-        .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(nonce.c_nonce))
+        .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(&nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
         .build()
         .await
@@ -394,7 +394,7 @@ async fn reduce_claims() {
     // --------------------------------------------------
     // Bob requests a credential
     // --------------------------------------------------
-    let details = &token.authorization_details.expect("should have authorization details");
+    let details = &token.authorization_details.as_ref().expect("should have authorization details");
     let request = CredentialRequest::builder()
         .credential_identifier(&details[0].credential_identifiers[0])
         .with_proof(jwt)
@@ -413,7 +413,7 @@ async fn reduce_claims() {
     // --------------------------------------------------
     // Bob extracts and verifies the received credential
     // --------------------------------------------------
-    let CredentialResponse::Credentials { credentials, .. } = &response else {
+    let CredentialResponse::Credentials { credentials, .. } = &*response else {
         panic!("expected single credential");
     };
     let Credential { credential } = credentials.first().expect("should have credential");
@@ -471,7 +471,7 @@ async fn notify_accepted() {
     // proof of possession of key material
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
-        .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(nonce.c_nonce))
+        .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(&nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
         .build()
         .await
@@ -481,7 +481,7 @@ async fn notify_accepted() {
     // --------------------------------------------------
     // Bob requests a credential
     // --------------------------------------------------
-    let details = &token.authorization_details.expect("should have authorization details");
+    let details = &token.authorization_details.as_ref().expect("should have authorization details");
     let request = CredentialRequest::builder()
         .credential_identifier(&details[0].credential_identifiers[0])
         .with_proof(jwt)
@@ -500,12 +500,12 @@ async fn notify_accepted() {
     // --------------------------------------------------
     // Bob send a notication advising the credential was accepted
     // --------------------------------------------------
-    let CredentialResponse::Credentials { notification_id, .. } = response else {
+    let CredentialResponse::Credentials { notification_id, .. } = &*response else {
         panic!("should have notification id");
     };
 
     let request = NotificationRequest::builder()
-        .notification_id(notification_id.unwrap())
+        .notification_id(notification_id.as_ref().unwrap())
         .event(NotificationEvent::CredentialAccepted)
         .event_description("Credential accepted")
         .build();

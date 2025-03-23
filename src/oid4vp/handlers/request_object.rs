@@ -16,7 +16,7 @@
 
 use credibil_infosec::jose::JwsBuilder;
 
-use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request};
+use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
 use crate::oid4vp::types::{RequestObjectRequest, RequestObjectResponse, RequestObjectType};
@@ -64,7 +64,7 @@ impl Handler for Request<RequestObjectRequest, NoHeaders> {
 
     fn handle(
         self, verifier: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<Self::Response>> + Send {
+    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send  {
         request_object(verifier, provider, self.body)
     }
 }

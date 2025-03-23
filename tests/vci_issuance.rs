@@ -70,7 +70,7 @@ async fn two_proofs() {
 
     let jws_2 = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
-        .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(nonce.c_nonce))
+        .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(&nonce.c_nonce))
         .add_signer(&wallet::keyring())
         .build()
         .await
@@ -79,7 +79,7 @@ async fn two_proofs() {
     // --------------------------------------------------
     // Bob requests a credential with both proofs
     // --------------------------------------------------
-    let details = &token.authorization_details.expect("should have authorization details");
+    let details = &token.authorization_details.as_ref().expect("should have authorization details");
     let request = CredentialRequest::builder()
         .credential_identifier(&details[0].credential_identifiers[0])
         .with_proof(jws_1.encode().expect("should encode JWS"))
@@ -99,7 +99,7 @@ async fn two_proofs() {
     // --------------------------------------------------
     // Bob extracts and verifies the received credentials
     // --------------------------------------------------
-    let CredentialResponse::Credentials { credentials, .. } = &response else {
+    let CredentialResponse::Credentials { credentials, .. } = &*response else {
         panic!("expected single credential");
     };
 
@@ -171,7 +171,7 @@ async fn sd_jwt() {
     // --------------------------------------------------
     // Bob requests a credential with both proofs
     // --------------------------------------------------
-    let details = &token.authorization_details.expect("should have authorization details");
+    let details = &token.authorization_details.as_ref().expect("should have authorization details");
     let request = CredentialRequest::builder()
         .credential_identifier(&details[0].credential_identifiers[0])
         .with_proof(jws.encode().expect("should encode JWS"))
@@ -190,7 +190,7 @@ async fn sd_jwt() {
     // --------------------------------------------------
     // Bob extracts and verifies the received credentials
     // --------------------------------------------------
-    let CredentialResponse::Credentials { credentials, .. } = &response else {
+    let CredentialResponse::Credentials { credentials, .. } = &*response else {
         panic!("expected single credential");
     };
 

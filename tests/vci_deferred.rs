@@ -59,7 +59,7 @@ async fn deferred() {
     // proof of possession of key material
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
-        .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(nonce.c_nonce))
+        .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(&nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
         .build()
         .await
@@ -69,7 +69,7 @@ async fn deferred() {
     // --------------------------------------------------
     // Bob requests a credential and receives a deferred response
     // --------------------------------------------------
-    let details = &token.authorization_details.expect("should have authorization details");
+    let details = token.authorization_details.as_ref().expect("should have authorization details");
     let request = CredentialRequest::builder()
         .credential_identifier(&details[0].credential_identifiers[0])
         .with_proof(jwt)
@@ -88,7 +88,7 @@ async fn deferred() {
     // --------------------------------------------------
     // Bob waits for a brief period and then retrieves the credential
     // --------------------------------------------------
-    let CredentialResponse::TransactionId { transaction_id } = &response else {
+    let CredentialResponse::TransactionId { transaction_id } = &*response else {
         panic!("expected transaction_id");
     };
 
@@ -106,7 +106,7 @@ async fn deferred() {
     // --------------------------------------------------
     // Bob extracts and verifies the received credential
     // --------------------------------------------------
-    let CredentialResponse::Credentials { credentials, .. } = &response else {
+    let CredentialResponse::Credentials { credentials, .. } = &*response else {
         panic!("expected single credential");
     };
 

@@ -11,7 +11,7 @@ use chrono::Utc;
 
 use crate::core::generate;
 use crate::oauth::GrantType;
-use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request};
+use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Expire, Offer, Stage, State};
 use crate::oid4vci::types::{
@@ -31,7 +31,7 @@ struct Context {
 /// Credential Offer request handler generates and returns a Credential Offer.
 async fn create_offer(
     issuer: &str, provider: &impl Provider, request: CreateOfferRequest,
-) -> Result<CreateOfferResponse> {
+) -> Result<Response<CreateOfferResponse>> {
     let iss = Metadata::issuer(provider, issuer)
         .await
         .map_err(|e| server!("issue getting issuer metadata: {e}"))?;
@@ -81,31 +81,36 @@ async fn create_offer(
 
     // respond with Offer object or uri?
     if request.send_type == SendType::ByVal {
-        Ok(CreateOfferResponse {
-            offer_type: OfferType::Object(offer.clone()),
-            tx_code: tx_code.clone(),
-        })
-    } else {
-        let uri_token = generate::uri_token();
-
-        // save offer to state
-        let state = State {
-            expires_at: Utc::now() + Expire::Authorized.duration(),
-            subject_id: request.subject_id,
-            stage: Stage::Pending(offer),
-        };
-        StateStore::put(provider, &uri_token, &state, state.expires_at)
-            .await
-            .map_err(|e| server!("issue saving state: {e}"))?;
-
-        Ok(CreateOfferResponse {
-            offer_type: OfferType::Uri(format!(
-                "{}/credential_offer/{uri_token}",
-                ctx.issuer.credential_issuer,
-            )),
-            tx_code,
-        })
+        return Ok(Response {
+            status: 201,
+            headers: None,
+            body: CreateOfferResponse {
+                offer_type: OfferType::Object(offer.clone()),
+                tx_code: tx_code.clone(),
+            },
+        });
     }
+
+    let uri_token = generate::uri_token();
+
+    // save offer to state
+    let state = State {
+        expires_at: Utc::now() + Expire::Authorized.duration(),
+        subject_id: request.subject_id,
+        stage: Stage::Pending(offer),
+    };
+    StateStore::put(provider, &uri_token, &state, state.expires_at)
+        .await
+        .map_err(|e| server!("issue saving state: {e}"))?;
+
+    Ok(Response {
+        status: 201,
+        headers: None,
+        body: CreateOfferResponse {
+            offer_type: OfferType::Uri(format!("{issuer}/credential_offer/{uri_token}",)),
+            tx_code,
+        },
+    })
 }
 
 impl Handler for Request<CreateOfferRequest, NoHeaders> {
@@ -113,7 +118,7 @@ impl Handler for Request<CreateOfferRequest, NoHeaders> {
 
     fn handle(
         self, issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<Self::Response>> + Send {
+    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
         create_offer(issuer, provider, self.body)
     }
 }

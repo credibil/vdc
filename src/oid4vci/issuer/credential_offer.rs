@@ -15,7 +15,7 @@
 //! [JWT VC Issuance Profile]: (https://identity.foundation/jwt-vc-issuance-profile)
 
 use crate::oid4vci::Result;
-use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request};
+use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::{Stage, State};
 use crate::oid4vci::types::{CredentialOfferRequest, CredentialOfferResponse};
@@ -55,7 +55,7 @@ impl Handler for Request<CredentialOfferRequest, NoHeaders> {
 
     fn handle(
         self, issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<Self::Response>> + Send {
+    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
         credential_offer(issuer, provider, self.body)
     }
 }

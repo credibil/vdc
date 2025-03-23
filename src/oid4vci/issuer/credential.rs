@@ -16,7 +16,7 @@ use credibil_infosec::jose::jws::{self, Key};
 
 use crate::core::{did_jwk, generate};
 use crate::mso_mdoc::MsoMdocBuilder;
-use crate::oid4vci::endpoint::{Body, Handler, Request};
+use crate::oid4vci::endpoint::{Body, Handler, Request, Response};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Deferrance, Expire, Stage, State};
 use crate::oid4vci::types::{
@@ -71,6 +71,7 @@ pub async fn credential(
     ctx.configuration = config.clone();
 
     request.verify(provider, &mut ctx).await?;
+
     ctx.issue(provider, dataset).await
 }
 
@@ -79,7 +80,7 @@ impl Handler for Request<CredentialRequest, CredentialHeaders> {
 
     fn handle(
         self, issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<Self::Response>> + Send {
+    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
         credential(issuer, provider, self)
     }
 }

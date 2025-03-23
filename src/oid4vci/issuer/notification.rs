@@ -19,7 +19,7 @@
 //! no guarantees that a Credential Issuer will receive a notification within a
 //! certain time period or at all.
 
-use crate::oid4vci::endpoint::{Body, Handler, Headers, Request};
+use crate::oid4vci::endpoint::{Body, Handler, Headers, Request, Response};
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::State;
 use crate::oid4vci::types::{NotificationHeaders, NotificationRequest, NotificationResponse};
@@ -55,7 +55,7 @@ impl Handler for Request<NotificationRequest, NotificationHeaders> {
 
     fn handle(
         self, issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<Self::Response>> + Send {
+    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
         notification(issuer, provider, self)
     }
 }
