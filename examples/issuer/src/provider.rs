@@ -53,12 +53,12 @@ impl Metadata for ProviderImpl {
         self.client.add(client)
     }
 
-    async fn issuer(&self, issuer_id: &str) -> Result<Issuer> {
-        self.issuer.get(issuer_id)
+    async fn issuer(&self, credential_issuer: &str) -> Result<Issuer> {
+        self.issuer.get(credential_issuer)
     }
 
-    async fn server(&self, server_id: &str) -> Result<Server> {
-        self.server.get(server_id)
+    async fn server(&self, issuer: &str) -> Result<Server> {
+        self.server.get(issuer)
     }
 }
 

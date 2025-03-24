@@ -26,8 +26,8 @@ impl IssuerStore {
         }
     }
 
-    pub fn get(&self, issuer_id: &str) -> Result<Issuer> {
-        let Some(issuer) = self.issuers.get(issuer_id) else {
+    pub fn get(&self, credential_issuer: &str) -> Result<Issuer> {
+        let Some(issuer) = self.issuers.get(credential_issuer) else {
             return Err(anyhow!("issuer not found"));
         };
         Ok(issuer.clone())
@@ -53,8 +53,8 @@ impl ServerStore {
         }
     }
 
-    pub fn get(&self, server_id: &str) -> Result<Server> {
-        let Some(server) = self.servers.get(server_id) else {
+    pub fn get(&self, issuer: &str) -> Result<Server> {
+        let Some(server) = self.servers.get(issuer) else {
             return Err(anyhow!("issuer not found"));
         };
         Ok(server.clone())

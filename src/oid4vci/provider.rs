@@ -26,10 +26,10 @@ pub trait Metadata: Send + Sync {
     fn client(&self, client_id: &str) -> impl Future<Output = Result<Client>> + Send;
 
     /// Credential Issuer metadata for the specified issuer.
-    fn issuer(&self, issuer_id: &str) -> impl Future<Output = Result<Issuer>> + Send;
+    fn issuer(&self, credential_issuer: &str) -> impl Future<Output = Result<Issuer>> + Send;
 
     /// Authorization Server metadata for the specified issuer/server.
-    fn server(&self, server_id: &str) -> impl Future<Output = Result<Server>> + Send;
+    fn server(&self, issuer: &str) -> impl Future<Output = Result<Server>> + Send;
 
     /// Used to dynamically register OAuth 2.0 clients with the authorization
     /// server.
