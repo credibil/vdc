@@ -7,8 +7,8 @@
 use std::fmt::Debug;
 use std::ops::Deref;
 
-use http::HeaderMap;
 use http::header::ACCEPT_LANGUAGE;
+use http::{HeaderMap, StatusCode};
 use tracing::instrument;
 
 use crate::invalid;
@@ -66,7 +66,7 @@ impl<B: Body> From<B> for Request<B, NoHeaders> {
 #[derive(Clone, Debug)]
 pub struct Response<T> {
     /// Response HTTP status code.
-    pub status: u16,
+    pub status: StatusCode,
 
     /// Response HTTP headers, if any.
     pub headers: Option<HeaderMap>,
@@ -78,7 +78,7 @@ pub struct Response<T> {
 impl<T> From<T> for Response<T> {
     fn from(body: T) -> Self {
         Self {
-            status: 200,
+            status: StatusCode::OK,
             headers: None,
             body,
         }

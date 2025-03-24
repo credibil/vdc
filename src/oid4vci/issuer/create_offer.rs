@@ -8,6 +8,7 @@
 use std::vec;
 
 use chrono::Utc;
+use http::StatusCode;
 
 use crate::core::generate;
 use crate::oauth::GrantType;
@@ -82,7 +83,7 @@ async fn create_offer(
     // respond with Offer object or uri?
     if request.send_type == SendType::ByVal {
         return Ok(Response {
-            status: 201,
+            status: StatusCode::CREATED,
             headers: None,
             body: CreateOfferResponse {
                 offer_type: OfferType::Object(offer.clone()),
@@ -104,7 +105,7 @@ async fn create_offer(
         .map_err(|e| server!("issue saving state: {e}"))?;
 
     Ok(Response {
-        status: 201,
+        status: StatusCode::CREATED,
         headers: None,
         body: CreateOfferResponse {
             offer_type: OfferType::Uri(format!("{issuer}/credential_offer/{uri_token}",)),
