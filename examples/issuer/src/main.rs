@@ -20,8 +20,8 @@ use credibil_vc::core::http::IntoHttp;
 use credibil_vc::oid4vci::endpoint;
 use credibil_vc::oid4vci::types::{
     AuthorizationRequest, CreateOfferRequest, CredentialHeaders, CredentialOfferRequest,
-    CredentialRequest, DeferredCredentialRequest, MetadataRequest,
-    NotificationHeaders, NotificationRequest, OAuthServerRequest, PushedAuthorizationRequest,
+    CredentialRequest, DeferredCredentialRequest, IssuerRequest,
+    NotificationHeaders, NotificationRequest, ServerRequest, PushedAuthorizationRequest,
     TokenRequest,
 };
 use credibil_vc::urlencode;
@@ -102,7 +102,7 @@ async fn metadata(
     headers: HeaderMap, State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
 ) -> impl IntoResponse {
     let request = endpoint::Request {
-        body: MetadataRequest,
+        body: IssuerRequest,
         headers: headers.try_into().expect("should find language header"),
     };
     endpoint::handle(&format!("http://{host}"), request, &provider).await.into_http()
@@ -113,7 +113,7 @@ async fn metadata(
 async fn oauth_server(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
 ) -> impl IntoResponse {
-    let req = OAuthServerRequest {
+    let req = ServerRequest {
         // Issuer should be derived from path component if necessary
         issuer: None,
     };

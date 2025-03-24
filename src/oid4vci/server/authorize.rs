@@ -207,8 +207,7 @@ impl Context {
             return Err(Error::InvalidClient("invalid `client_id`".to_string()));
         };
         // TODO: support authorization issuers
-        let Ok(server) = Metadata::server(provider, &self.issuer.credential_issuer, None).await
-        else {
+        let Ok(server) = Metadata::server(provider, &self.issuer.credential_issuer).await else {
             return Err(invalid!("invalid `credential_issuer`"));
         };
 

@@ -135,7 +135,7 @@ impl TokenRequest {
         // authorization_details object MUST contain the Issuer's identifier
         // in locations.
 
-        let Ok(server) = Metadata::server(provider, ctx.issuer, None).await else {
+        let Ok(server) = Metadata::server(provider, ctx.issuer).await else {
             return Err(invalid!("unknown authorization server"));
         };
         let Some(grant_types_supported) = &server.oauth.grant_types_supported else {

@@ -12,7 +12,7 @@ mod ipfs;
 
 /// `BlockStore` is used by implementers to provide data storage
 /// capability.
-pub trait BlockStore: Send + Sync {
+pub trait BlockStore: Sized + Send + Sync {
     /// Store a data block in the underlying block store.
     fn put(
         &self, owner: &str, partition: &str, cid: &str, data: &[u8],

@@ -9,7 +9,7 @@ use crate::oauth::{OAuthClient, OAuthServer};
 
 /// Request to retrieve the Verifier's  client metadata.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
-pub struct MetadataRequest {
+pub struct IssuerRequest {
     /// The Verifier's Client Identifier for which the configuration is to be
     /// returned.
     #[serde(default)]
@@ -18,7 +18,7 @@ pub struct MetadataRequest {
 
 /// Response containing the Verifier's client metadata.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct MetadataResponse {
+pub struct IssuerResponse {
     /// The Client metadata for the specified Verifier.
     #[serde(flatten)]
     pub client: Verifier,

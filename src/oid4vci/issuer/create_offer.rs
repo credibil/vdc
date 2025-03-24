@@ -39,7 +39,7 @@ async fn create_offer(
 
     // TODO: determine how to select correct server?
     // select `authorization_server`, if specified
-    let server = Metadata::server(provider, issuer, None)
+    let server = Metadata::server(provider, issuer)
         .await
         .map_err(|e| server!("issue getting server metadata: {e}"))?;
 

@@ -6,6 +6,7 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use credibil_did::DidResolver;
 use credibil_infosec::Signer;
+pub use datastore::BlockStore;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
@@ -28,9 +29,7 @@ pub trait Metadata: Send + Sync {
     fn issuer(&self, issuer_id: &str) -> impl Future<Output = Result<Issuer>> + Send;
 
     /// Authorization Server metadata for the specified issuer/server.
-    fn server(
-        &self, server_id: &str, issuer_id: Option<&str>,
-    ) -> impl Future<Output = Result<Server>> + Send;
+    fn server(&self, server_id: &str) -> impl Future<Output = Result<Server>> + Send;
 
     /// Used to dynamically register OAuth 2.0 clients with the authorization
     /// server.

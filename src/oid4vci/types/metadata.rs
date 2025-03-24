@@ -9,11 +9,11 @@ use crate::oauth::{OAuthClient, OAuthServer};
 
 /// Request to retrieve the Credential Issuer's configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct MetadataRequest;
+pub struct IssuerRequest;
 
 /// Response containing the Credential Issuer's configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct MetadataResponse {
+pub struct IssuerResponse {
     /// The Credential Issuer metadata for the specified Credential Issuer.
     #[serde(flatten)]
     pub credential_issuer: Issuer,
@@ -22,7 +22,7 @@ pub struct MetadataResponse {
 /// Request to retrieve the Credential Issuer's authorization server
 /// configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct OAuthServerRequest {
+pub struct ServerRequest {
     /// Authorization issuer identifier.
     ///
     /// This identifier can be obtained from the `authorization_servers`
@@ -35,7 +35,7 @@ pub struct OAuthServerRequest {
 /// Response containing the Credential Issuer's authorization server
 /// configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct OAuthServerResponse {
+pub struct ServerResponse {
     /// The OAuth 2.0 Authorization Server metadata for the Issuer.
     pub authorization_server: Server,
 }

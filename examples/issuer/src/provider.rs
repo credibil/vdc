@@ -57,7 +57,7 @@ impl Metadata for ProviderImpl {
         self.issuer.get(issuer_id)
     }
 
-    async fn server(&self, server_id: &str, _issuer_id: Option<&str>) -> Result<Server> {
+    async fn server(&self, server_id: &str) -> Result<Server> {
         self.server.get(server_id)
     }
 }
