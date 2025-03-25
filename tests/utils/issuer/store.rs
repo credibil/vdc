@@ -7,10 +7,6 @@ use serde::Deserialize;
 use serde_json::{Map, Value};
 use uuid::Uuid;
 
-// pub const NORMAL_USER: &str = "normal_user";
-// pub const PENDING_USER: &str = "pending_user";
-// pub const CLIENT_ID: &str = "96bfb9cb-0513-7d64-5532-bed74c48f9ab";
-
 #[derive(Default, Clone, Debug)]
 pub struct IssuerStore {
     issuers: HashMap<String, Issuer>,

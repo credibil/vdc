@@ -6,9 +6,8 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use credibil_did::DidResolver;
 use credibil_infosec::Signer;
-pub use datastore::BlockStore;
 use serde::Serialize;
-use serde::de::DeserializeOwned;
+use serde::de::Deserialize;
 
 use crate::oid4vci::types::{Client, Dataset, Issuer, Server};
 use crate::status::issuer::Status;
@@ -62,9 +61,24 @@ pub trait StateStore: Send + Sync {
         &self, key: &str, state: impl Serialize + Send, expiry: DateTime<Utc>,
     ) -> impl Future<Output = Result<()>> + Send;
 
+    // fn put(
+    //     &self, key: &str, state: impl Serialize + Send, expiry: DateTime<Utc>,
+    // ) -> impl Future<Output = Result<()>> + Send {
+    //     async { store::put(owner, "STATE", entry, self).await }
+    //     async { BlockStore::put(owner, "STATE", entry, self).await }
+    // }
+
     /// Retrieve data using the provided key.
-    fn get<T: DeserializeOwned>(&self, key: &str) -> impl Future<Output = Result<T>> + Send;
+    fn get<T: for<'a> Deserialize<'a>>(&self, key: &str) -> impl Future<Output = Result<T>> + Send;
+
+    // fn get<T: for<'a> Deserialize<'a>>(&self, key: &str) -> impl Future<Output = Result<T>> + Send {
+    //     async { store::get(owner, "STATE", message_cid, self).await }
+    //}
 
     /// Remove data using the key provided.
     fn purge(&self, key: &str) -> impl Future<Output = Result<()>> + Send;
+
+    // fn purge(&self, key: &str) -> impl Future<Output = Result<()>> + Send{
+    //     async { store::delete(owner, "STATE", message_cid, self).await }
+    // }
 }

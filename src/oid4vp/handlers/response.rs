@@ -69,7 +69,7 @@ impl Handler for Request<AuthorzationResponse, NoHeaders> {
 
     fn handle(
         self, verifier: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send  {
+    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
         response(verifier, provider, self.body)
     }
 }

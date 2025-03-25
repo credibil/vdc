@@ -1,4 +1,4 @@
-pub mod auth;
+pub mod kms;
 pub mod store;
 
 use std::collections::HashMap;
@@ -12,10 +12,9 @@ use credibil_infosec::jose::jwa::Algorithm;
 use credibil_vc::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use credibil_vc::oid4vci::types::{Client, Dataset, Issuer, Server};
 use credibil_vc::status::issuer::Status;
-use serde::Serialize;
-use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 
-use crate::provider::auth::Keyring;
+use crate::provider::kms::Keyring;
 use crate::provider::store::{ClientStore, DatasetStore, IssuerStore, ServerStore};
 
 #[derive(Clone, Debug)]
@@ -82,7 +81,7 @@ impl StateStore for ProviderImpl {
         Ok(())
     }
 
-    async fn get<T: DeserializeOwned>(&self, key: &str) -> Result<T> {
+    async fn get<T: for<'a> Deserialize<'a>>(&self, key: &str) -> Result<T> {
         let Some(state) = self.state.lock().expect("should lock").get(key).cloned() else {
             return Err(anyhow!("state not found for key: {key}"));
         };

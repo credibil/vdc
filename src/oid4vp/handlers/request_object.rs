@@ -64,7 +64,7 @@ impl Handler for Request<RequestObjectRequest, NoHeaders> {
 
     fn handle(
         self, verifier: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send  {
+    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
         request_object(verifier, provider, self.body)
     }
 }

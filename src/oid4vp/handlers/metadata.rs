@@ -31,7 +31,7 @@ impl Handler for Request<IssuerRequest, NoHeaders> {
 
     fn handle(
         self, verifier: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send  {
+    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
         metadata(verifier, provider, self.body)
     }
 }

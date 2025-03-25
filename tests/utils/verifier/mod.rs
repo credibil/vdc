@@ -7,8 +7,7 @@ use credibil_did::{DidResolver, Document};
 use credibil_infosec::{self, Algorithm, PublicKey, Receiver, SharedSecret, Signer};
 use credibil_vc::oid4vp::provider::{Metadata, Provider, StateStore};
 use credibil_vc::oid4vp::types::{Verifier, Wallet};
-use serde::Serialize;
-use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::kms::Keyring;
@@ -74,7 +73,7 @@ impl StateStore for ProviderImpl {
         Ok(())
     }
 
-    async fn get<T: DeserializeOwned>(&self, key: &str) -> Result<T> {
+    async fn get<T: for<'a> Deserialize<'a>>(&self, key: &str) -> Result<T> {
         let Some(state) = self.state.lock().expect("should lock").get(key).cloned() else {
             return Err(anyhow!("state not found for key: {key}"));
         };

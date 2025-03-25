@@ -6,8 +6,7 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use credibil_did::DidResolver;
 pub use credibil_infosec::Signer;
-use serde::Serialize;
-use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 
 use crate::oid4vp::types::{Verifier, Wallet};
 
@@ -37,7 +36,7 @@ pub trait StateStore: Send + Sync {
     ) -> impl Future<Output = Result<()>> + Send;
 
     /// Retrieve data using the provided key.
-    fn get<T: DeserializeOwned>(&self, key: &str) -> impl Future<Output = Result<T>> + Send;
+    fn get<T: for<'a> Deserialize<'a>>(&self, key: &str) -> impl Future<Output = Result<T>> + Send;
 
     /// Remove data using the key provided.
     fn purge(&self, key: &str) -> impl Future<Output = Result<()>> + Send;

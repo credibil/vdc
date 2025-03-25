@@ -20,9 +20,8 @@ use credibil_vc::core::http::IntoHttp;
 use credibil_vc::oid4vci::endpoint;
 use credibil_vc::oid4vci::types::{
     AuthorizationRequest, CreateOfferRequest, CredentialHeaders, CredentialOfferRequest,
-    CredentialRequest, DeferredCredentialRequest, IssuerRequest,
-    NotificationHeaders, NotificationRequest, ServerRequest, PushedAuthorizationRequest,
-    TokenRequest,
+    CredentialRequest, DeferredCredentialRequest, IssuerRequest, NotificationHeaders,
+    NotificationRequest, PushedAuthorizationRequest, ServerRequest, TokenRequest,
 };
 use credibil_vc::urlencode;
 use oauth2::CsrfToken;

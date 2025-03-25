@@ -82,7 +82,7 @@ impl Handler for Request<GenerateRequest, NoHeaders> {
 
     fn handle(
         self, verifier: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send  {
+    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
         generate(verifier, provider, self.body)
     }
 }
