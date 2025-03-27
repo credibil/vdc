@@ -108,7 +108,7 @@ axum-extra = { version = "0.10.0", features = ["typed-header"] }
 base64ct = { version = "1.7.3", features = ["std"] }
 chrono = { version = "0.4.40", features = ["serde"] }
 credibil-did = "0.1.2"
-credibil-infosec = "0.1.1"
+credibil-infosec = "0.1.2"
 credibil-vc = { path = "." }
 derive_builder = "0.20.2"
 fastrand = "2.3.0"
@@ -127,7 +127,7 @@ uuid = { version = "1.16.0", features = ["fast-rng", "v4"] }
 # credibil-did = { path = "../did" }
 credibil-did = { git = "https://github.com/credibil/did.git" }
 # credibil-infosec = { path = "../infosec" }
-credibil-infosec = { git = "https://github.com/credibil/infosec.git" }
+# credibil-infosec = { git = "https://github.com/credibil/infosec.git" }
 
 [profile.release]
 # optimize for small code size
