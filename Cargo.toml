@@ -57,22 +57,23 @@ urlencoding = "2.1.3"
 uuid.workspace = true
 
 [dev-dependencies]
-# async-std = { version = "1.13.1", features = ["attributes"] }
+axum-extra.workspace = true
 insta.workspace = true
-# multibase = "0.9"
+oauth2 = { version = "5.0.0" }
 rand_core = "0.6.4"
 tokio.workspace = true
-# x25519-dalek = { version = "2.0.1", features = ["static_secrets"] }
+tower-http.workspace = true
+
+[[example]]
+name = "issuer-axum"
+path = "examples/issuer/axum.rs"
+# required-features = ["client", "server"]
 
 # -----------------------------------------------
 # Workspace
 # -----------------------------------------------
 [workspace]
-members = [
-    # "crates/*",
-    "examples/issuer",
-    "examples/verifier",
-]
+# members = ["crates/*"]
 # resolver = "3"
 
 [workspace.package]

@@ -1,5 +1,6 @@
 //! Pre-Authorized Code Flow Tests
-
+#[path = "../examples/issuer/provider/mod.rs"]
+mod provider;
 mod utils;
 
 use std::collections::HashMap;
@@ -15,7 +16,7 @@ use credibil_vc::oid4vci::types::{
 };
 use credibil_vc::oid4vci::{JwtType, endpoint};
 use insta::assert_yaml_snapshot as assert_snapshot;
-use utils::issuer::{CREDENTIAL_ISSUER as ALICE_ISSUER, NORMAL_USER, ProviderImpl};
+use provider::{CREDENTIAL_ISSUER as ALICE_ISSUER, NORMAL_USER, ProviderImpl};
 use utils::wallet::{self, Keyring};
 
 static BOB_KEYRING: LazyLock<Keyring> = LazyLock::new(wallet::keyring);

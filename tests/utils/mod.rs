@@ -1,9 +1,8 @@
 #![allow(missing_docs)]
 #![allow(dead_code)]
 
-pub mod issuer;
+#[path = "../../examples/kms/mod.rs"]
 mod kms;
-pub mod verifier;
 pub mod wallet;
 
 use std::fmt::Display;

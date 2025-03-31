@@ -1,38 +1,46 @@
-mod auth;
+#![allow(dead_code)]
+
+#[path = "../../kms/mod.rs"]
+pub mod kms;
+pub mod store;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use anyhow::{Result, anyhow};
-use auth::Keyring;
 use chrono::{DateTime, Utc};
 use credibil_did::{DidResolver, Document};
-use credibil_infosec::{self, Algorithm, PublicKey, Receiver, SharedSecret, Signer};
-use credibil_vc::oid4vp::provider::{Metadata, Provider, StateStore};
-use credibil_vc::oid4vp::types::{Verifier, Wallet};
+use credibil_infosec::Signer;
+use credibil_infosec::jose::jwa::Algorithm;
+use credibil_vc::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
+use credibil_vc::oid4vci::types::{Client, Dataset, Issuer, Server};
+use credibil_vc::status::issuer::Status;
+use kms::Keyring;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+use store::{ClientStore, DatasetStore, IssuerStore, ServerStore};
 
-// pub const VERIFIER_ID: &str = "http://localhost:8080";
+pub const CREDENTIAL_ISSUER: &str = "http://credibil.io";
+pub const NORMAL_USER: &str = "normal_user";
+pub const PENDING_USER: &str = "pending_user";
 
 #[derive(Clone, Debug)]
 pub struct ProviderImpl {
-    verifiers: Arc<Mutex<HashMap<String, Verifier>>>,
+    client: ClientStore,
+    issuer: IssuerStore,
+    server: ServerStore,
     keyring: Keyring,
+    subject: DatasetStore,
     state: Arc<Mutex<HashMap<String, Vec<u8>>>>,
 }
 
 impl ProviderImpl {
     #[must_use]
     pub fn new() -> Self {
-        let json = include_bytes!("../data/verifier.json");
-        let verifier: Verifier = serde_json::from_slice(json).expect("should serialize");
-
         Self {
-            verifiers: Arc::new(Mutex::new(HashMap::from([(
-                verifier.oauth.client_id.clone(),
-                verifier,
-            )]))),
+            client: ClientStore::new(),
+            issuer: IssuerStore::new(),
+            server: ServerStore::new(),
+            subject: DatasetStore::new(),
             state: Arc::new(Mutex::new(HashMap::new())),
             keyring: Keyring::new(),
         }
@@ -42,28 +50,33 @@ impl ProviderImpl {
 impl Provider for ProviderImpl {}
 
 impl Metadata for ProviderImpl {
-    async fn verifier(&self, verifier_id: &str) -> Result<Verifier> {
-        let Some(verifier) = self.verifiers.lock().expect("should lock").get(verifier_id).cloned()
-        else {
-            return Err(anyhow!("verifier not found for verifier_id: {verifier_id}"));
-        };
-        Ok(verifier)
+    async fn client(&self, client_id: &str) -> Result<Client> {
+        self.client.get(client_id)
     }
 
-    async fn register(&self, verifier: &Verifier) -> Result<Verifier> {
-        let mut verifier = verifier.clone();
-        verifier.oauth.client_id = Uuid::new_v4().to_string();
-
-        self.verifiers
-            .lock()
-            .expect("should lock")
-            .insert(verifier.oauth.client_id.to_string(), verifier.clone());
-
-        Ok(verifier)
+    async fn register(&self, client: &Client) -> Result<Client> {
+        self.client.add(client)
     }
 
-    async fn wallet(&self, _wallet_id: &str) -> Result<Wallet> {
-        unimplemented!("WalletMetadata")
+    async fn issuer(&self, credential_issuer: &str) -> Result<Issuer> {
+        self.issuer.get(credential_issuer)
+    }
+
+    async fn server(&self, issuer: &str) -> Result<Server> {
+        self.server.get(issuer)
+    }
+}
+
+impl Subject for ProviderImpl {
+    /// Authorize issuance of the specified credential for the holder.
+    async fn authorize(
+        &self, subject_id: &str, credential_configuration_id: &str,
+    ) -> Result<Vec<String>> {
+        self.subject.authorize(subject_id, credential_configuration_id)
+    }
+
+    async fn dataset(&self, subject_id: &str, credential_identifier: &str) -> Result<Dataset> {
+        self.subject.dataset(subject_id, credential_identifier)
     }
 }
 
@@ -111,12 +124,4 @@ impl Signer for ProviderImpl {
     }
 }
 
-impl Receiver for ProviderImpl {
-    fn key_id(&self) -> String {
-        todo!()
-    }
-
-    async fn shared_secret(&self, _sender_public: PublicKey) -> Result<SharedSecret> {
-        todo!()
-    }
-}
+impl Status for ProviderImpl {}

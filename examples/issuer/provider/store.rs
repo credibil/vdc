@@ -15,7 +15,7 @@ pub struct IssuerStore {
 impl IssuerStore {
     #[must_use]
     pub fn new() -> Self {
-        let json = include_bytes!("../../data/issuer.json");
+        let json = include_bytes!("../data/issuer.json");
         let issuer: Issuer = serde_json::from_slice(json).expect("should serialize");
 
         Self {
@@ -42,7 +42,7 @@ pub struct ServerStore {
 impl ServerStore {
     #[must_use]
     pub fn new() -> Self {
-        let json = include_bytes!("../../data/server.json");
+        let json = include_bytes!("../data/server.json");
         let server: Server = serde_json::from_slice(json).expect("should serialize");
 
         Self {
@@ -69,7 +69,7 @@ pub struct ClientStore {
 impl ClientStore {
     #[must_use]
     pub fn new() -> Self {
-        let json = include_bytes!("../../data/client.json");
+        let json = include_bytes!("../data/client.json");
         let client: Client = serde_json::from_slice(json).expect("should serialize");
 
         // Local verifier client for use when running end to end tests
@@ -121,7 +121,7 @@ pub struct DatasetStore {
 impl DatasetStore {
     #[must_use]
     pub fn new() -> Self {
-        let json = include_bytes!("../../data/datasets.json");
+        let json = include_bytes!("../data/datasets.json");
         let datasets: HashMap<String, HashMap<String, Credential>> =
             serde_json::from_slice(json).expect("should serialize");
 

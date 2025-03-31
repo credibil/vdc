@@ -27,15 +27,19 @@ pub enum DidMethod {
 }
 
 impl Keyring {
+    pub fn new() -> Self {
+        Self::generate(DidMethod::Web)
+    }
+
     pub fn did_web() -> Self {
-        Self::new(DidMethod::Web)
+        Self::generate(DidMethod::Web)
     }
 
     pub fn did_key() -> Self {
-        Self::new(DidMethod::Key)
+        Self::generate(DidMethod::Key)
     }
 
-    pub fn new(method: DidMethod) -> Self {
+    fn generate(method: DidMethod) -> Self {
         // generate key pair
         let signing_key = SigningKey::generate(&mut OsRng);
         let verifying_key = signing_key.verifying_key();

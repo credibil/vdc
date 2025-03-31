@@ -503,6 +503,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
+ "axum-extra",
  "base64ct",
  "bitvec",
  "chrono",
@@ -518,6 +519,7 @@ dependencies = [
  "http-body",
  "image",
  "insta",
+ "oauth2",
  "percent-encoding",
  "qrcode",
  "rand 0.9.0",
@@ -529,6 +531,7 @@ dependencies = [
  "sha2 0.10.8",
  "thiserror 2.0.12",
  "tokio",
+ "tower-http",
  "tracing",
  "tracing-subscriber",
  "urlencoding",
@@ -1361,30 +1364,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "469fb0b9cefa57e3ef31275ee7cacb78f2fdca44e4765491884a2b119d4eb130"
 
 [[package]]
-name = "issuer"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "axum",
- "axum-extra",
- "base64ct",
- "chrono",
- "credibil-did",
- "credibil-infosec",
- "credibil-vc",
- "ed25519-dalek",
- "oauth2",
- "rand_core 0.6.4",
- "serde",
- "serde_json",
- "tokio",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "uuid",
-]
-
-[[package]]
 name = "itoa"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1872,9 +1851,9 @@ dependencies = [
 
 [[package]]
 name = "quinn-udp"
-version = "0.5.10"
+version = "0.5.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e46f3055866785f6b92bc6164b76be02ca8f2eb4b002c0354b28cf4c119e5944"
+checksum = "541d0f57c6ec747a90738a52741d3221f7960e8ac2f0ff4b1a63680e033b4ab5"
 dependencies = [
  "cfg_aliases",
  "libc",
@@ -2140,9 +2119,9 @@ dependencies = [
 
 [[package]]
 name = "rustls-webpki"
-version = "0.103.0"
+version = "0.103.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0aa4eeac2588ffff23e9d7a7e9b3f971c5fb5b7ebc9452745e0c232c64f83b2f"
+checksum = "fef8b8769aaccf73098557a87cd1816b4f9c7c16811c9c77142aa695c16f2c03"
 dependencies = [
  "ring",
  "rustls-pki-types",
@@ -2756,29 +2735,6 @@ name = "valuable"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
-
-[[package]]
-name = "verifier"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "axum",
- "axum-extra",
- "base64ct",
- "chrono",
- "credibil-did",
- "credibil-infosec",
- "credibil-vc",
- "ed25519-dalek",
- "rand_core 0.6.4",
- "serde",
- "serde_json",
- "tokio",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "uuid",
-]
 
 [[package]]
 name = "version_check"
