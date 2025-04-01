@@ -481,29 +481,13 @@ impl From<VerifiableCredential> for W3cVcClaims {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Once;
-
+    use chrono::TimeZone;
     use serde_json::json;
-    use tracing_subscriber::FmtSubscriber;
 
     use super::*;
 
-    // initalise tracing once for all tests
-    static INIT: Once = Once::new();
-
-    // Initialise tracing for tests.
-    fn init_tracer() {
-        INIT.call_once(|| {
-            let subscriber =
-                FmtSubscriber::builder().with_max_level(tracing::Level::ERROR).finish();
-            tracing::subscriber::set_global_default(subscriber).expect("subscriber set");
-        });
-    }
-
     #[test]
     fn builder() {
-        init_tracer();
-
         let vc = sample_vc();
         let vc_json = serde_json::to_value(&vc).expect("should serialize to json");
 
@@ -548,8 +532,6 @@ mod tests {
 
     #[test]
     fn flexvec() {
-        init_tracer();
-
         let mut vc = sample_vc();
         vc.credential_schema = Some(OneMany::Many(vec![
             CredentialSchema { ..Default::default() },
@@ -577,8 +559,6 @@ mod tests {
 
     #[test]
     fn strobj() {
-        init_tracer();
-
         let mut vc = sample_vc();
 
         // serialize with just issuer 'id' field set
@@ -621,9 +601,6 @@ mod tests {
     }
 
     fn sample_vc() -> VerifiableCredential {
-        use chrono::TimeZone;
-        use serde_json::json;
-
         VerifiableCredential {
             context: vec![
                 Kind::String("https://www.w3.org/2018/credentials/v1".to_string()),

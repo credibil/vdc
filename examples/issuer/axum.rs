@@ -221,7 +221,7 @@ async fn par(
     }
 
     // process request
-    endpoint::handle(&format!("http://{host}"), req, &provider).await.into_http()
+    endpoint::handle(&format!("http://{host}"), req, &provider).await.into_http().into_response()
 }
 
 #[derive(Deserialize)]
@@ -276,12 +276,10 @@ async fn token(
     Form(req): Form<HashMap<String, String>>,
 ) -> impl IntoResponse {
     let Ok(tr) = TokenRequest::form_decode(&req) else {
-        tracing::error!("unable to turn HashMap {req:?} into TokenRequest");
         return (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid request"})))
             .into_response();
     };
-
-    endpoint::handle(&format!("http://{host}"), tr, &provider).await.into_http()
+    endpoint::handle(&format!("http://{host}"), tr, &provider).await.into_http().into_response()
 }
 
 // Credential endpoint
