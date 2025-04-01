@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock, Mutex};
 
@@ -16,26 +18,26 @@ static DID_STORE: LazyLock<Arc<Mutex<HashMap<String, Document>>>> =
 #[derive(Clone, Debug)]
 pub struct Keyring {
     url: String,
+    did: String,
     signing_key: SigningKey,
     verifying_key: ed25519_dalek::VerifyingKey,
-    // public_key: x25519_dalek::PublicKey,
 }
 
-pub enum DidMethod {
+enum DidMethod {
     Key,
     Web,
 }
 
 impl Keyring {
     pub fn new() -> Self {
+        Self::new_web()
+    }
+
+    pub fn new_web() -> Self {
         Self::generate(DidMethod::Web)
     }
 
-    pub fn did_web() -> Self {
-        Self::generate(DidMethod::Web)
-    }
-
-    pub fn did_key() -> Self {
+    pub fn new_key() -> Self {
         Self::generate(DidMethod::Key)
     }
 
@@ -43,12 +45,12 @@ impl Keyring {
         // generate key pair
         let signing_key = SigningKey::generate(&mut OsRng);
         let verifying_key = signing_key.verifying_key();
-        // let public_key = x25519_dalek::PublicKey::from(verifying_key.to_montgomery().to_bytes());
 
         let url = format!("https://credibil.io/{}", generate::uri_token());
 
-        let keyring = Self {
+        let mut keyring = Self {
             url: url.clone(),
+            did: String::new(),
             signing_key,
             verifying_key,
         };
@@ -61,9 +63,19 @@ impl Keyring {
             DidMethod::Key => DidKey::create(&keyring, options).expect("should create"),
             DidMethod::Web => DidWeb::create(&url, &keyring, options).expect("should create"),
         };
+
+        keyring.did = document.id.clone();
         DID_STORE.lock().expect("should lock").insert(url, document);
 
         keyring
+    }
+
+    pub fn did(&self) -> String {
+        self.did.clone()
+    }
+
+    pub fn public_key(&self) -> x25519_dalek::PublicKey {
+        x25519_dalek::PublicKey::from(self.verifying_key.to_montgomery().to_bytes())
     }
 }
 

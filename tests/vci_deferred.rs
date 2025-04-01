@@ -2,7 +2,7 @@
 
 #[path = "../examples/issuer/provider/mod.rs"]
 mod provider;
-mod utils;
+mod wallet;
 
 use std::sync::LazyLock;
 
@@ -16,7 +16,7 @@ use credibil_vc::oid4vci::types::{
 use credibil_vc::oid4vci::{JwtType, endpoint};
 use insta::assert_yaml_snapshot as assert_snapshot;
 use provider::{CREDENTIAL_ISSUER as ALICE_ISSUER, PENDING_USER, ProviderImpl};
-use utils::wallet::{self, Keyring};
+use wallet::Keyring;
 
 static BOB_KEYRING: LazyLock<Keyring> = LazyLock::new(wallet::keyring);
 
