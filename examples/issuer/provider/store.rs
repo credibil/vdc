@@ -2,131 +2,13 @@ use std::collections::HashMap;
 use std::sync::{Arc, LazyLock, Mutex};
 
 use anyhow::{Result, anyhow};
-// use credibil_dwn::client::records::{Data, WriteBuilder};
-// use credibil_dwn::endpoint;
-use credibil_vc::oid4vci::types::{Client, Dataset, Issuer, Server};
+use credibil_vc::oid4vci::types::Dataset;
 use serde::Deserialize;
 use serde_json::{Map, Value};
-use uuid::Uuid;
 
 use super::kms::Keyring;
 
 static OWNER: LazyLock<Keyring> = LazyLock::new(Keyring::new);
-
-#[derive(Default, Clone, Debug)]
-pub struct IssuerStore {
-    issuers: HashMap<String, Issuer>,
-}
-
-impl IssuerStore {
-    #[must_use]
-    pub fn new() -> Self {
-        // let email = WriteBuilder::new()
-        //     .data(Data::from(b"Hello Alice".to_vec()))
-        //     // .protocol(ProtocolBuilder {
-        //     //     protocol: "http://email-protocol.xyz",
-        //     //     protocol_path: "email",
-        //     //     parent_context_id: None,
-        //     // })
-        //     .schema("email")
-        //     .data_format("text/plain")
-        //     .sign(&*OWNER)
-        //     .build()
-        //     .await
-        //     .expect("should create write");
-
-        // let reply =
-        //     endpoint::handle(&OWNER.did(), email.clone(), &provider).await.expect("should write");
-
-        let json = include_bytes!("../data/issuer.json");
-        let issuer: Issuer = serde_json::from_slice(json).expect("should serialize");
-
-        Self {
-            issuers: HashMap::from([
-                ("http://localhost:8080".to_string(), issuer.clone()),
-                (issuer.credential_issuer.clone(), issuer),
-            ]),
-        }
-    }
-
-    pub fn get(&self, credential_issuer: &str) -> Result<Issuer> {
-        let Some(issuer) = self.issuers.get(credential_issuer) else {
-            return Err(anyhow!("issuer not found"));
-        };
-        Ok(issuer.clone())
-    }
-}
-
-#[derive(Default, Clone, Debug)]
-pub struct ServerStore {
-    servers: HashMap<String, Server>,
-}
-
-impl ServerStore {
-    #[must_use]
-    pub fn new() -> Self {
-        let json = include_bytes!("../data/server.json");
-        let server: Server = serde_json::from_slice(json).expect("should serialize");
-
-        Self {
-            servers: HashMap::from([
-                ("http://localhost:8080".to_string(), server.clone()),
-                (server.oauth.issuer.clone(), server),
-            ]),
-        }
-    }
-
-    pub fn get(&self, issuer: &str) -> Result<Server> {
-        let Some(server) = self.servers.get(issuer) else {
-            return Err(anyhow!("issuer not found"));
-        };
-        Ok(server.clone())
-    }
-}
-
-#[derive(Default, Clone, Debug)]
-pub struct ClientStore {
-    clients: Arc<Mutex<HashMap<String, Client>>>,
-}
-
-impl ClientStore {
-    #[must_use]
-    pub fn new() -> Self {
-        let json = include_bytes!("../data/client.json");
-        let client: Client = serde_json::from_slice(json).expect("should serialize");
-
-        // Local verifier client for use when running end to end tests
-        let mut local = client.clone();
-        local.oauth.client_id = "http://localhost:8080".to_string();
-
-        Self {
-            clients: Arc::new(Mutex::new(HashMap::from([
-                (client.oauth.client_id.clone(), client),
-                (local.oauth.client_id.clone(), local),
-            ]))),
-        }
-    }
-
-    pub fn get(&self, client_id: &str) -> Result<Client> {
-        let Some(client) = self.clients.lock().expect("should lock").get(client_id).cloned() else {
-            return Err(anyhow!("client not found for client_id: {client_id}"));
-        };
-        Ok(client)
-    }
-
-    #[allow(clippy::unnecessary_wraps)]
-    pub fn add(&self, client: &Client) -> Result<Client> {
-        let mut client = client.clone();
-        client.oauth.client_id = Uuid::new_v4().to_string();
-
-        self.clients
-            .lock()
-            .expect("should lock")
-            .insert(client.oauth.client_id.to_string(), client.clone());
-
-        Ok(client)
-    }
-}
 
 #[derive(Default, Clone, Debug, Deserialize)]
 #[serde(default)]

@@ -1,23 +1,25 @@
 #![allow(dead_code)]
 
+mod block_store;
 #[path = "../../kms/mod.rs"]
-pub mod kms;
-pub mod store;
+mod kms;
+mod store;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use anyhow::{Result, anyhow};
-use chrono::{DateTime, Utc};
+use anyhow::Result;
+use blockstore::InMemoryBlockstore;
 use credibil_did::{DidResolver, Document};
 use credibil_infosec::Signer;
 use credibil_infosec::jose::jwa::Algorithm;
-use credibil_vc::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
-use credibil_vc::oid4vci::types::{Client, Dataset, Issuer, Server};
+use credibil_vc::BlockStore;
+use credibil_vc::oid4vci::provider::Subject;
+use credibil_vc::oid4vci::types::Dataset;
 use credibil_vc::status::issuer::Status;
+use futures::executor::block_on;
 use kms::Keyring;
-use serde::{Deserialize, Serialize};
-use store::{ClientStore, DatasetStore, IssuerStore, ServerStore};
+use store::DatasetStore;
 
 pub const CREDENTIAL_ISSUER: &str = "http://credibil.io";
 pub const NORMAL_USER: &str = "normal_user";
@@ -25,45 +27,44 @@ pub const PENDING_USER: &str = "pending_user";
 
 #[derive(Clone, Debug)]
 pub struct ProviderImpl {
-    client: ClientStore,
-    issuer: IssuerStore,
-    server: ServerStore,
     keyring: Keyring,
     subject: DatasetStore,
     state: Arc<Mutex<HashMap<String, Vec<u8>>>>,
+    blockstore: Arc<InMemoryBlockstore<64>>,
 }
 
 impl ProviderImpl {
     #[must_use]
     pub fn new() -> Self {
-        Self {
-            client: ClientStore::new(),
-            issuer: IssuerStore::new(),
-            server: ServerStore::new(),
+        let provider = Self {
             subject: DatasetStore::new(),
             state: Arc::new(Mutex::new(HashMap::new())),
             keyring: Keyring::new(),
-        }
-    }
-}
+            blockstore: Arc::new(InMemoryBlockstore::<64>::new()),
+        };
 
-impl Provider for ProviderImpl {}
+        block_on(async {
+            // let localhost = "http://localhost:8080";
+            let credibil = "http://credibil.io";
 
-impl Metadata for ProviderImpl {
-    async fn client(&self, client_id: &str) -> Result<Client> {
-        self.client.get(client_id)
-    }
+            // Issuer
+            let issuer_data = include_bytes!("../data/issuer.json");
+            // BlockStore::put(&provider, "owner", "ISSUER", localhost, issuer_data).await.unwrap();
+            BlockStore::put(&provider, "owner", "ISSUER", credibil, issuer_data).await.unwrap();
 
-    async fn register(&self, client: &Client) -> Result<Client> {
-        self.client.add(client)
-    }
+            // Server
+            let server_data = include_bytes!("../data/server.json");
+            // BlockStore::put(&provider, "owner", "SERVER", localhost, server_data).await.unwrap();
+            BlockStore::put(&provider, "owner", "SERVER", credibil, server_data).await.unwrap();
 
-    async fn issuer(&self, credential_issuer: &str) -> Result<Issuer> {
-        self.issuer.get(credential_issuer)
-    }
+            // Client
+            let client_data = include_bytes!("../data/client.json");
+            let client_id = "96bfb9cb-0513-7d64-5532-bed74c48f9ab";
+            BlockStore::put(&provider, "owner", "CLIENT", client_id, client_data).await.unwrap();
+            // BlockStore::put(&provider, "owner", "CLIENT", localhost, client_data).await.unwrap();
+        });
 
-    async fn server(&self, issuer: &str) -> Result<Server> {
-        self.server.get(issuer)
+        provider
     }
 }
 
@@ -77,26 +78,6 @@ impl Subject for ProviderImpl {
 
     async fn dataset(&self, subject_id: &str, credential_identifier: &str) -> Result<Dataset> {
         self.subject.dataset(subject_id, credential_identifier)
-    }
-}
-
-impl StateStore for ProviderImpl {
-    async fn put(&self, key: &str, state: impl Serialize, _dt: DateTime<Utc>) -> Result<()> {
-        let state = serde_json::to_vec(&state)?;
-        self.state.lock().expect("should lock").insert(key.to_string(), state);
-        Ok(())
-    }
-
-    async fn get<T: for<'a> Deserialize<'a>>(&self, key: &str) -> Result<T> {
-        let Some(state) = self.state.lock().expect("should lock").get(key).cloned() else {
-            return Err(anyhow!("state not found for key: {key}"));
-        };
-        Ok(serde_json::from_slice(&state)?)
-    }
-
-    async fn purge(&self, key: &str) -> Result<()> {
-        self.state.lock().expect("should lock").remove(key);
-        Ok(())
     }
 }
 
