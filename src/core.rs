@@ -140,5 +140,5 @@ where
     let Some(Resource::VerificationMethod(vm)) = deref.content_stream else {
         return Err(anyhow!("Verification method not found"));
     };
-    vm.method_type.jwk().map_err(|e| anyhow!("JWK not found: {e}"))
+    vm.key.jwk().map_err(|e| anyhow!("JWK not found: {e}"))
 }
