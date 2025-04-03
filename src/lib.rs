@@ -38,7 +38,6 @@ pub mod infosec {
 /// Re-export basic types
 pub use crate::core::{Kind, OneMany, urlencode};
 
-
 /// `BlockStore` is used by implementers to provide data storage
 /// capability.
 pub trait BlockStore: Sized + Send + Sync {
