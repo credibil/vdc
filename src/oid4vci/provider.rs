@@ -151,10 +151,11 @@ impl<T: BlockStore> StateStore for T {
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
-struct Credential {
+#[allow(missing_docs)]
+pub struct Credential {
     configuration_id: String,
     claims: Map<String, Value>,
-    pending: bool,
+    pub pending: bool,
 }
 
 impl<T: BlockStore> Subject for T {
@@ -162,7 +163,7 @@ impl<T: BlockStore> Subject for T {
         &self, subject_id: &str, credential_configuration_id: &str,
     ) -> Result<Vec<String>> {
         let Some(block) = BlockStore::get(self, "owner", "SUBJECT", subject_id).await? else {
-            return Err(anyhow!("could not find server for issuer"));
+            return Err(anyhow!("could not find dataset for subject"));
         };
         let subject: HashMap<String, Credential> = serde_json::from_slice(&block)?;
 
@@ -183,24 +184,15 @@ impl<T: BlockStore> Subject for T {
 
     async fn dataset(&self, subject_id: &str, credential_identifier: &str) -> Result<Dataset> {
         let Some(block) = BlockStore::get(self, "owner", "SUBJECT", subject_id).await? else {
-            return Err(anyhow!("could not find server for issuer"));
+            return Err(anyhow!("could not find dataset for subject"));
         };
 
-        let mut dataset: HashMap<String, Credential> = serde_json::from_slice(&block)?;
-        let mut credential = dataset.get(credential_identifier).unwrap().clone();
-
-        // HACK: update subject's pending state to make Deferred Issuance work
-        let pending = credential.pending;
-        credential.pending = false;
-        dataset.insert(credential_identifier.to_string(), credential.clone());
-        let data = serde_json::to_vec(&dataset)?;
-
-        BlockStore::delete(self, "owner", "SUBJECT", subject_id).await?;
-        BlockStore::put(self, "owner", "SUBJECT", subject_id, &data).await?;
+        let subject: HashMap<String, Credential> = serde_json::from_slice(&block)?;
+        let credential = subject.get(credential_identifier).unwrap().clone();
 
         Ok(Dataset {
             claims: credential.claims,
-            pending,
+            pending: credential.pending,
         })
     }
 }

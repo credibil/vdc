@@ -4,10 +4,13 @@
 mod provider;
 mod wallet;
 
+use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
+use credibil_vc::BlockStore;
 use credibil_vc::core::did_jwk;
+use credibil_vc::oid4vci::provider::Credential as Dataset;
 use credibil_vc::oid4vci::types::{
     CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, CredentialResponse,
     DeferredCredentialRequest, DeferredHeaders, NonceRequest, ProofClaims, TokenGrantType,
@@ -15,8 +18,12 @@ use credibil_vc::oid4vci::types::{
 };
 use credibil_vc::oid4vci::{JwtType, endpoint};
 use insta::assert_yaml_snapshot as assert_snapshot;
-use provider::{CREDENTIAL_ISSUER as ALICE_ISSUER, PENDING_USER, ProviderImpl};
+use provider::{ISSUER_ID, PENDING, ProviderImpl};
 use wallet::Keyring;
+
+const ISSUER: &[u8] = include_bytes!("../examples/issuer/data/issuer.json");
+const SERVER: &[u8] = include_bytes!("../examples/issuer/data/server.json");
+const USER: &[u8] = include_bytes!("../examples/issuer/data/pending-user.json");
 
 static BOB_KEYRING: LazyLock<Keyring> = LazyLock::new(wallet::keyring);
 
@@ -26,15 +33,19 @@ static BOB_KEYRING: LazyLock<Keyring> = LazyLock::new(wallet::keyring);
 async fn deferred() {
     let provider = ProviderImpl::new();
 
+    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, ISSUER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, SERVER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", PENDING, USER).await.unwrap();
+
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(PENDING_USER)
+        .subject_id(PENDING)
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
-        endpoint::handle(ALICE_ISSUER, request, &provider).await.expect("should create offer");
+        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -49,19 +60,18 @@ async fn deferred() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token =
-        endpoint::handle(ALICE_ISSUER, request, &provider).await.expect("should return token");
+    let token = endpoint::handle(ISSUER_ID, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a proof for a credential request
     // --------------------------------------------------
     let nonce =
-        endpoint::handle(ALICE_ISSUER, NonceRequest, &provider).await.expect("should return nonce");
+        endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
-        .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(&nonce.c_nonce))
+        .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
         .build()
         .await
@@ -85,10 +95,25 @@ async fn deferred() {
     };
 
     let response =
-        endpoint::handle(ALICE_ISSUER, request, &provider).await.expect("should return credential");
+        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
 
     // --------------------------------------------------
-    // Bob waits for a brief period and then retrieves the credential
+    // Alice approves issuance of the credential
+    // HACK: update subject's pending state
+    // --------------------------------------------------
+    let credential_identifier = &details[0].credential_identifiers[0];
+    let mut subject: HashMap<String, Dataset> = serde_json::from_slice(USER).unwrap();
+    let mut credential: Dataset = subject.get(credential_identifier).unwrap().clone();
+    credential.pending = false;
+
+    subject.insert(credential_identifier.to_string(), credential);
+    let data = serde_json::to_vec(&subject).unwrap();
+
+    BlockStore::delete(&provider, "owner", "SUBJECT", PENDING).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", PENDING, &data).await.unwrap();
+
+    // --------------------------------------------------
+    // After a brief wait Bob retrieves the credential
     // --------------------------------------------------
     let CredentialResponse::TransactionId { transaction_id } = &*response else {
         panic!("expected transaction_id");
@@ -103,7 +128,7 @@ async fn deferred() {
         },
     };
     let response =
-        endpoint::handle(ALICE_ISSUER, request, &provider).await.expect("should return credential");
+        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
 
     // --------------------------------------------------
     // Bob extracts and verifies the received credential

@@ -18,11 +18,11 @@ async fn same_device() {
     // Alice creates a presentation requesto to send to Bob
     // --------------------------------------------------
     // let request = GenerateRequest::builder()
-    //     .subject_id(NORMAL_USER)
+    //     .subject_id(NORMAL)
     //     .with_credential("EmployeeID_W3C_VC")
     //     .build();
     // let response =
-    //     endpoint::handle(ALICE_ISSUER, request, &provider).await.expect("should create offer");
+    //     endpoint::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
 
     // // create offer to 'send' to the app
     // let body = json!({

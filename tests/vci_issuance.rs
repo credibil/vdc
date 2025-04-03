@@ -10,6 +10,7 @@ use std::sync::LazyLock;
 
 use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
+use credibil_vc::BlockStore;
 use credibil_vc::core::did_jwk;
 use credibil_vc::oid4vci::types::{
     CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, CredentialResponse,
@@ -18,9 +19,13 @@ use credibil_vc::oid4vci::types::{
 use credibil_vc::oid4vci::{JwtType, endpoint};
 use credibil_vc::sd_jwt::SdJwtClaims;
 use insta::assert_yaml_snapshot as assert_snapshot;
-use provider::{CREDENTIAL_ISSUER as ALICE_ISSUER, NORMAL_USER, ProviderImpl};
+use provider::{ISSUER_ID, NORMAL, ProviderImpl};
 use sha2::{Digest, Sha256};
 use wallet::Keyring;
+
+const ISSUER: &[u8] = include_bytes!("../examples/issuer/data/issuer.json");
+const SERVER: &[u8] = include_bytes!("../examples/issuer/data/server.json");
+const USER: &[u8] = include_bytes!("../examples/issuer/data/normal-user.json");
 
 static BOB_KEYRING: LazyLock<Keyring> = LazyLock::new(wallet::keyring);
 
@@ -29,15 +34,19 @@ static BOB_KEYRING: LazyLock<Keyring> = LazyLock::new(wallet::keyring);
 async fn two_proofs() {
     let provider = ProviderImpl::new();
 
+    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, ISSUER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, SERVER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", NORMAL, USER).await.unwrap();
+
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(NORMAL_USER)
+        .subject_id(NORMAL)
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
-        endpoint::handle(ALICE_ISSUER, request, &provider).await.expect("should create offer");
+        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -52,19 +61,18 @@ async fn two_proofs() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token =
-        endpoint::handle(ALICE_ISSUER, request, &provider).await.expect("should return token");
+    let token = endpoint::handle(ISSUER_ID, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares 2 proofs for the credential request
     // --------------------------------------------------
     let nonce =
-        endpoint::handle(ALICE_ISSUER, NonceRequest, &provider).await.expect("should return nonce");
+        endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
     let jws_1 = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
-        .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(&nonce.c_nonce))
+        .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
         .build()
         .await
@@ -72,7 +80,7 @@ async fn two_proofs() {
 
     let jws_2 = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
-        .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(&nonce.c_nonce))
+        .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
         .add_signer(&wallet::keyring())
         .build()
         .await
@@ -96,7 +104,7 @@ async fn two_proofs() {
     };
 
     let response =
-        endpoint::handle(ALICE_ISSUER, request, &provider).await.expect("should return credential");
+        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
 
     // --------------------------------------------------
     // Bob extracts and verifies the received credentials
@@ -129,15 +137,17 @@ async fn two_proofs() {
 async fn sd_jwt() {
     let provider = ProviderImpl::new();
 
+    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, ISSUER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, SERVER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", NORMAL, USER).await.unwrap();
+
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
-    let request = CreateOfferRequest::builder()
-        .subject_id(NORMAL_USER)
-        .with_credential("Identity_SD_JWT")
-        .build();
+    let request =
+        CreateOfferRequest::builder().subject_id(NORMAL).with_credential("Identity_SD_JWT").build();
     let response =
-        endpoint::handle(ALICE_ISSUER, request, &provider).await.expect("should create offer");
+        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -152,19 +162,18 @@ async fn sd_jwt() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token =
-        endpoint::handle(ALICE_ISSUER, request, &provider).await.expect("should return token");
+    let token = endpoint::handle(ISSUER_ID, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares 2 proofs for the credential request
     // --------------------------------------------------
     let nonce =
-        endpoint::handle(ALICE_ISSUER, NonceRequest, &provider).await.expect("should return nonce");
+        endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
-        .payload(ProofClaims::new().credential_issuer(ALICE_ISSUER).nonce(&nonce.c_nonce))
+        .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
         .build()
         .await
@@ -187,7 +196,7 @@ async fn sd_jwt() {
     };
 
     let response =
-        endpoint::handle(ALICE_ISSUER, request, &provider).await.expect("should return credential");
+        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
 
     // --------------------------------------------------
     // Bob extracts and verifies the received credentials

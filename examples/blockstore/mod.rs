@@ -49,8 +49,7 @@ impl BlockStore for ProviderImpl {
 
     async fn delete(&self, owner: &str, partition: &str, key: &str) -> Result<()> {
         let cid = Identitifier::new(owner, partition, key).to_cid()?;
-        self.blockstore.remove(&cid).await?;
-        Ok(())
+        Ok(self.blockstore.remove(&cid).await?)
     }
 
     async fn purge(&self, _owner: &str, _partition: &str) -> Result<()> {
