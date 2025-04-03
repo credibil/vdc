@@ -23,8 +23,9 @@ use credibil_vc::oid4vci::types::{
     CredentialRequest, DeferredCredentialRequest, IssuerRequest, NotificationHeaders,
     NotificationRequest, PushedAuthorizationRequest, ServerRequest, TokenRequest,
 };
-use credibil_vc::urlencode;
+use credibil_vc::{BlockStore, urlencode};
 use oauth2::CsrfToken;
+use provider::{ISSUER_ID, NORMAL, ProviderImpl};
 use serde::Deserialize;
 use serde_json::json;
 use tokio::net::TcpListener;
@@ -35,7 +36,11 @@ use tower_http::trace::TraceLayer;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
 
-use self::provider::ProviderImpl;
+const ISSUER: &[u8] = include_bytes!("data/issuer.json");
+const SERVER: &[u8] = include_bytes!("data/server.json");
+const USER: &[u8] = include_bytes!("data/normal-user.json");
+const CLIENT: &[u8] = include_bytes!("data/client.json");
+const CLIENT_ID: &str = "96bfb9cb-0513-7d64-5532-bed74c48f9ab";
 
 static AUTH_REQUESTS: LazyLock<RwLock<HashMap<String, AuthorizationRequest>>> =
     LazyLock::new(|| RwLock::new(HashMap::new()));
@@ -45,6 +50,14 @@ static PAR_REQUESTS: LazyLock<RwLock<HashMap<String, PushedAuthorizationRequest>
 #[allow(clippy::needless_return)]
 #[tokio::main]
 async fn main() {
+    let provider = ProviderImpl::new();
+
+    // add some data
+    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, ISSUER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, SERVER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", NORMAL, USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "CLIENT", CLIENT_ID, CLIENT).await.unwrap();
+
     let subscriber = FmtSubscriber::builder().with_max_level(Level::DEBUG).finish();
     tracing::subscriber::set_global_default(subscriber).expect("set subscriber");
 
@@ -68,7 +81,7 @@ async fn main() {
             header::CACHE_CONTROL,
             HeaderValue::from_static("no-cache, no-store"),
         ))
-        .with_state(ProviderImpl::new());
+        .with_state(provider);
 
     let listener = TcpListener::bind("0.0.0.0:8080").await.expect("should bind");
     tracing::info!("listening on {}", listener.local_addr().expect("should have addr"));

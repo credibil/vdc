@@ -5,13 +5,10 @@ mod block_store;
 #[path = "../../kms/mod.rs"]
 mod kms;
 
-use std::sync::Arc;
-
 use anyhow::Result;
 use blockstore::InMemoryBlockstore;
 use credibil_did::{DidResolver, Document};
-use credibil_infosec::Signer;
-use credibil_infosec::jose::jwa::Algorithm;
+use credibil_infosec::{Algorithm, Signer};
 use credibil_vc::status::issuer::Status;
 use kms::Keyring;
 
@@ -22,7 +19,7 @@ pub const PENDING: &str = "pending_user";
 #[derive(Clone, Debug)]
 pub struct ProviderImpl {
     keyring: Keyring,
-    blockstore: Arc<InMemoryBlockstore<64>>,
+    blockstore: InMemoryBlockstore<64>,
 }
 
 impl ProviderImpl {
@@ -30,7 +27,7 @@ impl ProviderImpl {
     pub fn new() -> Self {
         Self {
             keyring: Keyring::new(),
-            blockstore: Arc::new(InMemoryBlockstore::<64>::new()),
+            blockstore: InMemoryBlockstore::<64>::new(),
         }
     }
 }
