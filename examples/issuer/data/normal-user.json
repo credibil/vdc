@@ -1,6 +1,6 @@
 {
     "PHLEmployeeID": {
-        "configuration_id": "EmployeeID_W3C_VC",
+        "credential_configuration_id": "EmployeeID_W3C_VC",
         "claims": {
             "given_name": "Normal",
             "family_name": "Person",
@@ -12,7 +12,7 @@
         }
     },
     "PHLDeveloper": {
-        "configuration_id": "Developer_W3C_VC",
+        "credential_configuration_id": "Developer_W3C_VC",
         "claims": {
             "name": "A. Developer",
             "role": "Lead",
@@ -20,7 +20,7 @@
         }
     },
     "OpenSourceDeveloper": {
-        "configuration_id": "Developer_W3C_VC",
+        "credential_configuration_id": "Developer_W3C_VC",
         "claims": {
             "name": "A. Mazing",
             "role": "Hacker",
@@ -28,7 +28,7 @@
         }
     },
     "DriverLicence": {
-        "configuration_id": "org.iso.18013.5.1.mDL",
+        "credential_configuration_id": "org.iso.18013.5.1.mDL",
         "claims": {
             "given_name": "Normal",
             "family_name": "Person",
@@ -36,7 +36,7 @@
         }
     },
     "Identity": {
-        "configuration_id": "Identity_SD_JWT",
+        "credential_configuration_id": "Identity_SD_JWT",
         "claims": {
             "given_name": "Normal",
             "family_name": "Person",

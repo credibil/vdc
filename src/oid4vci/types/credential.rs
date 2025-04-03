@@ -13,6 +13,9 @@ use crate::w3c_vc::vc::VerifiableCredential;
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Dataset {
+    /// The credential configuration ID of the credential this dataset is for.
+    pub credential_configuration_id: String,
+
     /// The credential subject populated for the user.
     pub claims: Map<String, Value>,
 

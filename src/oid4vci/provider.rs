@@ -16,7 +16,6 @@ use chrono::{DateTime, Utc};
 use credibil_did::DidResolver;
 use credibil_infosec::Signer;
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value};
 
 use crate::BlockStore;
 use crate::oid4vci::types::{Client, Dataset, Issuer, Server};
@@ -149,15 +148,6 @@ impl<T: BlockStore> StateStore for T {
     }
 }
 
-#[derive(Default, Clone, Debug, Serialize, Deserialize)]
-#[serde(default)]
-#[allow(missing_docs)]
-pub struct Credential {
-    configuration_id: String,
-    claims: Map<String, Value>,
-    pub pending: bool,
-}
-
 impl<T: BlockStore> Subject for T {
     async fn authorize(
         &self, subject_id: &str, credential_configuration_id: &str,
@@ -165,20 +155,18 @@ impl<T: BlockStore> Subject for T {
         let Some(block) = BlockStore::get(self, "owner", "SUBJECT", subject_id).await? else {
             return Err(anyhow!("could not find dataset for subject"));
         };
-        let subject: HashMap<String, Credential> = serde_json::from_slice(&block)?;
+        let datasets: HashMap<String, Dataset> = serde_json::from_slice(&block)?;
 
-        // preset dataset identifiers for subject/credential
-        let mut identifiers = vec![];
-        for (k, credential) in &subject {
-            if credential.configuration_id != credential_configuration_id {
-                continue;
-            }
-            identifiers.push(k.clone());
-        }
-
+        // find dataset identifiers for the provided subject & credential
+        let identifiers = datasets
+            .iter()
+            .filter(|(_, ds)| ds.credential_configuration_id == credential_configuration_id)
+            .map(|(k, _)| k.clone())
+            .collect::<Vec<_>>();
         if identifiers.is_empty() {
             return Err(anyhow!("no matching dataset for subject/credential"));
         }
+
         Ok(identifiers)
     }
 
@@ -186,13 +174,11 @@ impl<T: BlockStore> Subject for T {
         let Some(block) = BlockStore::get(self, "owner", "SUBJECT", subject_id).await? else {
             return Err(anyhow!("could not find dataset for subject"));
         };
+        let datasets: HashMap<String, Dataset> = serde_json::from_slice(&block)?;
 
-        let subject: HashMap<String, Credential> = serde_json::from_slice(&block)?;
-        let credential = subject.get(credential_identifier).unwrap().clone();
-
-        Ok(Dataset {
-            claims: credential.claims,
-            pending: credential.pending,
-        })
+        let Some(dataset) = datasets.get(credential_identifier) else {
+            return Err(anyhow!("could not find dataset for subject"));
+        };
+        Ok(dataset.clone())
     }
 }

@@ -10,10 +10,9 @@ use std::sync::LazyLock;
 use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
 use credibil_vc::BlockStore;
 use credibil_vc::core::did_jwk;
-use credibil_vc::oid4vci::provider::Credential as Dataset;
 use credibil_vc::oid4vci::types::{
     CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, CredentialResponse,
-    DeferredCredentialRequest, DeferredHeaders, NonceRequest, ProofClaims, TokenGrantType,
+    Dataset, DeferredCredentialRequest, DeferredHeaders, NonceRequest, ProofClaims, TokenGrantType,
     TokenRequest, W3cVcClaims,
 };
 use credibil_vc::oid4vci::{JwtType, endpoint};
