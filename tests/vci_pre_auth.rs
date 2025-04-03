@@ -22,8 +22,6 @@ use wallet::Keyring;
 const ISSUER: &[u8] = include_bytes!("../examples/issuer/data/issuer.json");
 const SERVER: &[u8] = include_bytes!("../examples/issuer/data/server.json");
 const USER: &[u8] = include_bytes!("../examples/issuer/data/normal-user.json");
-// const CLIENT: &[u8] = include_bytes!("../examples/issuer/data/client.json");
-// const CLIENT_ID: &str = "96bfb9cb-0513-7d64-5532-bed74c48f9ab";
 
 static BOB_KEYRING: LazyLock<Keyring> = LazyLock::new(wallet::keyring);
 
@@ -35,7 +33,6 @@ async fn offer_val() {
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, SERVER).await.unwrap();
-    // BlockStore::put(&provider, "owner", "CLIENT", CLIENT_ID, CLIENT).await.unwrap();
     BlockStore::put(&provider, "owner", "SUBJECT", NORMAL, USER).await.unwrap();
 
     // --------------------------------------------------
