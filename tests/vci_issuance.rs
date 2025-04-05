@@ -2,8 +2,11 @@
 
 //! Pre-Authorized Code Flow Tests
 
+#[path = "../examples/issuer/data/mod.rs"]
+mod data;
 #[path = "../examples/issuer/provider/mod.rs"]
 mod provider;
+#[path = "../examples/wallet/mod.rs"]
 mod wallet;
 
 use std::sync::LazyLock;
@@ -23,10 +26,6 @@ use provider::{ISSUER_ID, NORMAL, ProviderImpl};
 use sha2::{Digest, Sha256};
 use wallet::Keyring;
 
-const ISSUER: &[u8] = include_bytes!("../examples/issuer/data/issuer.json");
-const SERVER: &[u8] = include_bytes!("../examples/issuer/data/server.json");
-const USER: &[u8] = include_bytes!("../examples/issuer/data/normal-user.json");
-
 static BOB_KEYRING: LazyLock<Keyring> = LazyLock::new(wallet::keyring);
 
 // Should allow the Wallet to provide 2 JWT proofs when requesting a credential.
@@ -34,9 +33,9 @@ static BOB_KEYRING: LazyLock<Keyring> = LazyLock::new(wallet::keyring);
 async fn two_proofs() {
     let provider = ProviderImpl::new();
 
-    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, ISSUER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", NORMAL, USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", NORMAL, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
@@ -137,9 +136,9 @@ async fn two_proofs() {
 async fn sd_jwt() {
     let provider = ProviderImpl::new();
 
-    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, ISSUER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", NORMAL, USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", NORMAL, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob

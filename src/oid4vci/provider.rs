@@ -27,8 +27,8 @@ pub trait Provider:
 {
 }
 
-/// A blanket implementation for `Provider` trait  to allow any type
-/// implementing the required super traits to be considered a `Provider`.
+/// A blanket implementation for `Provider` trait so that any type implementing
+/// the required super traits is considered a `Provider`.
 impl<T> Provider for T where
     T: Metadata + Subject + StateStore + Signer + DidResolver + Status + Clone
 {

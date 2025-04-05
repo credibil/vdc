@@ -13,11 +13,7 @@ pub struct IssuerRequest;
 
 /// Response containing the Credential Issuer's configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct IssuerResponse {
-    /// The Credential Issuer metadata for the specified Credential Issuer.
-    #[serde(flatten)]
-    pub credential_issuer: Issuer,
-}
+pub struct IssuerResponse(pub Issuer);
 
 /// Request to retrieve the Credential Issuer's authorization server
 /// configuration.

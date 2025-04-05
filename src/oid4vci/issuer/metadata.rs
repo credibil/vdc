@@ -43,7 +43,7 @@ async fn metadata(
         .await
         .map_err(|e| server!("issue getting metadata: {e}"))?;
 
-    Ok(IssuerResponse { credential_issuer })
+    Ok(IssuerResponse(credential_issuer))
 }
 
 impl Handler for Request<IssuerRequest, MetadataHeaders> {

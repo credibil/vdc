@@ -19,7 +19,7 @@ use credibil_infosec::jose::JwsBuilder;
 use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
-use crate::oid4vp::types::{RequestObjectRequest, RequestObjectResponse, RequestObjectType};
+use crate::oid4vp::types::{RequestObjectRequest, RequestObjectResponse};
 use crate::oid4vp::{Error, Result};
 use crate::w3c_vc::proof::Type;
 
@@ -54,9 +54,7 @@ pub async fn request_object(
     let jwt_proof =
         jws.encode().map_err(|e| Error::ServerError(format!("issue encoding jwt: {e}")))?;
 
-    Ok(RequestObjectResponse {
-        request_object: RequestObjectType::Jwt(jwt_proof),
-    })
+    Ok(RequestObjectResponse::Jwt(jwt_proof))
 }
 
 impl Handler for Request<RequestObjectRequest, NoHeaders> {

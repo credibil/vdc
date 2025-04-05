@@ -1,7 +1,10 @@
 //! Deferred Issuance Tests
 
+#[path = "../examples/issuer/data/mod.rs"]
+mod data;
 #[path = "../examples/issuer/provider/mod.rs"]
 mod provider;
+#[path = "../examples/wallet/mod.rs"]
 mod wallet;
 
 use std::collections::HashMap;
@@ -20,10 +23,6 @@ use insta::assert_yaml_snapshot as assert_snapshot;
 use provider::{ISSUER_ID, PENDING, ProviderImpl};
 use wallet::Keyring;
 
-const ISSUER: &[u8] = include_bytes!("../examples/issuer/data/issuer.json");
-const SERVER: &[u8] = include_bytes!("../examples/issuer/data/server.json");
-const USER: &[u8] = include_bytes!("../examples/issuer/data/pending-user.json");
-
 static BOB_KEYRING: LazyLock<Keyring> = LazyLock::new(wallet::keyring);
 
 // Should return a credential when using the pre-authorized code flow and the
@@ -32,9 +31,9 @@ static BOB_KEYRING: LazyLock<Keyring> = LazyLock::new(wallet::keyring);
 async fn deferred() {
     let provider = ProviderImpl::new();
 
-    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, ISSUER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", PENDING, USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", PENDING, data::PENDING_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
@@ -101,7 +100,7 @@ async fn deferred() {
     // HACK: update subject's pending state
     // --------------------------------------------------
     let credential_identifier = &details[0].credential_identifiers[0];
-    let mut subject: HashMap<String, Dataset> = serde_json::from_slice(USER).unwrap();
+    let mut subject: HashMap<String, Dataset> = serde_json::from_slice(data::PENDING_USER).unwrap();
     let mut credential: Dataset = subject.get(credential_identifier).unwrap().clone();
     credential.pending = false;
 

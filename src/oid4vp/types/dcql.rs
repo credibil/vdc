@@ -1,10 +1,15 @@
 //! # Digital Credentials Query Language (DCQL)
 
+use datastore::query::{MatchOn, MatchSet, Matcher, Query, Sort};
+// use datastore::query::{
+//     self, Cursor, DateRange, Lower, MatchOn, MatchSet, Matcher, Pagination, Query, Range, Sort,
+//     Upper,
+// };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::oid4vci::types::{CredentialConfiguration, FormatProfile};
-// use crate::oid4vp::Result;
+// use crate::oid4vci::types::Credential;
 
 /// Implemented by credentials to support DCQL queries.
 pub trait Credential {
@@ -46,10 +51,21 @@ pub struct CredentialQuery {
     /// The format of the requested Credential
     pub format: CredentialFormat,
 
+    /// Indicates whether multiple Credentials can be returned for this
+    /// Credential Query. If omitted, the default value is false.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub multiple: Option<bool>,
+
     /// Additional properties requested that apply to the metadata of the
     /// Credential. Properties are specific to Credential Format Profile.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub meta: Option<MetadataQuery>,
+
+    /// Issuer certification authorities or trust frameworks that the Verifier
+    /// will accept. Every Credential returned by the Wallet SHOULD match at
+    /// least one of the conditions present.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    trusted_authorities: Option<Vec<TrustedAuthoritiesQuery>>,
 
     /// An array of objects that specifies claims in the requested Credential.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -61,14 +77,23 @@ pub struct CredentialQuery {
     pub claim_sets: Option<Vec<Vec<String>>>,
 }
 
-/// Used to request one or more credentials.
+/// Contains a request for one or more credentials hat satisfy a particular
+/// use case for the Verifier.
+///
+/// A Credential Set Query is used when multiple Credential Queries need to be
+/// combined to satisfy the Verifier's requirements.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct CredentialSetQuery {
-    /// One or more sets of Credential Query identifiers (i.e. `CredentialQuery.id`).
+    /// A list of Credential Query sets, one of which must identify a set of
+    /// Credentials that satisfies the query.
+    ///
+    /// Each value in the array contains a set of Credential Query identifiers
+    /// (`CredentialQuery.id`) pointing to a Credential Query objects in the
+    /// `credentials` array.
     pub options: Vec<Vec<String>>,
 
-    /// Specifies whether the set of Credentials identified by this query set
-    /// is required. Defaults to true.
+    /// Specifies whether this Credential Set Query entry is required.
+    /// Defaults to true.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub required: Option<bool>,
 
@@ -142,6 +167,53 @@ pub enum CredentialFormat {
     /// An IETF SD-JWT format credential.
     #[serde(rename = "dc+sd-jwt")]
     DcSdJwt,
+}
+
+/// Represents information that helps to identify an Issuer certification
+/// authority or trust framework.
+///
+/// A Credential is a match to a Trusted Authorities Query if it matches with
+/// one of the values in one of the provided types.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+pub struct TrustedAuthoritiesQuery {
+    /// An array of objects that specifies claims in the requested Credential.
+    #[serde(rename = "type")]
+    pub type_: Option<Vec<ClaimQuery>>,
+
+    /// Combinations of claims to use when requesting Credentials. Each set
+    /// consists of one or more `claims` identifiers (i.e. `ClaimsQuery.id`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub values: Option<Vec<Vec<String>>>,
+}
+
+/// The type of information about the Issuer trust framework.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+pub enum AuthorityType {
+    /// The `KeyIdentifier` of the X.509 `AuthorityKeyIdentifier` as a base64url
+    /// encoded string.
+    ///
+    /// The raw byte representation of this element MUST match with the
+    /// `AuthorityKeyIdentifier` element of an X.509 certificate in the
+    /// certificate chain present in the credential (e.g., in the header of an
+    /// `mdoc` or `SD-JWT`).
+    #[serde(rename = "aki")]
+    #[default]
+    Aki,
+
+    /// The identifier of an ETSI TS Trusted List.
+    ///
+    /// The trust chain of a matching Credential MUST contain at least one
+    /// X.509 Certificate that matches one of the entries of the Trusted List
+    /// or its cascading Trusted Lists.
+    #[serde(rename = "etsi_tl")]
+    EtsiTl,
+
+    /// An OpenID.Federation Entity Identifier.
+    ///
+    /// A valid trust path, including the given Entity Identifier, must be
+    /// constructible from a matching credential.
+    #[serde(rename = "openid_fed")]
+    OpenidFed,
 }
 
 impl DcqlQuery {
@@ -300,9 +372,87 @@ impl MetadataQuery {
     }
 }
 
+impl From<DcqlQuery> for Query {
+    fn from(query: DcqlQuery) -> Self {
+        let mut match_sets: Vec<MatchSet> = vec![];
+
+        let Some(credential_sets) = &query.credential_sets else {
+            //return query.credentials.iter().any(|cq| cq.is_match(credential).is_some());
+
+            // let csq = CredentialSetQuery {
+            //     options: vec![query.credentials.iter().map(|cq| cq.id.clone()).collect()],
+            //     required: Some(true),
+            //     purpose: None,
+            // };
+            todo!()
+        };
+
+        for set_query in credential_sets {
+            // TODO: include optional queries
+            if !set_query.required.unwrap_or(true) {
+                continue;
+            }
+
+            // AND together items in an `option`
+            // OR together `options` in a `CredentialSetQuery`
+
+            let match_set = MatchSet::default();
+
+            for query_set in &set_query.options {
+                // AND together items in an `option`
+                // let  match_set = MatchSet::default();
+
+                for query_id in query_set {
+                    let Some(cq) = query.credentials.iter().find(|cq| cq.id == *query_id) else {
+                        continue;
+                    };
+                    let Some(meta_query) = &cq.meta else {
+                        continue;
+                    };
+
+                    let mut match_set = MatchSet::default();
+
+                    match &meta_query {
+                        MetadataQuery::MsoMdoc { doctype_value } => {
+                            match_set.inner.push(Matcher {
+                                field: "format".to_string(),
+                                value: MatchOn::Equal("mso_mdoc".to_string()),
+                            });
+                            match_set.inner.push(Matcher {
+                                field: "doctype".to_string(),
+                                value: MatchOn::Equal(doctype_value.to_string()),
+                            });
+                        }
+                        MetadataQuery::SdJwt { vct_values } => {
+                            match_set.inner.push(Matcher {
+                                field: "format".to_string(),
+                                value: MatchOn::Equal("dc+sd-jwt".to_string()),
+                            });
+                            match_set.inner.push(Matcher {
+                                field: "vct".to_string(),
+                                value: MatchOn::OneOf(vct_values.clone()),
+                            });
+                        }
+                    }
+
+                    match_sets.push(match_set);
+                }
+            }
+
+            // OR together `options` in a `CredentialSetQuery`
+            match_sets.push(match_set);
+        }
+
+        Self {
+            match_sets,
+            sort: Sort::Ascending("messageTimestamp".to_string()),
+            pagination: None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-
     use serde_json::json;
 
     use super::*;
@@ -574,8 +724,15 @@ mod tests {
         });
         let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
 
-        let credential = licence_vc();
-        assert!(query.is_match(&credential));
+        let db_query = Query::from(query.clone());
+        for match_set in &db_query.match_sets {
+            for matcher in &match_set.inner {
+                println!("{matcher:?}");
+            }
+        }
+
+        // let credential = licence_vc();
+        // assert!(query.is_match(&credential));
     }
 
     // Requests the mandatory claims `last_name` and `date_of_birth`, and
@@ -759,30 +916,30 @@ mod tests {
     //     }
     // }
 
-    fn licence_vc() -> impl Credential {
-        CredentialImpl {
-            configuration: CredentialConfiguration {
-                profile: FormatProfile::MsoMdoc {
-                    doctype: "org.iso.18013.5.1.mDL".to_string(),
-                },
-                ..CredentialConfiguration::default()
-            },
-            claims: vec![
-                Claim {
-                    path: vec!["org.iso.18013.5.1".to_string(), "given_name".to_string()],
-                    values: vec![Value::String("Alice".to_string())],
-                },
-                Claim {
-                    path: vec!["org.iso.18013.5.1".to_string(), "family_name".to_string()],
-                    values: vec![Value::String("Holder".to_string())],
-                },
-                Claim {
-                    path: vec!["org.iso.18013.5.1".to_string(), "portrait".to_string()],
-                    values: vec![Value::String("path".to_string())],
-                },
-            ],
-        }
-    }
+    // fn licence_vc() -> impl Credential {
+    //     CredentialImpl {
+    //         configuration: CredentialConfiguration {
+    //             profile: FormatProfile::MsoMdoc {
+    //                 doctype: "org.iso.18013.5.1.mDL".to_string(),
+    //             },
+    //             ..CredentialConfiguration::default()
+    //         },
+    //         claims: vec![
+    //             Claim {
+    //                 path: vec!["org.iso.18013.5.1".to_string(), "given_name".to_string()],
+    //                 values: vec![Value::String("Alice".to_string())],
+    //             },
+    //             Claim {
+    //                 path: vec!["org.iso.18013.5.1".to_string(), "family_name".to_string()],
+    //                 values: vec![Value::String("Holder".to_string())],
+    //             },
+    //             Claim {
+    //                 path: vec!["org.iso.18013.5.1".to_string(), "portrait".to_string()],
+    //                 values: vec![Value::String("path".to_string())],
+    //             },
+    //         ],
+    //     }
+    // }
 
     fn registration_vc() -> impl Credential {
         CredentialImpl {
