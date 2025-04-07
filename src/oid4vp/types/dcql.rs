@@ -66,7 +66,7 @@ pub struct CredentialQuery {
     /// will accept. Every Credential returned by the Wallet SHOULD match at
     /// least one of the conditions present.
     #[serde(skip_serializing_if = "Option::is_none")]
-    trusted_authorities: Option<Vec<TrustedAuthoritiesQuery>>,
+    pub trusted_authorities: Option<Vec<TrustedAuthoritiesQuery>>,
 
     /// An array of objects that specifies claims in the requested Credential.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -223,38 +223,50 @@ impl DcqlQuery {
     /// # Errors
     /// TODO: add errors
     pub fn execute<'a, T: Credential>(&self, all_vcs: &'a [T]) -> Result<Vec<&'a T>> {
-        let mut matches: Vec<&T> = vec![];
-
-        // Step 2: apply CredentialSetQuery constraints
-        if let Some(credential_sets) = &self.credential_sets {
-            // find matching VCs for each CredentialSetQuery
-            for query_set in credential_sets {
-                if !query_set.required.unwrap_or(true) {
-                    continue;
-                }
-
-                matches.extend(query_set.filter(&self.credentials, all_vcs)?);
-            }
-
-            return Ok(matches);
+        // EITHER find matching VCs for each CredentialSetQuery
+        if let Some(sets) = &self.credential_sets {
+            return sets.iter().try_fold(vec![], |mut matched, query| {
+                let vcs = query.execute(&self.credentials, all_vcs)?;
+                matched.extend(vcs);
+                Ok(matched)
+            });
         }
 
-        // Step 1: determine whether credential matches CredentialQuery
-        for vc in all_vcs {
-            for cq in &self.credentials {
-                if cq.is_match(vc).is_some() {
-                    matches.push(vc);
-                }
+        // OR find matching VCs for each CredentialQuery
+        let matched = self.credentials.iter().fold(vec![], |mut matched, query| {
+            if let Some(vcs) = query.execute(all_vcs) {
+                matched.extend(vcs);
             }
-        }
+            matched
+        });
 
-        Ok(matches)
+        Ok(matched)
     }
 }
 
 impl CredentialQuery {
+    /// Execute the credential query.
+    fn execute<'a, T: Credential>(&self, all_vcs: &'a [T]) -> Option<Vec<&'a T>> {
+        if !self.multiple.unwrap_or_default() {
+            // return first matching credential
+            let Some(matched) = all_vcs.iter().find(|vc| self.is_match(*vc).is_some()) else {
+                return None;
+            };
+            return Some(vec![matched]);
+        }
+
+        // return all matching credentials
+        let matches =
+            all_vcs.iter().filter(|vc| self.is_match(*vc).is_some()).collect::<Vec<&'a T>>();
+        if matches.is_empty() {
+            return None;
+        }
+
+        Some(matches)
+    }
+
     /// Determines whether the specified credential matches the query.
-    pub fn is_match(&self, credential: &impl Credential) -> Option<Vec<Claim>> {
+    fn is_match(&self, credential: &impl Credential) -> Option<Vec<Claim>> {
         // format match
         let format = match &credential.meta().profile {
             FormatProfile::MsoMdoc { .. } => CredentialFormat::MsoMdoc,
@@ -274,109 +286,128 @@ impl CredentialQuery {
         }
 
         // claims match
-        let claims = self.match_claims(credential)?;
-
-        Some(claims)
+        self.match_claims(credential).ok()
     }
 
-    // Find matching claims in the credential.
-    fn match_claims(&self, credential: &impl Credential) -> Option<Vec<Claim>> {
+    /// Find matching claims in the credential.
+    fn match_claims(&self, credential: &impl Credential) -> Result<Vec<Claim>> {
         // when no claim queries are specified, return all claims
-        let Some(claim_queries) = &self.claims else {
-            return Some(credential.claims());
+        let Some(claims) = &self.claims else {
+            return Ok(credential.claims());
         };
 
         // when no claim sets are specified, return claims matching claim queries
         // N.B. every claim query must match at least one claim
-        let Some(claim_sets) = &self.claim_sets else {
-            return Self::match_claim_queries(claim_queries, credential);
+        if let Some(claim_sets) = &self.claim_sets {
+            // find the first claim set where all claim queries are matched
+            'next_claim_set: for claim_set in claim_sets {
+                let mut matches = vec![];
+
+                for cq_id in claim_set {
+                    // resolve claim query from id
+                    let Some(claim_query) = claims.iter().find(|cq| cq.id.as_ref() == Some(cq_id))
+                    else {
+                        return Err(anyhow!("cannot find ClaimQuery with the specified id"));
+                    };
+
+                    // execute claim query
+                    let Some(matched) = claim_query.execute(credential) else {
+                        continue 'next_claim_set;
+                    };
+                    matches.extend(matched);
+                }
+
+                return Ok(matches);
+            }
         };
 
-        // find the first claim set where all claim queries are matched
-        for claim_set in claim_sets {
-            let mut queries = Vec::<ClaimQuery>::new();
-            for id in claim_set {
-                if let Some(cq) = claim_queries.iter().find(|cq| cq.id.as_ref() == Some(id)) {
-                    queries.push(cq.clone());
-                }
-            }
-
-            if let Some(matched) = Self::match_claim_queries(&queries, credential) {
-                return Some(matched);
-            }
+        // when no claim sets are specified, return claims matching claim queries
+        // N.B. every claim query must match at least one claim
+        let mut matches = vec![];
+        for claim_query in claims {
+            // execute claim query
+            let Some(matched) = claim_query.execute(credential) else {
+                return Err(anyhow!("cannot find claim for ClaimQuery"));
+            };
+            matches.extend(matched);
         }
 
-        None
-    }
-
-    fn match_claim_queries(
-        queries: &[ClaimQuery], credential: &impl Credential,
-    ) -> Option<Vec<Claim>> {
-        let mut matched = vec![];
-
-        for cq in queries {
-            for claim in credential.claims() {
-                if cq.matches(&claim) {
-                    matched.push(claim);
-                    break;
-                }
-            }
-        }
-
-        if matched.len() == queries.len() {
-            return Some(matched);
-        }
-
-        None
+        return Ok(matches);
     }
 }
 
 impl CredentialSetQuery {
-    fn filter<'a, T: Credential>(
+    /// Execute credential set query.
+    fn execute<'a, T: Credential>(
         &self, credentials: &[CredentialQuery], all_vcs: &'a [T],
     ) -> Result<Vec<&'a T>> {
         // iterate until we find an `option` where every CredentialQuery is satisfied
-        'option: for option in &self.options {
+        'next_option: for option in &self.options {
             // match ALL credential queries in the option set
             let mut matches = vec![];
 
             for cq_id in option {
-                // get CredentialQuery
+                // resolve credential query from id
                 let Some(cq) = credentials.iter().find(|cq| cq.id == *cq_id) else {
-                    return Err(anyhow!("cannot find CredentialQuery matching `id`"));
+                    return Err(anyhow!("cannot find CredentialQuery with the specified id"));
                 };
 
-                // find matching VCs
-                let filtered =
-                    all_vcs.iter().filter(|vc| cq.is_match(*vc).is_some()).collect::<Vec<&'a T>>();
-                if filtered.len() == 0 {
-                    continue 'option;
-                }
-
-                matches.extend(filtered);
+                // execute credential query
+                let Some(matched) = cq.execute(all_vcs) else {
+                    continue 'next_option;
+                };
+                matches.extend(matched);
             }
 
             return Ok(matches);
         }
 
+        if !self.required.unwrap_or(true) {
+            return Ok(vec![]);
+        }
+
         Err(anyhow!("no matches"))
     }
 }
+
 impl ClaimQuery {
+    /// Execute claim query to find matching claims
+    fn execute(&self, credential: &impl Credential) -> Option<Vec<Claim>> {
+        let matches = credential
+            .claims()
+            .iter()
+            .filter(|c| self.is_match(c))
+            .map(|c| c.clone())
+            .collect::<Vec<Claim>>();
+
+        if matches.is_empty() {
+            return None;
+        }
+
+        Some(matches)
+    }
+
     /// Determine whether the specified claim matches the `ClaimQuery`.
     #[must_use]
-    pub fn matches(&self, claim: &Claim) -> bool {
-        if self.path == claim.path {
-            let Some(values) = &self.values else {
-                return true;
-            };
-            return values.iter().all(|v| claim.values.contains(v));
+    fn is_match(&self, claim: &Claim) -> bool {
+        if self.path != claim.path {
+            return false;
         }
-        false
+
+        // get query's claim values to match
+        let Some(values) = &self.values else {
+            return true;
+        };
+
+        // every query value must have a corresponding claim value
+        return values.iter().all(|v| claim.values.contains(v));
     }
 }
 
 impl MetadataQuery {
+    // fn execute(&self, credential: &impl Credential) -> bool {
+    // }
+
     fn is_match(&self, meta: &CredentialConfiguration) -> bool {
         match &self {
             Self::MsoMdoc { doctype_value } => {
@@ -561,11 +592,7 @@ mod tests {
         // should match all VCs below
         let all_vcs = all_vcs();
         let res = query.execute(&all_vcs).expect("should execute");
-        assert_eq!(res.len(), 1);
-
-        for vc in res {
-            println!("{:?}", vc.configuration)
-        }
+        assert_eq!(res.len(), 2);
     }
 
     // Request an ID and address from any credential.
