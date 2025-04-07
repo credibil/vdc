@@ -336,9 +336,18 @@ mod tests {
 
         // create claims
         let claims_json = json!({
-            "name": "Alice",
-            "age": 25
+            "given_name": "Alice",
+            "family_name": "Holder",
+            "address": {
+                "street_address": "123 Elm St",
+                "locality": "Hollywood",
+                "region": "CA",
+                "postal_code": "90210",
+                "country": "USA"
+            },
+            "birthdate": "2000-01-01"
         });
+
         let claims = claims_json.as_object().unwrap();
 
         let jwk = PublicKeyJwk {
