@@ -270,7 +270,7 @@ impl Context {
                     }
                 }
 
-                FormatProfile::DcSdJwt { .. } => {
+                FormatProfile::DcSdJwt { vct } => {
                     // TODO: cache the result of jwk when verifying proof (`verify` method)
                     let jwk = did_jwk(kid, provider).await.map_err(|e| {
                         server!("issue retrieving JWK for `dc+sd-jwt` credential: {e}")
@@ -280,7 +280,7 @@ impl Context {
                     };
 
                     let sd_jwt = DcSdJwtBuilder::new()
-                        .config(self.configuration.clone())
+                        .vct(vct)
                         .issuer(self.issuer.credential_issuer.clone())
                         .claims(dataset.claims.clone())
                         .key_binding(jwk)

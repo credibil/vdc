@@ -181,21 +181,10 @@ mod tests {
                 "portrait": "https://example.com/portrait.jpg",
             },
         });
-        // let claims_json = json!({
-        //     "org.iso.7367.1": {
-        //         "vehicle_holder": "Alice Holder",
-        //     },
-        //     "org.iso.18013.5.1": {
-        //         "given_name": "Normal",
-        //         "family_name": "Person",
-        //         "portrait": "https://example.com/portrait.jpg",
-        //     },
-        // });
         let claims = claims_json.as_object().unwrap();
 
         let mdl = MsoMdocBuilder::new()
             .doctype("org.iso.18013.5.1.mDL")
-            // .doctype("org.iso.7367.1.mVRC")
             .claims(claims.clone())
             .signer(&Keyring::new())
             .build()

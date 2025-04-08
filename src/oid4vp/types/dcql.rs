@@ -433,9 +433,9 @@ mod tests {
     use super::*;
 
     // Request a Credential with the claims `vehicle_holder` and `first_name`
-    #[test]
-    fn multiple_claims() {
-        let store = init_wallet();
+    #[tokio::test]
+    async fn multiple_claims() {
+        let store = init_wallet().await;
         let all_vcs = store.fetch();
 
         let query_json = json!({
@@ -458,9 +458,9 @@ mod tests {
     }
 
     // Request multiple Credentials all of which should be returned.
-    #[test]
-    fn multiple_credentials() {
-        let store = init_wallet();
+    #[tokio::test]
+    async fn multiple_credentials() {
+        let store = init_wallet().await;
         let all_vcs = store.fetch();
 
         let query_json = json!({
@@ -502,9 +502,9 @@ mod tests {
     //  - OR both `pid_reduced_cred_1` and `pid_reduced_cred_2`.
     //
     // Additionally, the `nice_to_have` credential may optionally be delivered.
-    #[test]
-    fn complex_query() {
-        let store = init_wallet();
+    #[tokio::test]
+    async fn complex_query() {
+        let store = init_wallet().await;
         let all_vcs = store.fetch();
 
         let query_json = json!({
@@ -592,9 +592,9 @@ mod tests {
     }
 
     // Request an ID and address from any credential.
-    #[test]
-    fn any_credential() {
-        let store = init_wallet();
+    #[tokio::test]
+    async fn any_credential() {
+        let store = init_wallet().await;
         let all_vcs = store.fetch();
 
         let query_json = json!({
@@ -703,9 +703,9 @@ mod tests {
     // Requests the mandatory claims `last_name` and `date_of_birth`, and
     // either the claim `postal_code`, or, if that is not available, both of
     // the claims `locality` and `region`.
-    #[test]
-    fn alt_claims() {
-        let store = init_wallet();
+    #[tokio::test]
+    async fn alt_claims() {
+        let store = init_wallet().await;
         let all_vcs = store.fetch();
 
         let query_json = json!({
@@ -737,9 +737,9 @@ mod tests {
     }
 
     // Requests a credential using specific values for the `last_name` and `postal_code` claims.
-    #[test]
-    fn specific_values() {
-        let store = init_wallet();
+    #[tokio::test]
+    async fn specific_values() {
+        let store = init_wallet().await;
         let all_vcs = store.fetch();
 
         let query_json = json!({
@@ -772,24 +772,168 @@ mod tests {
     }
 
     // Initialise the wallet with test credentials.
-    fn init_wallet() -> wallet::Store {
+    async fn init_wallet() -> wallet::Store {
         let mut store = wallet::Store::new();
 
         // load credentials
-        let raw = include_bytes!("../../../examples/wallet/data/credentials.json");
-        let value: Value = serde_json::from_slice(raw).expect("should deserialize");
-        let issued = value.as_array().expect("should be an array");
+        let vct = "https://credentials.example.com/identity_credential";
+        let claims = json!({
+            "given_name": "Alice",
+            "family_name": "Holder",
+            "address": {
+                "street_address": "123 Elm St",
+                "locality": "Hollywood",
+                "region": "CA",
+                "postal_code": "90210",
+                "country": "USA"
+            },
+            "birthdate": "2000-01-01"
+        });
+        let vc = issuer::issue_sd_jwt(vct, claims).await;
+        store.add(vc.clone());
 
-        for vc in issued {
-            let vc = vc.as_object().expect("should be an object");
-            let enc_val = vc.values().next().expect("should be a JWT");
-            store.add(enc_val.clone());
-        }
+        let vct = "https://othercredentials.example/pid";
+        let claims = json!({
+            "given_name": "John",
+            "family_name": "Doe",
+            "address": {
+                "street_address": "34 Drake St",
+                "locality": "Auckland",
+                "region": "Auckland",
+                "postal_code": "1010",
+                "country": "New Zealand"
+            },
+            "birthdate": "2000-01-01"
+        });
+        let vc = issuer::issue_sd_jwt(vct, claims).await;
+        store.add(vc.clone());
+
+        let vct = "https://cred.example/residence_credential";
+        let claims = json!({
+            "address": {
+                "locality": "Hollywood",
+                "region": "CA",
+                "postal_code": "90210",
+            },
+        });
+        let vc = issuer::issue_sd_jwt(vct, claims).await;
+        store.add(vc.clone());
+
+        let vct = "https://company.example/company_rewards";
+        let claims = json!({
+            "rewards_number": "1234567890",
+        });
+        let vc = issuer::issue_sd_jwt(vct, claims).await;
+        store.add(vc.clone());
+
+        let doctype = "org.iso.18013.5.1.mDL";
+        let claims = json!({
+            "org.iso.18013.5.1": {
+                "given_name": "Normal",
+                "family_name": "Person",
+                "portrait": "https://example.com/portrait.jpg",
+            },
+        });
+        let vc = issuer::issue_mso_mdoc(doctype, claims).await;
+        store.add(vc.clone());
+
+        let doctype = "org.iso.7367.1.mVRC";
+        let claims = json!({
+            "org.iso.7367.1": {
+                "vehicle_holder": "Alice Holder",
+            },
+            "org.iso.18013.5.1": {
+                "given_name": "Normal",
+                "family_name": "Person",
+                "portrait": "https://example.com/portrait.jpg",
+            },
+        });
+        let vc = issuer::issue_mso_mdoc(doctype, claims).await;
+        store.add(vc.clone());
 
         store
     }
 }
 
+#[cfg(test)]
+mod issuer {
+    use anyhow::Result;
+    use credibil_infosec::{Algorithm, Curve, KeyType, PublicKeyJwk, Signer};
+    use ed25519_dalek::{Signer as _, SigningKey};
+    use rand_core::OsRng;
+    use serde_json::Value;
+
+    use crate::mso_mdoc::MsoMdocBuilder;
+    use crate::sd_jwt::DcSdJwtBuilder;
+
+    pub async fn issue_sd_jwt(vct: &str, claims: Value) -> String {
+        let claims = claims.as_object().unwrap();
+
+        let jwk = PublicKeyJwk {
+            kty: KeyType::Okp,
+            crv: Curve::Ed25519,
+            x: "x".to_string(),
+            ..PublicKeyJwk::default()
+        };
+
+        // serialize to SD-JWT
+        DcSdJwtBuilder::new()
+            .vct(vct)
+            .issuer("https://example.com")
+            .key_binding(jwk)
+            .claims(claims.clone())
+            .signer(&Keyring::new())
+            .build()
+            .await
+            .expect("should build")
+    }
+
+    pub async fn issue_mso_mdoc(doctype: &str, claims: Value) -> String {
+        let claims = claims.as_object().unwrap();
+
+        // serialize to SD-JWT
+        MsoMdocBuilder::new()
+            .doctype(doctype)
+            .claims(claims.clone())
+            .signer(&Keyring::new())
+            .build()
+            .await
+            .expect("should build")
+    }
+
+    #[derive(Clone, Debug)]
+    pub struct Keyring {
+        signing_key: SigningKey,
+    }
+
+    impl Keyring {
+        pub fn new() -> Self {
+            Self {
+                signing_key: SigningKey::generate(&mut OsRng),
+            }
+        }
+    }
+
+    impl Signer for Keyring {
+        async fn try_sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
+            Ok(self.signing_key.sign(msg).to_bytes().to_vec())
+        }
+
+        async fn verifying_key(&self) -> Result<Vec<u8>> {
+            Ok(self.signing_key.verifying_key().as_bytes().to_vec())
+        }
+
+        fn algorithm(&self) -> Algorithm {
+            Algorithm::EdDSA
+        }
+
+        async fn verification_method(&self) -> Result<String> {
+            Ok("did:example:123#key-1".to_string())
+        }
+    }
+}
+
+#[cfg(test)]
 mod wallet {
     #![allow(unused)]
 
