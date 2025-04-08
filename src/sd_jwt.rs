@@ -357,7 +357,7 @@ mod tests {
         };
 
         // serialize to SD-JWT
-        let jwt = DcSdJwtBuilder::new()
+        let sd_jwt = DcSdJwtBuilder::new()
             .config(cfg)
             .issuer("https://example.com")
             .key_binding(jwk)
@@ -367,7 +367,7 @@ mod tests {
             .await
             .expect("should build");
 
-        println!("{jwt}");
+        println!("{sd_jwt}");
     }
 
     #[derive(Clone, Debug)]

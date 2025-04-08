@@ -222,11 +222,11 @@ impl DcqlQuery {
     ///
     /// # Errors
     /// TODO: add errors
-    pub fn execute<'a, T: Credential>(&self, all_vcs: &'a [T]) -> Result<Vec<&'a T>> {
+    pub fn execute<'a, T: Credential>(&self, fetch_vcs: &'a [T]) -> Result<Vec<&'a T>> {
         // EITHER find matching VCs for each CredentialSetQuery
         if let Some(sets) = &self.credential_sets {
             return sets.iter().try_fold(vec![], |mut matched, query| {
-                let vcs = query.execute(&self.credentials, all_vcs)?;
+                let vcs = query.execute(&self.credentials, fetch_vcs)?;
                 matched.extend(vcs);
                 Ok(matched)
             });
@@ -234,7 +234,7 @@ impl DcqlQuery {
 
         // OR find matching VCs for each CredentialQuery
         let matched = self.credentials.iter().fold(vec![], |mut matched, query| {
-            if let Some(vcs) = query.execute(all_vcs) {
+            if let Some(vcs) = query.execute(fetch_vcs) {
                 matched.extend(vcs);
             }
             matched
@@ -247,7 +247,7 @@ impl DcqlQuery {
 impl CredentialSetQuery {
     /// Execute credential set query.
     fn execute<'a, T: Credential>(
-        &self, credentials: &[CredentialQuery], all_vcs: &'a [T],
+        &self, credentials: &[CredentialQuery], fetch_vcs: &'a [T],
     ) -> Result<Vec<&'a T>> {
         // iterate until we find an `option` where every CredentialQuery is satisfied
         'next_option: for option in &self.options {
@@ -261,7 +261,7 @@ impl CredentialSetQuery {
                 };
 
                 // execute credential query
-                let Some(vcs) = cq.execute(all_vcs) else {
+                let Some(vcs) = cq.execute(fetch_vcs) else {
                     continue 'next_option;
                 };
                 matches.extend(vcs);
@@ -280,16 +280,16 @@ impl CredentialSetQuery {
 
 impl CredentialQuery {
     /// Execute the credential query.
-    fn execute<'a, T: Credential>(&self, all_vcs: &'a [T]) -> Option<Vec<&'a T>> {
+    fn execute<'a, T: Credential>(&self, fetch_vcs: &'a [T]) -> Option<Vec<&'a T>> {
         if !self.multiple.unwrap_or_default() {
             // return first matching credential
-            let matched = all_vcs.iter().find(|vc| self.is_match(*vc).is_some())?;
+            let matched = fetch_vcs.iter().find(|vc| self.is_match(*vc).is_some())?;
             return Some(vec![matched]);
         }
 
         // return all matching credentials
         let matches =
-            all_vcs.iter().filter(|vc| self.is_match(*vc).is_some()).collect::<Vec<&'a T>>();
+            fetch_vcs.iter().filter(|vc| self.is_match(*vc).is_some()).collect::<Vec<&'a T>>();
         if matches.is_empty() {
             return None;
         }
@@ -428,21 +428,16 @@ impl ClaimQuery {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
-    use base64ct::{Base64UrlUnpadded, Encoding};
-    use credibil_infosec::Jws;
-    use credibil_infosec::cose::cbor;
     use serde_json::json;
 
     use super::*;
-    use crate::mso_mdoc::{IssuerSigned, MobileSecurityObject};
-    use crate::oid4vci::types::FormatProfile;
-    use crate::sd_jwt::SdJwtClaims;
 
     // Request a Credential with the claims `vehicle_holder` and `first_name`
     #[test]
     fn multiple_claims() {
+        let store = init_wallet();
+        let all_vcs = store.fetch();
+
         let query_json = json!({
             "credentials": [{
                 "id": "my_credential",
@@ -456,18 +451,18 @@ mod tests {
                 ]
             }]
         });
+
         let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
-
-        // should match the registration VC
-        let all_vcs = all_vcs();
-        let res = query.execute(&all_vcs).expect("should execute");
-
+        let res = query.execute(all_vcs).expect("should execute");
         assert_eq!(res.len(), 1);
     }
 
     // Request multiple Credentials all of which should be returned.
     #[test]
     fn multiple_credentials() {
+        let store = init_wallet();
+        let all_vcs = store.fetch();
+
         let query_json = json!({
             "credentials": [
                 {
@@ -495,12 +490,9 @@ mod tests {
                 }
             ]
         });
+
         let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
-
-        // should match both identity and registration VCs
-        let all_vcs = all_vcs();
-        let res = query.execute(&all_vcs).expect("should execute");
-
+        let res = query.execute(all_vcs).expect("should execute");
         assert_eq!(res.len(), 2);
     }
 
@@ -512,6 +504,9 @@ mod tests {
     // Additionally, the `nice_to_have` credential may optionally be delivered.
     #[test]
     fn complex_query() {
+        let store = init_wallet();
+        let all_vcs = store.fetch();
+
         let query_json = json!({
             "credentials": [
                 {
@@ -590,17 +585,18 @@ mod tests {
                 }
             ]
         });
-        let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
 
-        // should match all VCs below
-        let all_vcs = all_vcs();
-        let res = query.execute(&all_vcs).expect("should execute");
+        let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
+        let res = query.execute(all_vcs).expect("should execute");
         assert_eq!(res.len(), 2);
     }
 
     // Request an ID and address from any credential.
     #[test]
     fn any_credential() {
+        let store = init_wallet();
+        let all_vcs = store.fetch();
+
         let query_json = json!({
             "credentials": [
                 {
@@ -698,11 +694,9 @@ mod tests {
                 }
             ]
         });
+
         let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
-
-        let all_vcs = all_vcs();
-        let res = query.execute(&all_vcs).expect("should execute");
-
+        let res = query.execute(all_vcs).expect("should execute");
         assert_eq!(res.len(), 2);
     }
 
@@ -711,6 +705,9 @@ mod tests {
     // the claims `locality` and `region`.
     #[test]
     fn alt_claims() {
+        let store = init_wallet();
+        let all_vcs = store.fetch();
+
         let query_json = json!({
             "credentials": [
                 {
@@ -733,17 +730,18 @@ mod tests {
                 }
             ]
         });
+
         let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
-
-        let all_vcs = all_vcs();
-        let res = query.execute(&all_vcs).expect("should execute");
-
+        let res = query.execute(all_vcs).expect("should execute");
         assert_eq!(res.len(), 1);
     }
 
     // Requests a credential using specific values for the `last_name` and `postal_code` claims.
     #[test]
     fn specific_values() {
+        let store = init_wallet();
+        let all_vcs = store.fetch();
+
         let query_json = json!({
             "credentials": [
                 {
@@ -767,49 +765,98 @@ mod tests {
                 }
             ]
         });
-        let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
 
-        let all_vcs = all_vcs();
-        let res = query.execute(&all_vcs).expect("should execute");
+        let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
+        let res = query.execute(all_vcs).expect("should execute");
         assert_eq!(res.len(), 1);
     }
 
-    fn all_vcs() -> Vec<CredentialImpl> {
+    // Initialise the wallet with test credentials.
+    fn init_wallet() -> wallet::Store {
+        let mut store = wallet::Store::new();
+
         // load credentials
         let raw = include_bytes!("../../../examples/wallet/data/credentials.json");
         let value: Value = serde_json::from_slice(raw).expect("should deserialize");
-        let stored_vcs = value.as_array().expect("should be an array");
+        let issued = value.as_array().expect("should be an array");
 
-        let mut credentials = vec![];
-
-        for vc in stored_vcs {
+        for vc in issued {
             let vc = vc.as_object().expect("should be an object");
             let enc_val = vc.values().next().expect("should be a JWT");
-            let enc_str = enc_val.as_str().expect("should be a string");
-
-            // decode VC
-            if enc_str.starts_with("ey") {
-                // base64 encoded JSON object
-                let jws = Jws::from_str(enc_str).expect("should be a JWS");
-                let credential = match jws.signatures[0].protected.typ.as_str() {
-                    "dc+sd-jwt" => from_sd_jwt(enc_str),
-                    _ => todo!("unsupported JWT type"),
-                };
-                credentials.push(credential);
-            } else {
-                // base64 encoded mdoc
-                let credential = from_mso_mdoc(enc_str);
-                credentials.push(credential);
-            }
+            store.add(enc_val.clone());
         }
 
-        credentials
+        store
+    }
+}
+
+mod wallet {
+    #![allow(unused)]
+
+    use std::str::FromStr;
+
+    use base64ct::{Base64UrlUnpadded, Encoding};
+    use credibil_infosec::Jws;
+    use credibil_infosec::cose::cbor;
+
+    use super::*;
+    use crate::mso_mdoc::{IssuerSigned, MobileSecurityObject};
+    use crate::oid4vci::types::{self, FormatProfile};
+    use crate::sd_jwt::SdJwtClaims;
+
+    pub struct Store {
+        store: Vec<Credential>,
     }
 
-    fn from_sd_jwt(jws: &str) -> CredentialImpl {
-        let mut split = jws.split('~');
+    #[derive(Debug)]
+    pub struct Credential {
+        profile: FormatProfile,
+        claims: Vec<Claim>,
+        issued: Value,
+    }
+
+    impl Store {
+        pub fn new() -> Self {
+            Self { store: vec![] }
+        }
+
+        // Add a credential to the store.
+        pub fn add(&mut self, vc: impl Into<Value>) {
+            let vc = vc.into();
+            let enc_str = vc.as_str().expect("should be a string");
+
+            // decode VC
+            let credential = if enc_str.starts_with("ey") {
+                let jws = Jws::from_str(enc_str).expect("should be a JWS");
+                match jws.signatures[0].protected.typ.as_str() {
+                    "dc+sd-jwt" => from_sd_jwt(enc_str),
+                    _ => todo!("unsupported JWT type"),
+                }
+            } else {
+                from_mso_mdoc(enc_str)
+            };
+
+            self.store.push(credential);
+        }
+
+        pub fn fetch(&self) -> &[Credential] {
+            &self.store
+        }
+    }
+
+    impl super::Credential for Credential {
+        fn meta(&self) -> FormatProfile {
+            self.profile.clone()
+        }
+
+        fn claims(&self) -> Vec<Claim> {
+            self.claims.clone()
+        }
+    }
+
+    fn from_sd_jwt(jwt_str: &str) -> Credential {
+        let mut split = jwt_str.split('~');
         let jws = Jws::from_str(split.next().unwrap()).expect("should be a JWS");
-        let sd_jwt: SdJwtClaims = jws.payload().expect("should be a payload");
 
         // extract claims from disclosures
         let mut claims = vec![];
@@ -823,9 +870,12 @@ mod tests {
             claims.extend(nested);
         }
 
-        CredentialImpl {
+        let sd_jwt: SdJwtClaims = jws.payload().expect("should be a payload");
+
+        Credential {
             profile: FormatProfile::DcSdJwt { vct: sd_jwt.vct },
             claims,
+            issued: Value::String(jwt_str.to_string()),
         }
     }
 
@@ -849,15 +899,11 @@ mod tests {
         }
     }
 
-    fn from_mso_mdoc(mdoc_str: &str) -> CredentialImpl {
-        let mdoc_bytes = Base64UrlUnpadded::decode_vec(mdoc_str).expect("should decode");
+    fn from_mso_mdoc(mdoc_str: &str) -> Credential {
+        let mdoc_bytes = Base64UrlUnpadded::decode_vec(&mdoc_str).expect("should decode");
         let mdoc: IssuerSigned = cbor::from_slice(&mdoc_bytes).expect("should deserialize");
 
-        let mso_bytes = mdoc.issuer_auth.0.payload.expect("should have payload");
-        let mso: MobileSecurityObject = cbor::from_slice(&mso_bytes).expect("should deserialize");
-
         let mut claims = vec![];
-
         for (name_space, tags) in &mdoc.name_spaces {
             let mut path = vec![name_space.clone()];
             for tag in tags {
@@ -867,11 +913,15 @@ mod tests {
             }
         }
 
-        CredentialImpl {
+        let mso_bytes = mdoc.issuer_auth.0.payload.expect("should have payload");
+        let mso: MobileSecurityObject = cbor::from_slice(&mso_bytes).expect("should deserialize");
+
+        Credential {
             profile: FormatProfile::MsoMdoc {
                 doctype: mso.doc_type,
             },
             claims,
+            issued: Value::String(mdoc_str.to_string()),
         }
     }
 
@@ -895,22 +945,6 @@ mod tests {
                 }]
             }
             _ => todo!(),
-        }
-    }
-
-    #[derive(Debug)]
-    struct CredentialImpl {
-        profile: FormatProfile,
-        claims: Vec<Claim>,
-    }
-
-    impl Credential for CredentialImpl {
-        fn meta(&self) -> FormatProfile {
-            self.profile.clone()
-        }
-
-        fn claims(&self) -> Vec<Claim> {
-            self.claims.clone()
         }
     }
 }
