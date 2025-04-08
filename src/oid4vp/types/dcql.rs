@@ -261,10 +261,10 @@ impl CredentialSetQuery {
                 };
 
                 // execute credential query
-                let Some(matched) = cq.execute(all_vcs) else {
+                let Some(vcs) = cq.execute(all_vcs) else {
                     continue 'next_option;
                 };
-                matches.extend(matched);
+                matches.extend(vcs);
             }
 
             return Ok(matches);
@@ -283,9 +283,7 @@ impl CredentialQuery {
     fn execute<'a, T: Credential>(&self, all_vcs: &'a [T]) -> Option<Vec<&'a T>> {
         if !self.multiple.unwrap_or_default() {
             // return first matching credential
-            let Some(matched) = all_vcs.iter().find(|vc| self.is_match(*vc).is_some()) else {
-                return None;
-            };
+            let matched = all_vcs.iter().find(|vc| self.is_match(*vc).is_some())?;
             return Some(vec![matched]);
         }
 
@@ -345,26 +343,26 @@ impl CredentialQuery {
                     };
 
                     // execute claim query
-                    let Some(matched) = claim_query.execute(credential) else {
+                    let Some(vcs) = claim_query.execute(credential) else {
                         continue 'next_claim_set;
                     };
-                    matches.extend(matched);
+                    matches.extend(vcs);
                 }
 
                 return Ok(matches);
             }
-        };
+        }
 
         // when no claim sets are specified, return claims matching claim queries
         // N.B. every claim query must match at least one claim
         let mut matches = vec![];
         for claim_query in claims {
-            if let Some(matched) = claim_query.execute(credential) {
-                matches.extend(matched);
-            };
+            if let Some(vcs) = claim_query.execute(credential) {
+                matches.extend(vcs);
+            }
         }
 
-        return Ok(matches);
+        Ok(matches)
     }
 }
 
@@ -401,7 +399,7 @@ impl ClaimQuery {
             .claims()
             .iter()
             .filter(|c| self.is_match(c))
-            .map(|c| c.clone())
+            .cloned()
             .collect::<Vec<Claim>>();
 
         if matches.is_empty() {
@@ -424,7 +422,7 @@ impl ClaimQuery {
         };
 
         // every query value must have a corresponding claim value
-        return values.iter().all(|v| v == &claim.value);
+        values.iter().all(|v| v == &claim.value)
     }
 }
 
