@@ -1,23 +1,18 @@
-//! # Verifiable Credentials
+//! # ISO mDL-based Credential Format
 //!
-//! This library encompasses the family of W3C Recommendations for Verifiable
-//! Credentials, as outlined below.
-//!
-//! The recommendations provide a mechanism to express credentials on the Web in
-//! a way that is cryptographically secure, privacy respecting, and
-//! machine-verifiable.
+//! This module provides the implementation of ISO mDL credentials.
 
 mod mdoc;
 mod mso;
 
 use anyhow::anyhow;
-use base64ct::{Base64UrlUnpadded as Base64, Encoding};
+use base64ct::{Base64UrlUnpadded, Encoding};
 use ciborium::cbor;
 use coset::{CoseSign1Builder, HeaderBuilder, iana};
 use credibil_infosec::cose::{CoseKey, Tag24};
 use credibil_infosec::{Algorithm, Curve, KeyType, Signer};
-use mdoc::{IssuerSigned, IssuerSignedItem};
-use mso::{DigestIdGenerator, MobileSecurityObject};
+pub use mdoc::{IssuerSigned, IssuerSignedItem};
+pub use mso::{DigestIdGenerator, MobileSecurityObject};
 use rand::{Rng, rng};
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
@@ -82,18 +77,17 @@ impl<S: Signer> MsoMdocBuilder<HasClaims, HasSigner<'_, S>> {
         // populate mdoc and accompanying MSO
         let mut mdoc = IssuerSigned::new();
         let mut mso = MobileSecurityObject::new();
-        let signer = self.signer.0;
 
-        for (key, value) in self.claims.0 {
+        for (name_space, value) in self.claims.0 {
             // namespace is a root-level claim
-            let Some(name_space) = value.as_object() else {
+            let Some(claims) = value.as_object() else {
                 return Err(anyhow!("invalid dataset"));
             };
 
             let mut id_gen = DigestIdGenerator::new();
 
             // assemble `IssuerSignedItem`s for name space
-            for (k, v) in name_space {
+            for (k, v) in claims {
                 let item = Tag24(IssuerSignedItem {
                     digest_id: id_gen.generate(),
                     random: rng().random::<[u8; 16]>().into(),
@@ -103,12 +97,17 @@ impl<S: Signer> MsoMdocBuilder<HasClaims, HasSigner<'_, S>> {
 
                 // digest of `IssuerSignedItem` for MSO
                 let digest = Sha256::digest(&item.to_vec()?).to_vec();
-                mso.value_digests.entry(key.clone()).or_default().insert(item.digest_id, digest);
+                mso.value_digests
+                    .entry(name_space.clone())
+                    .or_default()
+                    .insert(item.digest_id, digest);
 
                 // add item to IssuerSigned object
-                mdoc.name_spaces.entry(key.clone()).or_default().push(item);
+                mdoc.name_spaces.entry(name_space.clone()).or_default().push(item);
             }
         }
+
+        let signer = self.signer.0;
 
         // add public key to MSO
         mso.device_key_info.device_key = CoseKey {
@@ -144,43 +143,81 @@ impl<S: Signer> MsoMdocBuilder<HasClaims, HasSigner<'_, S>> {
         mdoc.issuer_auth = mso::IssuerAuth(cose_sign_1);
 
         // encode CBOR -> Base64Url -> return
-        Ok(Base64::encode_string(&mdoc.to_vec()?))
+        Ok(Base64UrlUnpadded::encode_string(&mdoc.to_vec()?))
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use credibil_infosec::cose::cbor;
-//     use serde_json::json;
-//     use test_issuer::ProviderImpl;
-//     use to_credential;
+#[cfg(test)]
+mod tests {
+    use anyhow::Result;
+    use credibil_infosec::cose::cbor;
+    use credibil_infosec::{Algorithm, KeyType, Signer};
+    use ed25519_dalek::{Signer as _, SigningKey};
+    use rand_core::OsRng;
+    use serde_json::json;
 
-//     use super::mso::DigestAlgorithm;
-//     use super::*;
+    use super::mso::DigestAlgorithm;
+    use super::{MsoMdocBuilder, *};
 
-//     #[tokio::test]
-//     async fn roundtrip() {
-//         let dataset = json!({
-//             "org.iso.18013.5.1.mDL": {
-//                 "given_name": "Normal",
-//                 "family_name": "Person",
-//                 "email": "normal.user@example.com"
-//             }
-//         });
+    #[tokio::test]
+    async fn roundtrip() {
+        let claims_json = json!({
+            "org.iso.18013.5.1": {
+                "given_name": "Normal",
+                "family_name": "Person",
+                "portrait": "https://example.com/portrait.jpg",
+            }
+        });
+        let claims = claims_json.as_object().unwrap();
 
-//         // generate mdl credential
-//         let dataset = serde_json::from_value(dataset).unwrap();
-//         let provider = ProviderImpl::new();
-//         let mdl = to_credential(dataset, provider).await.unwrap();
+        let mdl = MsoMdocBuilder::new()
+            .claims(claims.clone())
+            .signer(&Keyring::new())
+            .build()
+            .await
+            .expect("should build");
 
-//         // check credential deserializes back into original mdoc/mso structures
-//         let mdoc_bytes = Base64::decode_vec(&mdl).expect("should decode");
-//         let mdoc: IssuerSigned = cbor::from_slice(&mdoc_bytes).expect("should deserialize");
+        println!("mdl: {}", mdl);
 
-//         let mso_bytes = mdoc.issuer_auth.0.payload.expect("should have payload");
-//         let mso: MobileSecurityObject = cbor::from_slice(&mso_bytes).expect("should deserialize");
+        // check credential deserializes back into original mdoc/mso structures
+        let mdoc_bytes = Base64UrlUnpadded::decode_vec(&mdl).expect("should decode");
+        let mdoc: IssuerSigned = cbor::from_slice(&mdoc_bytes).expect("should deserialize");
 
-//         assert_eq!(mso.digest_algorithm, DigestAlgorithm::Sha256);
-//         assert_eq!(mso.device_key_info.device_key.kty, KeyType::Okp);
-//     }
-// }
+        let mso_bytes = mdoc.issuer_auth.0.payload.expect("should have payload");
+        let mso: MobileSecurityObject = cbor::from_slice(&mso_bytes).expect("should deserialize");
+
+        assert_eq!(mso.digest_algorithm, DigestAlgorithm::Sha256);
+        assert_eq!(mso.device_key_info.device_key.kty, KeyType::Okp);
+    }
+
+    #[derive(Clone, Debug)]
+    pub struct Keyring {
+        signing_key: SigningKey,
+    }
+
+    impl Keyring {
+        pub fn new() -> Self {
+            Self {
+                signing_key: SigningKey::generate(&mut OsRng),
+            }
+        }
+    }
+
+    impl Signer for Keyring {
+        async fn try_sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
+            Ok(self.signing_key.sign(msg).to_bytes().to_vec())
+        }
+
+        async fn verifying_key(&self) -> Result<Vec<u8>> {
+            Ok(self.signing_key.verifying_key().as_bytes().to_vec())
+        }
+
+        fn algorithm(&self) -> Algorithm {
+            Algorithm::EdDSA
+        }
+
+        async fn verification_method(&self) -> Result<String> {
+            Ok("did:example:123#key-1".to_string())
+        }
+    }
+}

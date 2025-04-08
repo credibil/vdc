@@ -434,9 +434,11 @@ mod tests {
 
     use base64ct::{Base64UrlUnpadded, Encoding};
     use credibil_infosec::Jws;
+    use credibil_infosec::cose::cbor;
     use serde_json::json;
 
     use super::*;
+    use crate::mso_mdoc::IssuerSigned;
     use crate::oid4vci::types::FormatProfile;
     use crate::sd_jwt::SdJwtClaims;
 
@@ -774,15 +776,86 @@ mod tests {
         assert_eq!(res.len(), 1);
     }
 
-    fn unpack_value(path: Vec<String>, value: &Value) -> Vec<Claim> {
+    fn all_vcs() -> Vec<CredentialImpl> {
+        // load file
+        let raw = include_bytes!("../../../examples/wallet/data/credentials.json");
+        let value: Value = serde_json::from_slice(raw).expect("should deserialize");
+        let vcs = value.as_array().expect("should be an array");
+
+        let mut credentials = vec![];
+
+        for vc in vcs {
+            let vc = vc.as_object().expect("should be an object");
+            let enc_val = vc.values().next().expect("should be a JWT");
+            let enc_str = enc_val.as_str().expect("should be a string");
+
+            if enc_str.starts_with("ey") {
+                // base64 encoded JSON object
+                let jws = Jws::from_str(enc_str).expect("should be a JWS");
+                let credential = match jws.signatures[0].protected.typ.as_str() {
+                    "dc+sd-jwt" => from_sd_jwt(enc_str),
+                    _ => panic!("unsupported JWT type"),
+                };
+                credentials.push(credential);
+            } else {
+                // base64 encoded mdoc
+                let credential = from_mso_mdoc(enc_str);
+                credentials.push(credential);
+            }
+        }
+
+        // registration vc
+        credentials.push(CredentialImpl {
+            profile: FormatProfile::MsoMdoc {
+                doctype: "org.iso.7367.1.mVRC".to_string(),
+            },
+            claims: vec![
+                Claim {
+                    path: vec!["org.iso.7367.1".to_string(), "vehicle_holder".to_string()],
+                    value: Value::String("Alice Holder".to_string()),
+                },
+                Claim {
+                    path: vec!["org.iso.18013.5.1".to_string(), "first_name".to_string()],
+                    value: Value::String("Alice".to_string()),
+                },
+            ],
+        });
+
+        credentials
+    }
+
+    fn from_sd_jwt(jws: &str) -> CredentialImpl {
+        let mut split = jws.split('~');
+        let jws = Jws::from_str(split.next().unwrap()).expect("should be a JWS");
+        let sd_jwt: SdJwtClaims = jws.payload().expect("should be a payload");
+
+        // extract claims from disclosures
+        let mut claims = vec![];
+        while let Some(disclosure) = split.next() {
+            let bytes = Base64UrlUnpadded::decode_vec(&disclosure).expect("should decode");
+            let value: Value = serde_json::from_slice(&bytes).expect("should be a JSON");
+            let disclosure = value.as_array().expect("should be an array");
+
+            let nested =
+                unpack_json(vec![disclosure[1].as_str().unwrap().to_string()], &disclosure[2]);
+            claims.extend(nested);
+        }
+
+        CredentialImpl {
+            profile: FormatProfile::DcSdJwt { vct: sd_jwt.vct },
+            claims,
+        }
+    }
+
+    fn unpack_json(path: Vec<String>, value: &serde_json::Value) -> Vec<Claim> {
         match value {
-            Value::Object(obj) => {
+            serde_json::Value::Object(obj) => {
                 let mut claims = vec![];
 
                 for (key, value) in obj.iter() {
                     let mut new_path = path.clone();
                     new_path.push(key.to_string());
-                    claims.extend(unpack_value(new_path, value));
+                    claims.extend(unpack_json(new_path, value));
                 }
 
                 claims
@@ -794,176 +867,47 @@ mod tests {
         }
     }
 
-    fn all_vcs() -> Vec<CredentialImpl> {
-        // load file
-        let raw = include_bytes!("../../../examples/wallet/data/credentials.json");
-        let value: Value = serde_json::from_slice(raw).expect("should deserialize");
-        let credentials = value.as_array().expect("should be an array");
+    fn from_mso_mdoc(mdoc_str: &str) -> CredentialImpl {
+        let bytes = Base64UrlUnpadded::decode_vec(mdoc_str).expect("should decode");
+        let mdoc: IssuerSigned = cbor::from_slice(&bytes).expect("should deserialize");
+        let tags = mdoc.name_spaces.get("org.iso.18013.5.1").expect("should have name space");
 
-        let first = credentials.first().expect("should exists");
-        let jws_str = first.as_str().expect("should be an object");
-        let mut split = jws_str.split('~');
-        let jws = Jws::from_str(split.next().unwrap()).expect("should be a JWS");
+        let mut claims = vec![];
 
-        let credential = match jws.signatures[0].protected.typ.as_str() {
-            "dc+sd-jwt" => {
-                let sd_jwt: SdJwtClaims = jws.payload().expect("should be a payload");
+        for tag in tags {
+            let nested = unpack_cbor(vec![tag.element_identifier.clone()], &tag.element_value);
+            claims.extend(nested);
+        }
 
-                // extract claims from disclosures
+        CredentialImpl {
+            profile: FormatProfile::MsoMdoc {
+                doctype: "org.iso.18013.5.1.mDL".to_string(),
+            },
+            claims,
+        }
+    }
+
+    fn unpack_cbor(path: Vec<String>, value: &ciborium::Value) -> Vec<Claim> {
+        match value {
+            ciborium::Value::Map(map) => {
                 let mut claims = vec![];
-                while let Some(disclosure) = split.next() {
-                    let bytes = Base64UrlUnpadded::decode_vec(&disclosure).expect("should decode");
-                    let value: Value = serde_json::from_slice(&bytes).expect("should be a JSON");
-                    let disclosure = value.as_array().expect("should be an array");
 
-                    let nested = unpack_value(
-                        vec![disclosure[1].as_str().unwrap().to_string()],
-                        &disclosure[2],
-                    );
-                    claims.extend(nested);
+                for (key, value) in map {
+                    let mut new_path = path.clone();
+                    new_path.push(key.clone().into_text().unwrap().to_string());
+                    claims.extend(unpack_cbor(new_path, value));
                 }
 
-                CredentialImpl {
-                    profile: FormatProfile::DcSdJwt { vct: sd_jwt.vct },
-                    claims,
-                }
+                claims
             }
-            _ => panic!("unsupported JWT type"),
-        };
-
-        vec![
-            // identity vc
-            credential,
-            // CredentialImpl {
-            //     profile: FormatProfile::DcSdJwt {
-            //         vct: "https://credentials.example.com/identity_credential".to_string(),
-            //     },
-            //     claims: vec![
-            //         Claim {
-            //             path: vec!["given_name".to_string()],
-            //             value: Value::String("Alice".to_string()),
-            //         },
-            //         Claim {
-            //             path: vec!["family_name".to_string()],
-            //             value: Value::String("Holder".to_string()),
-            //         },
-            //         Claim {
-            //             path: vec!["address".to_string(), "street_address".to_string()],
-            //             value: Value::String("1234 Elm St.".to_string()),
-            //         },
-            //         Claim {
-            //             path: vec!["address".to_string(), "locality".to_string()],
-            //             value: Value::String("Hollywood".to_string()),
-            //         },
-            //         Claim {
-            //             path: vec!["address".to_string(), "region".to_string()],
-            //             value: Value::String("CA".to_string()),
-            //         },
-            //         Claim {
-            //             path: vec!["address".to_string(), "postal_code".to_string()],
-            //             value: Value::String("90210".to_string()),
-            //         },
-            //     ],
-            // },
-            // other identity vc
-            CredentialImpl {
-                profile: FormatProfile::DcSdJwt {
-                    vct: "https://othercredentials.example/pid".to_string(),
-                },
-                claims: vec![
-                    Claim {
-                        path: vec!["given_name".to_string()],
-                        value: Value::String("Bob".to_string()),
-                    },
-                    Claim {
-                        path: vec!["family_name".to_string()],
-                        value: Value::String("Doe".to_string()),
-                    },
-                    Claim {
-                        path: vec!["address".to_string(), "street_address".to_string()],
-                        value: Value::String("34 Drake St.".to_string()),
-                    },
-                    Claim {
-                        path: vec!["address".to_string(), "postal_code".to_string()],
-                        value: Value::String("1010".to_string()),
-                    },
-                    Claim {
-                        path: vec!["address".to_string(), "locality".to_string()],
-                        value: Value::String("Auckland".to_string()),
-                    },
-                    Claim {
-                        path: vec!["address".to_string(), "region".to_string()],
-                        value: Value::String("Auckland".to_string()),
-                    },
-                ],
-            },
-            // residence vc
-            CredentialImpl {
-                profile: FormatProfile::DcSdJwt {
-                    vct: "https://cred.example/residence_credential".to_string(),
-                },
-                claims: vec![
-                    Claim {
-                        path: vec!["address".to_string(), "postal_code".to_string()],
-                        value: Value::String("90210".to_string()),
-                    },
-                    Claim {
-                        path: vec!["address".to_string(), "locality".to_string()],
-                        value: Value::String("Hollywood".to_string()),
-                    },
-                    Claim {
-                        path: vec!["address".to_string(), "region".to_string()],
-                        value: Value::String("CA".to_string()),
-                    },
-                ],
-            },
-            // rewards vc
-            CredentialImpl {
-                profile: FormatProfile::DcSdJwt {
-                    vct: "https://company.example/company_rewards".to_string(),
-                },
-                claims: vec![Claim {
-                    path: vec!["rewards_number".to_string()],
-                    value: Value::String("12345".to_string()),
-                }],
-            },
-            // licence vc
-            CredentialImpl {
-                profile: FormatProfile::MsoMdoc {
-                    doctype: "org.iso.18013.5.1.mDL".to_string(),
-                },
-                claims: vec![
-                    Claim {
-                        path: vec!["org.iso.18013.5.1".to_string(), "given_name".to_string()],
-                        value: Value::String("Alice".to_string()),
-                    },
-                    Claim {
-                        path: vec!["org.iso.18013.5.1".to_string(), "family_name".to_string()],
-                        value: Value::String("Holder".to_string()),
-                    },
-                    Claim {
-                        path: vec!["org.iso.18013.5.1".to_string(), "portrait".to_string()],
-                        value: Value::String("path".to_string()),
-                    },
-                ],
-            },
-            // registration vc
-            CredentialImpl {
-                profile: FormatProfile::MsoMdoc {
-                    doctype: "org.iso.7367.1.mVRC".to_string(),
-                },
-                claims: vec![
-                    Claim {
-                        path: vec!["org.iso.7367.1".to_string(), "vehicle_holder".to_string()],
-                        value: Value::String("Alice Holder".to_string()),
-                    },
-                    Claim {
-                        path: vec!["org.iso.18013.5.1".to_string(), "first_name".to_string()],
-                        value: Value::String("Alice".to_string()),
-                    },
-                ],
-            },
-        ]
+            ciborium::Value::Text(txt) => {
+                vec![Claim {
+                    path,
+                    value: serde_json::Value::String(txt.to_string()),
+                }]
+            }
+            _ => todo!(),
+        }
     }
 
     #[derive(Debug)]

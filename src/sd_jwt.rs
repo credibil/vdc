@@ -1,4 +1,4 @@
-//! # SD-JWT-based Verifiable Credentials (SD-JWT VC)
+//! # IETF SD-JWT-based Credential Format
 //!
 //! This module provides the implementation of SD-JWT-based Verifiable
 //! Credentials (SD-JWT VC).
@@ -329,7 +329,7 @@ mod tests {
     async fn test_claims() {
         let cfg = CredentialConfiguration {
             profile: FormatProfile::DcSdJwt {
-                vct: "https://credentials.example.com/identity_credential".to_string(),
+                vct: "https://company.example/company_rewards".to_string(),
             },
             ..CredentialConfiguration::default()
         };
@@ -347,7 +347,6 @@ mod tests {
             },
             "birthdate": "2000-01-01"
         });
-
         let claims = claims_json.as_object().unwrap();
 
         let jwk = PublicKeyJwk {
