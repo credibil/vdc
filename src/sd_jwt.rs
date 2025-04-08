@@ -1,4 +1,4 @@
-//! # SD-JWT-based Verifiable Credentials (SD-JWT VC)
+//! # IETF SD-JWT-based Credential Format
 //!
 //! This module provides the implementation of SD-JWT-based Verifiable
 //! Credentials (SD-JWT VC).
@@ -21,7 +21,7 @@ use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 
 use crate::oid4vci::JwtType;
-use crate::oid4vci::types::{CredentialConfiguration, Format};
+use crate::oid4vci::types::{CredentialConfiguration, FormatProfile};
 use crate::server;
 
 /// Generate an IETF `dc+sd-jwt` format credential.
@@ -191,7 +191,7 @@ impl<S: Signer> DcSdJwtBuilder<HasConfig, HasIssuer, HasKeyBinding, HasClaims, H
     /// # Errors
     /// TODO: Document errors
     pub async fn build(self) -> Result<String> {
-        let Format::DcSdJwt(sd_jwt) = self.config.0.format else {
+        let FormatProfile::DcSdJwt { vct } = self.config.0.profile else {
             return Err(anyhow!("Credential configuration format is invalid"));
         };
 
@@ -217,7 +217,7 @@ impl<S: Signer> DcSdJwtBuilder<HasConfig, HasIssuer, HasKeyBinding, HasClaims, H
             iss: self.issuer.0,
             iat: Some(Utc::now()),
             // exp: Some(Utc::now()),
-            vct: sd_jwt.vct,
+            vct,
             sd_alg: Some("sha-256".to_string()),
             cnf: Some(Binding::Jwk(self.key_binding.0)),
             // status: None,
@@ -323,21 +323,29 @@ mod tests {
     use serde_json::json;
 
     use super::DcSdJwtBuilder;
-    use crate::oid4vci::types::{CredentialConfiguration, Format, ProfileSdJwt};
+    use crate::oid4vci::types::{CredentialConfiguration, FormatProfile};
 
     #[tokio::test]
     async fn test_claims() {
         let cfg = CredentialConfiguration {
-            format: Format::DcSdJwt(ProfileSdJwt {
-                vct: "https://credentials.example.com/identity_credential".to_string(),
-            }),
+            profile: FormatProfile::DcSdJwt {
+                vct: "https://company.example/company_rewards".to_string(),
+            },
             ..CredentialConfiguration::default()
         };
 
         // create claims
         let claims_json = json!({
-            "name": "Alice",
-            "age": 25
+            "given_name": "Alice",
+            "family_name": "Holder",
+            "address": {
+                "street_address": "123 Elm St",
+                "locality": "Hollywood",
+                "region": "CA",
+                "postal_code": "90210",
+                "country": "USA"
+            },
+            "birthdate": "2000-01-01"
         });
         let claims = claims_json.as_object().unwrap();
 

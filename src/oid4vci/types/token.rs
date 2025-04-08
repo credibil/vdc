@@ -275,7 +275,7 @@ impl AuthorizedDetail {
             AuthorizationCredential::ConfigurationId {
                 credential_configuration_id,
             } => Some(credential_configuration_id.as_str()),
-            AuthorizationCredential::Format(_) => None,
+            AuthorizationCredential::FormatProfile(_) => None,
         }
     }
 }

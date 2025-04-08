@@ -5,9 +5,10 @@
 //! serialized to a JSON object.
 
 use std::fmt::Debug;
+use std::ops::Deref;
 
-use http::HeaderMap;
 use http::header::ACCEPT_LANGUAGE;
+use http::{HeaderMap, StatusCode};
 use tracing::instrument;
 
 use crate::invalid;
@@ -27,7 +28,7 @@ use crate::oid4vci::{Error, Result};
 #[instrument(level = "debug", skip(provider))]
 pub async fn handle<B, H, U>(
     issuer: &str, request: impl Into<Request<B, H>> + Debug, provider: &impl Provider,
-) -> Result<U>
+) -> Result<Response<U>>
 where
     B: Body,
     H: Headers,
@@ -35,7 +36,7 @@ where
 {
     let request: Request<B, H> = request.into();
     request.validate(issuer, provider).await?;
-    request.handle(issuer, provider).await
+    Ok(request.handle(issuer, provider).await?.into())
 }
 
 /// A request to process.
@@ -61,6 +62,37 @@ impl<B: Body> From<B> for Request<B, NoHeaders> {
     }
 }
 
+/// Top-level response data structure common to all handler.
+#[derive(Clone, Debug)]
+pub struct Response<T> {
+    /// Response HTTP status code.
+    pub status: StatusCode,
+
+    /// Response HTTP headers, if any.
+    pub headers: Option<HeaderMap>,
+
+    /// The endpoint-specific response.
+    pub body: T,
+}
+
+impl<T> From<T> for Response<T> {
+    fn from(body: T) -> Self {
+        Self {
+            status: StatusCode::OK,
+            headers: None,
+            body,
+        }
+    }
+}
+
+impl<T> Deref for Response<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.body
+    }
+}
+
 /// Methods common to all messages.
 ///
 /// The primary role of this trait is to provide a common interface for
@@ -72,7 +104,7 @@ pub trait Handler: Clone + Debug + Send + Sync {
     /// Routes the message to the concrete handler used to process the message.
     fn handle(
         self, issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<Self::Response>> + Send;
+    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send;
 
     /// Perform initial validation of the message.
     ///
@@ -82,9 +114,10 @@ pub trait Handler: Clone + Debug + Send + Sync {
         &self, issuer: &str, _provider: &impl Provider,
     ) -> impl Future<Output = Result<()>> + Send {
         async {
-            // if !tenant_gate.active(issuer)? {
+            // if !tenant.active(issuer)? {
             //     return Err(Error::Unauthorized("tenant not active"));
             // }
+
             // `credential_issuer` required
             if issuer.is_empty() {
                 return Err(invalid!("no `credential_issuer` specified"));
@@ -93,13 +126,6 @@ pub trait Handler: Clone + Debug + Send + Sync {
             // // validate the message schema during development
             // #[cfg(debug_assertions)]
             // schema::validate(self)?;
-
-            // // authenticate the requestor
-            // if let Some(authzn) = self.authorization() {
-            //     if let Err(e) = authzn.verify(provider.clone()).await {
-            //         return Err(unauthorized!("failed to authenticate: {e}"));
-            //     }
-            // }
 
             Ok(())
         }

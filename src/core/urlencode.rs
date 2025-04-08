@@ -6,7 +6,7 @@ mod ser;
 use error::{Error, Result};
 use percent_encoding::percent_decode_str;
 pub use ser::{Serializer, to_string};
-use serde::de::DeserializeOwned;
+use serde::Deserialize;
 
 /// Deserializes a url-encoded string to a value.
 ///
@@ -45,7 +45,7 @@ use serde::de::DeserializeOwned;
 /// // TODO: Add errors
 pub fn from_str<T>(s: &str) -> Result<T>
 where
-    T: DeserializeOwned,
+    T: for<'a> Deserialize<'a>,
 {
     // HACK: deserializing with `serde_json` makes decoding trivial and takes ~60µs
     let decoded = percent_decode_str(s).decode_utf8_lossy();

@@ -139,11 +139,16 @@ pub enum JwtType {
     /// JWT `typ` for SD-JWT credentials.
     #[serde(rename = "dc+sd-jwt")]
     SdJwt,
-
 }
 
 impl From<JwtType> for String {
     fn from(t: JwtType) -> Self {
+        From::from(&t)
+    }
+}
+
+impl From<&JwtType> for String {
+    fn from(t: &JwtType) -> Self {
         match t {
             JwtType::Jwt => "jwt".to_string(),
             JwtType::ProofJwt => "openid4vci-proof+jwt".to_string(),
@@ -154,7 +159,7 @@ impl From<JwtType> for String {
 
 impl Display for JwtType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s: String = self.clone().into();
+        let s: String = self.into();
         write!(f, "{s}")
     }
 }

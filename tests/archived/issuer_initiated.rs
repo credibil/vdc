@@ -6,10 +6,10 @@ mod utils;
 mod wallet;
 
 use credibil_vc::oid4vci::endpoint;
-use credibil_vc::oid4vci::types::{CreateOfferRequest, Format, ProfileW3c, SendType};
+use credibil_vc::oid4vci::types::{CreateOfferRequest, FormatProfile, ProfileW3c, SendType};
 use rstest::rstest;
 use serde_json::json;
-use test_issuer::{CREDENTIAL_ISSUER, NORMAL_USER, PENDING_USER, ProviderImpl};
+use test_issuer::{CREDENTIAL_ISSUER, NORMAL, PENDING, ProviderImpl};
 use utils::{Issuance, provider};
 
 /// Immediate and deferred issuance variants
@@ -20,8 +20,8 @@ async fn issuance(provider: ProviderImpl, #[case] issue: Issuance) {
     utils::init_tracer();
 
     let subject_id = match issue {
-        Issuance::Immediate => NORMAL_USER,
-        Issuance::Deferred => PENDING_USER,
+        Issuance::Immediate => NORMAL,
+        Issuance::Deferred => PENDING,
     };
 
     let value = json! ({
@@ -39,7 +39,7 @@ async fn issuance(provider: ProviderImpl, #[case] issue: Issuance) {
     let wallet = wallet::Wallet {
         provider,
         tx_code: response.tx_code,
-        format: Format::JwtVcJson(ProfileW3c::default()),
+        format: FormatProfile::JwtVcJson(ProfileW3c::default()),
     };
 
     wallet.issuer_initiated(response.offer_type).await.expect("should get credential");
@@ -47,15 +47,15 @@ async fn issuance(provider: ProviderImpl, #[case] issue: Issuance) {
 
 /// Credential format variants
 #[rstest]
-#[case(Format::JwtVcJson(ProfileW3c::default()))]
-async fn format(provider: ProviderImpl, #[case] credential_format: Format) {
+#[case(FormatProfile::JwtVcJson(ProfileW3c::default()))]
+async fn format(provider: ProviderImpl, #[case] credential_format: FormatProfile) {
     utils::init_tracer();
     snapshot!("issuer:{credential_format}");
 
     let value = json!({
         "credential_issuer": CREDENTIAL_ISSUER,
         "credential_configuration_ids": ["EmployeeID_W3C_VC"],
-        "subject_id": NORMAL_USER,
+        "subject_id": NORMAL,
          "grant_types": ["urn:ietf:params:oauth:grant-type:pre-authorized_code"],
         "tx_code_required": true,
         "send_type": SendType::ByVal,
@@ -82,7 +82,7 @@ async fn authorization(provider: ProviderImpl) {
     let value = json!({
         "credential_issuer": CREDENTIAL_ISSUER,
         "credential_configuration_ids": ["EmployeeID_W3C_VC"],
-        "subject_id": NORMAL_USER,
+        "subject_id": NORMAL,
         "tx_code_required": true,
         "send_type": SendType::ByVal,
     });
@@ -93,7 +93,7 @@ async fn authorization(provider: ProviderImpl) {
     let wallet = wallet::Wallet {
         provider: provider.clone(),
         tx_code: response.tx_code,
-        format: Format::JwtVcJson(ProfileW3c::default()),
+        format: FormatProfile::JwtVcJson(ProfileW3c::default()),
     };
 
     wallet.issuer_initiated(response.offer_type).await.expect("should get credential");
@@ -110,7 +110,7 @@ async fn offer_type(provider: ProviderImpl, #[case] send_type: SendType) {
     let value = json!({
         "credential_issuer": CREDENTIAL_ISSUER,
         "credential_configuration_ids": ["EmployeeID_W3C_VC"],
-        "subject_id": NORMAL_USER,
+        "subject_id": NORMAL,
         "grant_types": ["urn:ietf:params:oauth:grant-type:pre-authorized_code"],
         "tx_code_required": true,
         "send_type": send_type,
@@ -122,7 +122,7 @@ async fn offer_type(provider: ProviderImpl, #[case] send_type: SendType) {
     let wallet = wallet::Wallet {
         provider: provider.clone(),
         tx_code: response.tx_code,
-        format: Format::JwtVcJson(ProfileW3c::default()),
+        format: FormatProfile::JwtVcJson(ProfileW3c::default()),
     };
 
     wallet.issuer_initiated(response.offer_type).await.expect("should get credential");

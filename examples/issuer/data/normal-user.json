@@ -1,0 +1,50 @@
+{
+    "PHLEmployeeID": {
+        "credential_configuration_id": "EmployeeID_W3C_VC",
+        "claims": {
+            "given_name": "Normal",
+            "family_name": "Person",
+            "email": "normal.user@example.com",
+            "address": {
+                "street_address": "123 Fake St",
+                "locality": "Wellington"
+            }
+        }
+    },
+    "PHLDeveloper": {
+        "credential_configuration_id": "Developer_W3C_VC",
+        "claims": {
+            "name": "A. Developer",
+            "role": "Lead",
+            "proficiency": "3"
+        }
+    },
+    "OpenSourceDeveloper": {
+        "credential_configuration_id": "Developer_W3C_VC",
+        "claims": {
+            "name": "A. Mazing",
+            "role": "Hacker",
+            "proficiency": "2"
+        }
+    },
+    "DriverLicence": {
+        "credential_configuration_id": "org.iso.18013.5.1.mDL",
+        "claims": {
+            "given_name": "Normal",
+            "family_name": "Person",
+            "email": "normal.user@example.com"
+        }
+    },
+    "Identity": {
+        "credential_configuration_id": "Identity_SD_JWT",
+        "claims": {
+            "given_name": "Normal",
+            "family_name": "Person",
+            "email": "normal.user@example.com",
+            "address": {
+                "street_address": "123 Fake St",
+                "locality": "Wellington"
+            }
+        }
+    }
+}

@@ -161,6 +161,7 @@
 //! [OpenID4VP]: (https://openid.net/specs/openid-4-verifiable-presentations-1_0.html)
 //! [JWT VC Presentation Profile]: (https://identity.foundation/jwt-vc-presentation-profile)
 
+pub mod client;
 pub mod endpoint;
 pub mod provider;
 pub mod types;

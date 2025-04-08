@@ -11,7 +11,7 @@ use chrono::Utc;
 
 use crate::core::generate;
 use crate::oid4vci::Result;
-use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request};
+use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::Expire;
 use crate::oid4vci::types::{NonceRequest, NonceResponse};
@@ -39,7 +39,7 @@ impl Handler for Request<NonceRequest, NoHeaders> {
 
     fn handle(
         self, issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<Self::Response>> + Send {
+    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
         nonce(issuer, provider, self.body)
     }
 }

@@ -10,7 +10,7 @@ use credibil_vc::oid4vci::types::{AuthorizationRequest, PushedAuthorizationReque
 use insta::assert_yaml_snapshot as assert_snapshot;
 use serde_json::json;
 use sha2::{Digest, Sha256};
-use test_issuer::{CLIENT_ID, CREDENTIAL_ISSUER, NORMAL_USER};
+use test_issuer::{CLIENT_ID, CREDENTIAL_ISSUER, NORMAL};
 
 #[tokio::test]
 async fn request() {
@@ -30,7 +30,7 @@ async fn request() {
             "type": "openid_credential",
             "credential_configuration_id": "EmployeeID_W3C_VC",
         }],
-        "subject_id": NORMAL_USER,
+        "subject_id": NORMAL,
         "wallet_issuer": CREDENTIAL_ISSUER
     });
     let request = serde_json::from_value(value).expect("request is valid");

@@ -24,9 +24,9 @@
 //! ```
 
 use crate::oid4vci::Result;
-use crate::oid4vci::endpoint::{Body, Handler, Headers, Request};
+use crate::oid4vci::endpoint::{Body, Handler, Headers, Request, Response};
 use crate::oid4vci::provider::{Metadata, Provider};
-use crate::oid4vci::types::{MetadataHeaders, MetadataRequest, MetadataResponse};
+use crate::oid4vci::types::{IssuerRequest, IssuerResponse, MetadataHeaders};
 use crate::server;
 
 /// Metadata request handler.
@@ -36,24 +36,25 @@ use crate::server;
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
 async fn metadata(
-    issuer: &str, provider: &impl Provider, _: Request<MetadataRequest, MetadataHeaders>,
-) -> Result<MetadataResponse> {
+    issuer: &str, provider: &impl Provider, _: Request<IssuerRequest, MetadataHeaders>,
+) -> Result<IssuerResponse> {
     // FIXME: use language header in request
     let credential_issuer = Metadata::issuer(provider, issuer)
         .await
         .map_err(|e| server!("issue getting metadata: {e}"))?;
-    Ok(MetadataResponse { credential_issuer })
+
+    Ok(IssuerResponse(credential_issuer))
 }
 
-impl Handler for Request<MetadataRequest, MetadataHeaders> {
-    type Response = MetadataResponse;
+impl Handler for Request<IssuerRequest, MetadataHeaders> {
+    type Response = IssuerResponse;
 
     fn handle(
         self, issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<Self::Response>> + Send {
+    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
         metadata(issuer, provider, self)
     }
 }
 
-impl Body for MetadataRequest {}
+impl Body for IssuerRequest {}
 impl Headers for MetadataHeaders {}

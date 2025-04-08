@@ -13,6 +13,9 @@ use crate::w3c_vc::vc::VerifiableCredential;
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Dataset {
+    /// The credential configuration ID of the credential this dataset is for.
+    pub credential_configuration_id: String,
+
     /// The credential subject populated for the user.
     pub claims: Map<String, Value>,
 
@@ -297,7 +300,7 @@ pub struct CredentialResponseEncryption {
 #[serde(untagged)]
 pub enum CredentialResponse {
     /// Contains an array of issued Credentials. The values in the array MAY be
-    /// a string or an object, depending on the Credential Format.
+    /// a string or an object, depending on the Credential Format Profile.
     Credentials {
         /// An array of one or more issued Credentials
         credentials: Vec<Credential>,
@@ -335,7 +338,7 @@ impl Default for CredentialResponse {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Credential {
     /// Contains one issued Credential. It MAY be a string or an object,
-    /// depending on the Credential Format.
+    /// depending on the Credential Format Profile.
     pub credential: Kind<VerifiableCredential>,
 }
 

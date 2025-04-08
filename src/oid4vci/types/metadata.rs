@@ -9,20 +9,16 @@ use crate::oauth::{OAuthClient, OAuthServer};
 
 /// Request to retrieve the Credential Issuer's configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct MetadataRequest;
+pub struct IssuerRequest;
 
 /// Response containing the Credential Issuer's configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct MetadataResponse {
-    /// The Credential Issuer metadata for the specified Credential Issuer.
-    #[serde(flatten)]
-    pub credential_issuer: Issuer,
-}
+pub struct IssuerResponse(pub Issuer);
 
 /// Request to retrieve the Credential Issuer's authorization server
 /// configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct OAuthServerRequest {
+pub struct ServerRequest {
     /// Authorization issuer identifier.
     ///
     /// This identifier can be obtained from the `authorization_servers`
@@ -35,7 +31,7 @@ pub struct OAuthServerRequest {
 /// Response containing the Credential Issuer's authorization server
 /// configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct OAuthServerResponse {
+pub struct ServerResponse {
     /// The OAuth 2.0 Authorization Server metadata for the Issuer.
     pub authorization_server: Server,
 }
@@ -158,10 +154,10 @@ impl Issuer {
     /// # Errors
     ///
     /// TODO: add error handling
-    pub fn credential_configuration_id(&self, fmt: &Format) -> Result<&String> {
+    pub fn credential_configuration_id(&self, fmt: &FormatProfile) -> Result<&String> {
         self.credential_configurations_supported
             .iter()
-            .find(|(_, cfg)| &cfg.format == fmt)
+            .find(|(_, cfg)| &cfg.profile == fmt)
             .map(|(id, _)| id)
             .ok_or_else(|| anyhow!("Credential Configuration not found"))
     }
@@ -236,19 +232,17 @@ pub struct Display {
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(default)]
 pub struct CredentialConfiguration {
-    /// Identifies the format of the credential, e.g. "`jwt_vc_json`" or
-    /// "`ldp_vc`". Each object will contain further elements defining the
-    /// type and claims the credential MAY contain, as well as information
-    /// on how to display the credential.
+    /// Identifies the credential format and includes Format Profile
+    /// specific parameters.
     ///
-    /// See OpenID4VCI [Credential Format Profiles] for more detail.
-    ///
-    /// [Credential Format Profiles]: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-format-profiles
+    /// See <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-format-profiles>
     #[serde(flatten)]
-    pub format: Format,
+    pub profile: FormatProfile,
 
     /// The `scope` value that this Credential Issuer supports for this
-    /// credential. The value can be the same accross multiple
+    /// credential.
+    ///
+    /// The value can be the same accross multiple
     /// `credential_configurations_supported` objects. The Authorization
     /// Server MUST be able to uniquely identify the Credential Issuer based
     /// on the scope value. The Wallet can use this value in
@@ -259,33 +253,16 @@ pub struct CredentialConfiguration {
     pub scope: Option<String>,
 
     /// Identifies how the Credential should be bound to the identifier of the
-    /// End-User who possesses the Credential. Is case sensitive.
-    ///
-    /// Support for keys in JWK format [RFC7517] is indicated by the value
-    /// "`jwk`". Support for keys expressed as a COSE Key object [RFC8152]
-    /// (for example, used in [ISO.18013-5]) is indicated by the value
-    /// "`cose_key`".
-    ///
-    /// When Cryptographic Binding Method is a DID, valid values MUST be a
-    /// "did:" prefix followed by a method-name using a syntax as defined in
-    /// Section 3.1 of [DID-Core], but without a ":" and method-specific-id.
-    /// For example, support for the DID method with a method-name "example"
-    /// would be represented by "did:example". Support for all DID methods
-    /// listed in Section 13 of [DID Specification Registries] is indicated
-    /// by sending a DID without any method-name.
-    ///
-    /// [RFC7517]: (https://www.rfc-editor.org/rfc/rfc7517)
-    /// [RFC8152]: (https://www.rfc-editor.org/rfc/rfc8152)
-    /// [ISO.18013-5]: (https://www.iso.org/standard/69084.html)
-    /// [DID-Core]: (https://www.w3.org/TR/did-core/)
-    /// [DID Specification Registries]: (https://www.w3.org/TR/did-spec-registries/)
+    /// End-User who possesses the Credential.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub cryptographic_binding_methods_supported: Option<Vec<String>>,
+    pub cryptographic_binding_methods_supported: Option<Vec<BindingMethod>>,
 
+    // FIXME: use credibil_infosec::SigningAlgorithm
     /// Case sensitive strings that identify the cryptographic suites supported
-    /// for the `cryptographic_binding_methods_supported`. Cryptographic
-    /// algorithms for Credentials in `jwt_vc` format should use algorithm
-    /// names defined in IANA JOSE Algorithms Registry. Cryptographic
+    /// for the `cryptographic_binding_methods_supported`.
+    ///
+    /// Cryptographic algorithms for Credentials in `jwt_vc` format should use
+    /// algorithm names defined in IANA JOSE Algorithms Registry. Cryptographic
     /// algorithms for Credentials in `ldp_vc` format should use signature
     /// suites names defined in Linked Data Cryptographic Suite Registry.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -340,6 +317,27 @@ pub struct CredentialConfiguration {
     /// One or more claims description objects.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub claims: Option<Vec<ClaimsDescription>>,
+}
+
+/// Supported methods for binding the Credential to the identifier of the
+/// End-User who possesses the Credential.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+pub enum BindingMethod {
+    /// DID Web.
+    #[serde(rename = "did:web")]
+    DidWeb,
+
+    /// DID Web Version History.
+    #[serde(rename = "did:webvh")]
+    DidWebvh,
+
+    /// DID Key.
+    #[serde(rename = "did:key")]
+    DidKey,
+
+    /// Public key JWK.
+    #[serde(rename = "jwk")]
+    Jwk,
 }
 
 impl CredentialConfiguration {
@@ -421,14 +419,14 @@ impl CredentialConfiguration {
     }
 }
 
-/// Credential Format defines supported Credential data models. Each profile
+/// Format Profile defines supported Credential data models. Each profile
 /// defines a specific set of parameters or claims used to support a particular
 /// format.
 ///
-/// [Credential Format Profiles]: (https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-format-profiles)
+/// See <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-format-profiles>
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(tag = "format")]
-pub enum Format {
+pub enum FormatProfile {
     /// A W3C Verifiable Credential.
     ///
     /// When this format is specified, Credential Offer, Authorization Details,
@@ -436,112 +434,121 @@ pub enum Format {
     /// `credential_definition` object, MUST NOT be processed using JSON-LD
     /// rules.
     #[serde(rename = "jwt_vc_json")]
-    JwtVcJson(ProfileW3c),
+    JwtVcJson {
+        /// The detailed description of the W3C Credential type.
+        credential_definition: CredentialDefinition,
+    },
 
-    /// A W3C Verifiable Credential.
-    ///
-    /// When using this format, data MUST NOT be processed using JSON-LD rules.
-    ///
-    /// N.B. The `@context` value in the `credential_definition` object can be
-    /// used by the Wallet to check whether it supports a certain VC. If
-    /// necessary, the Wallet could apply JSON-LD processing to the
-    /// Credential issued.
+    /// A W3C Verifiable Credential not  using JSON-LD.
     #[serde(rename = "ldp-vc")]
-    LdpVc(ProfileW3c),
+    LdpVc {
+        /// The detailed description of the W3C Credential type.
+        credential_definition: CredentialDefinition,
+    },
 
-    /// A W3C Verifiable Credential.
-    ///
-    /// When using this format, data MUST NOT be processed using JSON-LD rules.
-    ///
-    /// N.B. The `@context` value in the `credential_definition` object can be
-    /// used by the Wallet to check whether it supports a certain VC. If
-    /// necessary, the Wallet could apply JSON-LD processing to the
-    /// Credential issued.
+    /// A W3C Verifiable Credential using JSON-LD.
     #[serde(rename = "jwt_vc_json-ld")]
-    JwtVcJsonLd(ProfileW3c),
+    JwtVcJsonLd {
+        /// The detailed description of the W3C Credential type.
+        credential_definition: CredentialDefinition,
+    },
 
-    /// ISO mDL.
-    ///
-    /// A Credential Format Profile for Credentials complying with [ISO.18013-5]
-    /// — ISO-compliant driving licence specification.
-    ///
-    /// [ISO.18013-5]: (https://www.iso.org/standard/69084.html)
+    /// An ISO mDL (ISO.18013-5) mobile driving licence format credential.
     #[serde(rename = "mso_mdoc")]
-    IsoMdl(ProfileIsoMdl),
+    MsoMdoc {
+        /// The Credential type, as defined in ISO.18013-5.
+        doctype: String,
+    },
 
-    /// IETF SD-JWT VC.
-    ///
-    /// A Credential Format Profile for Credentials complying with
-    /// [I-D.ietf-oauth-sd-jwt-vc] — SD-JWT-based Verifiable Credentials for
-    /// selective disclosure.
-    ///
-    /// [I-D.ietf-oauth-sd-jwt-vc]: (https://datatracker.ietf.org/doc/html/draft-ietf-oauth-sd-jwt-vc-01)
+    /// An IETF SD-JWT format credential.
     #[serde(rename = "dc+sd-jwt")]
-    DcSdJwt(ProfileSdJwt),
+    DcSdJwt {
+        /// The Verifiable Credential type. The `vct` value MUST be a
+        /// case-sensitive String or URI serving as an identifier for
+        /// the type of the SD-JWT VC.
+        vct: String,
+    },
 }
 
-impl Default for Format {
+impl Default for FormatProfile {
     fn default() -> Self {
-        Self::JwtVcJson(ProfileW3c::default())
-    }
-}
-
-impl fmt::Display for Format {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::JwtVcJson(_) => write!(f, "jwt_vc_json"),
-            Self::LdpVc(_) => write!(f, "ldp_vc"),
-            Self::JwtVcJsonLd(_) => write!(f, "jwt_vc_json-ld"),
-            Self::IsoMdl(_) => write!(f, "mso_mdoc"),
-            Self::DcSdJwt(_) => write!(f, "dc+sd-jwt"),
+        Self::JwtVcJson {
+            credential_definition: CredentialDefinition::default(),
         }
     }
 }
 
-/// Credential Format Profile for W3C Verifiable Credentials.
-#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq)]
-pub struct ProfileW3c {
-    /// The detailed description of the W3C Credential type.
-    pub credential_definition: CredentialDefinition,
-}
-
-impl PartialEq for ProfileW3c {
-    fn eq(&self, other: &Self) -> bool {
-        self.credential_definition.type_ == other.credential_definition.type_
+impl fmt::Display for FormatProfile {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::JwtVcJson { .. } => write!(f, "jwt_vc_json"),
+            Self::LdpVc { .. } => write!(f, "ldp_vc"),
+            Self::JwtVcJsonLd { .. } => write!(f, "jwt_vc_json-ld"),
+            Self::MsoMdoc { .. } => write!(f, "mso_mdoc"),
+            Self::DcSdJwt { .. } => write!(f, "dc+sd-jwt"),
+        }
     }
 }
 
-/// Credential Format Profile for `ISO.18013-5` (Mobile Driving License)
-/// credentials.
-#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq)]
-pub struct ProfileIsoMdl {
-    /// The Credential type, as defined in [ISO.18013-5].
-    pub doctype: String,
-}
-
-impl PartialEq for ProfileIsoMdl {
-    fn eq(&self, other: &Self) -> bool {
-        self.doctype == other.doctype
-    }
-}
-
-/// Credential Format Profile for Selective Disclosure JWT ([SD-JWT])
-/// credentials.
-///
-/// [SD-JWT]: <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-sd-jwt-vc-04>
-#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq)]
-pub struct ProfileSdJwt {
-    /// The Verifiable Credential type. The `vct` value MUST be a
-    /// case-sensitive String or URI serving as an identifier for
-    /// the type of the SD-JWT VC.
-    pub vct: String,
-}
-
-impl PartialEq for ProfileSdJwt {
-    fn eq(&self, other: &Self) -> bool {
-        self.vct == other.vct
-    }
-}
+// impl PartialEq for FormatProfile {
+//     fn eq(&self, other: &Self) -> bool {
+//         match self {
+//             Self::JwtVcJson {
+//                 credential_definition,
+//             } => {
+//                 if let Self::JwtVcJson {
+//                     credential_definition: other_credential_definition,
+//                 } = other
+//                 {
+//                     credential_definition == other_credential_definition
+//                 } else {
+//                     false
+//                 }
+//             }
+//             Self::LdpVc {
+//                 credential_definition,
+//             } => {
+//                 if let Self::LdpVc {
+//                     credential_definition: other_credential_definition,
+//                 } = other
+//                 {
+//                     credential_definition == other_credential_definition
+//                 } else {
+//                     false
+//                 }
+//             }
+//             Self::JwtVcJsonLd {
+//                 credential_definition,
+//             } => {
+//                 if let Self::JwtVcJsonLd {
+//                     credential_definition: other_credential_definition,
+//                 } = other
+//                 {
+//                     credential_definition == other_credential_definition
+//                 } else {
+//                     false
+//                 }
+//             }
+//             Self::MsoMdoc { doctype } => {
+//                 if let Self::MsoMdoc {
+//                     doctype: other_doctype,
+//                 } = other
+//                 {
+//                     doctype == other_doctype
+//                 } else {
+//                     false
+//                 }
+//             }
+//             Self::DcSdJwt { vct } => {
+//                 if let Self::DcSdJwt { vct: other_vct } = other {
+//                     vct == other_vct
+//                 } else {
+//                     false
+//                 }
+//             }
+//         }
+//     }
+// }
 
 /// Claim entry. Either a set of nested `Claim`s or a single `ClaimDisplay`.
 #[derive(Clone, Default, Debug, Deserialize, Serialize, PartialEq, Eq)]

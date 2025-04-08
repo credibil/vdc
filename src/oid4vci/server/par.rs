@@ -9,7 +9,7 @@
 use chrono::{Duration, Utc};
 
 use crate::core::generate;
-use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request};
+use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore};
 use crate::oid4vci::server::authorize;
 use crate::oid4vci::state::{PushedAuthorization, Stage, State};
@@ -67,7 +67,7 @@ impl Handler for Request<PushedAuthorizationRequest, NoHeaders> {
 
     fn handle(
         self, issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<Self::Response>> + Send {
+    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
         par(issuer, provider, self.body)
     }
 }

@@ -7,14 +7,14 @@ use credibil_infosec::jose::JwsBuilder;
 use credibil_vc::oid4vci::proof::{self, Payload, Type, Verify};
 use credibil_vc::oid4vci::types::{
     AuthorizationRequest, AuthorizationResponse, Credential, CredentialOfferRequest,
-    CredentialRequest, DeferredCredentialRequest, DeferredCredentialResponse, Format, OfferType,
+    CredentialRequest, DeferredCredentialRequest, DeferredCredentialResponse, FormatProfile, OfferType,
     ProofClaims, ResponseType, TokenGrantType, TokenRequest, TokenResponse,
 };
 use credibil_vc::oid4vci::{Error, Result, endpoint};
 use insta::assert_yaml_snapshot as assert_snapshot;
 use serde_json::json;
 use sha2::{Digest, Sha256};
-use test_issuer::{CLIENT_ID, CREDENTIAL_ISSUER, NORMAL_USER, ProviderImpl};
+use test_issuer::{CLIENT_ID, CREDENTIAL_ISSUER, NORMAL, ProviderImpl};
 
 pub const CODE_VERIFIER: &str = "ABCDEF12345";
 pub const REDIRECT_URI: &str = "http://localhost:3000/callback";
@@ -22,7 +22,7 @@ pub const REDIRECT_URI: &str = "http://localhost:3000/callback";
 #[derive(Default)]
 pub struct Wallet {
     pub provider: ProviderImpl,
-    pub format: Format,
+    pub format: FormatProfile,
     pub tx_code: Option<String>,
 }
 
@@ -108,7 +108,7 @@ impl Wallet {
                     }
                 }
             }],
-            "subject_id": NORMAL_USER,
+            "subject_id": NORMAL,
             "wallet_issuer": CREDENTIAL_ISSUER
         });
         // let request = serde_json::from_value(value).expect("request is valid");

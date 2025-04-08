@@ -15,12 +15,11 @@
 //! [JWT VC Presentation Profile]: (https://identity.foundation/jwt-vc-presentation-profile)
 
 use credibil_infosec::jose::JwsBuilder;
-use tracing::instrument;
 
-use crate::oid4vp::endpoint::{Body, Handler, Request};
+use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
-use crate::oid4vp::types::{RequestObjectRequest, RequestObjectResponse, RequestObjectType};
+use crate::oid4vp::types::{RequestObjectRequest, RequestObjectResponse};
 use crate::oid4vp::{Error, Result};
 use crate::w3c_vc::proof::Type;
 
@@ -31,12 +30,9 @@ use crate::w3c_vc::proof::Type;
 ///
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
-#[instrument(level = "debug", skip(provider))]
 pub async fn request_object(
-    provider: &impl Provider, request: RequestObjectRequest,
+    verifier: &str, provider: &impl Provider, request: RequestObjectRequest,
 ) -> Result<RequestObjectResponse> {
-    tracing::debug!("request_object");
-
     // retrieve request object from state
     let state = StateStore::get::<State>(provider, &request.id)
         .await
@@ -44,7 +40,7 @@ pub async fn request_object(
     let req_obj = state.request_object;
 
     // verify client_id (perhaps should use 'verify' method?)
-    if req_obj.client_id != format!("{}/post", request.client_id) {
+    if req_obj.client_id != format!("{verifier}/post") {
         return Err(Error::InvalidRequest("client ID mismatch".to_string()));
     }
 
@@ -58,18 +54,16 @@ pub async fn request_object(
     let jwt_proof =
         jws.encode().map_err(|e| Error::ServerError(format!("issue encoding jwt: {e}")))?;
 
-    Ok(RequestObjectResponse {
-        request_object: RequestObjectType::Jwt(jwt_proof),
-    })
+    Ok(RequestObjectResponse::Jwt(jwt_proof))
 }
 
-impl Handler for Request<RequestObjectRequest> {
+impl Handler for Request<RequestObjectRequest, NoHeaders> {
     type Response = RequestObjectResponse;
 
     fn handle(
-        self, _credential_issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<Self::Response>> + Send {
-        request_object(provider, self.body)
+        self, verifier: &str, provider: &impl Provider,
+    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
+        request_object(verifier, provider, self.body)
     }
 }
 

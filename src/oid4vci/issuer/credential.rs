@@ -15,14 +15,14 @@ use chrono::Utc;
 use credibil_infosec::jose::jws::{self, Key};
 
 use crate::core::{did_jwk, generate};
-use crate::iso_mdl::MsoMdocBuilder;
-use crate::oid4vci::endpoint::{Body, Handler, Request};
+use crate::mso_mdoc::MsoMdocBuilder;
+use crate::oid4vci::endpoint::{Body, Handler, Request, Response};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Deferrance, Expire, Stage, State};
 use crate::oid4vci::types::{
     AuthorizedDetail, Credential, CredentialConfiguration, CredentialHeaders, CredentialRequest,
-    CredentialResponse, Dataset, Format, Issuer, MultipleProofs, Proof, ProofClaims, RequestBy,
-    SingleProof,
+    CredentialResponse, Dataset, FormatProfile, Issuer, MultipleProofs, Proof, ProofClaims,
+    RequestBy, SingleProof,
 };
 use crate::oid4vci::{Error, JwtType, Result};
 use crate::sd_jwt::DcSdJwtBuilder;
@@ -71,6 +71,7 @@ pub async fn credential(
     ctx.configuration = config.clone();
 
     request.verify(provider, &mut ctx).await?;
+
     ctx.issue(provider, dataset).await
 }
 
@@ -79,7 +80,7 @@ impl Handler for Request<CredentialRequest, CredentialHeaders> {
 
     fn handle(
         self, issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<Self::Response>> + Send {
+    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
         credential(issuer, provider, self)
     }
 }
@@ -222,8 +223,8 @@ impl Context {
 
         // create a credential for each proof
         for kid in &self.proof_kids {
-            let credential = match &self.configuration.format {
-                Format::JwtVcJson(_) => {
+            let credential = match &self.configuration.profile {
+                FormatProfile::JwtVcJson { .. } => {
                     // FIXME: do we need to resolve DID document?
                     let Some(did) = kid.split('#').next() else {
                         return Err(Error::InvalidProof("Proof JWT DID is invalid".to_string()));
@@ -256,8 +257,9 @@ impl Context {
                     }
                 }
 
-                Format::IsoMdl(_) => {
+                FormatProfile::MsoMdoc { .. } => {
                     let mdl = MsoMdocBuilder::new()
+                        .doctype("org.iso.18013.5.1.mDL")
                         .claims(dataset.claims.clone())
                         .signer(provider)
                         .build()
@@ -268,7 +270,7 @@ impl Context {
                     }
                 }
 
-                Format::DcSdJwt(_) => {
+                FormatProfile::DcSdJwt { .. } => {
                     // TODO: cache the result of jwk when verifying proof (`verify` method)
                     let jwk = did_jwk(kid, provider).await.map_err(|e| {
                         server!("issue retrieving JWK for `dc+sd-jwt` credential: {e}")
@@ -293,8 +295,8 @@ impl Context {
                 }
 
                 // TODO: oustanding credential formats
-                Format::JwtVcJsonLd(_) => todo!(),
-                Format::LdpVc(_) => todo!(),
+                FormatProfile::JwtVcJsonLd { .. } => todo!(),
+                FormatProfile::LdpVc { .. } => todo!(),
             };
 
             credentials.push(credential);

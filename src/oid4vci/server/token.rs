@@ -17,7 +17,7 @@ use std::fmt::Debug;
 
 use crate::core::{generate, pkce};
 use crate::oauth::GrantType;
-use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request};
+use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore};
 use crate::oid4vci::state::{Expire, Stage, State, Token};
 use crate::oid4vci::types::{
@@ -107,7 +107,7 @@ impl Handler for Request<TokenRequest, NoHeaders> {
 
     fn handle(
         self, issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<Self::Response>> + Send {
+    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
         token(issuer, provider, self.body)
     }
 }
@@ -135,7 +135,7 @@ impl TokenRequest {
         // authorization_details object MUST contain the Issuer's identifier
         // in locations.
 
-        let Ok(server) = Metadata::server(provider, ctx.issuer, None).await else {
+        let Ok(server) = Metadata::server(provider, ctx.issuer).await else {
             return Err(invalid!("unknown authorization server"));
         };
         let Some(grant_types_supported) = &server.oauth.grant_types_supported else {
@@ -293,7 +293,7 @@ fn verify_claims(issuer: &Issuer, detail: &AuthorizationDetail) -> Result<()> {
         AuthorizationCredential::ConfigurationId {
             credential_configuration_id,
         } => credential_configuration_id,
-        AuthorizationCredential::Format(fmt) => {
+        AuthorizationCredential::FormatProfile(fmt) => {
             issuer.credential_configuration_id(fmt).map_err(|e| server!("issuer issue: {e}"))?
         }
     };

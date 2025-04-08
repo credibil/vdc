@@ -17,37 +17,37 @@
 //! `/.well-known/oauth-authorization-server/issuer1`.
 
 use crate::oid4vci::Result;
-use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request};
+use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vci::provider::{Metadata, Provider};
-use crate::oid4vci::types::{OAuthServerRequest, OAuthServerResponse};
+use crate::oid4vci::types::{ServerRequest, ServerResponse};
 use crate::server;
 
 /// OAuth server metadata request handler.
 ///
 /// # Errors
 ///
-/// Returns an `OpenID4VP` error if the request is invalid or if the provider is
+/// Returns an `OpenID4VCI` error if the request is invalid or if the provider is
 /// not available.
 async fn metadata(
-    issuer: &str, provider: &impl Provider, request: OAuthServerRequest,
-) -> Result<OAuthServerResponse> {
-    let auth_server = Metadata::server(provider, issuer, request.issuer.as_deref())
+    issuer: &str, provider: &impl Provider, _request: ServerRequest,
+) -> Result<ServerResponse> {
+    let auth_server = Metadata::server(provider, issuer)
         .await
         .map_err(|e| server!("issue getting authorization server metadata: {e}"))?;
 
-    Ok(OAuthServerResponse {
+    Ok(ServerResponse {
         authorization_server: auth_server,
     })
 }
 
-impl Handler for Request<OAuthServerRequest, NoHeaders> {
-    type Response = OAuthServerResponse;
+impl Handler for Request<ServerRequest, NoHeaders> {
+    type Response = ServerResponse;
 
     fn handle(
         self, issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<Self::Response>> + Send {
+    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
         metadata(issuer, provider, self.body)
     }
 }
 
-impl Body for OAuthServerRequest {}
+impl Body for ServerRequest {}

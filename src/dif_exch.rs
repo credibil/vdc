@@ -53,7 +53,7 @@ pub struct PresentationDefinition {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub purpose: Option<String>,
 
-    /// One or more registered Claim Format Designation objects (e.g., `jwt`,
+    /// One or more registered Claim Format Profile Designation objects (e.g., `jwt`,
     /// `jwt_vc`, `jwt_vp`, etc.). Used to inform the Holder of the Claim
     /// formats the Verifier can process. For example,
     ///
@@ -85,7 +85,7 @@ pub struct InputDescriptor {
     pub purpose: Option<String>,
 
     /// If present, its MUST be an object with one or more properties matching
-    /// registered Claim Format Designations (e.g., `jwt`, `jwt_vc`, `jwt_vp`,
+    /// registered Claim Format Profile Designations (e.g., `jwt`, `jwt_vc`, `jwt_vp`,
     /// etc.). This property can be used to specifically constrain
     /// submission of a single input to a subset of the top-level formats or
     /// algorithms specified in the Presentation Definition.
@@ -99,7 +99,7 @@ pub struct InputDescriptor {
 
 // TODO: create enum for ClaimFormat
 
-/// A registered Claim Format Designation object (e.g., `jwt`, `jwt_vc`,
+/// A registered Claim Format Profile Designation object (e.g., `jwt`, `jwt_vc`,
 /// `jwt_vp`, etc.) used to inform the Holder of a Claim format the Verifier can
 /// process.
 ///
@@ -274,7 +274,7 @@ pub struct DescriptorMap {
     /// Presentation Submission is related to.
     pub id: String,
 
-    /// Denotes the data format of the Claim. MUST match one of the Claim Format
+    /// Denotes the data format of the Claim. MUST match one of the Claim Format Profile
     /// Designations specified in the Input Descriptor.
     pub format: String,
 

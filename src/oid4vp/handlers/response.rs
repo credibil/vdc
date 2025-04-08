@@ -24,13 +24,12 @@
 use credibil_infosec::jose::{Jwt, jws};
 use serde_json::Value;
 use serde_json_path::JsonPath;
-use tracing::instrument;
 
-use crate::core::{Kind, did_jwk};
-use crate::oid4vp::endpoint::{Body, Handler, Request};
+use crate::core::did_jwk;
+use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
-use crate::oid4vp::types::{ResponseRequest, ResponseResponse};
+use crate::oid4vp::types::{AuthorzationResponse, Query, RedirectResponse};
 use crate::oid4vp::{Error, Result};
 use crate::w3c_vc;
 use crate::w3c_vc::proof::{Payload, Verify};
@@ -42,12 +41,9 @@ use crate::w3c_vc::vc::{VerifiableCredential, W3cVcClaims};
 ///
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
-#[instrument(level = "debug", skip(provider))]
 async fn response(
-    credential_issuer: &str, provider: &impl Provider, request: ResponseRequest,
-) -> Result<ResponseResponse> {
-    tracing::debug!("response");
-
+    _verifier: &str, provider: &impl Provider, request: AuthorzationResponse,
+) -> Result<RedirectResponse> {
     // TODO: handle case where Wallet returns error instead of submission
     verify(provider.clone(), &request).await?;
 
@@ -59,7 +55,7 @@ async fn response(
         .await
         .map_err(|e| Error::ServerError(format!("issue purging state: {e}")))?;
 
-    Ok(ResponseResponse {
+    Ok(RedirectResponse {
         // TODO: add response to state using `response_code` so Wallet can fetch full response
         // TODO: align redirct_uri to spec
         // redirect_uri: Some(format!("http://localhost:3000/cb#response_code={}", "1234")),
@@ -68,17 +64,17 @@ async fn response(
     })
 }
 
-impl Handler for Request<ResponseRequest> {
-    type Response = ResponseResponse;
+impl Handler for Request<AuthorzationResponse, NoHeaders> {
+    type Response = RedirectResponse;
 
     fn handle(
-        self, credential_issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<Self::Response>> + Send {
-        response(credential_issuer, provider, self.body)
+        self, verifier: &str, provider: &impl Provider,
+    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
+        response(verifier, provider, self.body)
     }
 }
 
-impl Body for ResponseRequest {}
+impl Body for AuthorzationResponse {}
 
 // TODO: validate  Verifiable Presentation by format
 // Check integrity, authenticity, and holder binding of each Presentation
@@ -86,7 +82,7 @@ impl Body for ResponseRequest {}
 
 // Verfiy the vp_token and presentation subm
 #[allow(clippy::too_many_lines)]
-async fn verify(provider: impl Provider, request: &ResponseRequest) -> Result<()> {
+async fn verify(provider: impl Provider, request: &AuthorzationResponse) -> Result<()> {
     tracing::debug!("response::verify");
 
     // get state by client state key
@@ -124,13 +120,10 @@ async fn verify(provider: impl Provider, request: &ResponseRequest) -> Result<()
     let Some(subm) = &request.presentation_submission else {
         return Err(Error::InvalidRequest("no presentation_submission".to_string()));
     };
-    let def = match &saved_req.presentation_definition {
-        Kind::Object(def) => def,
-        Kind::String(_) => {
-            return Err(Error::InvalidRequest(
-                "presentation_definition_uri is unsupported".to_string(),
-            ));
-        }
+    let Query::Definition(def) = &saved_req.query else {
+        return Err(Error::InvalidRequest(
+            "presentation_definition_uri is unsupported".to_string(),
+        ));
     };
 
     // verify presentation subm matches definition

@@ -3,7 +3,7 @@
 use crate::oauth::{CodeChallengeMethod, ResponseType};
 use crate::oid4vci::types::{
     AuthorizationCredential, AuthorizationDetail, AuthorizationDetailType, AuthorizationRequest,
-    ClaimsDescription, Format, RequestObject,
+    ClaimsDescription, FormatProfile, RequestObject,
 };
 
 impl AuthorizationRequest {
@@ -214,9 +214,9 @@ impl AuthorizationDetailBuilder<NoCredential> {
 
     /// Specify the format of the credential.
     #[must_use]
-    pub fn format(self, format: Format) -> AuthorizationDetailBuilder<Credential> {
+    pub fn format(self, format: FormatProfile) -> AuthorizationDetailBuilder<Credential> {
         AuthorizationDetailBuilder {
-            credential: Credential(AuthorizationCredential::Format(format)),
+            credential: Credential(AuthorizationCredential::FormatProfile(format)),
             claims: self.claims,
         }
     }
