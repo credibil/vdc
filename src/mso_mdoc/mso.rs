@@ -57,7 +57,7 @@ pub struct MobileSecurityObject {
     pub device_key_info: DeviceKeyInfo,
 
     /// The document type of the document being signed.
-    doc_type: String,
+    pub doc_type: String,
 
     /// Validity information for the MSO
     pub validity_info: ValidityInfo,

@@ -259,6 +259,7 @@ impl Context {
 
                 FormatProfile::MsoMdoc { .. } => {
                     let mdl = MsoMdocBuilder::new()
+                        .doctype("org.iso.18013.5.1.mDL")
                         .claims(dataset.claims.clone())
                         .signer(provider)
                         .build()

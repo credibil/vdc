@@ -438,7 +438,7 @@ mod tests {
     use serde_json::json;
 
     use super::*;
-    use crate::mso_mdoc::IssuerSigned;
+    use crate::mso_mdoc::{IssuerSigned, MobileSecurityObject};
     use crate::oid4vci::types::FormatProfile;
     use crate::sd_jwt::SdJwtClaims;
 
@@ -454,7 +454,7 @@ mod tests {
                 },
                 "claims": [
                     {"path": ["org.iso.7367.1", "vehicle_holder"]},
-                    {"path": ["org.iso.18013.5.1", "first_name"]}
+                    {"path": ["org.iso.18013.5.1", "given_name"]}
                 ]
             }]
         });
@@ -777,24 +777,25 @@ mod tests {
     }
 
     fn all_vcs() -> Vec<CredentialImpl> {
-        // load file
+        // load credentials
         let raw = include_bytes!("../../../examples/wallet/data/credentials.json");
         let value: Value = serde_json::from_slice(raw).expect("should deserialize");
-        let vcs = value.as_array().expect("should be an array");
+        let stored_vcs = value.as_array().expect("should be an array");
 
         let mut credentials = vec![];
 
-        for vc in vcs {
+        for vc in stored_vcs {
             let vc = vc.as_object().expect("should be an object");
             let enc_val = vc.values().next().expect("should be a JWT");
             let enc_str = enc_val.as_str().expect("should be a string");
 
+            // decode VC
             if enc_str.starts_with("ey") {
                 // base64 encoded JSON object
                 let jws = Jws::from_str(enc_str).expect("should be a JWS");
                 let credential = match jws.signatures[0].protected.typ.as_str() {
                     "dc+sd-jwt" => from_sd_jwt(enc_str),
-                    _ => panic!("unsupported JWT type"),
+                    _ => todo!("unsupported JWT type"),
                 };
                 credentials.push(credential);
             } else {
@@ -803,23 +804,6 @@ mod tests {
                 credentials.push(credential);
             }
         }
-
-        // registration vc
-        credentials.push(CredentialImpl {
-            profile: FormatProfile::MsoMdoc {
-                doctype: "org.iso.7367.1.mVRC".to_string(),
-            },
-            claims: vec![
-                Claim {
-                    path: vec!["org.iso.7367.1".to_string(), "vehicle_holder".to_string()],
-                    value: Value::String("Alice Holder".to_string()),
-                },
-                Claim {
-                    path: vec!["org.iso.18013.5.1".to_string(), "first_name".to_string()],
-                    value: Value::String("Alice".to_string()),
-                },
-            ],
-        });
 
         credentials
     }
@@ -868,19 +852,26 @@ mod tests {
     }
 
     fn from_mso_mdoc(mdoc_str: &str) -> CredentialImpl {
-        let bytes = Base64UrlUnpadded::decode_vec(mdoc_str).expect("should decode");
-        let mdoc: IssuerSigned = cbor::from_slice(&bytes).expect("should deserialize");
-        let tags = mdoc.name_spaces.get("org.iso.18013.5.1").expect("should have name space");
+        let mdoc_bytes = Base64UrlUnpadded::decode_vec(mdoc_str).expect("should decode");
+        let mdoc: IssuerSigned = cbor::from_slice(&mdoc_bytes).expect("should deserialize");
+
+        let mso_bytes = mdoc.issuer_auth.0.payload.expect("should have payload");
+        let mso: MobileSecurityObject = cbor::from_slice(&mso_bytes).expect("should deserialize");
 
         let mut claims = vec![];
-        for tag in tags {
-            let nested = unpack_cbor(vec![tag.element_identifier.clone()], &tag.element_value);
-            claims.extend(nested);
+
+        for (name_space, tags) in &mdoc.name_spaces {
+            let mut path = vec![name_space.clone()];
+            for tag in tags {
+                path.push(tag.element_identifier.clone());
+                let nested = unpack_cbor(path.clone(), &tag.element_value);
+                claims.extend(nested);
+            }
         }
 
         CredentialImpl {
             profile: FormatProfile::MsoMdoc {
-                doctype: "org.iso.18013.5.1.mDL".to_string(),
+                doctype: mso.doc_type,
             },
             claims,
         }

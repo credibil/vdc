@@ -20,6 +20,7 @@ use sha2::{Digest, Sha256};
 /// Generate an ISO mDL `mso_mdoc` format credential.
 #[derive(Debug)]
 pub struct MsoMdocBuilder<C, S> {
+    doctype: String,
     claims: C,
     signer: S,
 }
@@ -39,11 +40,20 @@ pub struct NoClaims;
 pub struct HasClaims(Map<String, Value>);
 
 impl MsoMdocBuilder<NoClaims, NoSigner> {
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self {
+            doctype: "org.iso.18013.5.1.mDL".to_string(),
             claims: NoClaims,
             signer: NoSigner,
         }
+    }
+}
+
+impl<C, S> MsoMdocBuilder<C, S> {
+    /// Set the claims for the ISO mDL credential.
+    pub fn doctype(mut self, doctype: impl Into<String>) -> Self {
+        self.doctype = doctype.into();
+        self
     }
 }
 
@@ -51,6 +61,7 @@ impl<C> MsoMdocBuilder<C, NoSigner> {
     /// Set the credential Signer.
     pub fn signer<S: Signer>(self, signer: &'_ S) -> MsoMdocBuilder<C, HasSigner<'_, S>> {
         MsoMdocBuilder {
+            doctype: self.doctype,
             claims: self.claims,
             signer: HasSigner(signer),
         }
@@ -61,6 +72,7 @@ impl<S> MsoMdocBuilder<NoClaims, S> {
     /// Set the claims for the ISO mDL credential.
     pub fn claims(self, claims: Map<String, Value>) -> MsoMdocBuilder<HasClaims, S> {
         MsoMdocBuilder {
+            doctype: self.doctype,
             claims: HasClaims(claims),
             signer: self.signer,
         }
@@ -77,6 +89,7 @@ impl<S: Signer> MsoMdocBuilder<HasClaims, HasSigner<'_, S>> {
         // populate mdoc and accompanying MSO
         let mut mdoc = IssuerSigned::new();
         let mut mso = MobileSecurityObject::new();
+        mso.doc_type = self.doctype;
 
         for (name_space, value) in self.claims.0 {
             // namespace is a root-level claim
@@ -166,18 +179,28 @@ mod tests {
                 "given_name": "Normal",
                 "family_name": "Person",
                 "portrait": "https://example.com/portrait.jpg",
-            }
+            },
         });
+        // let claims_json = json!({
+        //     "org.iso.7367.1": {
+        //         "vehicle_holder": "Alice Holder",
+        //     },
+        //     "org.iso.18013.5.1": {
+        //         "given_name": "Normal",
+        //         "family_name": "Person",
+        //         "portrait": "https://example.com/portrait.jpg",
+        //     },
+        // });
         let claims = claims_json.as_object().unwrap();
 
         let mdl = MsoMdocBuilder::new()
+            .doctype("org.iso.18013.5.1.mDL")
+            // .doctype("org.iso.7367.1.mVRC")
             .claims(claims.clone())
             .signer(&Keyring::new())
             .build()
             .await
             .expect("should build");
-
-        println!("mdl: {}", mdl);
 
         // check credential deserializes back into original mdoc/mso structures
         let mdoc_bytes = Base64UrlUnpadded::decode_vec(&mdl).expect("should decode");
