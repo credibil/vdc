@@ -124,9 +124,9 @@ tracing-subscriber = { version = "0.3.19", features = ["env-filter", "fmt"] }
 uuid = { version = "1.16.0", features = ["fast-rng", "v4"] }
 
 [patch.crates-io]
-# credibil-did = { path = "../did" }
-credibil-did = { git = "https://github.com/credibil/did.git" }
-# credibil-infosec = { path = "../infosec" }
+credibil-did = { path = "../did" }
+# credibil-did = { git = "https://github.com/credibil/did.git" }
+credibil-infosec = { path = "../infosec" }
 # credibil-infosec = { git = "https://github.com/credibil/infosec.git" }
 
 [profile.release]

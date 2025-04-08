@@ -605,7 +605,6 @@ dependencies = [
 [[package]]
 name = "credibil-did"
 version = "0.1.2"
-source = "git+https://github.com/credibil/did.git#9a128252358d055d37e03fd113ed91b388550c06"
 dependencies = [
  "anyhow",
  "base64ct",
@@ -629,8 +628,6 @@ dependencies = [
 [[package]]
 name = "credibil-infosec"
 version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53653065fec043ea529b33b00653f84ebee91f4d784e9e13eae7d82e42c626ce"
 dependencies = [
  "aes-gcm",
  "aes-kw",
