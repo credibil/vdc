@@ -873,7 +873,6 @@ mod tests {
         let tags = mdoc.name_spaces.get("org.iso.18013.5.1").expect("should have name space");
 
         let mut claims = vec![];
-
         for tag in tags {
             let nested = unpack_cbor(vec![tag.element_identifier.clone()], &tag.element_value);
             claims.extend(nested);
@@ -894,7 +893,7 @@ mod tests {
 
                 for (key, value) in map {
                     let mut new_path = path.clone();
-                    new_path.push(key.clone().into_text().unwrap().to_string());
+                    new_path.push(key.as_text().unwrap().to_string());
                     claims.extend(unpack_cbor(new_path, value));
                 }
 
