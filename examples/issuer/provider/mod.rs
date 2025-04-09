@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(unused)]
 
 #[path = "../../blockstore/mod.rs"]
 mod block_store;
@@ -10,7 +10,8 @@ use blockstore::InMemoryBlockstore;
 use credibil_did::{DidResolver, Document};
 use credibil_infosec::{Algorithm, Signer};
 use credibil_vc::status::issuer::Status;
-use kms::Keyring;
+
+use self::kms::Keyring;
 
 pub const ISSUER_ID: &str = "http://credibil.io";
 pub const NORMAL: &str = "normal_user";

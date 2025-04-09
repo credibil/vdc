@@ -1,21 +1,28 @@
 //! Tests for the Verifier API
 
-#[path = "../examples/issuer/mod.rs"]
-mod issuer;
-#[path = "../examples/issuer/provider/mod.rs"]
-mod provider;
+#[path = "../examples/kms/mod.rs"]
+mod kms;
 #[path = "../examples/wallet/mod.rs"]
 mod wallet;
 
+use std::sync::LazyLock;
+
+use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
+use credibil_vc::mso_mdoc::MsoMdocBuilder;
 use credibil_vc::oid4vp::types::DcqlQuery;
-use serde_json::json;
+use credibil_vc::sd_jwt::DcSdJwtBuilder;
+use futures::executor::block_on;
+use serde_json::{Map, Value, json};
+
+use self::kms::Keyring;
+
+// Create a mock wallet populated with test credentials.
+static WALLET: LazyLock<wallet::Store> = LazyLock::new(|| block_on(async { load_wallet().await }));
 
 // Should request a Credential with the claims `vehicle_holder` and `first_name`.
-#[tokio::test]
-async fn multiple_claims() {
-    // The issuer issues a credential with the claims `vehicle_holder` and `first_name`.
-    let wallet = mock_wallet().await;
-    let all_vcs = wallet.fetch();
+#[test]
+fn multiple_claims() {
+    let all_vcs = WALLET.fetch();
 
     let query_json = json!({
         "credentials": [{
@@ -36,11 +43,10 @@ async fn multiple_claims() {
     assert_eq!(res.len(), 1);
 }
 
-// Request multiple Credentials all of which should be returned.
-#[tokio::test]
-async fn multiple_credentials() {
-    let wallet = mock_wallet().await;
-    let all_vcs = wallet.fetch();
+// Should return multiple Credentials.
+#[test]
+fn multiple_credentials() {
+    let all_vcs = WALLET.fetch();
 
     let query_json = json!({
         "credentials": [
@@ -75,16 +81,13 @@ async fn multiple_credentials() {
     assert_eq!(res.len(), 2);
 }
 
-// Make a complex query where the Wallet is requested to deliver:
-//  - The `pid` credential
-//  - OR the `other_pid` credential,
-//  - OR both `pid_reduced_cred_1` and `pid_reduced_cred_2`.
+// Should return one of a `pid`, OR the `other_pid`, OR both 
+// `pid_reduced_cred_1` and `pid_reduced_cred_2` credentials.
 //
-// Additionally, the `nice_to_have` credential may optionally be delivered.
-#[tokio::test]
-async fn complex_query() {
-    let wallet = mock_wallet().await;
-    let all_vcs = wallet.fetch();
+// Should also optionally return the `nice_to_have` credential.
+#[test]
+fn complex_query() {
+    let all_vcs = WALLET.fetch();
 
     let query_json = json!({
         "credentials": [
@@ -171,10 +174,9 @@ async fn complex_query() {
 }
 
 // Request an ID and address from any credential.
-#[tokio::test]
-async fn any_credential() {
-    let wallet = mock_wallet().await;
-    let all_vcs = wallet.fetch();
+#[test]
+fn any_credential() {
+    let all_vcs = WALLET.fetch();
 
     let query_json = json!({
         "credentials": [
@@ -282,10 +284,9 @@ async fn any_credential() {
 // Requests the mandatory claims `last_name` and `date_of_birth`, and
 // either the claim `postal_code`, or, if that is not available, both of
 // the claims `locality` and `region`.
-#[tokio::test]
-async fn alt_claims() {
-    let wallet = mock_wallet().await;
-    let all_vcs = wallet.fetch();
+#[test]
+fn alt_claims() {
+    let all_vcs = WALLET.fetch();
 
     let query_json = json!({
         "credentials": [
@@ -316,10 +317,9 @@ async fn alt_claims() {
 }
 
 // Requests a credential using specific values for the `last_name` and `postal_code` claims.
-#[tokio::test]
-async fn specific_values() {
-    let wallet = mock_wallet().await;
-    let all_vcs = wallet.fetch();
+#[test]
+fn specific_values() {
+    let all_vcs = WALLET.fetch();
 
     let query_json = json!({
         "credentials": [
@@ -351,7 +351,7 @@ async fn specific_values() {
 }
 
 // Initialise the wallet with test credentials.
-async fn mock_wallet() -> wallet::Store {
+async fn load_wallet() -> wallet::Store {
     let mut store = wallet::Store::new();
 
     // load credentials
@@ -368,7 +368,7 @@ async fn mock_wallet() -> wallet::Store {
         },
         "birthdate": "2000-01-01"
     });
-    let vc = issuer::issue_sd_jwt(vct, claims).await;
+    let vc = sd_jwt(vct, claims.as_object().unwrap().clone()).await;
     store.add(vc.clone());
 
     let vct = "https://othercredentials.example/pid";
@@ -384,7 +384,7 @@ async fn mock_wallet() -> wallet::Store {
         },
         "birthdate": "2000-01-01"
     });
-    let vc = issuer::issue_sd_jwt(vct, claims).await;
+    let vc = sd_jwt(vct, claims.as_object().unwrap().clone()).await;
     store.add(vc.clone());
 
     let vct = "https://cred.example/residence_credential";
@@ -395,14 +395,14 @@ async fn mock_wallet() -> wallet::Store {
             "postal_code": "90210",
         },
     });
-    let vc = issuer::issue_sd_jwt(vct, claims).await;
+    let vc = sd_jwt(vct, claims.as_object().unwrap().clone()).await;
     store.add(vc.clone());
 
     let vct = "https://company.example/company_rewards";
     let claims = json!({
         "rewards_number": "1234567890",
     });
-    let vc = issuer::issue_sd_jwt(vct, claims).await;
+    let vc = sd_jwt(vct, claims.as_object().unwrap().clone()).await;
     store.add(vc.clone());
 
     let doctype = "org.iso.18013.5.1.mDL";
@@ -413,7 +413,7 @@ async fn mock_wallet() -> wallet::Store {
             "portrait": "https://example.com/portrait.jpg",
         },
     });
-    let vc = issuer::issue_mso_mdoc(doctype, claims).await;
+    let vc = mso_mdoc(doctype, claims.as_object().unwrap().clone()).await;
     store.add(vc.clone());
 
     let doctype = "org.iso.7367.1.mVRC";
@@ -427,8 +427,35 @@ async fn mock_wallet() -> wallet::Store {
             "portrait": "https://example.com/portrait.jpg",
         },
     });
-    let vc = issuer::issue_mso_mdoc(doctype, claims).await;
+    let vc = mso_mdoc(doctype, claims.as_object().unwrap().clone()).await;
     store.add(vc.clone());
 
     store
+}
+
+async fn sd_jwt(vct: &str, claims: Map<String, Value>) -> String {
+    DcSdJwtBuilder::new()
+        .vct(vct)
+        .claims(claims)
+        .issuer("https://example.com")
+        .key_binding(PublicKeyJwk {
+            kty: KeyType::Okp,
+            crv: Curve::Ed25519,
+            x: "x".to_string(),
+            ..PublicKeyJwk::default()
+        })
+        .signer(&Keyring::new())
+        .build()
+        .await
+        .expect("should build")
+}
+
+async fn mso_mdoc(doctype: &str, claims: Map<String, Value>) -> String {
+    MsoMdocBuilder::new()
+        .doctype(doctype)
+        .claims(claims)
+        .signer(&Keyring::new())
+        .build()
+        .await
+        .expect("should build")
 }
