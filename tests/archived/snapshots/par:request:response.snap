@@ -1,7 +1,0 @@
----
-source: tests/par.rs
-assertion_line: 47
-expression: response
----
-request_uri: "[request_uri]"
-expires_in: 600

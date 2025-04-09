@@ -14,8 +14,8 @@ use credibil_vc::status::issuer::Status;
 use self::kms::Keyring;
 
 pub const ISSUER_ID: &str = "http://credibil.io";
-pub const NORMAL: &str = "normal_user";
-pub const PENDING: &str = "pending_user";
+pub const BOB_ID: &str = "bob";
+pub const CAROL_ID: &str = "carol";
 
 #[derive(Clone, Debug)]
 pub struct ProviderImpl {

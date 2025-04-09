@@ -26,7 +26,7 @@ use credibil_vc::oid4vci::types::{
 };
 use credibil_vc::{BlockStore, urlencode};
 use oauth2::CsrfToken;
-use provider::{ISSUER_ID, NORMAL, ProviderImpl};
+use provider::{BOB_ID, ISSUER_ID, ProviderImpl};
 use serde::Deserialize;
 use serde_json::json;
 use tokio::net::TcpListener;
@@ -56,7 +56,7 @@ async fn main() {
     // add some data
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", NORMAL, USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, USER).await.unwrap();
     BlockStore::put(&provider, "owner", "CLIENT", CLIENT_ID, CLIENT).await.unwrap();
 
     let subscriber = FmtSubscriber::builder().with_max_level(Level::DEBUG).finish();
@@ -166,7 +166,7 @@ async fn authorize(
         let login_form = format!(
             r#"
             <form method="post" action="/login">
-                <input type="text" name="username" placeholder="username" value="normal_user" />
+                <input type="text" name="username" placeholder="username" value="bob" />
                 <input type="password" name="password" placeholder="password" value="password" />
                 <input type="hidden" name="csrf_token" value="{token}" />
                 <input type="submit" value="Login" />
@@ -224,7 +224,7 @@ async fn par(
         let login_form = format!(
             r#"
             <form method="post" action="/login">
-                <input type="text" name="username" placeholder="username" value="normal_user" />
+                <input type="text" name="username" placeholder="username" value="bob" />
                 <input type="password" name="password" placeholder="password" value="password" />
                 <input type="hidden" name="csrf_token" value="{token}" />
                 <input type="submit" value="Login" />
@@ -250,7 +250,7 @@ async fn handle_login(
     TypedHeader(host): TypedHeader<Host>, Form(req): Form<LoginRequest>,
 ) -> impl IntoResponse {
     // check username and password
-    if req.username != "normal_user" {
+    if req.username != "bob" {
         return (StatusCode::UNAUTHORIZED, Json(json!({"error": "invalid username"})))
             .into_response();
     }

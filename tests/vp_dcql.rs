@@ -81,7 +81,7 @@ fn multiple_credentials() {
     assert_eq!(res.len(), 2);
 }
 
-// Should return one of a `pid`, OR the `other_pid`, OR both 
+// Should return one of a `pid`, OR the `other_pid`, OR both
 // `pid_reduced_cred_1` and `pid_reduced_cred_2` credentials.
 //
 // Should also optionally return the `nice_to_have` credential.
@@ -173,7 +173,7 @@ fn complex_query() {
     assert_eq!(res.len(), 2);
 }
 
-// Request an ID and address from any credential.
+// Should return an ID and address from any credential.
 #[test]
 fn any_credential() {
     let all_vcs = WALLET.fetch();
@@ -281,7 +281,7 @@ fn any_credential() {
     assert_eq!(res.len(), 2);
 }
 
-// Requests the mandatory claims `last_name` and `date_of_birth`, and
+// Should return the mandatory claims `last_name` and `date_of_birth`, and
 // either the claim `postal_code`, or, if that is not available, both of
 // the claims `locality` and `region`.
 #[test]
@@ -316,7 +316,8 @@ fn alt_claims() {
     assert_eq!(res.len(), 1);
 }
 
-// Requests a credential using specific values for the `last_name` and `postal_code` claims.
+// Should return a credential for a request using specific values for the
+// `last_name` and `postal_code` claims.
 #[test]
 fn specific_values() {
     let all_vcs = WALLET.fetch();
@@ -350,7 +351,7 @@ fn specific_values() {
     assert_eq!(res.len(), 1);
 }
 
-// Initialise the wallet with test credentials.
+// Initialise a mock "wallet" with test credentials.
 async fn load_wallet() -> wallet::Store {
     let mut store = wallet::Store::new();
 

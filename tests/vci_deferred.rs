@@ -11,7 +11,6 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
-use credibil_vc::BlockStore;
 use credibil_vc::core::did_jwk;
 use credibil_vc::oid4vci::types::{
     CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, CredentialResponse,
@@ -19,11 +18,12 @@ use credibil_vc::oid4vci::types::{
     TokenRequest, W3cVcClaims,
 };
 use credibil_vc::oid4vci::{JwtType, endpoint};
-use insta::assert_yaml_snapshot as assert_snapshot;
-use provider::{ISSUER_ID, PENDING, ProviderImpl};
+use credibil_vc::{BlockStore, OneMany};
+use provider::{CAROL_ID, ISSUER_ID, ProviderImpl};
+use serde_json::json;
 use wallet::Keyring;
 
-static BOB_KEYRING: LazyLock<Keyring> = LazyLock::new(wallet::keyring);
+static CAROL_KEYRING: LazyLock<Keyring> = LazyLock::new(wallet::keyring);
 
 // Should return a credential when using the pre-authorized code flow and the
 // credential offer to the Wallet is made by value.
@@ -33,13 +33,13 @@ async fn deferred() {
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", PENDING, data::PENDING_USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", CAROL_ID, data::PENDING_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(PENDING)
+        .subject_id(CAROL_ID)
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
@@ -70,7 +70,7 @@ async fn deferred() {
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .add_signer(&*BOB_KEYRING)
+        .add_signer(&*CAROL_KEYRING)
         .build()
         .await
         .expect("builds JWS");
@@ -107,8 +107,8 @@ async fn deferred() {
     subject.insert(credential_identifier.to_string(), credential);
     let data = serde_json::to_vec(&subject).unwrap();
 
-    BlockStore::delete(&provider, "owner", "SUBJECT", PENDING).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", PENDING, &data).await.unwrap();
+    BlockStore::delete(&provider, "owner", "SUBJECT", CAROL_ID).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", CAROL_ID, &data).await.unwrap();
 
     // --------------------------------------------------
     // After a brief wait Bob retrieves the credential
@@ -142,9 +142,13 @@ async fn deferred() {
     let resolver = async |kid: String| did_jwk(&kid, &provider).await;
     let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
 
-    assert_snapshot!("issued", jwt.claims.vc, {
-        ".validFrom" => "[validFrom]",
-        ".credentialSubject" => insta::sorted_redaction(),
-        ".credentialSubject.id" => "[id]"
-    });
+    // verify the credential
+    assert_eq!(jwt.claims.iss, ISSUER_ID);
+    assert_eq!(jwt.claims.sub, CAROL_KEYRING.did());
+
+    let OneMany::One(subject) = jwt.claims.vc.credential_subject else {
+        panic!("should be a single credential subject");
+    };
+    assert_eq!(subject.id, Some(CAROL_KEYRING.did()));
+    assert_eq!(subject.claims.get("family_name"), Some(&json!("Person")));
 }

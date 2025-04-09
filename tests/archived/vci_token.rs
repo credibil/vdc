@@ -13,7 +13,7 @@ use credibil_vc::oid4vci::types::{
 };
 use insta::assert_yaml_snapshot as assert_snapshot;
 use serde_json::json;
-use test_issuer::{CLIENT_ID, CREDENTIAL_ISSUER, NORMAL};
+use test_issuer::{CLIENT_ID, CREDENTIAL_ISSUER, BOB_ID};
 
 #[tokio::test]
 async fn authorized() {
@@ -41,7 +41,7 @@ async fn authorized() {
             client_id: CLIENT_ID.into(),
             ..Authorization::default()
         }),
-        subject_id: Some(NORMAL.into()),
+        subject_id: Some(BOB_ID.into()),
         expires_at: Utc::now() + Expire::Authorized.duration(),
     };
 
@@ -108,7 +108,7 @@ async fn authorization_details() {
             }],
             ..Authorization::default()
         }),
-        subject_id: Some(NORMAL.into()),
+        subject_id: Some(BOB_ID.into()),
         expires_at: Utc::now() + Expire::Authorized.duration(),
     };
 

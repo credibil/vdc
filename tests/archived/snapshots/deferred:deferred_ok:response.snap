@@ -1,9 +1,0 @@
----
-source: tests/deferred.rs
-assertion_line: 96
-expression: "&response"
----
-credential: "[credential]"
-c_nonce: "[c_nonce]"
-c_nonce_expires_in: 599
-notification_id: "[notification_id]"

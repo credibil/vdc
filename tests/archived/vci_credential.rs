@@ -15,7 +15,7 @@ use credibil_vc::oid4vci::types::{
 use credibil_vc::w3c_vc::proof::{self, Payload, Type, Verify};
 use insta::assert_yaml_snapshot as assert_snapshot;
 use serde_json::json;
-use test_issuer::{CLIENT_ID, CREDENTIAL_ISSUER, NORMAL};
+use test_issuer::{CLIENT_ID, CREDENTIAL_ISSUER, BOB_ID};
 
 #[tokio::test]
 async fn identifier() {
@@ -40,7 +40,7 @@ async fn identifier() {
                 credential_identifiers: vec!["PHLEmployeeID".to_string()],
             }],
         }),
-        subject_id: Some(NORMAL.into()),
+        subject_id: Some(BOB_ID.into()),
         expires_at: Utc::now() + Expire::Authorized.duration(),
     };
 
@@ -131,7 +131,7 @@ async fn format() {
                 credential_identifiers: vec!["PHLEmployeeID".to_string()],
             }],
         }),
-        subject_id: Some(NORMAL.into()),
+        subject_id: Some(BOB_ID.into()),
         expires_at: Utc::now() + Expire::Authorized.duration(),
     };
 
@@ -229,7 +229,7 @@ async fn iso_mdl() {
                 credential_identifiers: vec!["DriverLicence".to_string()],
             }],
         }),
-        subject_id: Some(NORMAL.into()),
+        subject_id: Some(BOB_ID.into()),
         expires_at: Utc::now() + Expire::Authorized.duration(),
     };
 

@@ -13,7 +13,6 @@ use std::sync::LazyLock;
 
 use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
-use credibil_vc::BlockStore;
 use credibil_vc::core::did_jwk;
 use credibil_vc::oid4vci::types::{
     CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, CredentialResponse,
@@ -21,8 +20,9 @@ use credibil_vc::oid4vci::types::{
 };
 use credibil_vc::oid4vci::{JwtType, endpoint};
 use credibil_vc::sd_jwt::SdJwtClaims;
-use insta::assert_yaml_snapshot as assert_snapshot;
-use provider::{ISSUER_ID, NORMAL, ProviderImpl};
+use credibil_vc::{BlockStore, OneMany};
+use provider::{BOB_ID, ISSUER_ID, ProviderImpl};
+use serde_json::json;
 use sha2::{Digest, Sha256};
 use wallet::Keyring;
 
@@ -35,13 +35,13 @@ async fn two_proofs() {
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", NORMAL, data::NORMAL_USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(NORMAL)
+        .subject_id(BOB_ID)
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
@@ -77,10 +77,11 @@ async fn two_proofs() {
         .await
         .expect("builds JWS");
 
+    let dan = wallet::keyring();
     let jws_2 = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .add_signer(&wallet::keyring())
+        .add_signer(&dan)
         .build()
         .await
         .expect("builds JWS");
@@ -115,6 +116,7 @@ async fn two_proofs() {
     assert_eq!(credentials.len(), 2);
 
     let resolver = async |kid: String| did_jwk(&kid, &provider).await;
+    let dids = vec![BOB_KEYRING.did(), dan.did()];
 
     for (i, credential) in credentials.iter().enumerate() {
         let Credential { credential } = credential;
@@ -123,11 +125,14 @@ async fn two_proofs() {
         let token = credential.as_string().expect("should be a string");
         let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
 
-        assert_snapshot!(format!("vc_{i}"), jwt.claims.vc, {
-            ".validFrom" => "[validFrom]",
-            ".credentialSubject" => insta::sorted_redaction(),
-            ".credentialSubject.id" => "[id]"
-        });
+        assert_eq!(jwt.claims.iss, ISSUER_ID);
+        assert_eq!(jwt.claims.sub, dids[i]);
+
+        let OneMany::One(subject) = jwt.claims.vc.credential_subject else {
+            panic!("should be a single credential subject");
+        };
+        assert_eq!(subject.id, Some(dids[i].clone()));
+        assert_eq!(subject.claims.get("family_name"), Some(&json!("Person")));
     }
 }
 
@@ -138,13 +143,13 @@ async fn sd_jwt() {
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", NORMAL, data::NORMAL_USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request =
-        CreateOfferRequest::builder().subject_id(NORMAL).with_credential("Identity_SD_JWT").build();
+        CreateOfferRequest::builder().subject_id(BOB_ID).with_credential("Identity_SD_JWT").build();
     let response =
         endpoint::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
 
@@ -215,23 +220,15 @@ async fn sd_jwt() {
     let resolver = async |kid: String| did_jwk(&kid, &provider).await;
     let jwt: Jwt<SdJwtClaims> = jws::decode(token, resolver).await.expect("should decode");
 
-    assert_snapshot!("sd_jwt", jwt, {
-        ".header.kid" => "[kid]",
-        ".claims._sd" => "[_sd]",
-        ".claims.iat" => "[iat]",
-        ".claims.sub" => "[sub]",
-        ".claims.cnf" => "[cnf]",
-    });
+    // verify the credential
+    assert_eq!(jwt.header.typ, "dc+sd-jwt");
+    assert_eq!(jwt.claims.iss, ISSUER_ID);
+    assert_eq!(jwt.claims.vct, "Identity_SD_JWT");
+    assert_eq!(jwt.claims.sub, Some(BOB_KEYRING.did()));
 
     // verify disclosures
     let disclosures = parts.1.split('~').collect::<Vec<&str>>();
     for d in &disclosures {
-        // let sd_bytes = Base64UrlUnpadded::decode_vec(d).expect("should decode");
-        // let sd_json: serde_json::Value =
-        //     serde_json::from_slice(&sd_bytes).expect("should deserialize");
-        // let array = sd_json.as_array().expect("should be an array");
-        // let salt = array[0].as_str().expect("should be a string");
-
         let sd_hash = Base64UrlUnpadded::encode_string(Sha256::digest(d).as_slice());
         assert!(jwt.claims.sd.contains(&sd_hash), "disclosure not found");
     }
