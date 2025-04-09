@@ -74,12 +74,12 @@ x25519-dalek = { version = "2.0.1", features = ["static_secrets"] }
 
 [[example]]
 name = "issuer-axum"
-path = "examples/issuer/axum.rs"
+path = "examples/http/issuer.rs"
 # required-features = ["client", "server"]
 
 [[example]]
 name = "verifier-axum"
-path = "examples/verifier/axum.rs"
+path = "examples/http/verifier.rs"
 # required-features = ["client", "server"]
 
 # -----------------------------------------------

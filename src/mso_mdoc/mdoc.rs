@@ -44,6 +44,7 @@ impl IssuerSigned {
         }
     }
 
+    /// Serialize the `IssuerSigned` object to a CBOR byte vector.
     pub fn to_vec(&self) -> anyhow::Result<Vec<u8>> {
         cbor::to_vec(self)
     }

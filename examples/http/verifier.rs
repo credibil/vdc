@@ -4,6 +4,7 @@
 //! [Verifiable Credential HTTP API](
 //! https://identity.foundation/verifiable-credential/spec/#http-api).
 
+#[path = "../verifier/provider/mod.rs"]
 mod provider;
 
 use std::collections::HashMap;

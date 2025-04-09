@@ -40,6 +40,7 @@ pub struct NoClaims;
 pub struct HasClaims(Map<String, Value>);
 
 impl MsoMdocBuilder<NoClaims, NoSigner> {
+    /// Create a new ISO mDL credential builder.
     pub fn new() -> Self {
         Self {
             doctype: "org.iso.18013.5.1.mDL".to_string(),

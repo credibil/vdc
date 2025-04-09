@@ -183,10 +183,12 @@ pub struct DigestIdGenerator {
 }
 
 impl DigestIdGenerator {
+    /// Create a new `DigestIdGenerator`.
     pub fn new() -> Self {
         Self { used: HashSet::new() }
     }
 
+    /// Generate a unique `DigestId`.
     pub fn generate(&mut self) -> DigestId {
         let mut digest_id;
         loop {

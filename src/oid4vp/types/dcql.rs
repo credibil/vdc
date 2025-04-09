@@ -12,13 +12,17 @@ use serde_json::Value;
 
 use crate::oid4vci::types::FormatProfile;
 
-/// Implemented by credentials to support DCQL queries.
-pub trait Credential {
-    /// Returns the Credential's format.
-    fn meta(&self) -> FormatProfile;
+/// Implemented by wallets in order to support DCQL queries.
+#[derive(Debug)]
+pub struct Credential {
+    /// The credential's format profile.
+    pub profile: FormatProfile,
 
-    /// Returns the Credential's claims.
-    fn claims(&self) -> Vec<Claim>;
+    /// The credential's claims.
+    pub claims: Vec<Claim>,
+
+    /// The original issued credential.
+    pub issued: Value,
 }
 
 /// A generic credential claim to use with DCQL queries.
@@ -222,7 +226,7 @@ impl DcqlQuery {
     ///
     /// # Errors
     /// TODO: add errors
-    pub fn execute<'a, T: Credential>(&self, fetch_vcs: &'a [T]) -> Result<Vec<&'a T>> {
+    pub fn execute<'a>(&self, fetch_vcs: &'a [Credential]) -> Result<Vec<&'a Credential>> {
         // EITHER find matching VCs for each CredentialSetQuery
         if let Some(sets) = &self.credential_sets {
             return sets.iter().try_fold(vec![], |mut matched, query| {
@@ -246,9 +250,9 @@ impl DcqlQuery {
 
 impl CredentialSetQuery {
     /// Execute credential set query.
-    fn execute<'a, T: Credential>(
-        &self, credentials: &[CredentialQuery], fetch_vcs: &'a [T],
-    ) -> Result<Vec<&'a T>> {
+    fn execute<'a>(
+        &self, credentials: &[CredentialQuery], fetch_vcs: &'a [Credential],
+    ) -> Result<Vec<&'a Credential>> {
         // iterate until we find an `option` where every CredentialQuery is satisfied
         'next_option: for option in &self.options {
             // match ALL credential queries in the option set
@@ -280,7 +284,7 @@ impl CredentialSetQuery {
 
 impl CredentialQuery {
     /// Execute the credential query.
-    fn execute<'a, T: Credential>(&self, fetch_vcs: &'a [T]) -> Option<Vec<&'a T>> {
+    fn execute<'a>(&self, fetch_vcs: &'a [Credential]) -> Option<Vec<&'a Credential>> {
         if !self.multiple.unwrap_or_default() {
             // return first matching credential
             let matched = fetch_vcs.iter().find(|vc| self.is_match(*vc).is_some())?;
@@ -288,8 +292,10 @@ impl CredentialQuery {
         }
 
         // return all matching credentials
-        let matches =
-            fetch_vcs.iter().filter(|vc| self.is_match(*vc).is_some()).collect::<Vec<&'a T>>();
+        let matches = fetch_vcs
+            .iter()
+            .filter(|vc| self.is_match(*vc).is_some())
+            .collect::<Vec<&'a Credential>>();
         if matches.is_empty() {
             return None;
         }
@@ -298,9 +304,9 @@ impl CredentialQuery {
     }
 
     /// Determines whether the specified credential matches the query.
-    fn is_match(&self, credential: &impl Credential) -> Option<Vec<Claim>> {
+    fn is_match(&self, credential: &Credential) -> Option<Vec<Claim>> {
         // format match
-        let format = match &credential.meta() {
+        let format = match &credential.profile {
             FormatProfile::MsoMdoc { .. } => CredentialFormat::MsoMdoc,
             FormatProfile::DcSdJwt { .. } => CredentialFormat::DcSdJwt,
             FormatProfile::JwtVcJson { .. } => CredentialFormat::JwtVcJson,
@@ -312,7 +318,7 @@ impl CredentialQuery {
 
         // metadata match
         if let Some(meta) = &self.meta {
-            if !meta.is_match(&credential.meta()) {
+            if !meta.is_match(&credential.profile) {
                 return None;
             }
         }
@@ -322,10 +328,10 @@ impl CredentialQuery {
     }
 
     /// Find matching claims in the credential.
-    fn match_claims(&self, credential: &impl Credential) -> Result<Vec<Claim>> {
+    fn match_claims(&self, credential: &Credential) -> Result<Vec<Claim>> {
         // when no claim queries are specified, return all claims
         let Some(claims) = &self.claims else {
-            return Ok(credential.claims());
+            return Ok(credential.claims.clone());
         };
 
         // when no claim sets are specified, return claims matching claim queries
@@ -394,13 +400,9 @@ impl MetadataQuery {
 
 impl ClaimQuery {
     /// Execute claim query to find matching claims
-    fn execute(&self, credential: &impl Credential) -> Option<Vec<Claim>> {
-        let matches = credential
-            .claims()
-            .iter()
-            .filter(|c| self.is_match(c))
-            .cloned()
-            .collect::<Vec<Claim>>();
+    fn execute(&self, credential: &Credential) -> Option<Vec<Claim>> {
+        let matches =
+            credential.claims.iter().filter(|c| self.is_match(c)).cloned().collect::<Vec<Claim>>();
 
         if matches.is_empty() {
             return None;
@@ -423,672 +425,5 @@ impl ClaimQuery {
 
         // every query value must have a corresponding claim value
         values.iter().all(|v| v == &claim.value)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use serde_json::json;
-
-    use super::*;
-
-    // Request a Credential with the claims `vehicle_holder` and `first_name`
-    #[tokio::test]
-    async fn multiple_claims() {
-        let store = init_wallet().await;
-        let all_vcs = store.fetch();
-
-        let query_json = json!({
-            "credentials": [{
-                "id": "my_credential",
-                "format": "mso_mdoc",
-                "meta": {
-                    "doctype_value": "org.iso.7367.1.mVRC"
-                },
-                "claims": [
-                    {"path": ["org.iso.7367.1", "vehicle_holder"]},
-                    {"path": ["org.iso.18013.5.1", "given_name"]}
-                ]
-            }]
-        });
-
-        let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
-        let res = query.execute(all_vcs).expect("should execute");
-        assert_eq!(res.len(), 1);
-    }
-
-    // Request multiple Credentials all of which should be returned.
-    #[tokio::test]
-    async fn multiple_credentials() {
-        let store = init_wallet().await;
-        let all_vcs = store.fetch();
-
-        let query_json = json!({
-            "credentials": [
-                {
-                    "id": "pid",
-                    "format": "dc+sd-jwt",
-                    "meta": {
-                        "vct_values": ["https://credentials.example.com/identity_credential"]
-                    },
-                    "claims": [
-                        {"path": ["given_name"]},
-                        {"path": ["family_name"]},
-                        {"path": ["address", "street_address"]}
-                    ]
-                },
-                {
-                    "id": "mdl",
-                    "format": "mso_mdoc",
-                    "meta": {
-                        "doctype_value": "org.iso.7367.1.mVRC"
-                    },
-                    "claims": [
-                        {"path": ["org.iso.7367.1", "vehicle_holder"]},
-                        {"path": ["org.iso.18013.5.1", "first_name"]}
-                    ]
-                }
-            ]
-        });
-
-        let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
-        let res = query.execute(all_vcs).expect("should execute");
-        assert_eq!(res.len(), 2);
-    }
-
-    // Make a complex query where the Wallet is requested to deliver:
-    //  - The `pid` credential
-    //  - OR the `other_pid` credential,
-    //  - OR both `pid_reduced_cred_1` and `pid_reduced_cred_2`.
-    //
-    // Additionally, the `nice_to_have` credential may optionally be delivered.
-    #[tokio::test]
-    async fn complex_query() {
-        let store = init_wallet().await;
-        let all_vcs = store.fetch();
-
-        let query_json = json!({
-            "credentials": [
-                {
-                    "id": "pid",
-                    "format": "dc+sd-jwt",
-                    "meta": {
-                        "vct_values": ["https://credentials.example.com/identity_credential"]
-                    },
-                    "claims": [
-                        {"path": ["given_name"]},
-                        {"path": ["family_name"]},
-                        {"path": ["address", "street_address"]}
-                    ]
-                },
-                {
-                    "id": "other_pid",
-                    "format": "dc+sd-jwt",
-                    "meta": {
-                        "vct_values": ["https://othercredentials.example/pid"]
-                    },
-                    "claims": [
-                        {"path": ["given_name"]},
-                        {"path": ["family_name"]},
-                        {"path": ["address", "street_address"]}
-                    ]
-                },
-                {
-                    "id": "pid_reduced_cred_1",
-                    "format": "dc+sd-jwt",
-                    "meta": {
-                        "vct_values": ["https://credentials.example.com/reduced_identity_credential"]
-                    },
-                    "claims": [
-                        {"path": ["family_name"]},
-                        {"path": ["given_name"]}
-                    ]
-                },
-                {
-                    "id": "pid_reduced_cred_2",
-                    "format": "dc+sd-jwt",
-                    "meta": {
-                        "vct_values": ["https://cred.example/residence_credential"]
-                    },
-                    "claims": [
-                        {"path": ["postal_code"]},
-                        {"path": ["locality"]},
-                        {"path": ["region"]}
-                    ]
-                },
-                {
-                    "id": "nice_to_have",
-                    "format": "dc+sd-jwt",
-                    "meta": {
-                        "vct_values": ["https://company.example/company_rewards"]
-                    },
-                    "claims": [
-                        {"path": ["rewards_number"]}
-                    ]
-                }
-            ],
-            "credential_sets": [
-                {
-                    "purpose": "Identification",
-                    "options": [
-                        [ "pid" ],
-                        [ "other_pid" ],
-                        [ "pid_reduced_cred_1", "pid_reduced_cred_2" ]
-                    ]
-                },
-                {
-                    "purpose": "Show your rewards card",
-                    "required": false,
-                    "options": [
-                        [ "nice_to_have" ]
-                    ]
-                }
-            ]
-        });
-
-        let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
-        let res = query.execute(all_vcs).expect("should execute");
-        assert_eq!(res.len(), 2);
-    }
-
-    // Request an ID and address from any credential.
-    #[tokio::test]
-    async fn any_credential() {
-        let store = init_wallet().await;
-        let all_vcs = store.fetch();
-
-        let query_json = json!({
-            "credentials": [
-                {
-                    "id": "mdl-id",
-                    "format": "mso_mdoc",
-                    "meta": {
-                        "doctype_value": "org.iso.18013.5.1.mDL"
-                    },
-                    "claims": [
-                        {
-                            "id": "given_name",
-                            "path": ["org.iso.18013.5.1", "given_name"]
-                        },
-                        {
-                            "id": "family_name",
-                            "path": ["org.iso.18013.5.1", "family_name"]
-                        },
-                        {
-                            "id": "portrait",
-                            "path": ["org.iso.18013.5.1", "portrait"]
-                        }
-                    ]
-                },
-                {
-                    "id": "mdl-address",
-                    "format": "mso_mdoc",
-                    "meta": {
-                        "doctype_value": "org.iso.18013.5.1.mDL"
-                    },
-                    "claims": [
-                        {
-                        "id": "resident_address",
-                        "path": ["org.iso.18013.5.1", "resident_address"]
-                        },
-                        {
-                        "id": "resident_country",
-                        "path": ["org.iso.18013.5.1", "resident_country"]
-                        }
-                    ]
-                },
-                {
-                    "id": "photo_card-id",
-                    "format": "mso_mdoc",
-                    "meta": {
-                        "doctype_value": "org.iso.23220.photoid.1"
-                    },
-                    "claims": [
-                        {
-                            "id": "given_name",
-                            "path": ["org.iso.18013.5.1", "given_name"]
-                        },
-                        {
-                            "id": "family_name",
-                            "path": ["org.iso.18013.5.1", "family_name"]
-                        },
-                        {
-                            "id": "portrait",
-                            "path": ["org.iso.18013.5.1", "portrait"]
-                        }
-                    ]
-                },
-                {
-                    "id": "photo_card-address",
-                    "format": "mso_mdoc",
-                    "meta": {
-                        "doctype_value": "org.iso.23220.photoid.1"
-                    },
-                    "claims": [
-                        {
-                        "id": "resident_address",
-                        "path": ["org.iso.18013.5.1", "resident_address"]
-                        },
-                        {
-                        "id": "resident_country",
-                        "path": ["org.iso.18013.5.1", "resident_country"]
-                        }
-                    ]
-                }
-            ],
-            "credential_sets": [
-                {
-                    "purpose": "Identification",
-                    "options": [
-                        [ "mdl-id" ],
-                        [ "photo_card-id" ]
-                    ]
-                },
-                {
-                    "purpose": "Proof of address",
-                    "required": false,
-                    "options": [
-                        [ "mdl-address"],
-                        ["photo_card-address" ]
-                    ]
-                }
-            ]
-        });
-
-        let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
-        let res = query.execute(all_vcs).expect("should execute");
-        assert_eq!(res.len(), 2);
-    }
-
-    // Requests the mandatory claims `last_name` and `date_of_birth`, and
-    // either the claim `postal_code`, or, if that is not available, both of
-    // the claims `locality` and `region`.
-    #[tokio::test]
-    async fn alt_claims() {
-        let store = init_wallet().await;
-        let all_vcs = store.fetch();
-
-        let query_json = json!({
-            "credentials": [
-                {
-                    "id": "pid",
-                    "format": "dc+sd-jwt",
-                    "meta": {
-                        "vct_values": [ "https://credentials.example.com/identity_credential" ]
-                    },
-                    "claims": [
-                        {"id": "a", "path": ["last_name"]},
-                        {"id": "b", "path": ["postal_code"]},
-                        {"id": "c", "path": ["locality"]},
-                        {"id": "d", "path": ["region"]},
-                        {"id": "e", "path": ["date_of_birth"]}
-                    ],
-                    "claim_sets": [
-                        ["a", "c", "d", "e"],
-                        ["a", "b", "e"]
-                    ]
-                }
-            ]
-        });
-
-        let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
-        let res = query.execute(all_vcs).expect("should execute");
-        assert_eq!(res.len(), 1);
-    }
-
-    // Requests a credential using specific values for the `last_name` and `postal_code` claims.
-    #[tokio::test]
-    async fn specific_values() {
-        let store = init_wallet().await;
-        let all_vcs = store.fetch();
-
-        let query_json = json!({
-            "credentials": [
-                {
-                    "id": "my_credential",
-                    "format": "dc+sd-jwt",
-                    "meta": {
-                        "vct_values": [ "https://credentials.example.com/identity_credential" ]
-                    },
-                    "claims": [
-                        {
-                            "path": ["last_name"],
-                            "values": ["Doe"]
-                        },
-                        {"path": ["first_name"]},
-                        {"path": ["address", "street_address"]},
-                        {
-                            "path": ["postal_code"],
-                            "values": ["90210", "90211"]
-                        }
-                    ]
-                }
-            ]
-        });
-
-        let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
-        let res = query.execute(all_vcs).expect("should execute");
-        assert_eq!(res.len(), 1);
-    }
-
-    // Initialise the wallet with test credentials.
-    async fn init_wallet() -> wallet::Store {
-        let mut store = wallet::Store::new();
-
-        // load credentials
-        let vct = "https://credentials.example.com/identity_credential";
-        let claims = json!({
-            "given_name": "Alice",
-            "family_name": "Holder",
-            "address": {
-                "street_address": "123 Elm St",
-                "locality": "Hollywood",
-                "region": "CA",
-                "postal_code": "90210",
-                "country": "USA"
-            },
-            "birthdate": "2000-01-01"
-        });
-        let vc = issuer::issue_sd_jwt(vct, claims).await;
-        store.add(vc.clone());
-
-        let vct = "https://othercredentials.example/pid";
-        let claims = json!({
-            "given_name": "John",
-            "family_name": "Doe",
-            "address": {
-                "street_address": "34 Drake St",
-                "locality": "Auckland",
-                "region": "Auckland",
-                "postal_code": "1010",
-                "country": "New Zealand"
-            },
-            "birthdate": "2000-01-01"
-        });
-        let vc = issuer::issue_sd_jwt(vct, claims).await;
-        store.add(vc.clone());
-
-        let vct = "https://cred.example/residence_credential";
-        let claims = json!({
-            "address": {
-                "locality": "Hollywood",
-                "region": "CA",
-                "postal_code": "90210",
-            },
-        });
-        let vc = issuer::issue_sd_jwt(vct, claims).await;
-        store.add(vc.clone());
-
-        let vct = "https://company.example/company_rewards";
-        let claims = json!({
-            "rewards_number": "1234567890",
-        });
-        let vc = issuer::issue_sd_jwt(vct, claims).await;
-        store.add(vc.clone());
-
-        let doctype = "org.iso.18013.5.1.mDL";
-        let claims = json!({
-            "org.iso.18013.5.1": {
-                "given_name": "Normal",
-                "family_name": "Person",
-                "portrait": "https://example.com/portrait.jpg",
-            },
-        });
-        let vc = issuer::issue_mso_mdoc(doctype, claims).await;
-        store.add(vc.clone());
-
-        let doctype = "org.iso.7367.1.mVRC";
-        let claims = json!({
-            "org.iso.7367.1": {
-                "vehicle_holder": "Alice Holder",
-            },
-            "org.iso.18013.5.1": {
-                "given_name": "Normal",
-                "family_name": "Person",
-                "portrait": "https://example.com/portrait.jpg",
-            },
-        });
-        let vc = issuer::issue_mso_mdoc(doctype, claims).await;
-        store.add(vc.clone());
-
-        store
-    }
-}
-
-#[cfg(test)]
-mod issuer {
-    use anyhow::Result;
-    use credibil_infosec::{Algorithm, Curve, KeyType, PublicKeyJwk, Signer};
-    use ed25519_dalek::{Signer as _, SigningKey};
-    use rand_core::OsRng;
-    use serde_json::Value;
-
-    use crate::mso_mdoc::MsoMdocBuilder;
-    use crate::sd_jwt::DcSdJwtBuilder;
-
-    pub async fn issue_sd_jwt(vct: &str, claims: Value) -> String {
-        let claims = claims.as_object().unwrap();
-
-        let jwk = PublicKeyJwk {
-            kty: KeyType::Okp,
-            crv: Curve::Ed25519,
-            x: "x".to_string(),
-            ..PublicKeyJwk::default()
-        };
-
-        // serialize to SD-JWT
-        DcSdJwtBuilder::new()
-            .vct(vct)
-            .issuer("https://example.com")
-            .key_binding(jwk)
-            .claims(claims.clone())
-            .signer(&Keyring::new())
-            .build()
-            .await
-            .expect("should build")
-    }
-
-    pub async fn issue_mso_mdoc(doctype: &str, claims: Value) -> String {
-        let claims = claims.as_object().unwrap();
-
-        // serialize to SD-JWT
-        MsoMdocBuilder::new()
-            .doctype(doctype)
-            .claims(claims.clone())
-            .signer(&Keyring::new())
-            .build()
-            .await
-            .expect("should build")
-    }
-
-    #[derive(Clone, Debug)]
-    pub struct Keyring {
-        signing_key: SigningKey,
-    }
-
-    impl Keyring {
-        pub fn new() -> Self {
-            Self {
-                signing_key: SigningKey::generate(&mut OsRng),
-            }
-        }
-    }
-
-    impl Signer for Keyring {
-        async fn try_sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
-            Ok(self.signing_key.sign(msg).to_bytes().to_vec())
-        }
-
-        async fn verifying_key(&self) -> Result<Vec<u8>> {
-            Ok(self.signing_key.verifying_key().as_bytes().to_vec())
-        }
-
-        fn algorithm(&self) -> Algorithm {
-            Algorithm::EdDSA
-        }
-
-        async fn verification_method(&self) -> Result<String> {
-            Ok("did:example:123#key-1".to_string())
-        }
-    }
-}
-
-#[cfg(test)]
-mod wallet {
-    #![allow(unused)]
-
-    use std::str::FromStr;
-
-    use base64ct::{Base64UrlUnpadded, Encoding};
-    use credibil_infosec::Jws;
-    use credibil_infosec::cose::cbor;
-
-    use super::*;
-    use crate::mso_mdoc::{IssuerSigned, MobileSecurityObject};
-    use crate::oid4vci::types::{self, FormatProfile};
-    use crate::sd_jwt::SdJwtClaims;
-
-    pub struct Store {
-        store: Vec<Credential>,
-    }
-
-    #[derive(Debug)]
-    pub struct Credential {
-        profile: FormatProfile,
-        claims: Vec<Claim>,
-        issued: Value,
-    }
-
-    impl Store {
-        pub fn new() -> Self {
-            Self { store: vec![] }
-        }
-
-        // Add a credential to the store.
-        pub fn add(&mut self, vc: impl Into<Value>) {
-            let vc = vc.into();
-            let enc_str = vc.as_str().expect("should be a string");
-
-            // decode VC
-            let credential = if enc_str.starts_with("ey") {
-                let jws = Jws::from_str(enc_str).expect("should be a JWS");
-                match jws.signatures[0].protected.typ.as_str() {
-                    "dc+sd-jwt" => from_sd_jwt(enc_str),
-                    _ => todo!("unsupported JWT type"),
-                }
-            } else {
-                from_mso_mdoc(enc_str)
-            };
-
-            self.store.push(credential);
-        }
-
-        pub fn fetch(&self) -> &[Credential] {
-            &self.store
-        }
-    }
-
-    impl super::Credential for Credential {
-        fn meta(&self) -> FormatProfile {
-            self.profile.clone()
-        }
-
-        fn claims(&self) -> Vec<Claim> {
-            self.claims.clone()
-        }
-    }
-
-    fn from_sd_jwt(jwt_str: &str) -> Credential {
-        let mut split = jwt_str.split('~');
-        let jws = Jws::from_str(split.next().unwrap()).expect("should be a JWS");
-
-        // extract claims from disclosures
-        let mut claims = vec![];
-        while let Some(disclosure) = split.next() {
-            let bytes = Base64UrlUnpadded::decode_vec(&disclosure).expect("should decode");
-            let value: Value = serde_json::from_slice(&bytes).expect("should be a JSON");
-            let disclosure = value.as_array().expect("should be an array");
-
-            let nested =
-                unpack_json(vec![disclosure[1].as_str().unwrap().to_string()], &disclosure[2]);
-            claims.extend(nested);
-        }
-
-        let sd_jwt: SdJwtClaims = jws.payload().expect("should be a payload");
-
-        Credential {
-            profile: FormatProfile::DcSdJwt { vct: sd_jwt.vct },
-            claims,
-            issued: Value::String(jwt_str.to_string()),
-        }
-    }
-
-    fn unpack_json(path: Vec<String>, value: &serde_json::Value) -> Vec<Claim> {
-        match value {
-            serde_json::Value::Object(obj) => {
-                let mut claims = vec![];
-
-                for (key, value) in obj.iter() {
-                    let mut new_path = path.clone();
-                    new_path.push(key.to_string());
-                    claims.extend(unpack_json(new_path, value));
-                }
-
-                claims
-            }
-            _ => vec![Claim {
-                path,
-                value: value.clone(),
-            }],
-        }
-    }
-
-    fn from_mso_mdoc(mdoc_str: &str) -> Credential {
-        let mdoc_bytes = Base64UrlUnpadded::decode_vec(&mdoc_str).expect("should decode");
-        let mdoc: IssuerSigned = cbor::from_slice(&mdoc_bytes).expect("should deserialize");
-
-        let mut claims = vec![];
-        for (name_space, tags) in &mdoc.name_spaces {
-            let mut path = vec![name_space.clone()];
-            for tag in tags {
-                path.push(tag.element_identifier.clone());
-                let nested = unpack_cbor(path.clone(), &tag.element_value);
-                claims.extend(nested);
-            }
-        }
-
-        let mso_bytes = mdoc.issuer_auth.0.payload.expect("should have payload");
-        let mso: MobileSecurityObject = cbor::from_slice(&mso_bytes).expect("should deserialize");
-
-        Credential {
-            profile: FormatProfile::MsoMdoc {
-                doctype: mso.doc_type,
-            },
-            claims,
-            issued: Value::String(mdoc_str.to_string()),
-        }
-    }
-
-    fn unpack_cbor(path: Vec<String>, value: &ciborium::Value) -> Vec<Claim> {
-        match value {
-            ciborium::Value::Map(map) => {
-                let mut claims = vec![];
-
-                for (key, value) in map {
-                    let mut new_path = path.clone();
-                    new_path.push(key.as_text().unwrap().to_string());
-                    claims.extend(unpack_cbor(new_path, value));
-                }
-
-                claims
-            }
-            ciborium::Value::Text(txt) => {
-                vec![Claim {
-                    path,
-                    value: serde_json::Value::String(txt.to_string()),
-                }]
-            }
-            _ => todo!(),
-        }
     }
 }

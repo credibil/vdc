@@ -79,6 +79,7 @@ impl Default for W3cVcBuilder<NoConfig, NoIssuer, NoHolder, NoClaims, NoSigner> 
 }
 
 impl W3cVcBuilder<NoConfig, NoIssuer, NoHolder, NoClaims, NoSigner> {
+    /// Create a new W3C credential builder.
     pub const fn new() -> Self {
         Self {
             config: NoConfig,

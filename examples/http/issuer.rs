@@ -2,6 +2,7 @@
 //!
 //! This example demonstrates how to use the Verifiable Credential Issuer (VCI)
 
+#[path = "../issuer/provider/mod.rs"]
 mod provider;
 
 use std::collections::HashMap;
@@ -36,10 +37,10 @@ use tower_http::trace::TraceLayer;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
 
-const ISSUER: &[u8] = include_bytes!("data/issuer.json");
-const SERVER: &[u8] = include_bytes!("data/server.json");
-const USER: &[u8] = include_bytes!("data/normal-user.json");
-const CLIENT: &[u8] = include_bytes!("data/client.json");
+const ISSUER: &[u8] = include_bytes!("../issuer/data/issuer.json");
+const SERVER: &[u8] = include_bytes!("../issuer/data/server.json");
+const USER: &[u8] = include_bytes!("../issuer/data/normal-user.json");
+const CLIENT: &[u8] = include_bytes!("../issuer/data/client.json");
 const CLIENT_ID: &str = "96bfb9cb-0513-7d64-5532-bed74c48f9ab";
 
 static AUTH_REQUESTS: LazyLock<RwLock<HashMap<String, AuthorizationRequest>>> =
