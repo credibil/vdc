@@ -65,6 +65,7 @@ pub struct MobileSecurityObject {
 
 impl MobileSecurityObject {
     /// Create a new `MobileSecurityObject` with default values.
+    #[must_use]
     pub fn new() -> Self {
         // TODO: get valid_xxx dates from issuer
         let until = Utc::now() + Duration::days(365);
@@ -82,6 +83,12 @@ impl MobileSecurityObject {
                 expected_update: None,
             },
         }
+    }
+}
+
+impl Default for MobileSecurityObject {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -184,6 +191,7 @@ pub struct DigestIdGenerator {
 
 impl DigestIdGenerator {
     /// Create a new `DigestIdGenerator`.
+    #[must_use]
     pub fn new() -> Self {
         Self { used: HashSet::new() }
     }
@@ -197,5 +205,11 @@ impl DigestIdGenerator {
                 return digest_id;
             }
         }
+    }
+}
+
+impl Default for DigestIdGenerator {
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -14,8 +14,8 @@ use serde_json::json;
 #[tokio::test]
 async fn multiple_claims() {
     // The issuer issues a credential with the claims `vehicle_holder` and `first_name`.
-    let store = init_wallet().await;
-    let all_vcs = store.fetch();
+    let wallet = mock_wallet().await;
+    let all_vcs = wallet.fetch();
 
     let query_json = json!({
         "credentials": [{
@@ -39,8 +39,8 @@ async fn multiple_claims() {
 // Request multiple Credentials all of which should be returned.
 #[tokio::test]
 async fn multiple_credentials() {
-    let store = init_wallet().await;
-    let all_vcs = store.fetch();
+    let wallet = mock_wallet().await;
+    let all_vcs = wallet.fetch();
 
     let query_json = json!({
         "credentials": [
@@ -83,8 +83,8 @@ async fn multiple_credentials() {
 // Additionally, the `nice_to_have` credential may optionally be delivered.
 #[tokio::test]
 async fn complex_query() {
-    let store = init_wallet().await;
-    let all_vcs = store.fetch();
+    let wallet = mock_wallet().await;
+    let all_vcs = wallet.fetch();
 
     let query_json = json!({
         "credentials": [
@@ -173,8 +173,8 @@ async fn complex_query() {
 // Request an ID and address from any credential.
 #[tokio::test]
 async fn any_credential() {
-    let store = init_wallet().await;
-    let all_vcs = store.fetch();
+    let wallet = mock_wallet().await;
+    let all_vcs = wallet.fetch();
 
     let query_json = json!({
         "credentials": [
@@ -284,8 +284,8 @@ async fn any_credential() {
 // the claims `locality` and `region`.
 #[tokio::test]
 async fn alt_claims() {
-    let store = init_wallet().await;
-    let all_vcs = store.fetch();
+    let wallet = mock_wallet().await;
+    let all_vcs = wallet.fetch();
 
     let query_json = json!({
         "credentials": [
@@ -318,8 +318,8 @@ async fn alt_claims() {
 // Requests a credential using specific values for the `last_name` and `postal_code` claims.
 #[tokio::test]
 async fn specific_values() {
-    let store = init_wallet().await;
-    let all_vcs = store.fetch();
+    let wallet = mock_wallet().await;
+    let all_vcs = wallet.fetch();
 
     let query_json = json!({
         "credentials": [
@@ -351,7 +351,7 @@ async fn specific_values() {
 }
 
 // Initialise the wallet with test credentials.
-async fn init_wallet() -> wallet::Store {
+async fn mock_wallet() -> wallet::Store {
     let mut store = wallet::Store::new();
 
     // load credentials

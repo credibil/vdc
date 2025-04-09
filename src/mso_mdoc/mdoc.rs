@@ -37,6 +37,7 @@ pub struct IssuerSigned {
 
 impl IssuerSigned {
     /// Create a new `IssuerSigned` with default values.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             name_spaces: BTreeMap::new(),
@@ -45,8 +46,17 @@ impl IssuerSigned {
     }
 
     /// Serialize the `IssuerSigned` object to a CBOR byte vector.
+    ///
+    /// # Errors
+    /// TODO: document errors
     pub fn to_vec(&self) -> anyhow::Result<Vec<u8>> {
         cbor::to_vec(self)
+    }
+}
+
+impl Default for IssuerSigned {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -1,4 +1,3 @@
-
 use anyhow::Result;
 use credibil_infosec::{Algorithm, Curve, KeyType, PublicKeyJwk, Signer};
 use credibil_vc::mso_mdoc::MsoMdocBuilder;

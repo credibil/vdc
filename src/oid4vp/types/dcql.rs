@@ -287,14 +287,14 @@ impl CredentialQuery {
     fn execute<'a>(&self, fetch_vcs: &'a [Credential]) -> Option<Vec<&'a Credential>> {
         if !self.multiple.unwrap_or_default() {
             // return first matching credential
-            let matched = fetch_vcs.iter().find(|vc| self.is_match(*vc).is_some())?;
+            let matched = fetch_vcs.iter().find(|vc| self.is_match(vc).is_some())?;
             return Some(vec![matched]);
         }
 
         // return all matching credentials
         let matches = fetch_vcs
             .iter()
-            .filter(|vc| self.is_match(*vc).is_some())
+            .filter(|vc| self.is_match(vc).is_some())
             .collect::<Vec<&'a Credential>>();
         if matches.is_empty() {
             return None;
