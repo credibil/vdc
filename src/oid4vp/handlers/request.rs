@@ -54,8 +54,6 @@ pub async fn request(
 
     // TODO: add wallet_nonce to request object
 
-    
-
     let jws = JwsBuilder::new()
         .typ(Type::OauthAuthzReqJwt)
         .payload(req_obj)
@@ -63,9 +61,10 @@ pub async fn request(
         .build()
         .await
         .map_err(|e| Error::ServerError(format!("issue building jwt: {e}")))?;
-    let jwt = jws.encode().map_err(|e| Error::ServerError(format!("issue encoding jwt: {e}")))?;
+    let req_obj_jwt =
+        jws.encode().map_err(|e| Error::ServerError(format!("issue encoding jwt: {e}")))?;
 
-    Ok(RequestObjectResponse::Jwt(jwt))
+    Ok(RequestObjectResponse::Jwt(req_obj_jwt))
 }
 
 impl Handler for Request<RequestObjectRequest, NoHeaders> {

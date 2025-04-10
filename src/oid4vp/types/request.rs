@@ -7,7 +7,7 @@ use base64ct::{Base64, Encoding};
 use credibil_infosec::PublicKeyJwk;
 pub use credibil_infosec::Signer;
 use credibil_infosec::jose::jwa::Algorithm;
-use credibil_infosec::jose::jwe::{ContentAlgorithm, KeyAlgorithm};
+use credibil_infosec::jose::jwe::{AlgAlgorithm, EncAlgorithm};
 use qrcode::QrCode;
 // use serde::de::{self, Deserializer, Visitor};
 // use serde::ser::{SerializeMap, Serializer};
@@ -450,11 +450,11 @@ pub struct VerifierMetadata {
 
     /// The JWE `alg` algorithm for encrypting authorization responses.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub authorization_encrypted_response_alg: Option<KeyAlgorithm>,
+    pub authorization_encrypted_response_alg: Option<AlgAlgorithm>,
 
     /// The JWE `enc` algorithm for encrypting authorization responses.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub authorization_encrypted_response_enc: Option<ContentAlgorithm>,
+    pub authorization_encrypted_response_enc: Option<EncAlgorithm>,
 }
 
 /// JSON Web Key Set (JWKS) containing the public keys of the Verifier.
@@ -588,7 +588,7 @@ mod tests {
             client_metadata: Some(VerifierMetadata::default()),
             request_uri_method: Some(RequestUriMethod::Get),
             transaction_data: Some(vec![TransactionData::default()]),
-            wallet_nonce:None,
+            wallet_nonce: None,
         };
 
         let serialized = serde_json::to_string_pretty(&request_object).unwrap();

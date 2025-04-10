@@ -66,7 +66,7 @@ insta = { version = "1.42.2", features = ["redactions", "yaml"] }
 multihash-codetable = { version = "0.1.4", features = ["sha2"] }
 oauth2 = { version = "5.0.0" }
 rand_core = "0.6.4"
-tokio = { version = "1.44.1", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.44.2", features = ["macros", "rt-multi-thread"] }
 tower-http = { version = "0.6.2", features = ["cors", "set-header", "trace"] }
 tracing-subscriber = { version = "0.3.19", features = ["env-filter", "fmt"] }
 x25519-dalek = { version = "2.0.1", features = ["static_secrets"] }
@@ -98,7 +98,7 @@ keywords = ["credentials", "decentralized", "identity", "openid", "verifiable"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/credibil/vc"
-rust-version = "1.85"
+rust-version = "1.86"
 version = "0.1.0"
 
 [workspace.lints.rust]
@@ -128,10 +128,8 @@ tracing = "0.1.41"
 uuid = { version = "1.16.0", features = ["fast-rng", "v4"] }
 
 [patch.crates-io]
-credibil-did = { path = "../did" }
-# credibil-did = { git = "https://github.com/credibil/did.git" }
-credibil-infosec = { path = "../infosec" }
-# credibil-infosec = { git = "https://github.com/credibil/infosec.git" }
+credibil-did = { git = "https://github.com/credibil/did.git" }
+credibil-infosec = { git = "https://github.com/credibil/infosec.git" }
 
 [profile.release]
 # optimize for small code size
