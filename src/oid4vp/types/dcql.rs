@@ -431,6 +431,7 @@ mod tests {
     use std::str::FromStr;
 
     use base64ct::{Base64UrlUnpadded, Encoding};
+    // use credibil_infosec::jose::jws;
     use credibil_infosec::Jws;
     use credibil_infosec::cose::cbor;
     use serde_json::json;
@@ -438,7 +439,7 @@ mod tests {
     use super::*;
     use crate::mso_mdoc::{IssuerSigned, MobileSecurityObject};
     use crate::oid4vci::types::FormatProfile;
-    use crate::sd_jwt::SdJwtClaims;
+    // use crate::sd_jwt::SdJwtClaims;
 
     // Request a Credential with the claims `vehicle_holder` and `first_name`
     #[test]
@@ -809,7 +810,8 @@ mod tests {
     fn from_sd_jwt(jws: &str) -> CredentialImpl {
         let mut split = jws.split('~');
         let jws = Jws::from_str(split.next().unwrap()).expect("should be a JWS");
-        let sd_jwt: SdJwtClaims = jws.payload().expect("should be a payload");
+        // let sd_jwt: SdJwtClaims = jws.payload().expect("should be a payload");
+        let vct = jws.payload;
 
         // extract claims from disclosures
         let mut claims = vec![];
@@ -824,7 +826,8 @@ mod tests {
         }
 
         CredentialImpl {
-            profile: FormatProfile::DcSdJwt { vct: sd_jwt.vct },
+            //profile: FormatProfile::DcSdJwt { vct: sd_jwt.vct },
+            profile: FormatProfile::DcSdJwt { vct },
             claims,
         }
     }
