@@ -16,11 +16,12 @@ use axum::routing::{get, post};
 use axum::{Form, Json, Router};
 use axum_extra::TypedHeader;
 use axum_extra::headers::Host;
+use credibil_vc::BlockStore;
 use credibil_vc::oid4vp::{
     self, AuthorzationResponse, GenerateRequest, GenerateResponse, RedirectResponse,
     RequestObjectRequest, RequestObjectResponse, endpoint,
 };
-use provider::ProviderImpl;
+use provider::{ProviderImpl, VERIFIER_ID};
 use serde::Serialize;
 use serde_json::json;
 use tokio::net::TcpListener;
@@ -29,9 +30,16 @@ use tower_http::trace::TraceLayer;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
 
+const VERIFIER: &[u8] = include_bytes!("../issuer/data/issuer.json");
+
 #[allow(clippy::needless_return)]
 #[tokio::main]
 async fn main() {
+    let provider = ProviderImpl::new();
+
+    // add some data
+    BlockStore::put(&provider, "owner", "VERIFIER", VERIFIER_ID, VERIFIER).await.unwrap();
+
     let subscriber = FmtSubscriber::builder().with_max_level(Level::DEBUG).finish();
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
@@ -44,7 +52,7 @@ async fn main() {
         .route("/post", post(response))
         .layer(TraceLayer::new_for_http())
         .layer(cors)
-        .with_state(ProviderImpl::new());
+        .with_state(provider);
 
     let listener = TcpListener::bind("0.0.0.0:8080").await.expect("should bind");
     tracing::info!("listening on {}", listener.local_addr().expect("local_addr should be set"));

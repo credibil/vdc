@@ -12,7 +12,7 @@ use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::{Expire, State};
 use crate::oid4vp::types::{
     ClientIdentifier, DeviceFlow, GenerateRequest, GenerateResponse, Query, RequestObject,
-    ResponseType,
+    ResponseMode, ResponseType,
 };
 use crate::oid4vp::{Error, Result};
 
@@ -50,7 +50,7 @@ async fn generate(
     // Response Mode "direct_post" is RECOMMENDED for cross-device flows.
     // TODO: replace hard-coded endpoints with Provider-set values
     let response = if request.device_flow == DeviceFlow::CrossDevice {
-        req_obj.response_mode = crate::oid4vp::types::ResponseMode::DirectPost {
+        req_obj.response_mode = ResponseMode::DirectPost {
             response_uri: format!("{verifier}/post"),
         };
         req_obj.client_id = ClientIdentifier::RedirectUri(format!("{verifier}/post"));
