@@ -1,6 +1,5 @@
 use std::collections::HashMap;
-// use std::fmt;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display, Formatter};
 use std::io::Cursor;
 
 use anyhow::{Result, anyhow};
@@ -16,8 +15,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::core::urlencode;
 use crate::dif_exch::PresentationDefinition;
-use crate::oid4vp::DcqlQuery;
-use crate::oid4vp::types::{Format, VpFormat};
+use crate::oid4vp::types::{DcqlQuery, Format, VpFormat, Wallet};
 
 /// The Request Object Request is created by the Verifier to generate an
 /// Authorization Request Object.
@@ -163,6 +161,10 @@ pub struct RequestObject {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub transaction_data: Option<Vec<TransactionData>>,
 
+    /// The Wallet provided nonce used to mitigate replay attacks.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wallet_nonce: Option<String>,
+
     /// State is used to maintain state between the Authorization Request and
     /// subsequent callback from the Wallet ('Authorization Server').
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -220,7 +222,8 @@ impl RequestObject {
 /// `client_id` in the process of Client identification, authentication, and
 /// authorization.
 ///
-/// If a : character is not present in the Client Identifier, the Wallet MUST treat the Client Identifier as referencing a pre-registered client.
+/// When no `:` character is present, the Wallet MUST treat the Client
+/// Identifier as referencing a pre-registered client.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ClientIdentifier {
     /// The Verifier's redirect URI (or response URI when Response Mode is
@@ -274,22 +277,57 @@ impl Default for ClientIdentifier {
     }
 }
 
+impl Display for ClientIdentifier {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::RedirectUri(uri) => write!(f, "redirect_uri:{uri}"),
+            Self::Https(uri) => write!(f, "https:{uri}"),
+            Self::Did(did) => write!(f, "did:{did}"),
+            Self::VerifierAttestation(sub) => write!(f, "verifier_attestation:{sub}"),
+            Self::X509SanDns(fqdn) => write!(f, "x509_san_dns:{fqdn}"),
+            Self::Origin(uri) => write!(f, "origin:{uri}"),
+            Self::X509Hash(hash) => write!(f, "x509_hash:{hash}"),
+            Self::Preregistered(id) => write!(f, "{id}"),
+        }
+    }
+}
+
+impl From<String> for ClientIdentifier {
+    fn from(value: String) -> Self {
+        #[allow(clippy::option_if_let_else)]
+        if let Some(uri) = value.strip_prefix("redirect_uri:") {
+            Self::RedirectUri(uri.to_string())
+        } else if let Some(uri) = value.strip_prefix("https:") {
+            Self::Https(uri.to_string())
+        } else if let Some(did) = value.strip_prefix("did:") {
+            Self::Did(did.to_string())
+        } else if let Some(sub) = value.strip_prefix("verifier_attestation:") {
+            Self::VerifierAttestation(sub.to_string())
+        } else if let Some(fqdn) = value.strip_prefix("x509_san_dns:") {
+            Self::X509SanDns(fqdn.to_string())
+        } else if let Some(uri) = value.strip_prefix("origin:") {
+            Self::Origin(uri.to_string())
+        } else if let Some(hash) = value.strip_prefix("x509_hash:") {
+            Self::X509Hash(hash.to_string())
+        } else {
+            Self::Preregistered(value)
+        }
+    }
+}
+
+impl From<&str> for ClientIdentifier {
+    fn from(value: &str) -> Self {
+        Self::from(value.to_string())
+    }
+}
+
 impl Serialize for ClientIdentifier {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        let value = match self {
-            Self::RedirectUri(uri) => &format!("redirect_uri:{uri}"),
-            Self::Https(uri) => uri,
-            Self::Did(did) => did,
-            Self::VerifierAttestation(sub) => &format!("verifier_attestation:{sub}"),
-            Self::X509SanDns(fqdn) => &format!("x509_san_dns:{fqdn}"),
-            Self::Origin(uri) => &format!("origin:{uri}"),
-            Self::X509Hash(hash) => &format!("x509_hash:{hash}"),
-            Self::Preregistered(id) => id,
-        };
-        Ok(value.serialize(serializer)?)
+        let value = self.to_string();
+        value.serialize(serializer)
     }
 }
 
@@ -299,23 +337,7 @@ impl<'a> Deserialize<'a> for ClientIdentifier {
         D: serde::Deserializer<'a>,
     {
         let value = String::deserialize(deserializer)?;
-        if value.starts_with("redirect_uri:") {
-            Ok(Self::RedirectUri(value[13..].to_string()))
-        } else if value.starts_with("https:") {
-            Ok(Self::Https(value))
-        } else if value.starts_with("did:") {
-            Ok(Self::Did(value))
-        } else if value.starts_with("verifier_attestation:") {
-            Ok(Self::VerifierAttestation(value[20..].to_string()))
-        } else if value.starts_with("x509_san_dns:") {
-            Ok(Self::X509SanDns(value[13..].to_string()))
-        } else if value.starts_with("origin:") {
-            Ok(Self::Origin(value[7..].to_string()))
-        } else if value.starts_with("x509_hash:") {
-            Ok(Self::X509Hash(value[10..].to_string()))
-        } else {
-            Ok(Self::Preregistered(value))
-        }
+        Ok(Self::from(value))
     }
 }
 
@@ -488,6 +510,15 @@ pub struct TransactionData {
 pub struct RequestObjectRequest {
     /// The unique identifier of the the previously generated Request Object.
     pub id: String,
+
+    /// Wallet metadata parameters.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wallet_metadata: Option<Wallet>,
+
+    /// Provided by the wallet to mitigate replay attacks of the Authorization
+    /// Request.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wallet_nonce: Option<String>,
 }
 
 /// The Request Object Response returns a previously generated Authorization
@@ -510,6 +541,33 @@ impl Default for RequestObjectResponse {
     }
 }
 
+/// The Request Object Claims are the claims contained in the JWT
+/// representation of the Request Object. The claims are used to
+/// serialize/deserialize the Request Object to/from a JWT.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct RequestObjectClaims {
+    /// The Verifier's `client_id`.
+    pub iss: String,
+
+    /// Equal to the issuer claim when Dynamic Discovery is performed OR
+    /// `"https://self-issued.me/v2"`, when Static Discovery metadata is used.
+    pub aud: String,
+
+    /// Remaining [`RequestObject`] attributes.
+    #[serde(flatten)]
+    pub request_object: RequestObject,
+}
+
+impl From<RequestObject> for RequestObjectClaims {
+    fn from(request_object: RequestObject) -> Self {
+        Self {
+            iss: request_object.client_id.to_string(),
+            aud: "https://self-issued.me/v2".to_string(),
+            request_object,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -520,16 +578,17 @@ mod tests {
         let request_object = RequestObject {
             response_type: ResponseType::VpToken,
             client_id: ClientIdentifier::Preregistered("client_id".to_string()),
-            nonce: "nonce".to_string(),
-            scope: Some("scope".to_string()),
+            nonce: "n-0S6_WzA2Mj".to_string(),
+            scope: Some("openid".to_string()),
             response_mode: ResponseMode::Fragment {
-                redirect_uri: "redirect_uri".to_string(),
+                redirect_uri: "https://client.example.org/cb".to_string(),
             },
-            state: Some("state".to_string()),
+            state: Some("af0ifjsldkj".to_string()),
             query: Query::Definition(PresentationDefinition::default()),
             client_metadata: Some(VerifierMetadata::default()),
             request_uri_method: Some(RequestUriMethod::Get),
             transaction_data: Some(vec![TransactionData::default()]),
+            wallet_nonce:None,
         };
 
         let serialized = serde_json::to_string_pretty(&request_object).unwrap();

@@ -14,6 +14,7 @@ use crate::oid4vp::types::{
     ClientIdentifier, DeviceFlow, GenerateRequest, GenerateResponse, Query, RequestObject,
     ResponseMode, ResponseType,
 };
+// use crate::oid4vp::types::RequestObjectClaims;
 use crate::oid4vp::{Error, Result};
 
 /// Create an Authorization Request.
@@ -46,6 +47,9 @@ async fn generate(
         client_metadata: None, //Some(verifier_meta),
         ..Default::default()
     };
+
+    // TODO: when passing by value AND URL parameter is base64 encoded RequestObject
+    // let payload: RequestObjectClaims = req_obj.into();
 
     // Response Mode "direct_post" is RECOMMENDED for cross-device flows.
     // TODO: replace hard-coded endpoints with Provider-set values

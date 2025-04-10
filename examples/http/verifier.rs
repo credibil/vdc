@@ -47,7 +47,7 @@ async fn main() {
 
     let router = Router::new()
         .route("/create_request", post(create_request))
-        .route("/request/{id}", get(request_object))
+        .route("/request/{id}", get(request))
         .route("/callback", get(response))
         .route("/post", post(response))
         .layer(TraceLayer::new_for_http())
@@ -70,11 +70,16 @@ async fn create_request(
 
 // Retrieve Authorization Request Object endpoint
 #[axum::debug_handler]
-async fn request_object(
+async fn request(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
     Path(id): Path<String>,
 ) -> HttpResult<RequestObjectResponse> {
-    let request = RequestObjectRequest { id };
+    // TODO: add wallet_metadata and wallet_nonce
+    let request = RequestObjectRequest {
+        id,
+        wallet_metadata: None, // Some(wallet_metadata),
+        wallet_nonce: None,    // Some(wallet_nonce)
+    };
     endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
 }
 

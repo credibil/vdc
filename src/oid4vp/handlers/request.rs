@@ -30,7 +30,7 @@ use crate::w3c_vc::proof::Type;
 ///
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
-pub async fn request_object(
+pub async fn request(
     verifier: &str, provider: &impl Provider, request: RequestObjectRequest,
 ) -> Result<RequestObjectResponse> {
     // retrieve request object from state
@@ -44,26 +44,37 @@ pub async fn request_object(
         return Err(Error::InvalidRequest("client ID mismatch".to_string()));
     }
 
+    // TODO: use wallet_metadata to determine supported formats, alg_values, etc.
+    // if let Some(wallet_metadata) = request.wallet_metadata {
+    //     let vp_formats = wallet_metadata.vp_formats_supported.unwrap_or_default();
+    //     if !vp_formats.is_empty() {
+    //
+    //     }
+    // }
+
+    // TODO: add wallet_nonce to request object
+
+    
+
     let jws = JwsBuilder::new()
         .typ(Type::OauthAuthzReqJwt)
-        .payload(&req_obj)
+        .payload(req_obj)
         .add_signer(provider)
         .build()
         .await
         .map_err(|e| Error::ServerError(format!("issue building jwt: {e}")))?;
-    let jwt_proof =
-        jws.encode().map_err(|e| Error::ServerError(format!("issue encoding jwt: {e}")))?;
+    let jwt = jws.encode().map_err(|e| Error::ServerError(format!("issue encoding jwt: {e}")))?;
 
-    Ok(RequestObjectResponse::Jwt(jwt_proof))
+    Ok(RequestObjectResponse::Jwt(jwt))
 }
 
 impl Handler for Request<RequestObjectRequest, NoHeaders> {
     type Response = RequestObjectResponse;
 
-    fn handle(
+    async fn handle(
         self, verifier: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
-        request_object(verifier, provider, self.body)
+    ) -> Result<impl Into<Response<Self::Response>>> {
+        request(verifier, provider, self.body).await
     }
 }
 

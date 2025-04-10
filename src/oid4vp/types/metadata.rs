@@ -66,11 +66,41 @@ pub enum Format {
 pub struct VpFormat {
     /// Algorithms supported by the format.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub alg: Option<Vec<String>>,
+    pub alg_values_supported: Option<Vec<String>>,
+}
 
-    /// Proof types supported by the format.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub proof_type: Option<Vec<String>>,
+/// /// Client Identifier schemes that may be supported by the Wallet.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ClientIdentifierScheme {
+    /// The Verifier's redirect URI (or response URI when Response Mode is
+    /// `direct_post`).
+    RedirectUri,
+
+    /// An Entity Identifier as defined in OpenID Federation.
+    Https,
+
+    /// A DID URI as defined in DID Core specification.
+    Did,
+
+    /// The `sub` claim in the Verifier attestation JWT when the Verifier
+    /// authenticates using a JWT.
+    VerifierAttestation,
+
+    /// A DNS name matching a dNSName Subject Alternative Name (SAN) entry in
+    /// the leaf certificate passed with the request.
+    X509SanDns,
+
+    /// The audience for a Credential Presentation. Only used with
+    /// presentations over the Digital Credentials API.
+    Origin,
+
+    /// A hash of the leaf certificate passed with the request.
+    X509Hash,
+
+    /// A pre-registered client ID.
+    #[default]
+    Preregistered,
 }
 
 /// OAuth 2.0 Authorization Server metadata.
@@ -81,14 +111,41 @@ pub struct Wallet {
     #[serde(flatten)]
     pub oauth: OAuthServer,
 
-    /// Specifies whether the Wallet supports the transfer of
-    /// `presentation_definition` by reference, with true indicating support.
-    /// If omitted, the default value is true.
+    /// When the Client Identifier Scheme permits signed Request Objects, the
+    /// Wallet SHOULD list supported cryptographic algorithms for securing the
+    /// Request Object.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request_object_signing_alg_values_supported: Option<Vec<String>>,
+
+    // /// Supported JWS algorithms for JARM. The none algorithm, i.e. a plain
+    // /// JWT, is forbidden. If the client doesn’t have a JWS algorithm
+    // /// registered for JARM and requests a JWT-secured response_mode the
+    // /// default algorithm is RS256.
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub authorization_signing_alg_values_supported: Option<Vec<String>>,
+    //
+    /// Supported JWE algorithms for when the Wallet requires an encrypted
+    /// Authorization Response.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authorization_encryption_alg_values_supported: Option<Vec<String>>,
+
+    /// Supported JWE methods for when the Wallet requires an encrypted
+    /// Authorization Response.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authorization_encryption_enc_values_supported: Option<Vec<String>>,
+
+    /// Supported JWE methods  for when the Wallet requires an encrypted
+    /// Authorization Response.
     pub presentation_definition_uri_supported: bool,
 
     /// A list of key value pairs, where the key identifies a Credential format
     /// supported by the Wallet.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub vp_formats_supported: Option<HashMap<String, VpFormat>>,
+
+    /// Values of Client Identifier schemes that the Wallet supports.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_id_schemes_supported: Option<Vec<ClientIdentifierScheme>>,
 }
 
 #[cfg(test)]
