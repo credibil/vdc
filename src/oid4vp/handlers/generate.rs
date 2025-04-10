@@ -11,7 +11,8 @@ use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::{Expire, State};
 use crate::oid4vp::types::{
-    DeviceFlow, GenerateRequest, GenerateResponse, Query, RequestObject, ResponseType,
+    ClientIdentifier, DeviceFlow, GenerateRequest, GenerateResponse, Query, RequestObject,
+    ResponseType,
 };
 use crate::oid4vp::{Error, Result};
 
@@ -49,18 +50,13 @@ async fn generate(
     // Response Mode "direct_post" is RECOMMENDED for cross-device flows.
     // TODO: replace hard-coded endpoints with Provider-set values
     let response = if request.device_flow == DeviceFlow::CrossDevice {
-        // req_obj.response_mode = Some("direct_post".to_string());
-        // req_obj.response_uri = Some(format!("{verifier}/post"));
-
         req_obj.response_mode = crate::oid4vp::types::ResponseMode::DirectPost {
             response_uri: format!("{verifier}/post"),
         };
-
-        req_obj.client_id = format!("{verifier}/post");
-
+        req_obj.client_id = ClientIdentifier::RedirectUri(format!("{verifier}/post"));
         GenerateResponse::Uri(format!("{verifier}/request/{uri_token}"))
     } else {
-        req_obj.client_id = format!("{verifier}/callback");
+        req_obj.client_id = ClientIdentifier::RedirectUri(format!("{verifier}/callback"));
         GenerateResponse::Object(req_obj.clone())
     };
 

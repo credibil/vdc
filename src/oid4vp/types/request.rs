@@ -121,7 +121,7 @@ pub struct RequestObject {
     pub response_type: ResponseType,
 
     /// The Verifier's `client_id`.
-    pub client_id: String,
+    pub client_id: ClientIdentifier,
 
     /// The nonce is used to securely bind the requested Verifiable
     /// Presentation(s) provided by the Wallet to the particular
@@ -211,6 +211,109 @@ impl RequestObject {
     /// serialized.
     pub fn to_querystring(&self) -> Result<String> {
         urlencode::to_string(self).map_err(|e| anyhow!("issue creating query string: {e}"))
+    }
+}
+
+/// Client Identifier schemes indicate how the Wallet should interpret the
+/// `client_id` in the process of Client identification, authentication, and
+/// authorization.
+///
+/// If a : character is not present in the Client Identifier, the Wallet MUST treat the Client Identifier as referencing a pre-registered client.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ClientIdentifier {
+    /// The Verifier's redirect URI (or response URI when Response Mode is
+    /// `direct_post`).
+    ///
+    /// For example, `https://client.example.org/cb`.
+    RedirectUri(String),
+
+    /// An Entity Identifier as defined in OpenID Federation.
+    ///
+    /// For example, `https://federation-verifier.example.com`.
+    Https(String),
+
+    /// A DID URI as defined in DID Core specification.
+    ///
+    /// For example, `did:example:123456789abcdefghi`.
+    Did(String),
+
+    /// The `sub` claim in the Verifier attestation JWT when the Verifier
+    /// authenticates using a JWT.
+    ///
+    /// For example, `verifier.example`.
+    VerifierAttestation(String),
+
+    /// A DNS name matching a dNSName Subject Alternative Name (SAN) entry in
+    /// the leaf certificate passed with the request.
+    ///
+    /// For example, `client.example.org`.
+    X509SanDns(String),
+
+    /// The audience for a Credential Presentation. Only used with
+    /// presentations over the Digital Credentials API.
+    ///
+    /// For example, `https://verifier.example.com/`
+    Origin(String),
+
+    /// A hash of the leaf certificate passed with the request.
+    ///
+    /// For example, `Uvo3HtuIxuhC92rShpgqcT3YXwrqRxWEviRiA0OZszk`.
+    X509Hash(String),
+
+    /// A pre-registered client ID.
+    ///
+    /// For example, `example-client`.
+    Preregistered(String),
+}
+
+impl Default for ClientIdentifier {
+    fn default() -> Self {
+        Self::Preregistered(String::new())
+    }
+}
+
+impl Serialize for ClientIdentifier {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let value = match self {
+            Self::RedirectUri(uri) => &format!("redirect_uri:{uri}"),
+            Self::Https(uri) => uri,
+            Self::Did(did) => did,
+            Self::VerifierAttestation(sub) => &format!("verifier_attestation:{sub}"),
+            Self::X509SanDns(fqdn) => &format!("x509_san_dns:{fqdn}"),
+            Self::Origin(uri) => &format!("origin:{uri}"),
+            Self::X509Hash(hash) => &format!("x509_hash:{hash}"),
+            Self::Preregistered(id) => id,
+        };
+        Ok(value.serialize(serializer)?)
+    }
+}
+
+impl<'a> Deserialize<'a> for ClientIdentifier {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'a>,
+    {
+        let value = String::deserialize(deserializer)?;
+        if value.starts_with("redirect_uri:") {
+            Ok(Self::RedirectUri(value[13..].to_string()))
+        } else if value.starts_with("https:") {
+            Ok(Self::Https(value))
+        } else if value.starts_with("did:") {
+            Ok(Self::Did(value))
+        } else if value.starts_with("verifier_attestation:") {
+            Ok(Self::VerifierAttestation(value[20..].to_string()))
+        } else if value.starts_with("x509_san_dns:") {
+            Ok(Self::X509SanDns(value[13..].to_string()))
+        } else if value.starts_with("origin:") {
+            Ok(Self::Origin(value[7..].to_string()))
+        } else if value.starts_with("x509_hash:") {
+            Ok(Self::X509Hash(value[10..].to_string()))
+        } else {
+            Ok(Self::Preregistered(value))
+        }
     }
 }
 
@@ -485,7 +588,6 @@ impl Default for RequestObjectResponse {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
 
     #[test]
@@ -493,7 +595,7 @@ mod tests {
     fn serialize_request_object() {
         let request_object = RequestObject {
             response_type: ResponseType::VpToken,
-            client_id: "client_id".to_string(),
+            client_id: ClientIdentifier::Preregistered("client_id".to_string()),
             nonce: "nonce".to_string(),
             scope: Some("scope".to_string()),
             response_mode: ResponseMode::Fragment {

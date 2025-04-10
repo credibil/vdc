@@ -19,7 +19,7 @@ use credibil_infosec::jose::JwsBuilder;
 use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
-use crate::oid4vp::types::{RequestObjectRequest, RequestObjectResponse};
+use crate::oid4vp::types::{ClientIdentifier, RequestObjectRequest, RequestObjectResponse};
 use crate::oid4vp::{Error, Result};
 use crate::w3c_vc::proof::Type;
 
@@ -40,7 +40,7 @@ pub async fn request_object(
     let req_obj = state.request_object;
 
     // verify client_id (perhaps should use 'verify' method?)
-    if req_obj.client_id != format!("{verifier}/post") {
+    if req_obj.client_id != ClientIdentifier::RedirectUri(format!("{verifier}/post")) {
         return Err(Error::InvalidRequest("client ID mismatch".to_string()));
     }
 
