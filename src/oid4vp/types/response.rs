@@ -26,6 +26,7 @@ pub struct AuthorzationResponse {
 /// Authorization Request.
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(untagged)]
+#[allow(clippy::large_enum_variant)]
 pub enum VpToken {
     /// The VP token is JSON-encoded and containing a Verifiable
     /// Presentation for each Credential Query. The key is the ID of the
@@ -84,7 +85,7 @@ impl AuthorzationResponse {
         if let Some(state) = &self.state {
             map.insert("state".to_string(), state.into());
         }
-        
+
         Ok(map)
     }
 
