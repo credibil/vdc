@@ -88,11 +88,11 @@ impl<T: Clone + Default + PartialEq> OneMany<T> {
         }
     }
 
-    /// Returns `true` if the quota contains an array of objects.
-    pub const fn as_many(&self) -> Option<&[T]> {
+    /// Returns the `OneMany` as a Vec regardless of contents.
+    pub fn to_vec(self) -> Vec<T> {
         match self {
-            Self::One(_) => None,
-            Self::Many(m) => Some(m.as_slice()),
+            Self::One(one) => vec![one],
+            Self::Many(many) => many,
         }
     }
 

@@ -30,7 +30,7 @@ use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
 use crate::oid4vp::types::{AuthorzationResponse, Query, RedirectResponse};
-use crate::oid4vp::{Error, Result};
+use crate::oid4vp::{Error, Result, VpToken};
 use crate::w3c_vc;
 use crate::w3c_vc::proof::{Payload, Verify};
 use crate::w3c_vc::vc::{VerifiableCredential, W3cVcClaims};
@@ -94,14 +94,18 @@ async fn verify(provider: impl Provider, request: &AuthorzationResponse) -> Resu
     };
     let saved_req = &state.request_object;
 
-    let Some(vp_token) = request.vp_token.clone() else {
+    let VpToken::DifExch {
+        vp_token,
+        presentation_submission,
+    } = request.vp_token.clone()
+    else {
         return Err(Error::InvalidRequest("vp_token not founnd".to_string()));
     };
 
     let mut vps = vec![];
 
     // check nonce matches
-    for vp_val in &vp_token {
+    for vp_val in &vp_token.to_vec() {
         let (vp, nonce) = match w3c_vc::proof::verify(Verify::Vp(vp_val), provider.clone()).await {
             Ok(Payload::Vp { vp, nonce, .. }) => (vp, nonce),
             Ok(_) => return Err(Error::InvalidRequest("proof payload is invalid".to_string())),
@@ -117,9 +121,6 @@ async fn verify(provider: impl Provider, request: &AuthorzationResponse) -> Resu
         vps.push(vp);
     }
 
-    let Some(subm) = &request.presentation_submission else {
-        return Err(Error::InvalidRequest("no presentation_submission".to_string()));
-    };
     let Query::Definition(def) = &saved_req.query else {
         return Err(Error::InvalidRequest(
             "presentation_definition_uri is unsupported".to_string(),
@@ -128,22 +129,20 @@ async fn verify(provider: impl Provider, request: &AuthorzationResponse) -> Resu
 
     // verify presentation subm matches definition
     // N.B. technically, this is redundant as it is done when looking up state
-    if subm.definition_id != def.id {
+    if presentation_submission.definition_id != def.id {
         return Err(Error::InvalidRequest("definition_ids do not match".to_string()));
     }
 
     let input_descs = &def.input_descriptors;
-    let desc_map = &subm.descriptor_map;
+    let desc_map = &presentation_submission.descriptor_map;
 
-    // convert VP Token to JSON Value for JSONPath querying
-    // N.B. because of Mapping path syntax, we need to convert single entry
-    // Vec to an req_obj
-
-    let vp_val: Value = match vps.len() {
-        1 => serde_json::to_value(vps[0].clone())
-            .map_err(|e| Error::ServerError(format!("issue converting VP to Value: {e}")))?,
-        _ => serde_json::to_value(vps)
-            .map_err(|e| Error::ServerError(format!("issue aggregating vp values: {e}")))?,
+    // convert VP Token to `Value` for JSONPath querying
+    let vp_val: Value = if vps.len() == 1 {
+        serde_json::to_value(vps[0].clone())
+            .map_err(|e| Error::ServerError(format!("issue converting VP to Value: {e}")))?
+    } else {
+        serde_json::to_value(vps)
+            .map_err(|e| Error::ServerError(format!("issue aggregating vp values: {e}")))?
     };
 
     // Verify request has been fulfilled for each credential requested:
