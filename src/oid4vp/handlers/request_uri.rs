@@ -9,7 +9,7 @@
 //! containing the `request_uri` endpoint which can be used to retrieve the
 //! saved Request Object.
 //!
-//! At the same time, the Wallet can use the call to the endpoint to 
+//! At the same time, the Wallet can use the call to the endpoint to
 //! communicate information about it's capabilities to the Verifier. This
 //! information (using `wallet_metadata`) can be used tailor the Request Object
 //! to match the Wallet's capabilities.
@@ -19,7 +19,7 @@ use credibil_infosec::jose::JwsBuilder;
 use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
-use crate::oid4vp::types::{ClientIdentifier, RequestObjectRequest, RequestObjectResponse};
+use crate::oid4vp::types::{ClientIdentifier, RequestUriRequest, RequestUriResponse};
 use crate::oid4vp::{Error, Result};
 use crate::w3c_vc::proof::Type;
 
@@ -31,8 +31,8 @@ use crate::w3c_vc::proof::Type;
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
 pub async fn request_uri(
-    verifier: &str, provider: &impl Provider, request: RequestObjectRequest,
-) -> Result<RequestObjectResponse> {
+    verifier: &str, provider: &impl Provider, request: RequestUriRequest,
+) -> Result<RequestUriResponse> {
     // retrieve request object from state
     let state = StateStore::get::<State>(provider, &request.id)
         .await
@@ -66,11 +66,11 @@ pub async fn request_uri(
     let req_obj_jwt =
         jws.encode().map_err(|e| Error::ServerError(format!("issue encoding jwt: {e}")))?;
 
-    Ok(RequestObjectResponse::Jwt(req_obj_jwt))
+    Ok(RequestUriResponse::Jwt(req_obj_jwt))
 }
 
-impl Handler for Request<RequestObjectRequest, NoHeaders> {
-    type Response = RequestObjectResponse;
+impl Handler for Request<RequestUriRequest, NoHeaders> {
+    type Response = RequestUriResponse;
 
     async fn handle(
         self, verifier: &str, provider: &impl Provider,
@@ -79,4 +79,4 @@ impl Handler for Request<RequestObjectRequest, NoHeaders> {
     }
 }
 
-impl Body for RequestObjectRequest {}
+impl Body for RequestUriRequest {}

@@ -19,7 +19,7 @@ use axum_extra::headers::Host;
 use credibil_vc::BlockStore;
 use credibil_vc::oid4vp::{
     self, AuthorzationResponse, GenerateRequest, GenerateResponse, RedirectResponse,
-    RequestObjectRequest, RequestObjectResponse, endpoint,
+    RequestUriRequest, RequestUriResponse, endpoint,
 };
 use provider::{ProviderImpl, VERIFIER_ID};
 use serde::Serialize;
@@ -73,9 +73,9 @@ async fn create_request(
 async fn request_uri(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
     Path(id): Path<String>,
-) -> HttpResult<RequestObjectResponse> {
+) -> HttpResult<RequestUriResponse> {
     // TODO: add wallet_metadata and wallet_nonce
-    let request = RequestObjectRequest {
+    let request = RequestUriRequest {
         id,
         wallet_metadata: None, // Some(wallet_metadata),
         wallet_nonce: None,    // Some(wallet_nonce)

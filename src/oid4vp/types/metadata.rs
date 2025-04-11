@@ -143,6 +143,19 @@ pub struct Wallet {
     #[serde(flatten)]
     pub oauth: OAuthServer,
 
+    /// Supported JWE methods  for when the Wallet requires an encrypted
+    /// Authorization Response.
+    pub presentation_definition_uri_supported: bool,
+
+    /// A list of key value pairs, where the key identifies a Credential format
+    /// supported by the Wallet.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vp_formats_supported: Option<HashMap<String, VpFormat>>,
+
+    /// Values of Client Identifier schemes that the Wallet supports.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_id_schemes_supported: Option<Vec<ClientIdentifierScheme>>,
+
     /// When the Client Identifier Scheme permits signed Request Objects, the
     /// Wallet SHOULD list supported cryptographic algorithms for securing the
     /// Request Object.
@@ -165,19 +178,6 @@ pub struct Wallet {
     /// Authorization Response.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub authorization_encryption_enc_values_supported: Option<Vec<EncAlgorithm>>,
-
-    /// Supported JWE methods  for when the Wallet requires an encrypted
-    /// Authorization Response.
-    pub presentation_definition_uri_supported: bool,
-
-    /// A list of key value pairs, where the key identifies a Credential format
-    /// supported by the Wallet.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub vp_formats_supported: Option<HashMap<String, VpFormat>>,
-
-    /// Values of Client Identifier schemes that the Wallet supports.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub client_id_schemes_supported: Option<Vec<ClientIdentifierScheme>>,
 }
 
 #[cfg(test)]

@@ -127,11 +127,12 @@ pub struct RequestObject {
     /// transaction. Returned in the VP's Proof.challenge parameter.
     pub nonce: String,
 
-    /// The Wallet MAY allow Verifiers to request presentation of Verifiable
-    /// Credentials by utilizing a pre-defined scope value.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub scope: Option<String>,
-
+    // TODO: feature flag for SIOPv2
+    // /// The Wallet MAY allow Verifiers to request presentation of Verifiable
+    // /// Credentials by utilizing a pre-defined scope value.
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub scope: Option<String>,
+    //
     /// Inform the Wallet of the mechanism to use when returning an
     /// Authorization Response. Defaults to "`fragment`".
     #[serde(flatten)]
@@ -382,6 +383,11 @@ pub enum Query {
     /// are set.
     #[serde(rename = "presentation_definition_uri")]
     DefinitionUri(String),
+
+    /// The Wallet MAY allow Verifiers to request presentation of Verifiable
+    /// Credentials by utilizing a pre-defined scope value.
+    #[serde(rename = "scope")]
+    Scope(String),
 }
 
 impl Default for Query {
@@ -501,7 +507,7 @@ pub struct TransactionData {
 /// Request Object. The URI has the form `client_id/request/state_key`.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
-pub struct RequestObjectRequest {
+pub struct RequestUriRequest {
     /// The unique identifier of the the previously generated Request Object.
     pub id: String,
 
@@ -519,7 +525,7 @@ pub struct RequestObjectRequest {
 /// Request Object. Will be either an object or a JWT.
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 #[allow(clippy::large_enum_variant)]
-pub enum RequestObjectResponse {
+pub enum RequestUriResponse {
     /// The repsonse contains an Authorization Request Object objet.
     #[serde(rename = "request_object")]
     Object(RequestObject),
@@ -529,7 +535,7 @@ pub enum RequestObjectResponse {
     Jwt(String),
 }
 
-impl Default for RequestObjectResponse {
+impl Default for RequestUriResponse {
     fn default() -> Self {
         Self::Object(RequestObject::default())
     }
@@ -579,7 +585,7 @@ mod tests {
             response_type: ResponseType::VpToken,
             client_id: ClientIdentifier::Preregistered("client_id".to_string()),
             nonce: "n-0S6_WzA2Mj".to_string(),
-            scope: Some("openid".to_string()),
+            // scope: Some("openid".to_string()),
             response_mode: ResponseMode::Fragment {
                 redirect_uri: "https://client.example.org/cb".to_string(),
             },
@@ -605,7 +611,7 @@ mod tests {
             response_type: ResponseType::VpToken,
             client_id: ClientIdentifier::RedirectUri("https://client.example.com".to_string()),
             nonce: "n-0S6_WzA2Mj".to_string(),
-            scope: Some("openid".to_string()),
+            // scope: Some("openid".to_string()),
             response_mode: ResponseMode::Fragment {
                 redirect_uri: "https://client.example.org/cb".to_string(),
             },

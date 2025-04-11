@@ -147,8 +147,8 @@
 //! async fn request_object(
 //!     State(endpoint): State<Arc<Endpoint<Provider>>>, TypedHeader(host): TypedHeader<Host>,
 //!     Path(client_state): Path<String>,
-//! ) -> AxResult<RequestObjectResponse> {
-//!     let req = RequestObjectRequest {
+//! ) -> AxResult<RequestUriResponse> {
+//!     let req = RequestUriRequest {
 //!         client_id: format!("http://{}", host),
 //!         state: client_state,
 //!     };

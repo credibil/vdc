@@ -10,7 +10,7 @@ use credibil_vc::oid4vp::endpoint;
 use credibil_vc::oid4vp::provider::StateStore;
 use credibil_vc::oid4vp::state::{Expire, State};
 use credibil_vc::oid4vp::types::{
-    ClientIdScheme, RequestObject, RequestObjectRequest, RequestObjectType, ResponseType, Verifier,
+    ClientIdScheme, RequestObject, RequestObjectType, RequestUriRequest, ResponseType, Verifier,
 };
 use credibil_vc::verify_key;
 use insta::assert_yaml_snapshot as assert_snapshot;
@@ -46,7 +46,7 @@ async fn request_jwt() {
     };
     StateStore::put(&provider, &state_key, &state, state.expires_at).await.expect("state exists");
 
-    let request = RequestObjectRequest {
+    let request = RequestUriRequest {
         client_id: VERIFIER_ID.to_string(),
         id: state_key.to_string(),
     };
