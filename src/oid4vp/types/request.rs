@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::io::Cursor;
 
@@ -6,16 +5,14 @@ use anyhow::{Result, anyhow};
 use base64ct::{Base64, Encoding};
 use credibil_infosec::PublicKeyJwk;
 pub use credibil_infosec::Signer;
-use credibil_infosec::jose::jwa::Algorithm;
-use credibil_infosec::jose::jwe::{AlgAlgorithm, EncAlgorithm};
+use credibil_infosec::jose::jws;
 use qrcode::QrCode;
-// use serde::de::{self, Deserializer, Visitor};
-// use serde::ser::{SerializeMap, Serializer};
 use serde::{Deserialize, Serialize};
 
 use crate::core::urlencode;
 use crate::dif_exch::PresentationDefinition;
-use crate::oid4vp::types::{DcqlQuery, Format, VpFormat, Wallet};
+use crate::oid4vp::types::{DcqlQuery, VerifierMetadata, Wallet};
+use crate::w3c_vc::proof::Type;
 
 /// The Request Object Request is created by the Verifier to generate an
 /// Authorization Request Object.
@@ -84,13 +81,15 @@ impl GenerateResponse {
     /// Returns an error if the neither the `request_object` nor `request_uri` is
     /// set or the respective field cannot be represented as a base64-encoded PNG
     /// image of a QR code.
-    pub fn to_qrcode(&self, endpoint: Option<&str>) -> anyhow::Result<String> {
+    pub async fn to_qrcode(
+        &self, endpoint: Option<&str>, signer: &impl Signer,
+    ) -> anyhow::Result<String> {
         match self {
             Self::Object(req_obj) => {
                 let Some(endpoint) = endpoint else {
                     return Err(anyhow!("no endpoint provided for object-type response"));
                 };
-                req_obj.to_qrcode(endpoint)
+                req_obj.to_qrcode(endpoint, signer).await
             }
             Self::Uri(uri) => {
                 let qr_code =
@@ -148,10 +147,6 @@ pub struct RequestObject {
 
     /// The HTTP method to be used by the Wallet when sending a request to the
     /// `request_uri` endpoint.
-    ///
-    /// The endpoint is called by the Wallet when it wants to provide the
-    /// Verifier details about its technical capabilities so it can generate a
-    /// an accceptable request.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub request_uri_method: Option<RequestUriMethod>,
 
@@ -187,9 +182,9 @@ impl RequestObject {
     ///
     /// Returns an `Error::ServerError` error if the Request Object cannot be
     /// serialized.
-    pub fn to_qrcode(&self, endpoint: &str) -> Result<String> {
-        let qs =
-            self.to_querystring().map_err(|e| anyhow!("Failed to generate querystring: {e}"))?;
+    pub async fn to_qrcode(&self, endpoint: &str, signer: &impl Signer) -> Result<String> {
+        // let qs = self.url_params().map_err(|e| anyhow!("Failed to generate querystring: {e}"))?;
+        let qs = self.url_value(signer).await?;
 
         // generate qr code
         let qr_code = QrCode::new(format!("{endpoint}{qs}"))
@@ -207,14 +202,42 @@ impl RequestObject {
         Ok(format!("data:image/png;base64,{}", Base64::encode_string(buffer.as_slice())))
     }
 
-    /// Generate a query string for the Request Object.
+    /// Generate an Authorization Request query string with URL-encoded
+    /// parameters.
     ///
     /// # Errors
     ///
     /// Returns an `Error::ServerError` error if the Request Object cannot be
     /// serialized.
-    pub fn to_querystring(&self) -> Result<String> {
+    #[deprecated(since = "0.1.0", note = "please use `url_value` instead")]
+    pub fn url_params(&self) -> Result<String> {
         urlencode::to_string(self).map_err(|e| anyhow!("issue creating query string: {e}"))
+    }
+
+    /// Generate an  Authorization Request query string with a base64 encoded
+    /// Request Object.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `Error::ServerError` error if the Request Object cannot be
+    /// serialized.
+    pub async fn url_value(&self, signer: &impl Signer) -> Result<String> {
+        let payload: RequestObjectClaims = self.clone().into();
+
+        let jws = jws::JwsBuilder::new()
+            .typ(Type::OauthAuthzReqJwt)
+            .payload(payload)
+            .add_signer(signer)
+            .build()
+            .await
+            .map_err(|e| anyhow!("issue building jwt: {e}"))?;
+        let encoded = jws.encode().map_err(|e| anyhow!("issue encoding jwt: {e}"))?;
+
+        let client_id = urlencode::to_string(&self.client_id)?;
+        // let bytes = serde_json::to_vec(&req_obj)
+        //     .map_err(|e| anyhow!("issue serializing request object: {e}"))?;
+        // let encoded = Base64UrlUnpadded::encode_string(&bytes);
+        Ok(format!("?{client_id}&request={encoded}"))
     }
 }
 
@@ -428,35 +451,6 @@ impl Default for ResponseMode {
     }
 }
 
-/// Verifier metadata when sent directly in the `RequestObject`.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct VerifierMetadata {
-    /// Public keys, such as those used by the Wallet for encryption of the
-    /// Authorization Response or where the Wallet will require the public key
-    /// of the Verifier to generate the Verifiable Presentation.
-    ///
-    /// This allows the Verifier to pass ephemeral keys specific to this
-    /// Authorization Request.
-    pub jwks: Option<String>,
-
-    /// An object defining the formats and proof types of Verifiable
-    /// Presentations and Verifiable Credentials that a Verifier supports.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub vp_formats: Option<HashMap<Format, VpFormat>>,
-
-    /// The JWS `alg` algorithm for signing authorization responses.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub authorization_signed_response_alg: Option<Algorithm>,
-
-    /// The JWE `alg` algorithm for encrypting authorization responses.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub authorization_encrypted_response_alg: Option<AlgAlgorithm>,
-
-    /// The JWE `enc` algorithm for encrypting authorization responses.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub authorization_encrypted_response_enc: Option<EncAlgorithm>,
-}
-
 /// JSON Web Key Set (JWKS) containing the public keys of the Verifier.
 pub struct Jwks {
     /// Keys in the set.
@@ -542,8 +536,10 @@ impl Default for RequestObjectResponse {
 }
 
 /// The Request Object Claims are the claims contained in the JWT
-/// representation of the Request Object. The claims are used to
-/// serialize/deserialize the Request Object to/from a JWT.
+/// representation of the Request Object.
+///
+/// The claims are used to serialize/deserialize the Request Object to/from a
+/// JWT.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct RequestObjectClaims {
     /// The Verifier's `client_id`.
@@ -570,6 +566,10 @@ impl From<RequestObject> for RequestObjectClaims {
 
 #[cfg(test)]
 mod tests {
+    use credibil_infosec::{Algorithm, Signer};
+    use ed25519_dalek::{Signer as _, SigningKey};
+    use rand_core::OsRng;
+
     use super::*;
 
     #[test]
@@ -595,7 +595,64 @@ mod tests {
         println!("{serialized}");
 
         // let deserialized: RequestObject = serde_json::from_str(&serialized).unwrap();
-
         // assert_eq!(request_object, deserialized);
+    }
+
+    #[tokio::test]
+    #[ignore = "development only"]
+    async fn url_value() {
+        let request_object = RequestObject {
+            response_type: ResponseType::VpToken,
+            client_id: ClientIdentifier::RedirectUri("https://client.example.com".to_string()),
+            nonce: "n-0S6_WzA2Mj".to_string(),
+            scope: Some("openid".to_string()),
+            response_mode: ResponseMode::Fragment {
+                redirect_uri: "https://client.example.org/cb".to_string(),
+            },
+            state: Some("af0ifjsldkj".to_string()),
+            query: Query::Definition(PresentationDefinition::default()),
+            client_metadata: Some(VerifierMetadata::default()),
+            request_uri_method: Some(RequestUriMethod::Get),
+            transaction_data: Some(vec![TransactionData::default()]),
+            wallet_nonce: None,
+        };
+
+        let serialized = request_object.url_value(&Keyring::new()).await.unwrap();
+        // let serialized = request_object.url_params().unwrap();
+        println!("{serialized}");
+
+        // let deserialized: RequestObject = serde_json::from_str(&serialized).unwrap();
+        // assert_eq!(request_object, deserialized);
+    }
+
+    #[derive(Clone, Debug)]
+    pub struct Keyring {
+        signing_key: SigningKey,
+    }
+
+    impl Keyring {
+        pub fn new() -> Self {
+            Self {
+                signing_key: SigningKey::generate(&mut OsRng),
+            }
+        }
+    }
+
+    impl Signer for Keyring {
+        async fn try_sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
+            Ok(self.signing_key.sign(msg).to_bytes().to_vec())
+        }
+
+        async fn verifying_key(&self) -> Result<Vec<u8>> {
+            Ok(self.signing_key.verifying_key().as_bytes().to_vec())
+        }
+
+        fn algorithm(&self) -> Algorithm {
+            Algorithm::EdDSA
+        }
+
+        async fn verification_method(&self) -> Result<String> {
+            Ok("did:example:123#key-1".to_string())
+        }
     }
 }

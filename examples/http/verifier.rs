@@ -47,7 +47,7 @@ async fn main() {
 
     let router = Router::new()
         .route("/create_request", post(create_request))
-        .route("/request/{id}", get(request))
+        .route("/request/{id}", get(request_uri))
         .route("/callback", get(response))
         .route("/post", post(response))
         .layer(TraceLayer::new_for_http())
@@ -70,7 +70,7 @@ async fn create_request(
 
 // Retrieve Authorization Request Object endpoint
 #[axum::debug_handler]
-async fn request(
+async fn request_uri(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
     Path(id): Path<String>,
 ) -> HttpResult<RequestObjectResponse> {

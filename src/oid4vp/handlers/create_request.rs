@@ -8,13 +8,12 @@ use chrono::Utc;
 
 use crate::core::generate;
 use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
-use crate::oid4vp::provider::{Provider, StateStore};
+use crate::oid4vp::provider::{Metadata, Provider, StateStore};
 use crate::oid4vp::state::{Expire, State};
 use crate::oid4vp::types::{
     ClientIdentifier, DeviceFlow, GenerateRequest, GenerateResponse, Query, RequestObject,
     ResponseMode, ResponseType,
 };
-// use crate::oid4vp::types::RequestObjectClaims;
 use crate::oid4vp::{Error, Result};
 
 /// Create an Authorization Request.
@@ -23,36 +22,26 @@ use crate::oid4vp::{Error, Result};
 ///
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
-async fn generate(
+async fn create_request(
     verifier: &str, provider: &impl Provider, request: GenerateRequest,
 ) -> Result<GenerateResponse> {
-    // TODO: build dynamically...
-    // let fmt = ClaimFormat {
-    //     alg: Some(vec![Algorithm::EdDSA.to_string()]),
-    //     proof_type: None,
-    // };
-
     let uri_token = generate::uri_token();
 
-    // get client metadata
-    // let Ok(verifier_meta) = Metadata::verifier(provider, verifier).await else {
-    //     return Err(Error::InvalidRequest("invalid client_id".to_string()));
-    // };
+    let Ok(metadata) = Metadata::verifier(provider, verifier).await else {
+        return Err(Error::InvalidRequest("invalid client_id".to_string()));
+    };
 
     let mut req_obj = RequestObject {
         response_type: ResponseType::VpToken,
         state: Some(uri_token.clone()),
         nonce: generate::nonce(),
         query: Query::Dcql(request.query),
-        client_metadata: None, //Some(verifier_meta),
+        client_metadata: Some(metadata.client_metadata),
         ..Default::default()
     };
 
-    // TODO: when passing by value AND URL parameter is base64 encoded RequestObject
-    // let payload: RequestObjectClaims = req_obj.into();
-
     // Response Mode "direct_post" is RECOMMENDED for cross-device flows.
-    // TODO: replace hard-coded endpoints with Provider-set values
+    // FIXME: replace hard-coded endpoints with Provider-set values
     let response = if request.device_flow == DeviceFlow::CrossDevice {
         req_obj.response_mode = ResponseMode::DirectPost {
             response_uri: format!("{verifier}/post"),
@@ -83,7 +72,7 @@ impl Handler for Request<GenerateRequest, NoHeaders> {
     fn handle(
         self, verifier: &str, provider: &impl Provider,
     ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
-        generate(verifier, provider, self.body)
+        create_request(verifier, provider, self.body)
     }
 }
 

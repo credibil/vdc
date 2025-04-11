@@ -490,66 +490,6 @@ impl fmt::Display for FormatProfile {
     }
 }
 
-// impl PartialEq for FormatProfile {
-//     fn eq(&self, other: &Self) -> bool {
-//         match self {
-//             Self::JwtVcJson {
-//                 credential_definition,
-//             } => {
-//                 if let Self::JwtVcJson {
-//                     credential_definition: other_credential_definition,
-//                 } = other
-//                 {
-//                     credential_definition == other_credential_definition
-//                 } else {
-//                     false
-//                 }
-//             }
-//             Self::LdpVc {
-//                 credential_definition,
-//             } => {
-//                 if let Self::LdpVc {
-//                     credential_definition: other_credential_definition,
-//                 } = other
-//                 {
-//                     credential_definition == other_credential_definition
-//                 } else {
-//                     false
-//                 }
-//             }
-//             Self::JwtVcJsonLd {
-//                 credential_definition,
-//             } => {
-//                 if let Self::JwtVcJsonLd {
-//                     credential_definition: other_credential_definition,
-//                 } = other
-//                 {
-//                     credential_definition == other_credential_definition
-//                 } else {
-//                     false
-//                 }
-//             }
-//             Self::MsoMdoc { doctype } => {
-//                 if let Self::MsoMdoc {
-//                     doctype: other_doctype,
-//                 } = other
-//                 {
-//                     doctype == other_doctype
-//                 } else {
-//                     false
-//                 }
-//             }
-//             Self::DcSdJwt { vct } => {
-//                 if let Self::DcSdJwt { vct: other_vct } = other {
-//                     vct == other_vct
-//                 } else {
-//                     false
-//                 }
-//             }
-//         }
-//     }
-// }
-
 /// Claim entry. Either a set of nested `Claim`s or a single `ClaimDisplay`.
 #[derive(Clone, Default, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct ClaimsDescription {

@@ -3,11 +3,14 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 
+use credibil_infosec::Algorithm;
+use credibil_infosec::jose::EncAlgorithm;
+use credibil_infosec::jose::jwe::AlgAlgorithm;
 use serde::{Deserialize, Serialize};
 
 use crate::oauth::{OAuthClient, OAuthServer};
 
-/// Request to retrieve the Verifier's  client metadata.
+/// Request to retrieve the Verifier's client metadata.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct IssuerRequest {
     /// The Verifier's Client Identifier for which the configuration is to be
@@ -34,14 +37,43 @@ pub struct IssuerResponse {
 /// Verifier is the Client.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Verifier {
+    /// The subset of Verifier metadata sent to the Wallet in the
+    /// Authorization Request Object.
+    #[serde(flatten)]
+    pub client_metadata: VerifierMetadata,
+
     /// OAuth 2.0 Client
     #[serde(flatten)]
     pub oauth: OAuthClient,
+}
+
+/// Verifier metadata when sent directly in the `RequestObject`.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+pub struct VerifierMetadata {
+    /// Public keys, such as those used by the Wallet for encryption of the
+    /// Authorization Response or where the Wallet will require the public key
+    /// of the Verifier to generate the Verifiable Presentation.
+    ///
+    /// This allows the Verifier to pass ephemeral keys specific to this
+    /// Authorization Request.
+    pub jwks: Option<String>,
 
     /// An object defining the formats and proof types of Verifiable
     /// Presentations and Verifiable Credentials that a Verifier supports.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub vp_formats: Option<HashMap<Format, VpFormat>>,
+
+    /// The JWS `alg` algorithm for signing authorization responses.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authorization_signed_response_alg: Option<Algorithm>,
+
+    /// The JWE `alg` algorithm for encrypting authorization responses.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authorization_encrypted_response_alg: Option<AlgAlgorithm>,
+
+    /// The JWE `enc` algorithm for encrypting authorization responses.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authorization_encrypted_response_enc: Option<EncAlgorithm>,
 }
 
 /// The `OpenID4VCI` specification defines commonly used [Credential Format
@@ -115,7 +147,7 @@ pub struct Wallet {
     /// Wallet SHOULD list supported cryptographic algorithms for securing the
     /// Request Object.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub request_object_signing_alg_values_supported: Option<Vec<String>>,
+    pub request_object_signing_alg_values_supported: Option<Vec<Algorithm>>,
 
     // /// Supported JWS algorithms for JARM. The none algorithm, i.e. a plain
     // /// JWT, is forbidden. If the client doesn’t have a JWS algorithm
@@ -127,12 +159,12 @@ pub struct Wallet {
     /// Supported JWE algorithms for when the Wallet requires an encrypted
     /// Authorization Response.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub authorization_encryption_alg_values_supported: Option<Vec<String>>,
+    pub authorization_encryption_alg_values_supported: Option<Vec<AlgAlgorithm>>,
 
     /// Supported JWE methods for when the Wallet requires an encrypted
     /// Authorization Response.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub authorization_encryption_enc_values_supported: Option<Vec<String>>,
+    pub authorization_encryption_enc_values_supported: Option<Vec<EncAlgorithm>>,
 
     /// Supported JWE methods  for when the Wallet requires an encrypted
     /// Authorization Response.
