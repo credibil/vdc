@@ -5,27 +5,10 @@
 //! - <https://identity.foundation/jwt-vc-presentation-profile>
 //! - <https://identity.foundation/claim-format-registry>
 
-pub mod matcher;
-
 use std::collections::HashMap;
 use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
-
-/// Used to provide `serde`-compatible set of Claims  serialized as JSON (as
-/// [`serde_json::Value`]).
-///
-/// Per the Presentation Exchange specification, this trait
-/// can be implemented for a variety of `Claim` formats.
-pub trait Claims {
-    /// Serialize Claims as a JSON object.
-    ///
-    /// # Errors
-    ///
-    /// The implementation should return an error if the Claims cannot be
-    /// serialized to JSON.
-    fn to_json(&self) -> anyhow::Result<serde_json::Value>;
-}
 
 /// A Presentation Definition is used by a Verifier to articulate proofs
 /// required. The proofs help the Verifier decide how to interact with the

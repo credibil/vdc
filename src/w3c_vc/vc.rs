@@ -124,27 +124,9 @@ pub struct VerifiableCredential {
 
 impl VerifiableCredential {
     /// Returns a new [`VerifiableCredential`] configured with defaults.
-    ///
-    /// # Errors
-    ///
-    /// Fails with `Error::ServerError` if any of the VC's mandatory fields are
-    /// not set.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
-    }
-
-    // /// Returns a new [`VcBuilder`], which can be used to build a
-    // /// [`VerifiableCredential`]
-    // #[must_use]
-    // pub fn builder() -> VcBuilder {
-    //     VcBuilder::new()
-    // }
-}
-
-impl crate::dif_exch::Claims for VerifiableCredential {
-    fn to_json(&self) -> anyhow::Result<serde_json::Value> {
-        serde_json::to_value(self).map_err(Into::into)
     }
 }
 

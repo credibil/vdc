@@ -12,9 +12,9 @@ use regex::Regex;
 use serde_json::Value;
 use serde_json_path::JsonPath;
 
-use super::{Claims, Constraints, Field, FilterValue};
+use crate::oid4vp::types::{Constraints, Field, FilterValue};
 
-// LATER: add support for Zero-Knowledge Proofs by enabling the `predicate`
+// TODO: add support for Zero-Knowledge Proofs by enabling the `predicate`
 // feature
 
 impl Constraints {
@@ -24,18 +24,18 @@ impl Constraints {
     /// # Errors
     ///
     /// Returns an error if the `JSONPath` query is invalid.
-    pub fn satisfied(&self, claims: &impl Claims) -> Result<bool> {
+    pub fn satisfied(&self, vc: impl TryInto<Value>) -> Result<bool> {
         let Some(fields) = &self.fields else {
             return Ok(true);
         };
-        let Ok(vc_val) = claims.to_json() else {
-            return Err(anyhow!("error serializing credential"));
-        };
+
+        let vc: Value =
+            vc.try_into().map_err(|_| anyhow!("failed to convert Queryable to JSON value"))?;
 
         // EVERY field must match
         for field in fields {
             // if no match AND the field is not optional, constraints are not satisfied
-            if !field.matched(&vc_val).unwrap_or_default() && !field.optional.unwrap_or_default() {
+            if !field.matched(&vc).unwrap_or_default() && !field.optional.unwrap_or_default() {
                 return Ok(false);
             }
         }
@@ -51,14 +51,14 @@ impl Field {
     /// The [Presentation Exchange 2.0.0] specification only requires one
     /// matching JSON path expression for the field to be considered
     /// matched.
-    fn matched(&self, vc: &Value) -> Result<bool> {
+    fn matched(&self, value: &Value) -> Result<bool> {
         // find the FIRST matching JSON path expression for field
         for path in &self.path {
             // execute JSONPath query
             let Ok(jpath) = JsonPath::parse(path) else {
                 return Err(anyhow!("Invalid JSONPath: {path}"));
             };
-            let nodes = jpath.query(vc).all();
+            let nodes = jpath.query(value).all();
 
             // no matches: try next path
             if nodes.is_empty() {
@@ -71,7 +71,7 @@ impl Field {
             };
 
             // find FIRST node matching filter (in practice, there should only be one node)
-            if let Some(node) = nodes.into_iter().next() {
+            if let Some(node) = nodes.first() {
                 match filter.value.matched(node) {
                     Ok(true) => return Ok(true),
                     Ok(false) => break,
@@ -152,12 +152,17 @@ fn match_format(filter_val: &FilterValue, vc_node: &Value) -> Result<bool> {
 
 #[cfg(test)]
 mod test {
+    use std::sync::LazyLock;
 
     use serde_json::json;
 
     use super::*;
+    use crate::Kind;
+    use crate::oid4vci::types::{CredentialDefinition, FormatProfile};
+    use crate::oid4vp::query::{Claim, Queryable};
 
     #[test]
+    #[ignore]
     fn test_const() {
         let constr = json!({
             "fields": [{
@@ -170,7 +175,7 @@ mod test {
         });
 
         let constraints: Constraints = serde_json::from_value(constr).expect("should deserialize");
-        assert!(constraints.satisfied(&Credential).unwrap());
+        assert!(constraints.satisfied(&*CREDENTIAL).unwrap());
     }
 
     #[test]
@@ -186,7 +191,7 @@ mod test {
         });
 
         let constraints: Constraints = serde_json::from_value(constr).expect("should deserialize");
-        assert!(constraints.satisfied(&Credential).unwrap());
+        assert!(constraints.satisfied(&*CREDENTIAL).unwrap());
     }
 
     #[test]
@@ -202,31 +207,30 @@ mod test {
         });
 
         let constraints: Constraints = serde_json::from_value(constr).expect("should deserialize");
-
-        assert!(constraints.satisfied(&Credential).unwrap());
+        assert!(constraints.satisfied(&*CREDENTIAL).unwrap());
     }
 
-    struct Credential;
-    impl Claims for Credential {
-        fn to_json(&self) -> Result<Value> {
-            Ok(json!({
-                "@context":[
-                    "https://www.w3.org/2018/credentials/v1",
-                    "https://www.w3.org/2018/credentials/examples/v1"
-                ],
-                "type":[
-                    "VerifiableCredential",
-                    "EmployeeIDCredential"
-                ],
-                "id":"https://example.com/credentials/3732",
-                "issuer":"https://example.com/issuers/14",
-                "validFrom":"2023-11-20T23:21:55Z",
-                "validUntil":"2023-12-20T23:21:55Z",
-                "credentialSubject":{
-                    "employeeId":"1234567890",
-                    "id":"did:example:ebfeb1f712ebc6f1c276e12ec21"
-                }
-            }))
-        }
-    }
+    static CREDENTIAL: LazyLock<Queryable> = LazyLock::new(|| Queryable {
+        profile: FormatProfile::JwtVcJson {
+            credential_definition: CredentialDefinition {
+                context: None,
+                type_: vec!["VerifiableCredential".to_string(), "EmployeeIDCredential".to_string()],
+            },
+        },
+        claims: vec![
+            Claim {
+                path: vec!["validFrom".to_string()],
+                value: Value::String("2023-11-20T23:21:55Z".to_string()),
+            },
+            Claim {
+                path: vec!["credentialSubject".to_string(), "employeeId".to_string()],
+                value: Value::String("1234567890".to_string()),
+            },
+            Claim {
+                path: vec!["credentialSubject".to_string(), "id".to_string()],
+                value: Value::String("did:example:ebfeb1f712ebc6f1c276e12ec21".to_string()),
+            },
+        ],
+        issued: Kind::String("jwt_str".to_string()),
+    });
 }

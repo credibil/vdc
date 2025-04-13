@@ -10,8 +10,7 @@ use qrcode::QrCode;
 use serde::{Deserialize, Serialize};
 
 use crate::core::urlencode;
-use crate::dif_exch::PresentationDefinition;
-use crate::oid4vp::types::{DcqlQuery, VerifierMetadata, Wallet};
+use crate::oid4vp::types::{DcqlQuery, PresentationDefinition, VerifierMetadata, Wallet};
 use crate::w3c_vc::proof::Type;
 
 /// The Request Object Request is created by the Verifier to generate an

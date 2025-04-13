@@ -8,7 +8,9 @@ mod wallet;
 use std::sync::LazyLock;
 
 use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
+use credibil_vc::Kind;
 use credibil_vc::mso_mdoc::MsoMdocBuilder;
+use credibil_vc::oid4vci::types::Credential;
 use credibil_vc::oid4vp::types::DcqlQuery;
 use credibil_vc::sd_jwt::DcSdJwtBuilder;
 use futures::executor::block_on;
@@ -370,7 +372,7 @@ async fn load_wallet() -> wallet::Store {
         "birthdate": "2000-01-01"
     });
     let vc = sd_jwt(vct, claims.as_object().unwrap().clone()).await;
-    store.add(vc.clone());
+    store.add(vc);
 
     let vct = "https://othercredentials.example/pid";
     let claims = json!({
@@ -386,7 +388,7 @@ async fn load_wallet() -> wallet::Store {
         "birthdate": "2000-01-01"
     });
     let vc = sd_jwt(vct, claims.as_object().unwrap().clone()).await;
-    store.add(vc.clone());
+    store.add(vc);
 
     let vct = "https://cred.example/residence_credential";
     let claims = json!({
@@ -397,14 +399,14 @@ async fn load_wallet() -> wallet::Store {
         },
     });
     let vc = sd_jwt(vct, claims.as_object().unwrap().clone()).await;
-    store.add(vc.clone());
+    store.add(vc);
 
     let vct = "https://company.example/company_rewards";
     let claims = json!({
         "rewards_number": "1234567890",
     });
     let vc = sd_jwt(vct, claims.as_object().unwrap().clone()).await;
-    store.add(vc.clone());
+    store.add(vc);
 
     let doctype = "org.iso.18013.5.1.mDL";
     let claims = json!({
@@ -415,7 +417,7 @@ async fn load_wallet() -> wallet::Store {
         },
     });
     let vc = mso_mdoc(doctype, claims.as_object().unwrap().clone()).await;
-    store.add(vc.clone());
+    store.add(vc);
 
     let doctype = "org.iso.7367.1.mVRC";
     let claims = json!({
@@ -429,13 +431,13 @@ async fn load_wallet() -> wallet::Store {
         },
     });
     let vc = mso_mdoc(doctype, claims.as_object().unwrap().clone()).await;
-    store.add(vc.clone());
+    store.add(vc);
 
     store
 }
 
-async fn sd_jwt(vct: &str, claims: Map<String, Value>) -> String {
-    DcSdJwtBuilder::new()
+async fn sd_jwt(vct: &str, claims: Map<String, Value>) -> Credential {
+    let dc = DcSdJwtBuilder::new()
         .vct(vct)
         .claims(claims)
         .issuer("https://example.com")
@@ -448,15 +450,23 @@ async fn sd_jwt(vct: &str, claims: Map<String, Value>) -> String {
         .signer(&Keyring::new())
         .build()
         .await
-        .expect("should build")
+        .expect("should build");
+
+    Credential {
+        credential: Kind::String(dc),
+    }
 }
 
-async fn mso_mdoc(doctype: &str, claims: Map<String, Value>) -> String {
-    MsoMdocBuilder::new()
+async fn mso_mdoc(doctype: &str, claims: Map<String, Value>) -> Credential {
+    let mdoc = MsoMdocBuilder::new()
         .doctype(doctype)
         .claims(claims)
         .signer(&Keyring::new())
         .build()
         .await
-        .expect("should build")
+        .expect("should build");
+
+    Credential {
+        credential: Kind::String(mdoc),
+    }
 }

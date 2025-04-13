@@ -4,7 +4,7 @@ use std::fmt::Debug;
 use serde::{Deserialize, Serialize};
 
 use crate::core::{Kind, OneMany};
-use crate::dif_exch::PresentationSubmission;
+use crate::oid4vp::types::PresentationSubmission;
 use crate::w3c_vc::vp::VerifiablePresentation;
 
 /// Authorization Response request object is used by Wallets to send a VP Token

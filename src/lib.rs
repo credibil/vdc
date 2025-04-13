@@ -17,7 +17,6 @@ pub mod oid4vci;
 pub mod oid4vp;
 
 pub mod core;
-pub mod dif_exch;
 pub mod mso_mdoc;
 pub mod oauth;
 pub mod sd_jwt;

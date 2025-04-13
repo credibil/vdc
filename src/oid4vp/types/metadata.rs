@@ -185,8 +185,9 @@ mod tests {
     use insta::assert_yaml_snapshot as assert_snapshot;
 
     use crate::core::{Kind, OneMany};
-    use crate::dif_exch::{DescriptorMap, PathNested, PresentationSubmission};
-    use crate::oid4vp::types::{AuthorzationResponse, VpToken};
+    use crate::oid4vp::types::{
+        AuthorzationResponse, DescriptorMap, PathNested, PresentationSubmission, VpToken,
+    };
 
     #[test]
     fn response_request_form_encode() {

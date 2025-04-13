@@ -177,42 +177,42 @@ async fn verify(provider: impl Provider, request: &AuthorzationResponse) -> Resu
             )));
         };
 
-        let vc: VerifiableCredential = match vc_node {
+        // FIXME: this should resolve to Queryable
+        let _queryable: VerifiableCredential = match vc_node {
             Value::String(token) => {
                 let resolver = async |kid: String| did_jwk(&kid, &provider).await;
                 let jwt: Jwt<W3cVcClaims> =
                     jws::decode(token, resolver).await.expect("should decode");
                 jwt.claims.vc
             }
-            Value::Object(_) => {
-                let vc: VerifiableCredential = serde_json::from_value(vc_node.clone())
-                    .map_err(|e| Error::ServerError(format!("issue deserializing vc: {e}")))?;
-                vc
-            }
+            Value::Object(_) => serde_json::from_value(vc_node.clone())
+                .map_err(|e| Error::ServerError(format!("issue deserializing vc: {e}")))?,
             _ => return Err(Error::InvalidRequest(format!("unexpected VC format: {vc_node}"))),
         };
 
         // verify input constraints have been met
-        if !input
-            .constraints
-            .satisfied(&vc)
-            .map_err(|e| Error::ServerError(format!("issue matching constraints: {e}")))?
-        {
-            return Err(Error::InvalidRequest("input constraints not satisfied".to_string()));
-        }
+        // FIXME: use actual VC
+        // if !input
+        //     .constraints
+        //     .satisfied(queryable)
+        //     .map_err(|e| Error::ServerError(format!("issue matching constraints: {e}")))?
+        // {
+        //     return Err(Error::InvalidRequest("input constraints not satisfied".to_string()));
+        // }
 
+        // FIXME: check validity
         // check VC is valid (hasn't expired, been revoked, etc)
-        if vc.valid_until.is_some_and(|exp| exp < chrono::Utc::now()) {
-            return Err(Error::InvalidRequest("credential has expired".to_string()));
-        }
+        // if vc.valid_until.is_some_and(|exp| exp < chrono::Utc::now()) {
+        //     return Err(Error::InvalidRequest("credential has expired".to_string()));
+        // }
 
-        // TODO: look up credential status using status.id
+        // FIXME: look up credential status using status.id
         // if let Some(_status) = &vc.credential_status {
-        //     // TODO: look up credential status using status.id
+        //     // FIXME: look up credential status using status.id
         // }
     }
 
-    // TODO: perform Verifier policy checks
+    // FIXME: perform Verifier policy checks
     // Checks based on the set of trust requirements such as trust frameworks
     // it belongs to (i.e., revocation checks), if applicable.
 

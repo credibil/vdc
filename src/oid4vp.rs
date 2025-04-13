@@ -164,6 +164,7 @@
 pub mod client;
 pub mod endpoint;
 pub mod provider;
+pub mod query;
 pub mod types;
 
 mod error;
@@ -176,10 +177,10 @@ pub mod proof {
 }
 
 // Re-export types
-pub use crate::dif_exch::{
-    Claims, Constraints, DescriptorMap, Field, Filter, FilterValue, InputDescriptor, PathNested,
-    PresentationSubmission,
-};
+// pub use crate::dif_exch::{
+//     Constraints, DescriptorMap, Field, Filter, FilterValue, InputDescriptor, PathNested,
+//     PresentationSubmission,
+// };
 pub use crate::oid4vp::types::*;
 pub use crate::w3c_vc::vp::VerifiablePresentation;
 
