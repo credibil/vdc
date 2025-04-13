@@ -57,6 +57,64 @@ impl TryFrom<Credential> for Queryable {
     }
 }
 
+impl TryFrom<&Value> for Queryable {
+    type Error = anyhow::Error;
+
+    fn try_from(value: &Value) -> Result<Self> {
+        match value {
+            Value::String(encoded) => {
+                if encoded.starts_with("ey") {
+                    from_json(encoded)
+                } else {
+                    from_cbor(encoded)
+                }
+            }
+            _ => return Err(anyhow!("unexpected VC format: {value}")),
+        }
+    }
+}
+
+impl TryFrom<&Queryable> for Value {
+    type Error = anyhow::Error;
+
+    fn try_from(queryable: &Queryable) -> Result<Self> {
+        let mut value = match &queryable.profile {
+            FormatProfile::JwtVcJson {
+                credential_definition,
+            } => {
+                json!({
+                    "@context": credential_definition.context,
+                    "type": credential_definition.type_,
+                })
+            }
+            FormatProfile::DcSdJwt { vct } => json!({"vct": vct}),
+            FormatProfile::MsoMdoc { doctype } => json!({"doctype": doctype}),
+            _ => {
+                return Err(anyhow!("unsupported profile"));
+            }
+        };
+
+        let mut default = Map::new();
+
+        for claim in &queryable.claims {
+            let mut claims_map = value.as_object_mut().unwrap_or(&mut default);
+
+            for (i, key) in claim.path.iter().enumerate() {
+                if i == claim.path.len() - 1 {
+                    claims_map.insert(key.to_string(), claim.value.clone());
+                } else {
+                    if !claims_map.contains_key(key) {
+                        claims_map.insert(key.to_string(), json!({}));
+                    }
+                    claims_map = claims_map.get_mut(key).unwrap().as_object_mut().unwrap();
+                }
+            }
+        }
+
+        Ok(value)
+    }
+}
+
 fn from_json(json_enc: &str) -> Result<Queryable> {
     let mut split = json_enc.split('~');
     let Some(jwt_enc) = split.next() else {
@@ -198,48 +256,6 @@ fn unpack_cbor(path: Vec<String>, value: &ciborium::Value) -> Vec<Claim> {
             }]
         }
         _ => todo!(),
-    }
-}
-
-//
-impl TryFrom<&Queryable> for Value {
-    type Error = anyhow::Error;
-
-    fn try_from(queryable: &Queryable) -> Result<Self> {
-        let mut value = match &queryable.profile {
-            FormatProfile::JwtVcJson {
-                credential_definition,
-            } => {
-                json!({
-                    "@context": credential_definition.context,
-                    "type": credential_definition.type_,
-                })
-            }
-            FormatProfile::DcSdJwt { vct } => json!({"vct": vct}),
-            FormatProfile::MsoMdoc { doctype } => json!({"doctype": doctype}),
-            _ => {
-                return Err(anyhow!("unsupported profile"));
-            }
-        };
-
-        let mut default = Map::new();
-
-        for claim in &queryable.claims {
-            let mut claims_map = value.as_object_mut().unwrap_or(&mut default);
-
-            for (i, key) in claim.path.iter().enumerate() {
-                if i == claim.path.len() - 1 {
-                    claims_map.insert(key.to_string(), claim.value.clone());
-                } else {
-                    if !claims_map.contains_key(key) {
-                        claims_map.insert(key.to_string(), Map::new().into());
-                    }
-                    claims_map = claims_map.get_mut(key).unwrap().as_object_mut().unwrap();
-                }
-            }
-        }
-
-        Ok(value)
     }
 }
 

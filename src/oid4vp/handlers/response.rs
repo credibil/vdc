@@ -21,11 +21,9 @@
 //! If the Response Type value is "code" (Authorization Code Grant Type), the VP
 //! Token is provided in the Token Response.
 
-use credibil_infosec::jose::{Jwt, jws};
 use serde_json::Value;
 use serde_json_path::JsonPath;
 
-use crate::core::did_jwk;
 use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
@@ -33,7 +31,6 @@ use crate::oid4vp::types::{AuthorzationResponse, Query, RedirectResponse};
 use crate::oid4vp::{Error, Result, VpToken};
 use crate::w3c_vc;
 use crate::w3c_vc::proof::{Payload, Verify};
-use crate::w3c_vc::vc::{VerifiableCredential, W3cVcClaims};
 
 /// Endpoint for the Wallet to respond Verifier's Authorization Request.
 ///
@@ -112,9 +109,6 @@ async fn verify(provider: impl Provider, request: &AuthorzationResponse) -> Resu
             Err(e) => return Err(Error::ServerError(format!("issue verifying VP proof: {e}"))),
         };
 
-        // else {
-        //     return Err(Error::InvalidRequest("invalid vp_token".to_string()));
-        // };
         if nonce != saved_req.nonce {
             return Err(Error::InvalidRequest("nonce does not match".to_string()));
         }
@@ -177,28 +171,14 @@ async fn verify(provider: impl Provider, request: &AuthorzationResponse) -> Resu
             )));
         };
 
-        // FIXME: this should resolve to Queryable
-        let _queryable: VerifiableCredential = match vc_node {
-            Value::String(token) => {
-                let resolver = async |kid: String| did_jwk(&kid, &provider).await;
-                let jwt: Jwt<W3cVcClaims> =
-                    jws::decode(token, resolver).await.expect("should decode");
-                jwt.claims.vc
-            }
-            Value::Object(_) => serde_json::from_value(vc_node.clone())
-                .map_err(|e| Error::ServerError(format!("issue deserializing vc: {e}")))?,
-            _ => return Err(Error::InvalidRequest(format!("unexpected VC format: {vc_node}"))),
-        };
-
         // verify input constraints have been met
-        // FIXME: use actual VC
-        // if !input
-        //     .constraints
-        //     .satisfied(queryable)
-        //     .map_err(|e| Error::ServerError(format!("issue matching constraints: {e}")))?
-        // {
-        //     return Err(Error::InvalidRequest("input constraints not satisfied".to_string()));
-        // }
+        if !input
+            .constraints
+            .satisfied(vc_node.clone())
+            .map_err(|e| Error::ServerError(format!("issue matching constraints: {e}")))?
+        {
+            return Err(Error::InvalidRequest("input constraints not satisfied".to_string()));
+        }
 
         // FIXME: check validity
         // check VC is valid (hasn't expired, been revoked, etc)

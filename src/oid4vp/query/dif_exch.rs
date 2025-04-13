@@ -14,6 +14,13 @@ use serde_json_path::JsonPath;
 
 use crate::oid4vp::types::{Constraints, Field, FilterValue};
 
+// FIXME: add support for Submission Requirement Feature
+// FIXME: add support for Predicate Feature
+// FIXME: add support for Relational Constraint Feature
+// FIXME: add support for Credential Status Feature
+// FIXME: add support for JSON-LD Feature
+// FIXME: add support for Retention Feature
+
 // TODO: add support for Zero-Knowledge Proofs by enabling the `predicate`
 // feature
 
