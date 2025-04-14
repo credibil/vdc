@@ -10,7 +10,7 @@ use credibil_infosec::Jws;
 use credibil_infosec::cose::cbor;
 use credibil_vc::mso_mdoc::{IssuerSigned, MobileSecurityObject};
 use credibil_vc::oid4vci::types::{Credential, FormatProfile};
-use credibil_vc::oid4vp::query::{Claim, Queryable};
+use credibil_vc::oid4vp::types::{Claim, Queryable};
 use credibil_vc::sd_jwt::SdJwtClaims;
 use serde_json::Value;
 

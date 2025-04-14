@@ -8,9 +8,11 @@ pub use credibil_infosec::Signer;
 use credibil_infosec::jose::jws;
 use qrcode::QrCode;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
+use crate::Kind;
 use crate::core::urlencode;
-use crate::oid4vp::types::{DcqlQuery, PresentationDefinition, VerifierMetadata, Wallet};
+use crate::oid4vp::types::{DcqlQuery, VerifierMetadata, Wallet};
 use crate::w3c_vc::proof::Type;
 
 /// The Request Object Request is created by the Verifier to generate an
@@ -126,11 +128,10 @@ pub struct RequestObject {
     /// transaction. Returned in the VP's Proof.challenge parameter.
     pub nonce: String,
 
-    // TODO: feature flag for SIOPv2
-    // /// The Wallet MAY allow Verifiers to request presentation of Verifiable
-    // /// Credentials by utilizing a pre-defined scope value.
-    // #[serde(skip_serializing_if = "Option::is_none")]
-    // pub scope: Option<String>,
+    /// The Wallet MAY allow Verifiers to request presentation of Verifiable
+    /// Credentials by utilizing a pre-defined scope value.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scope: Option<String>,
     //
     /// Inform the Wallet of the mechanism to use when returning an
     /// Authorization Response. Defaults to "`fragment`".
@@ -138,8 +139,7 @@ pub struct RequestObject {
     pub response_mode: ResponseMode,
 
     /// The query used to request Verifiable Presentations.
-    #[serde(flatten)]
-    pub query: Query,
+    pub dcql_query: DcqlQuery,
 
     /// Client Metadata contains Verifier metadata values.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -155,6 +155,13 @@ pub struct RequestObject {
     /// authorize.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub transaction_data: Option<Vec<TransactionData>>,
+
+    /// Attestations about the Verifier relevant to the Credential Request.
+    ///
+    /// Attestations are intended to support authorization decisions, inform
+    /// Wallet policy enforcement, or enrich the End-User consent dialog.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub verifier_attestations: Option<Vec<VerifierAttestation>>,
 
     /// The Wallet provided nonce used to mitigate replay attacks.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -304,8 +311,8 @@ impl Display for ClientIdentifier {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::RedirectUri(uri) => write!(f, "redirect_uri:{uri}"),
-            Self::Https(uri) => write!(f, "https:{uri}"),
-            Self::Did(did) => write!(f, "did:{did}"),
+            Self::Https(uri) => write!(f, "openid_federation:{uri}"),
+            Self::Did(did) => write!(f, "decentralized_identifier:{did}"),
             Self::VerifierAttestation(sub) => write!(f, "verifier_attestation:{sub}"),
             Self::X509SanDns(fqdn) => write!(f, "x509_san_dns:{fqdn}"),
             Self::Origin(uri) => write!(f, "origin:{uri}"),
@@ -320,9 +327,9 @@ impl From<String> for ClientIdentifier {
         #[allow(clippy::option_if_let_else)]
         if let Some(uri) = value.strip_prefix("redirect_uri:") {
             Self::RedirectUri(uri.to_string())
-        } else if let Some(uri) = value.strip_prefix("https:") {
+        } else if let Some(uri) = value.strip_prefix("openid_federation:") {
             Self::Https(uri.to_string())
-        } else if let Some(did) = value.strip_prefix("did:") {
+        } else if let Some(did) = value.strip_prefix("decentralized_identifier:") {
             Self::Did(did.to_string())
         } else if let Some(sub) = value.strip_prefix("verifier_attestation:") {
             Self::VerifierAttestation(sub.to_string())
@@ -361,37 +368,6 @@ impl<'a> Deserialize<'a> for ClientIdentifier {
     {
         let value = String::deserialize(deserializer)?;
         Ok(Self::from(value))
-    }
-}
-
-/// The type of Presentation Definition returned by the `RequestObject`:
-/// either an object or a URI.
-#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
-pub enum Query {
-    /// A JSON-encoded DCQL query.
-    #[serde(rename = "dcql_query")]
-    Dcql(DcqlQuery),
-
-    /// A Presentation Definition object embedded in the `RequestObject`.
-    #[serde(rename = "presentation_definition")]
-    Definition(PresentationDefinition),
-
-    /// A URI pointing to where a Presentation Definition object can be
-    /// retrieved. This parameter MUST be set when neither
-    /// `presentation_definition` nor a Presentation Definition scope value
-    /// are set.
-    #[serde(rename = "presentation_definition_uri")]
-    DefinitionUri(String),
-
-    /// The Wallet MAY allow Verifiers to request presentation of Verifiable
-    /// Credentials by utilizing a pre-defined scope value.
-    #[serde(rename = "scope")]
-    Scope(String),
-}
-
-impl Default for Query {
-    fn default() -> Self {
-        Self::Dcql(DcqlQuery::default())
     }
 }
 
@@ -499,6 +475,25 @@ pub struct TransactionData {
     pub transaction_data_hashes_alg: Option<Vec<String>>,
 }
 
+/// Details about the transaction that the Verifier is requesting the End-User
+/// to authorize.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
+pub struct VerifierAttestation {
+    /// The format of the attestation and how it is encoded.
+    pub format: String,
+
+    /// An object or string containing an attestation (e.g. a JWT). The payload
+    /// is defined on a per format level. The Wallet MUST validate the
+    /// attestation signature and ensure binding.
+    pub data: Kind<Value>,
+
+    /// References credentials requested for which the attestation is relevant.
+    /// Each entry matches the `id` field in a DCQL Credential Query.
+    /// If omitted, the attestation is relevant to all requested credentials.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub credential_ids: Option<Vec<String>>,
+}
+
 /// The Request Object Request is used (indirectly) by the Wallet to retrieve a
 /// previously generated Authorization Request Object.
 ///
@@ -584,15 +579,16 @@ mod tests {
             response_type: ResponseType::VpToken,
             client_id: ClientIdentifier::Preregistered("client_id".to_string()),
             nonce: "n-0S6_WzA2Mj".to_string(),
-            // scope: Some("openid".to_string()),
+            dcql_query: DcqlQuery::default(),
+            scope: None,
             response_mode: ResponseMode::Fragment {
                 redirect_uri: "https://client.example.org/cb".to_string(),
             },
             state: Some("af0ifjsldkj".to_string()),
-            query: Query::Definition(PresentationDefinition::default()),
             client_metadata: Some(VerifierMetadata::default()),
             request_uri_method: Some(RequestUriMethod::Get),
             transaction_data: Some(vec![TransactionData::default()]),
+            verifier_attestations: Some(vec![VerifierAttestation::default()]),
             wallet_nonce: None,
         };
 
@@ -610,15 +606,16 @@ mod tests {
             response_type: ResponseType::VpToken,
             client_id: ClientIdentifier::RedirectUri("https://client.example.com".to_string()),
             nonce: "n-0S6_WzA2Mj".to_string(),
-            // scope: Some("openid".to_string()),
+            dcql_query: DcqlQuery::default(),
+            scope: None,
             response_mode: ResponseMode::Fragment {
                 redirect_uri: "https://client.example.org/cb".to_string(),
             },
             state: Some("af0ifjsldkj".to_string()),
-            query: Query::Definition(PresentationDefinition::default()),
             client_metadata: Some(VerifierMetadata::default()),
             request_uri_method: Some(RequestUriMethod::Get),
             transaction_data: Some(vec![TransactionData::default()]),
+            verifier_attestations: Some(vec![VerifierAttestation::default()]),
             wallet_nonce: None,
         };
 

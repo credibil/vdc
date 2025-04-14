@@ -1,9 +1,11 @@
+//! #! Querying credentials
+
 use anyhow::{Result, anyhow};
 
 use crate::oid4vci::types::FormatProfile;
-use crate::oid4vp::query::{Claim, Queryable};
 use crate::oid4vp::types::{
-    ClaimQuery, CredentialFormat, CredentialQuery, CredentialSetQuery, DcqlQuery, MetadataQuery,
+    Claim, ClaimQuery, CredentialFormat, CredentialQuery, CredentialSetQuery, DcqlQuery,
+    MetadataQuery, Queryable,
 };
 
 impl DcqlQuery {
@@ -158,28 +160,43 @@ impl CredentialQuery {
 }
 
 impl MetadataQuery {
-    // fn execute(&self, credential: &impl Queryable) -> bool {
-    // }
-
     fn is_match(&self, meta: &FormatProfile) -> bool {
         match &self {
             Self::MsoMdoc { doctype_value } => {
                 if let FormatProfile::MsoMdoc { doctype } = meta {
-                    if doctype != doctype_value {
-                        return false;
+                    if doctype == doctype_value {
+                        return true;
                     }
                 }
             }
             Self::SdJwt { vct_values } => {
                 if let FormatProfile::DcSdJwt { vct } = meta {
-                    if !vct_values.contains(vct) {
-                        return false;
+                    if vct_values.contains(vct) {
+                        return true;
+                    }
+                }
+            }
+            Self::W3cVc { type_values } => {
+                if let FormatProfile::JwtVcJson {
+                    credential_definition,
+                } = meta
+                {
+                    // all credential types must match query
+                    for vc_type in &credential_definition.type_ {
+                        for type_value in type_values {
+                            if !type_value.contains(vc_type) {
+                                // try next set of type value
+                                continue;
+                            }
+                        }
+                        // if we get here, all type values matched
+                        return true;
                     }
                 }
             }
         }
 
-        true
+        false
     }
 }
 

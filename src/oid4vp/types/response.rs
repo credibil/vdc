@@ -3,8 +3,7 @@ use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
-use crate::core::{Kind, OneMany};
-use crate::oid4vp::types::PresentationSubmission;
+use crate::core::Kind;
 use crate::w3c_vc::vp::VerifiablePresentation;
 
 /// Authorization Response request object is used by Wallets to send a VP Token
@@ -12,75 +11,27 @@ use crate::w3c_vc::vp::VerifiablePresentation;
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct AuthorzationResponse {
     /// The VP Token returned by the Wallet.
-    #[serde(flatten)]
-    pub vp_token: VpToken,
+    pub vp_token: HashMap<String, Vec<Kind<VerifiablePresentation>>>,
 
     /// The client state value from the Authorization Request.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub state: Option<String>,
 }
 
-/// `VpToken` is used to return a Verifiable Presentation to the Verifier.
-///
-/// The variant used is dependent on the type of query used in the
-/// Authorization Request.
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(untagged)]
-#[allow(clippy::large_enum_variant)]
-pub enum VpToken {
-    /// The VP token is JSON-encoded and containing a Verifiable
-    /// Presentation for each Credential Query. The key is the ID of the
-    /// Credential Query.
-    Dcql {
-        /// One or more Verifiable Presentations as base64url encoded strings
-        /// and/or JSON objects. The VP format determines the encoding.
-        vp_token: HashMap<String, Vec<Kind<VerifiablePresentation>>>,
-    },
-
-    /// The presentation is a DIF Presentation Exchange in response to a DIF
-    /// Presentation Exchange request.
-    DifExch {
-        /// One or more Verifiable Presentations as base64url encoded strings
-        /// and/or JSON objects. The VP format determines the encoding.
-        vp_token: OneMany<Kind<VerifiablePresentation>>,
-
-        /// Mappings between the requested Verifiable Credentials and their
-        /// location within the returned VP Token.
-        presentation_submission: PresentationSubmission,
-    },
-}
-
-impl Default for VpToken {
-    fn default() -> Self {
-        Self::Dcql {
-            vp_token: HashMap::new(),
-        }
-    }
-}
-
+// FIXME: align serialization/deserialization with spec
 impl AuthorzationResponse {
     /// Create a `HashMap` representation of the `AuthorzationResponse` suitable for
     /// use in an HTML form post.
     ///
     /// # Errors
+    ///
     /// Will return an error if any nested objects cannot be serialized and
     /// URL-encoded.
     pub fn form_encode(&self) -> anyhow::Result<HashMap<String, String>> {
         let mut map = HashMap::new();
-        if let VpToken::DifExch {
-            vp_token,
-            presentation_submission,
-        } = &self.vp_token
-        {
-            let as_json = serde_json::to_string(vp_token)?;
-            map.insert("vp_token".to_string(), urlencoding::encode(&as_json).to_string());
 
-            let as_json = serde_json::to_string(presentation_submission)?;
-            map.insert(
-                "presentation_submission".to_string(),
-                urlencoding::encode(&as_json).to_string(),
-            );
-        }
+        let as_json = serde_json::to_string(&self.vp_token)?;
+        map.insert("vp_token".to_string(), urlencoding::encode(&as_json).to_string());
 
         if let Some(state) = &self.state {
             map.insert("state".to_string(), state.into());
@@ -95,31 +46,23 @@ impl AuthorzationResponse {
     /// use in a verifier's response endpoint that receives a form post before
     /// passing the `AuthorzationResponse` to the `response` handler.
     ///
+    ///
     /// # Errors
     /// Will return an error if any nested objects cannot be deserialized from
     /// URL-encoded JSON strings.
     pub fn form_decode(map: &HashMap<String, String>) -> anyhow::Result<Self> {
-        let mut req = Self::default();
-        if let Some(vp_token) = map.get("vp_token") {
-            let decoded = urlencoding::decode(vp_token)?;
-            let vp_token: OneMany<Kind<VerifiablePresentation>> = serde_json::from_str(&decoded)?;
+        // let mut req = Self::default();
+        // if let Some(vp_token) = map.get("vp_token") {
+        //     let decoded = urlencoding::decode(vp_token)?;
+        //     let vp_token: OneMany<Kind<VerifiablePresentation>> = serde_json::from_str(&decoded)?;
+        //     req.vp_token = vp_token;
+        // }
 
-            let Some(presentation_submission) = map.get("presentation_submission") else {
-                return Err(anyhow::anyhow!("presentation_submission not found"));
-            };
-            let decoded = urlencoding::decode(presentation_submission)?;
-            let presentation_submission: PresentationSubmission = serde_json::from_str(&decoded)?;
-
-            req.vp_token = VpToken::DifExch {
-                vp_token,
-                presentation_submission,
-            };
-        }
-
-        if let Some(state) = map.get("state") {
-            req.state = Some(state.to_string());
-        }
-        Ok(req)
+        // if let Some(state) = map.get("state") {
+        //     req.state = Some(state.to_string());
+        // }
+        // Ok(req)
+        todo!()
     }
 }
 

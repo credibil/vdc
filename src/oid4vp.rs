@@ -162,9 +162,9 @@
 //! [JWT VC Presentation Profile]: (https://identity.foundation/jwt-vc-presentation-profile)
 
 pub mod client;
+pub mod dcql;
 pub mod endpoint;
 pub mod provider;
-pub mod query;
 pub mod types;
 
 mod error;

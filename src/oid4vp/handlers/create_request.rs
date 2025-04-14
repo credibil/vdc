@@ -11,8 +11,8 @@ use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vp::provider::{Metadata, Provider, StateStore};
 use crate::oid4vp::state::{Expire, State};
 use crate::oid4vp::types::{
-    ClientIdentifier, DeviceFlow, GenerateRequest, GenerateResponse, Query, RequestObject,
-    ResponseMode, ResponseType,
+    ClientIdentifier, DeviceFlow, GenerateRequest, GenerateResponse, RequestObject, ResponseMode,
+    ResponseType,
 };
 use crate::oid4vp::{Error, Result};
 
@@ -35,7 +35,7 @@ async fn create_request(
         response_type: ResponseType::VpToken,
         state: Some(uri_token.clone()),
         nonce: generate::nonce(),
-        query: Query::Dcql(request.query),
+        dcql_query: request.query,
         client_metadata: Some(metadata.client_metadata),
         ..Default::default()
     };
