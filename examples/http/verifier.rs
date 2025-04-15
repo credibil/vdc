@@ -7,8 +7,6 @@
 #[path = "../verifier/provider/mod.rs"]
 mod provider;
 
-use std::collections::HashMap;
-
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -87,7 +85,7 @@ async fn request_uri(
 #[axum::debug_handler]
 async fn response(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
-    Form(request): Form<HashMap<String, String>>,
+    Form(request): Form<String>,
 ) -> impl IntoResponse {
     let Ok(req) = AuthorzationResponse::form_decode(&request) else {
         tracing::error!("unable to turn HashMap {request:?} into AuthorzationResponse");

@@ -287,7 +287,7 @@ async fn handle_login(
 #[axum::debug_handler]
 async fn token(
     State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
-    Form(req): Form<HashMap<String, String>>,
+    Form(req): Form<String>,
 ) -> impl IntoResponse {
     let Ok(tr) = TokenRequest::form_decode(&req) else {
         return (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid request"})))

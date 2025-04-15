@@ -1,3 +1,5 @@
+//! # URL Encoding Serializer
+
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
 use serde::{Serialize, ser};
 

@@ -20,27 +20,27 @@ pub struct AuthorzationResponse {
 
 // FIXME: align serialization/deserialization with spec
 impl AuthorzationResponse {
-    /// Create a `HashMap` representation of the `AuthorzationResponse` suitable for
-    /// use in an HTML form post.
+    /// Create a `application/x-www-form-urlencoded` string of the
+    /// `AuthorzationResponse` suitable for use in an HTML form post.
     ///
     /// # Errors
     ///
     /// Will return an error if any nested objects cannot be serialized and
     /// URL-encoded.
-    pub fn form_encode(&self) -> anyhow::Result<HashMap<String, String>> {
-        let mut map = HashMap::new();
+    pub fn form_encode(&self) -> anyhow::Result<String> {
+        let mut encoder = form_urlencoded::Serializer::new(String::new());
 
-        let as_json = serde_json::to_string(&self.vp_token)?;
-        map.insert("vp_token".to_string(), urlencoding::encode(&as_json).to_string());
+        encoder.append_pair("vp_token", &serde_json::to_string(&self.vp_token)?);
 
         if let Some(state) = &self.state {
-            map.insert("state".to_string(), state.into());
+            encoder.append_pair("state", state);
         }
 
-        Ok(map)
+        Ok(encoder.finish())
     }
 
-    /// Create a `AuthorzationResponse` from a `HashMap` representation.
+    /// Create a `AuthorzationResponse` from a
+    /// `application/x-www-form-urlencoded` string.
     ///
     /// Suitable for
     /// use in a verifier's response endpoint that receives a form post before
@@ -50,19 +50,18 @@ impl AuthorzationResponse {
     /// # Errors
     /// Will return an error if any nested objects cannot be deserialized from
     /// URL-encoded JSON strings.
-    pub fn form_decode(map: &HashMap<String, String>) -> anyhow::Result<Self> {
-        // let mut req = Self::default();
-        // if let Some(vp_token) = map.get("vp_token") {
-        //     let decoded = urlencoding::decode(vp_token)?;
-        //     let vp_token: OneMany<Kind<VerifiablePresentation>> = serde_json::from_str(&decoded)?;
-        //     req.vp_token = vp_token;
-        // }
+    pub fn form_decode(form: &str) -> anyhow::Result<Self> {
+        let mut req = Self::default();
+        let decoded = form_urlencoded::parse(form.as_bytes())
+            .into_owned()
+            .collect::<HashMap<String, String>>();
 
-        // if let Some(state) = map.get("state") {
-        //     req.state = Some(state.to_string());
-        // }
-        // Ok(req)
-        todo!()
+        if let Some(vp_token) = decoded.get("vp_token") {
+            req.vp_token = serde_json::from_str(vp_token)?;
+        }
+        req.state = decoded.get("state").cloned();
+
+        Ok(req)
     }
 }
 
@@ -98,4 +97,28 @@ pub struct RedirectResponse {
     /// `response_code` is returned to the Verifier when the Wallet follows
     /// the redirect in the `redirect_uri` parameter.
     pub response_code: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use crate::core::Kind;
+
+    #[test]
+    fn form_encode() {
+        let request = AuthorzationResponse {
+            vp_token: HashMap::from([(
+                "my_credential".to_string(),
+                vec![Kind::String("eyJ.etc".to_string())],
+            )]),
+            state: None,
+        };
+
+        let encoded = request.form_encode().expect("should encode");
+        assert_eq!(encoded, "vp_token=%7B%22my_credential%22%3A%5B%22eyJ.etc%22%5D%7D");
+
+        let decoded = AuthorzationResponse::form_decode(&encoded).expect("should decode");
+        assert_eq!(request, decoded);
+    }
 }

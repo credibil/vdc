@@ -10,7 +10,7 @@ use crate::oid4vci::types::{AuthorizationCredential, AuthorizationDetail, Client
 /// Flow.
 ///
 /// [RFC6749]: (https://www.rfc-editor.org/rfc/rfc6749.html)
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(default)]
 pub struct TokenRequest {
     /// OAuth 2.0 Client ID used by the Wallet.
@@ -44,21 +44,19 @@ pub struct TokenRequest {
 }
 
 impl TokenRequest {
-    /// Create a `HashMap` representation of the `TokenRequest` suitable for
-    /// use in an HTML form post.
+    /// Create an `application/x-www-form-urlencoded` representation of the
+    /// `TokenRequest` suitable for use in an HTML form post.
     ///
     /// # Errors
     ///
     /// Will return an error if any of the object-type fields cannot be
     /// serialized to JSON and URL-encoded. (`authorization_details` and
     /// `client_assertion`).
-    pub fn form_encode(&self) -> anyhow::Result<HashMap<String, String>> {
-        let mut map = HashMap::new();
-        // if !self.credential_issuer.is_empty() {
-        //     map.insert("credential_issuer".to_string(), self.credential_issuer.clone());
-        // }
+    pub fn form_encode(&self) -> anyhow::Result<String> {
+        let mut encoder = form_urlencoded::Serializer::new(String::new());
+
         if let Some(client_id) = &self.client_id {
-            map.insert("client_id".to_string(), client_id.clone());
+            encoder.append_pair("client_id", client_id);
         }
         match &self.grant_type {
             TokenGrantType::AuthorizationCode {
@@ -66,41 +64,38 @@ impl TokenRequest {
                 redirect_uri,
                 code_verifier,
             } => {
-                map.insert("code".to_string(), code.clone());
+                encoder.append_pair("code", code);
                 if let Some(redirect_uri) = redirect_uri {
-                    map.insert("redirect_uri".to_string(), redirect_uri.clone());
+                    encoder.append_pair("redirect_uri", redirect_uri);
                 }
                 if let Some(code_verifier) = code_verifier {
-                    map.insert("code_verifier".to_string(), code_verifier.clone());
+                    encoder.append_pair("code_verifier", code_verifier);
                 }
             }
             TokenGrantType::PreAuthorizedCode {
                 pre_authorized_code,
                 tx_code,
             } => {
-                map.insert("pre-authorized_code".to_string(), pre_authorized_code.clone());
+                encoder.append_pair("pre-authorized_code", pre_authorized_code);
                 if let Some(tx_code) = tx_code {
-                    map.insert("tx_code".to_string(), tx_code.clone());
+                    encoder.append_pair("tx_code", tx_code);
                 }
             }
         }
         if let Some(authorization_details) = &self.authorization_details {
             let as_json = serde_json::to_string(authorization_details)?;
-            map.insert(
-                "authorization_details".to_string(),
-                urlencoding::encode(&as_json).to_string(),
-            );
+            encoder.append_pair("authorization_details", &as_json);
         }
         if let Some(client_assertion) = &self.client_assertion {
-            map.insert(
-                "client_assertion_type".to_string(),
-                urlencoding::encode("urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
-                    .into(),
+            encoder.append_pair(
+                "client_assertion_type",
+                "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
             );
             let ClientAssertion::JwtBearer { client_assertion } = client_assertion;
-            map.insert("client_assertion".to_string(), client_assertion.clone());
+            encoder.append_pair("client_assertion", client_assertion);
         }
-        Ok(map)
+
+        Ok(encoder.finish())
     }
 
     /// Create a `TokenRequest` from a `HashMap` representation. Suitable for
@@ -110,38 +105,35 @@ impl TokenRequest {
     /// Will return an error if any of the object-type fields, assumed to be
     /// URL-encoded JSON, cannot be decoded. (`authorization_details` and
     /// `client_assertion`).
-    pub fn form_decode(map: &HashMap<String, String>) -> anyhow::Result<Self> {
-        let mut req = Self::default();
-        // if let Some(credential_issuer) = map.get("credential_issuer") {
-        //     req.credential_issuer.clone_from(credential_issuer);
-        // }
-        if let Some(client_id) = map.get("client_id") {
-            req.client_id = Some(client_id.clone());
-        }
-        if let Some(code) = map.get("code") {
-            let redirect_uri = map.get("redirect_uri").cloned();
-            let code_verifier = map.get("code_verifier").cloned();
+    pub fn form_decode(form: &str) -> anyhow::Result<Self> {
+        let decoded = form_urlencoded::parse(form.as_bytes())
+            .into_owned()
+            .collect::<HashMap<String, String>>();
+
+        let mut req = Self {
+            client_id: decoded.get("client_id").cloned(),
+            ..Self::default()
+        };
+
+        if let Some(code) = decoded.get("code") {
             req.grant_type = TokenGrantType::AuthorizationCode {
                 code: code.clone(),
-                redirect_uri,
-                code_verifier,
+                redirect_uri: decoded.get("redirect_uri").cloned(),
+                code_verifier: decoded.get("code_verifier").cloned(),
             };
-        } else if let Some(pre_authorized_code) = map.get("pre-authorized_code") {
-            let tx_code = map.get("tx_code").cloned();
+        } else if let Some(pre_authorized_code) = decoded.get("pre-authorized_code") {
             req.grant_type = TokenGrantType::PreAuthorizedCode {
                 pre_authorized_code: pre_authorized_code.clone(),
-                tx_code,
+                tx_code: decoded.get("tx_code").cloned(),
             };
         }
-        if let Some(authorization_details) = map.get("authorization_details") {
-            let authorization_details =
-                serde_json::from_str(&urlencoding::decode(authorization_details)?)?;
-            req.authorization_details = Some(authorization_details);
+        if let Some(authorization_details) = decoded.get("authorization_details") {
+            req.authorization_details = Some(serde_json::from_str(authorization_details)?);
         }
-        if let Some(client_assertion) = map.get("client_assertion") {
-            if let Some(client_assertion_type) = map.get("client_assertion_type") {
-                let decoded = urlencoding::decode(client_assertion_type)?;
-                if decoded == "urn:ietf:params:oauth:client-assertion-type:jwt-bearer" {
+        if let Some(client_assertion) = decoded.get("client_assertion") {
+            if let Some(client_assertion_type) = decoded.get("client_assertion_type") {
+                if client_assertion_type == "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+                {
                     req.client_assertion = Some(ClientAssertion::JwtBearer {
                         client_assertion: client_assertion.clone(),
                     });
@@ -282,7 +274,6 @@ impl AuthorizedDetail {
 
 #[cfg(test)]
 mod tests {
-    use insta::assert_yaml_snapshot as assert_snapshot;
 
     use super::*;
     use crate::oid4vci::types::{
@@ -290,7 +281,7 @@ mod tests {
     };
 
     #[test]
-    fn token_request_form_encoding() {
+    fn form_encoding() {
         let request = TokenRequest {
             client_id: Some("1234".to_string()),
             grant_type: TokenGrantType::PreAuthorizedCode {
@@ -359,12 +350,12 @@ mod tests {
             }),
         };
 
-        let map = request.form_encode().expect("should condense to hashmap");
-        let req = TokenRequest::form_decode(&map).expect("should expand from hashmap");
-        assert_snapshot!("token_request_form_encoding", &req, {
-            ".authorization_details[].credential_definition.type_" => insta::sorted_redaction(),
-            ".authorization_details[].credential_definition.credentialSubject" => insta::sorted_redaction(),
-            ".authorization_details[].credential_definition.credentialSubject.address" => insta::sorted_redaction(),
-        });
+        let encoded = request.form_encode().expect("should encode");
+        assert!(encoded.contains("client_id=1234"));
+        assert!(encoded.contains("&pre-authorized_code=WQHhDmQ3ZygxyOPlBjunlA"));
+        assert!(encoded.contains("&authorization_details=%5B%7B%22"));
+
+        let decoded = TokenRequest::form_decode(&encoded).expect("should decode");
+        assert_eq!(request, decoded);
     }
 }

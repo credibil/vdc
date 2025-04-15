@@ -21,16 +21,11 @@
 //! If the Response Type value is "code" (Authorization Code Grant Type), the VP
 //! Token is provided in the Token Response.
 
-use serde_json::Value;
-use serde_json_path::JsonPath;
-
 use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
 use crate::oid4vp::types::{AuthorzationResponse, RedirectResponse};
 use crate::oid4vp::{Error, Result};
-use crate::w3c_vc;
-use crate::w3c_vc::proof::{Payload, Verify};
 
 /// Endpoint for the Wallet to respond Verifier's Authorization Request.
 ///
@@ -91,7 +86,7 @@ async fn verify(provider: impl Provider, request: &AuthorzationResponse) -> Resu
     };
     let saved_req = &state.request_object;
 
-    let vp_token = request.vp_token.clone();
+    let _vp_token = request.vp_token.clone();
 
     // let mut vps = vec![];
 
@@ -109,11 +104,8 @@ async fn verify(provider: impl Provider, request: &AuthorzationResponse) -> Resu
     //     vps.push(vp);
     // }
 
-    // let Query::Definition(def) = &saved_req.query else {
-    //     return Err(Error::InvalidRequest(
-    //         "presentation_definition_uri is unsupported".to_string(),
-    //     ));
-    // };
+    let dcql_query = &saved_req.dcql_query;
+    println!("dcql_query: {dcql_query:?}");
 
     // verify presentation subm matches definition
     // N.B. technically, this is redundant as it is done when looking up state

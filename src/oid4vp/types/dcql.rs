@@ -8,7 +8,7 @@ use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_infosec::Jws;
 use credibil_infosec::cose::cbor;
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value, json};
+use serde_json::Value;
 
 use crate::Kind;
 use crate::mso_mdoc::{IssuerSigned, MobileSecurityObject};
@@ -54,7 +54,7 @@ pub struct CredentialQuery {
     pub trusted_authorities: Option<Vec<TrustedAuthoritiesQuery>>,
 
     /// Indicates whether the Verifier requires a Cryptographic Holder Binding
-    /// proof. The default value is true, i.e., a Verifiable Presentation with 
+    /// proof. The default value is true, i.e., a Verifiable Presentation with
     /// Cryptographic Holder Binding is required.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub require_cryptographic_holder_binding: Option<bool>,
