@@ -32,7 +32,7 @@ use std::fmt::Display;
 
 use anyhow::bail;
 use chrono::{DateTime, Utc};
-use credibil_did::DidResolver;
+use credibil_did::{DidResolver, SignerExt};
 use credibil_infosec::Signer;
 use credibil_infosec::jose::{jws, jwt};
 use serde::{Deserialize, Serialize};
@@ -150,18 +150,19 @@ pub enum Payload {
 ///
 /// # Errors
 /// TODO: document errors
-pub async fn create(payload: Payload, signer: &impl Signer) -> anyhow::Result<String> {
+pub async fn create(payload: Payload, signer: &impl SignerExt) -> anyhow::Result<String> {
+    let key_ref = signer.verification_method().await?;
     let jwt = match payload {
         Payload::Vc { vc, issued_at } => {
             let mut claims = W3cVcClaims::from(vc);
             claims.iat = issued_at;
-            jws::encode(&claims, signer).await?
+            jws::encode(&claims, &key_ref, signer).await?
         }
         Payload::Vp { vp, client_id, nonce } => {
             let mut claims = VpClaims::from(vp);
             claims.aud.clone_from(&client_id);
             claims.nonce.clone_from(&nonce);
-            jws::encode(&claims, signer).await?
+            jws::encode(&claims, &key_ref, signer).await?
         }
     };
 

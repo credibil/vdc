@@ -8,7 +8,8 @@ use std::sync::{Arc, Mutex};
 
 use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
-use credibil_did::{DidResolver, Document};
+use credibil_did::{DidResolver, Document, SignerExt};
+use credibil_infosec::jose::jws::Key;
 use credibil_infosec::{self, Algorithm, PublicKey, Receiver, SharedSecret, Signer};
 use credibil_vc::oid4vp::provider::{Metadata, Provider, StateStore};
 use credibil_vc::oid4vp::types::{Verifier, Wallet};
@@ -108,8 +109,10 @@ impl Signer for ProviderImpl {
     fn algorithm(&self) -> Algorithm {
         self.keyring.algorithm()
     }
+}
 
-    async fn verification_method(&self) -> Result<String> {
+impl SignerExt for ProviderImpl {
+    async fn verification_method(&self) -> Result<Key> {
         self.keyring.verification_method().await
     }
 }

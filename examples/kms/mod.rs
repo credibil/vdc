@@ -8,7 +8,8 @@ use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_did::document::{CreateOptions, Document};
 use credibil_did::key::DidKey;
 use credibil_did::web::DidWeb;
-use credibil_did::{DidOperator, DidResolver, KeyPurpose};
+use credibil_did::{DidOperator, DidResolver, KeyPurpose, SignerExt};
+use credibil_infosec::jose::jws::Key;
 use credibil_infosec::{Algorithm, Curve, KeyType, PublicKeyJwk, Signer};
 use credibil_vc::core::generate;
 use ed25519_dalek::{Signer as _, SigningKey};
@@ -93,12 +94,14 @@ impl Signer for Keyring {
     fn algorithm(&self) -> Algorithm {
         Algorithm::EdDSA
     }
+}
 
-    async fn verification_method(&self) -> Result<String> {
+impl SignerExt for Keyring {
+    async fn verification_method(&self) -> Result<Key> {
         let store = DID_STORE.lock().expect("should lock");
         let doc = store.get(&self.url).unwrap();
         let vm = &doc.verification_method.as_ref().unwrap()[0];
-        Ok(vm.id.clone())
+        Ok(Key::KeyId(vm.id.clone()))
     }
 }
 

@@ -13,8 +13,8 @@ use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use chrono::serde::ts_seconds_option;
 use chrono::{DateTime, Utc};
-use credibil_did::PublicKeyJwk;
-use credibil_infosec::{Jws, Signer};
+use credibil_did::SignerExt;
+use credibil_infosec::{Jws, PublicKeyJwk};
 use rand::{Rng, rng};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
@@ -69,7 +69,7 @@ pub struct HasClaims(Map<String, Value>);
 pub struct NoSigner;
 /// Builder state has a signer.
 #[doc(hidden)]
-pub struct HasSigner<'a, S: Signer>(pub &'a S);
+pub struct HasSigner<'a, S: SignerExt>(pub &'a S);
 
 impl Default for DcSdJwtBuilder<NoConfig, NoIssuer, NoKeyBinding, NoClaims, NoSigner> {
     fn default() -> Self {
@@ -172,7 +172,7 @@ impl<G, I, K, C, S> DcSdJwtBuilder<G, I, K, C, S> {
 impl<G, I, K, C> DcSdJwtBuilder<G, I, K, C, NoSigner> {
     /// Set the credential Signer.
     #[must_use]
-    pub fn signer<S: Signer>(self, signer: &'_ S) -> DcSdJwtBuilder<G, I, K, C, HasSigner<'_, S>> {
+    pub fn signer<S: SignerExt>(self, signer: &'_ S) -> DcSdJwtBuilder<G, I, K, C, HasSigner<'_, S>> {
         DcSdJwtBuilder {
             config: self.config,
             issuer: self.issuer,
@@ -184,7 +184,7 @@ impl<G, I, K, C> DcSdJwtBuilder<G, I, K, C, NoSigner> {
     }
 }
 
-impl<S: Signer> DcSdJwtBuilder<HasConfig, HasIssuer, HasKeyBinding, HasClaims, HasSigner<'_, S>> {
+impl<S: SignerExt> DcSdJwtBuilder<HasConfig, HasIssuer, HasKeyBinding, HasClaims, HasSigner<'_, S>> {
     /// Build the SD-JWT credential, returning a base64url-encoded, JSON SD-JWT
     /// with the format `<Issuer-signed JWT>~<Disclosure 1>~<Disclosure 2>~...~`
     ///
@@ -226,9 +226,14 @@ impl<S: Signer> DcSdJwtBuilder<HasConfig, HasIssuer, HasKeyBinding, HasClaims, H
             ..SdJwtClaims::default()
         };
 
+        let key_id = self.signer.0.verification_method().await.map_err(|e| {
+            server!("issue getting verification method: {e}")
+        })?;
+
         let jws = Jws::builder()
             .typ(JwtType::SdJwt)
             .payload(claims)
+            .key_ref(&key_id)
             .add_signer(self.signer.0)
             .build()
             .await
@@ -317,7 +322,8 @@ pub enum Binding {
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
-    use credibil_infosec::{Algorithm, Curve, KeyType, PublicKeyJwk, Signer};
+    use credibil_did::SignerExt;
+    use credibil_infosec::{jose::jws::Key, Algorithm, Curve, KeyType, PublicKeyJwk, Signer};
     use ed25519_dalek::{Signer as _, SigningKey};
     use rand_core::OsRng;
     use serde_json::json;
@@ -395,9 +401,11 @@ mod tests {
         fn algorithm(&self) -> Algorithm {
             Algorithm::EdDSA
         }
+    }
 
-        async fn verification_method(&self) -> Result<String> {
-            Ok("did:example:123#key-1".to_string())
+    impl SignerExt for Keyring {
+        async fn verification_method(&self) -> Result<Key> {
+            Ok(Key::KeyId("did:example:123#key-1".to_string()))
         }
     }
 }

@@ -544,7 +544,6 @@ dependencies = [
 [[package]]
 name = "credibil-did"
 version = "0.1.2"
-source = "git+https://github.com/credibil/did.git#a26db0b85971eb34331c92b8ac855bec542959b5"
 dependencies = [
  "anyhow",
  "base64ct",
@@ -568,7 +567,6 @@ dependencies = [
 [[package]]
 name = "credibil-infosec"
 version = "0.1.2"
-source = "git+https://github.com/credibil/infosec.git#a67a6ebd05c158ce12f6b66271f81813e284e7b6"
 dependencies = [
  "aes-gcm",
  "aes-kw",

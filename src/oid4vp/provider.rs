@@ -4,14 +4,13 @@ use std::future::Future;
 
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use credibil_did::DidResolver;
-pub use credibil_infosec::Signer;
+use credibil_did::{DidResolver, SignerExt};
 use serde::{Deserialize, Serialize};
 
 use crate::oid4vp::types::{Verifier, Wallet};
 
 /// Verifier Provider trait.
-pub trait Provider: Metadata + StateStore + Signer + DidResolver + Clone {}
+pub trait Provider: Metadata + StateStore + SignerExt + DidResolver + Clone {}
 
 /// The `Metadata` trait is used by implementers to provide `Verifier` (client)
 /// metadata to the library.
