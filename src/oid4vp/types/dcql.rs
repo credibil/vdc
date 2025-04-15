@@ -14,7 +14,7 @@ use crate::Kind;
 use crate::mso_mdoc::{IssuerSigned, MobileSecurityObject};
 use crate::oid4vci::types::{Credential, CredentialDefinition, FormatProfile};
 use crate::sd_jwt::SdJwtClaims;
-use crate::w3c_vc::vc::{VerifiableCredential, W3cVcClaims};
+use crate::w3c::{VerifiableCredential, W3cVcClaims};
 
 /// DCQL query for requesting Verifiable Presentations.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]

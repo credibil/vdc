@@ -22,8 +22,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
-pub use self::issue::DcSdJwtBuilder;
-pub use self::present::PresentationBuilder;
+pub use self::issue::SdJwtVcBuilder;
+pub use self::present::SdJwtVpBuilder;
 
 /// Claims that can be included in the payload of SD-JWT VCs.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]

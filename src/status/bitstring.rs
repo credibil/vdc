@@ -17,7 +17,7 @@ use serde_json::{Map, Value};
 
 use crate::status::config::ListConfig;
 use crate::status::log::StatusLogEntry;
-use crate::w3c_vc::vc::{CredentialSubject, StatusPurpose, VerifiableCredential, W3cVcClaims};
+use crate::w3c::{CredentialSubject, StatusPurpose, VerifiableCredential, W3cVcClaims};
 use crate::{Kind, OneMany};
 
 // TODO: Configurable.

@@ -12,7 +12,7 @@ use credibil_vc::Kind;
 use credibil_vc::mso_mdoc::MsoMdocBuilder;
 use credibil_vc::oid4vci::types::Credential;
 use credibil_vc::oid4vp::types::DcqlQuery;
-use credibil_vc::sd_jwt::DcSdJwtBuilder;
+use credibil_vc::sd_jwt::SdJwtVcBuilder;
 use futures::executor::block_on;
 use serde_json::{Map, Value, json};
 
@@ -437,7 +437,7 @@ async fn load_wallet() -> wallet::Store {
 }
 
 async fn sd_jwt(vct: &str, claims: Map<String, Value>) -> Credential {
-    let dc = DcSdJwtBuilder::new()
+    let dc = SdJwtVcBuilder::new()
         .vct(vct)
         .claims(claims)
         .issuer("https://example.com")

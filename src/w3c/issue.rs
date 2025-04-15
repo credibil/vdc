@@ -7,11 +7,6 @@
 //! a way that is cryptographically secure, privacy respecting, and
 //! machine-verifiable.
 
-pub mod proof;
-pub mod types;
-pub mod vc;
-pub mod vp;
-
 use anyhow::anyhow;
 use credibil_infosec::Signer;
 use credibil_infosec::jose::jws;
@@ -19,12 +14,8 @@ use serde_json::{Map, Value};
 
 use crate::core::{Kind, OneMany};
 use crate::oid4vci::types::{CredentialConfiguration, CredentialDisplay, FormatProfile};
-use crate::w3c_vc::types::{LangString, Language};
-use crate::w3c_vc::vc::{CredentialStatus, CredentialSubject, VerifiableCredential, W3cVcClaims};
-
-// pub async fn verify_vc(){
-
-// }
+use crate::w3c::types::{LangString, Language};
+use crate::w3c::{CredentialStatus, CredentialSubject, VerifiableCredential, W3cVcClaims};
 
 /// Generate a W3C `jwt_vc_json` format credential.
 #[derive(Debug)]

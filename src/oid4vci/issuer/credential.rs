@@ -25,10 +25,10 @@ use crate::oid4vci::types::{
     RequestBy, SingleProof,
 };
 use crate::oid4vci::{Error, JwtType, Result};
-use crate::sd_jwt::DcSdJwtBuilder;
+use crate::sd_jwt::SdJwtVcBuilder;
 use crate::server;
 use crate::status::issuer::Status;
-use crate::w3c_vc::W3cVcBuilder;
+use crate::w3c::W3cVcBuilder;
 
 /// Credential request handler.
 ///
@@ -252,6 +252,7 @@ impl Context {
                         .build()
                         .await
                         .map_err(|e| server!("issue creating `jwt_vc_json` credential: {e}"))?;
+
                     Credential {
                         credential: jwt.into(),
                     }
@@ -265,6 +266,7 @@ impl Context {
                         .build()
                         .await
                         .map_err(|e| server!("issue creating `mso_mdoc` credential: {e}"))?;
+
                     Credential {
                         credential: mdl.into(),
                     }
@@ -279,7 +281,7 @@ impl Context {
                         return Err(Error::InvalidProof("Proof JWT DID is invalid".to_string()));
                     };
 
-                    let sd_jwt = DcSdJwtBuilder::new()
+                    let sd_jwt = SdJwtVcBuilder::new()
                         .vct(vct)
                         .issuer(self.issuer.credential_issuer.clone())
                         .claims(dataset.claims.clone())
@@ -289,6 +291,7 @@ impl Context {
                         .build()
                         .await
                         .map_err(|e| server!("issue creating `dc+sd-jwt` credential: {e}"))?;
+
                     Credential {
                         credential: sd_jwt.into(),
                     }

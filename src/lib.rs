@@ -21,7 +21,7 @@ pub mod mso_mdoc;
 pub mod oauth;
 pub mod sd_jwt;
 pub mod status;
-pub mod w3c_vc;
+pub mod w3c;
 
 /// Re-export DID resolution
 pub mod did {

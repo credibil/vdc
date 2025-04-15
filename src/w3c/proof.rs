@@ -38,8 +38,7 @@ use credibil_infosec::jose::{jws, jwt};
 use serde::{Deserialize, Serialize};
 
 use crate::core::{Kind, OneMany, did_jwk};
-use crate::w3c_vc::vc::{VerifiableCredential, W3cVcClaims};
-use crate::w3c_vc::vp::{VerifiablePresentation, VpClaims};
+use crate::w3c::{VerifiableCredential, VerifiablePresentation, VpClaims, W3cVcClaims};
 
 /// To be verifiable, a credential must contain at least one proof mechanism,
 /// and details necessary to evaluate that proof.

@@ -1,244 +1,289 @@
 //! # ISO mDL-based Credential Format
 //!
 //! This module provides the implementation of ISO mDL credentials.
+//!
+//! The Mobile Security Object (MSO) Mobile Device Object (MDOC) is a data
+//! structure that contains the data elements that are signed by the issuer
+//! and the mobile device. The issuer signs the data elements to authenticate
+//! the issuer data, and the mobile device signs the data elements to
+//! authenticate the mobile device data. The MSO MDOC is returned in the
+//! `DeviceResponse` structure.
 
-mod mdoc;
-mod mso;
+mod issue;
+mod present;
 
-use anyhow::anyhow;
-use base64ct::{Base64UrlUnpadded, Encoding};
-use ciborium::cbor;
-use coset::{CoseSign1Builder, HeaderBuilder, iana};
-use credibil_infosec::cose::{CoseKey, Tag24};
-use credibil_infosec::{Algorithm, Curve, KeyType, Signer};
-pub use mdoc::{IssuerSigned, IssuerSignedItem};
-pub use mso::{DigestIdGenerator, MobileSecurityObject};
-use rand::{Rng, rng};
-use serde_json::{Map, Value};
-use sha2::{Digest, Sha256};
+use std::collections::{BTreeMap, HashSet};
 
-/// Generate an ISO mDL `mso_mdoc` format credential.
-#[derive(Debug)]
-pub struct MsoMdocBuilder<C, S> {
-    doctype: String,
-    claims: C,
-    signer: S,
+use chrono::{Duration, SecondsFormat, Utc};
+use ciborium::Value;
+use coset::{AsCborValue, CoseSign1};
+use credibil_infosec::cose::{CoseKey, Tag24, cbor};
+pub use issue::MsoMdocBuilder;
+use rand::Rng;
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de, ser};
+
+type NameSpace = String;
+
+/// Data elements (claims) returned by the Issuer. Each data element is
+/// hashed and signed by the Issuer in the MSO.
+///
+/// See 8.3.2.1.2.2 Device retrieval mdoc response.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssuerSigned {
+    /// Returned data elements for each namespace (`IssuerNameSpaces` element)
+    pub name_spaces: BTreeMap<NameSpace, Vec<IssuerSignedItemBytes>>,
+
+    /// The mobile security object (MSO) for issuer data authentication.
+    /// `COSE_Sign1` with a payload of `MobileSecurityObjectBytes`
+    pub issuer_auth: IssuerAuth,
 }
 
-/// Builder has no signer.
-#[doc(hidden)]
-pub struct NoSigner;
-/// Builder state has a signer.
-#[doc(hidden)]
-pub struct HasSigner<'a, S: Signer>(pub &'a S);
-
-/// Builder has no claims.
-#[doc(hidden)]
-pub struct NoClaims;
-/// Builder has claims.
-#[doc(hidden)]
-pub struct HasClaims(Map<String, Value>);
-
-impl MsoMdocBuilder<NoClaims, NoSigner> {
-    /// Create a new ISO mDL credential builder.
+impl IssuerSigned {
+    /// Create a new `IssuerSigned` with default values.
     #[must_use]
     pub fn new() -> Self {
         Self {
-            doctype: "org.iso.18013.5.1.mDL".to_string(),
-            claims: NoClaims,
-            signer: NoSigner,
+            name_spaces: BTreeMap::new(),
+            issuer_auth: IssuerAuth::default(),
         }
+    }
+
+    /// Serialize the `IssuerSigned` object to a CBOR byte vector.
+    ///
+    /// # Errors
+    /// TODO: document errors
+    pub fn to_vec(&self) -> anyhow::Result<Vec<u8>> {
+        cbor::to_vec(self)
     }
 }
 
-impl Default for MsoMdocBuilder<NoClaims, NoSigner> {
+impl Default for IssuerSigned {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<C, S> MsoMdocBuilder<C, S> {
-    /// Set the claims for the ISO mDL credential.
+/// `IssuerSignedItemBytes` represents the tagged `IssuerSignedItem` after
+/// CBOR serialization:  `#6.24(bstr .cbor IssuerSignedItem)`
+pub type IssuerSignedItemBytes = Tag24<IssuerSignedItem>;
+
+/// Issuer-signed data element
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct IssuerSignedItem {
+    /// Id of the digest as added to the MSO `value_digests` parameter.
+    pub digest_id: DigestId,
+
+    /// Random hexadecimal value for issuer data authentication.
+    /// (min. 16 bytes).
+    pub random: Vec<u8>,
+
+    /// Data element identifier. For example, "`family_name`"
+    pub element_identifier: String,
+
+    /// Data element value. For example, "`Smith`"
+    pub element_value: ciborium::Value,
+}
+
+/// `IssuerAuth` is comprised of an MSO encapsulated and signed by an untagged
+/// `COSE_Sign1` type (RFC 8152).
+///
+/// The `COSE_Sign1` payload is `MobileSecurityObjectBytes` with the
+/// `Sig_structure.external_aad` set to a zero-length bytestring.
+#[derive(Clone, Debug, Default)]
+pub struct IssuerAuth(pub CoseSign1);
+
+impl Serialize for IssuerAuth {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.0.clone().to_cbor_value().map_err(ser::Error::custom)?.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for IssuerAuth {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = Value::deserialize(deserializer)?;
+        CoseSign1::from_cbor_value(value).map_err(de::Error::custom).map(Self)
+    }
+}
+
+/// An mdoc digital signature is generated over the mobile security object
+/// (MSO).
+///
+/// The MSO is used to provide Issuer data authentication for the associated
+/// `mdoc`. It contains a signed digest (e.g. SHA-256) of the `mdoc`, including
+/// the digests in the MSO.
+///
+/// See 9.1.2.4 Signing method and structure for MSO.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MobileSecurityObject {
+    /// Version of the `MobileSecurityObject`. Must be 1.0.
+    version: String,
+
+    /// Message digest algorithm used.
+    pub digest_algorithm: DigestAlgorithm,
+
+    /// An ordered set of value digests for each data element in each name
+    /// space.
+    pub value_digests: BTreeMap<NameSpace, BTreeMap<DigestId, Digest>>,
+
+    /// Device key information
+    pub device_key_info: DeviceKeyInfo,
+
+    /// The document type of the document being signed.
+    pub doc_type: String,
+
+    /// Validity information for the MSO
+    pub validity_info: ValidityInfo,
+}
+
+impl MobileSecurityObject {
+    /// Create a new `MobileSecurityObject` with default values.
     #[must_use]
-    pub fn doctype(mut self, doctype: impl Into<String>) -> Self {
-        self.doctype = doctype.into();
-        self
-    }
-}
+    pub fn new() -> Self {
+        // TODO: get valid_xxx dates from issuer
+        let until = Utc::now() + Duration::days(365);
 
-impl<C> MsoMdocBuilder<C, NoSigner> {
-    /// Set the credential Signer.
-    pub fn signer<S: Signer>(self, signer: &'_ S) -> MsoMdocBuilder<C, HasSigner<'_, S>> {
-        MsoMdocBuilder {
-            doctype: self.doctype,
-            claims: self.claims,
-            signer: HasSigner(signer),
-        }
-    }
-}
-
-impl<S> MsoMdocBuilder<NoClaims, S> {
-    /// Set the claims for the ISO mDL credential.
-    pub fn claims(self, claims: Map<String, Value>) -> MsoMdocBuilder<HasClaims, S> {
-        MsoMdocBuilder {
-            doctype: self.doctype,
-            claims: HasClaims(claims),
-            signer: self.signer,
-        }
-    }
-}
-
-impl<S: Signer> MsoMdocBuilder<HasClaims, HasSigner<'_, S>> {
-    /// Build the ISO mDL credential, returning a base64url-encoded,
-    /// CBOR-encoded, ISO mDL.
-    ///
-    /// # Errors
-    /// TODO: Document errors
-    pub async fn build(self) -> anyhow::Result<String> {
-        // populate mdoc and accompanying MSO
-        let mut mdoc = IssuerSigned::new();
-        let mut mso = MobileSecurityObject::new();
-        mso.doc_type = self.doctype;
-
-        for (name_space, value) in self.claims.0 {
-            // namespace is a root-level claim
-            let Some(claims) = value.as_object() else {
-                return Err(anyhow!("invalid dataset"));
-            };
-
-            let mut id_gen = DigestIdGenerator::new();
-
-            // assemble `IssuerSignedItem`s for name space
-            for (k, v) in claims {
-                let item = Tag24(IssuerSignedItem {
-                    digest_id: id_gen.generate(),
-                    random: rng().random::<[u8; 16]>().into(),
-                    element_identifier: k.clone(),
-                    element_value: cbor!(v)?,
-                });
-
-                // digest of `IssuerSignedItem` for MSO
-                let digest = Sha256::digest(&item.to_vec()?).to_vec();
-                mso.value_digests
-                    .entry(name_space.clone())
-                    .or_default()
-                    .insert(item.digest_id, digest);
-
-                // add item to IssuerSigned object
-                mdoc.name_spaces.entry(name_space.clone()).or_default().push(item);
-            }
-        }
-
-        let signer = self.signer.0;
-
-        // add public key to MSO
-        mso.device_key_info.device_key = CoseKey {
-            kty: KeyType::Okp,
-            crv: Curve::Ed25519,
-            x: signer.verifying_key().await?,
-            y: None,
-        };
-
-        // sign
-        let mso_bytes = Tag24(mso).to_vec()?;
-        let signature = signer.sign(&mso_bytes).await;
-
-        // build COSE_Sign1
-        let algorithm = match signer.algorithm() {
-            Algorithm::EdDSA => iana::Algorithm::EdDSA,
-            Algorithm::ES256K => return Err(anyhow!("unsupported algorithm")),
-        };
-
-        let verification_method = signer.verification_method().await?;
-        let key_id = verification_method.as_bytes().to_vec();
-
-        let protected = HeaderBuilder::new().algorithm(algorithm).build();
-        let unprotected = HeaderBuilder::new().key_id(key_id).build();
-        let cose_sign_1 = CoseSign1Builder::new()
-            .protected(protected)
-            .unprotected(unprotected)
-            .payload(mso_bytes)
-            .signature(signature)
-            .build();
-
-        // add COSE_Sign1 to IssuerSigned object
-        mdoc.issuer_auth = mso::IssuerAuth(cose_sign_1);
-
-        // encode CBOR -> Base64Url -> return
-        Ok(Base64UrlUnpadded::encode_string(&mdoc.to_vec()?))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use anyhow::Result;
-    use credibil_infosec::cose::cbor;
-    use credibil_infosec::{Algorithm, KeyType, Signer};
-    use ed25519_dalek::{Signer as _, SigningKey};
-    use rand_core::OsRng;
-    use serde_json::json;
-
-    use super::mso::DigestAlgorithm;
-    use super::{MsoMdocBuilder, *};
-
-    #[tokio::test]
-    async fn roundtrip() {
-        let claims_json = json!({
-            "org.iso.18013.5.1": {
-                "given_name": "Normal",
-                "family_name": "Person",
-                "portrait": "https://example.com/portrait.jpg",
+        Self {
+            version: "1.0".to_string(),
+            digest_algorithm: DigestAlgorithm::Sha256,
+            value_digests: BTreeMap::new(),
+            device_key_info: DeviceKeyInfo::default(),
+            doc_type: "org.iso.18013.5.1.mDL".to_string(),
+            validity_info: ValidityInfo {
+                signed: Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true),
+                valid_from: Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true),
+                valid_until: until.to_rfc3339_opts(SecondsFormat::Secs, true),
+                expected_update: None,
             },
-        });
-        let claims = claims_json.as_object().unwrap();
+        }
+    }
+}
 
-        let mdl = MsoMdocBuilder::new()
-            .doctype("org.iso.18013.5.1.mDL")
-            .claims(claims.clone())
-            .signer(&Keyring::new())
-            .build()
-            .await
-            .expect("should build");
+impl Default for MobileSecurityObject {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
-        // check credential deserializes back into original mdoc/mso structures
-        let mdoc_bytes = Base64UrlUnpadded::decode_vec(&mdl).expect("should decode");
-        let mdoc: IssuerSigned = cbor::from_slice(&mdoc_bytes).expect("should deserialize");
+/// `DigestID` is an unsigned integer (0 < 2^31) used to match the hashes in
+/// the MSO to the data elements in the mdoc response.
+///
+/// The Digest ID must be unique within a namespace with no correlation between
+/// ID’s for the same namespace/element in different MSO’s. The value must be
+/// smaller than 2^31.
+pub type DigestId = i32;
 
-        let mso_bytes = mdoc.issuer_auth.0.payload.expect("should have payload");
-        let mso: MobileSecurityObject = cbor::from_slice(&mso_bytes).expect("should deserialize");
+/// The SHA digest of a data element.
+pub type Digest = Vec<u8>;
 
-        assert_eq!(mso.digest_algorithm, DigestAlgorithm::Sha256);
-        assert_eq!(mso.device_key_info.device_key.kty, KeyType::Okp);
+/// Digest algorithm used by the MSO.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+pub enum DigestAlgorithm {
+    /// SHA-256
+    #[serde(rename = "SHA-256")]
+    Sha256,
+    //
+    // /// SHA-384
+    // #[serde(rename = "SHA-384")]
+    // Sha384,
+
+    // /// SHA-512
+    // #[serde(rename = "SHA-512")]
+    // Sha512,
+}
+
+/// Used to hold the mdoc authentication public key and information related to
+/// this key. Encoded as an untagged `COSE_Key` element as specified in
+/// [RFC 9052] and [RFC 9053].
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeviceKeyInfo {
+    /// Device key
+    pub device_key: CoseKey,
+
+    /// Key authorizations
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_authorizations: Option<Vec<KeyAuthorization>>,
+
+    /// Key info
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_info: Option<BTreeMap<i64, ciborium::Value>>,
+}
+
+/// Name spaces authorized for the MSO
+pub type AuthorizedNameSpaces = Vec<NameSpace>;
+
+/// Data elements authorized for the MSO
+pub type AuthorizedDataElements = BTreeMap<NameSpace, DataElementsArray>;
+
+/// Array of data element identifiers
+pub type DataElementsArray = Vec<DataElementIdentifier>;
+
+/// Data element identifier
+pub type DataElementIdentifier = String;
+
+/// Key authorization
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KeyAuthorization {
+    /// Key authorization namespace
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name_spaces: Option<AuthorizedNameSpaces>,
+
+    /// Map of data elements by name space.
+    /// e.g. <namespace: [data elements]>
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data_elements: Option<AuthorizedDataElements>,
+}
+
+/// Contains information related to the validity of the MSO and its signature.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ValidityInfo {
+    /// Time the MSO was signed
+    pub signed: String,
+
+    /// The timestamp before which the MSO is not yet valid. Should be equal
+    /// or later than the `signed` element
+    pub valid_from: String,
+
+    /// The timestamp after which the MSO is no longer valid.
+    ///
+    /// The value must be later than the `valid_from` element.
+    pub valid_until: String,
+
+    /// The time at which the issuing authority expects to re-sign the MSO
+    /// (and potentially update data elements).
+    pub expected_update: Option<String>,
+}
+
+/// Generates unique `DigestId` values.
+pub struct DigestIdGenerator {
+    used: HashSet<DigestId>,
+}
+
+impl DigestIdGenerator {
+    /// Create a new `DigestIdGenerator`.
+    #[must_use]
+    pub fn new() -> Self {
+        Self { used: HashSet::new() }
     }
 
-    #[derive(Clone, Debug)]
-    pub struct Keyring {
-        signing_key: SigningKey,
-    }
-
-    impl Keyring {
-        pub fn new() -> Self {
-            Self {
-                signing_key: SigningKey::generate(&mut OsRng),
+    /// Generate a unique `DigestId`.
+    pub fn generate(&mut self) -> DigestId {
+        let mut digest_id;
+        loop {
+            digest_id = i32::abs(rand::rng().random());
+            if self.used.insert(digest_id) {
+                return digest_id;
             }
         }
     }
+}
 
-    impl Signer for Keyring {
-        async fn try_sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
-            Ok(self.signing_key.sign(msg).to_bytes().to_vec())
-        }
-
-        async fn verifying_key(&self) -> Result<Vec<u8>> {
-            Ok(self.signing_key.verifying_key().as_bytes().to_vec())
-        }
-
-        fn algorithm(&self) -> Algorithm {
-            Algorithm::EdDSA
-        }
-
-        async fn verification_method(&self) -> Result<String> {
-            Ok("did:example:123#key-1".to_string())
-        }
+impl Default for DigestIdGenerator {
+    fn default() -> Self {
+        Self::new()
     }
 }

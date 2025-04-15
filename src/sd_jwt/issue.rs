@@ -20,7 +20,7 @@ use crate::server;
 
 /// Generate an IETF `dc+sd-jwt` format credential.
 #[derive(Debug)]
-pub struct DcSdJwtBuilder<V, I, K, C, S> {
+pub struct SdJwtVcBuilder<V, I, K, C, S> {
     vct: V,
     issuer: I,
     key_binding: K,
@@ -65,13 +65,13 @@ pub struct NoSigner;
 #[doc(hidden)]
 pub struct HasSigner<'a, S: Signer>(pub &'a S);
 
-impl Default for DcSdJwtBuilder<NoVct, NoIssuer, NoKeyBinding, NoClaims, NoSigner> {
+impl Default for SdJwtVcBuilder<NoVct, NoIssuer, NoKeyBinding, NoClaims, NoSigner> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DcSdJwtBuilder<NoVct, NoIssuer, NoKeyBinding, NoClaims, NoSigner> {
+impl SdJwtVcBuilder<NoVct, NoIssuer, NoKeyBinding, NoClaims, NoSigner> {
     /// Create a new builder.
     #[must_use]
     pub const fn new() -> Self {
@@ -87,11 +87,11 @@ impl DcSdJwtBuilder<NoVct, NoIssuer, NoKeyBinding, NoClaims, NoSigner> {
 }
 
 // Credential configuration
-impl<I, K, C, S> DcSdJwtBuilder<NoVct, I, K, C, S> {
+impl<I, K, C, S> SdJwtVcBuilder<NoVct, I, K, C, S> {
     /// Set the claims for the ISO mDL credential.
     #[must_use]
-    pub fn vct(self, vct: impl Into<String>) -> DcSdJwtBuilder<Vct, I, K, C, S> {
-        DcSdJwtBuilder {
+    pub fn vct(self, vct: impl Into<String>) -> SdJwtVcBuilder<Vct, I, K, C, S> {
+        SdJwtVcBuilder {
             vct: Vct(vct.into()),
             issuer: self.issuer,
             key_binding: self.key_binding,
@@ -103,11 +103,11 @@ impl<I, K, C, S> DcSdJwtBuilder<NoVct, I, K, C, S> {
 }
 
 // Issuer
-impl<V, K, C, S> DcSdJwtBuilder<V, NoIssuer, K, C, S> {
+impl<V, K, C, S> SdJwtVcBuilder<V, NoIssuer, K, C, S> {
     /// Set the claims for the ISO mDL credential.
     #[must_use]
-    pub fn issuer(self, issuer: impl Into<String>) -> DcSdJwtBuilder<V, HasIssuer, K, C, S> {
-        DcSdJwtBuilder {
+    pub fn issuer(self, issuer: impl Into<String>) -> SdJwtVcBuilder<V, HasIssuer, K, C, S> {
+        SdJwtVcBuilder {
             vct: self.vct,
             issuer: HasIssuer(issuer.into()),
             key_binding: self.key_binding,
@@ -119,13 +119,13 @@ impl<V, K, C, S> DcSdJwtBuilder<V, NoIssuer, K, C, S> {
 }
 
 // KeyBinding
-impl<V, I, C, S> DcSdJwtBuilder<V, I, NoKeyBinding, C, S> {
+impl<V, I, C, S> SdJwtVcBuilder<V, I, NoKeyBinding, C, S> {
     /// Set the claims for the ISO mDL credential.
     #[must_use]
     pub fn key_binding(
         self, key_binding: PublicKeyJwk,
-    ) -> DcSdJwtBuilder<V, I, HasKeyBinding, C, S> {
-        DcSdJwtBuilder {
+    ) -> SdJwtVcBuilder<V, I, HasKeyBinding, C, S> {
+        SdJwtVcBuilder {
             vct: self.vct,
             issuer: self.issuer,
             key_binding: HasKeyBinding(key_binding),
@@ -137,11 +137,11 @@ impl<V, I, C, S> DcSdJwtBuilder<V, I, NoKeyBinding, C, S> {
 }
 
 // Claims
-impl<V, I, K, S> DcSdJwtBuilder<V, I, K, NoClaims, S> {
+impl<V, I, K, S> SdJwtVcBuilder<V, I, K, NoClaims, S> {
     /// Set the claims for the ISO mDL credential.
     #[must_use]
-    pub fn claims(self, claims: Map<String, Value>) -> DcSdJwtBuilder<V, I, K, HasClaims, S> {
-        DcSdJwtBuilder {
+    pub fn claims(self, claims: Map<String, Value>) -> SdJwtVcBuilder<V, I, K, HasClaims, S> {
+        SdJwtVcBuilder {
             vct: self.vct,
             issuer: self.issuer,
             key_binding: self.key_binding,
@@ -153,7 +153,7 @@ impl<V, I, K, S> DcSdJwtBuilder<V, I, K, NoClaims, S> {
 }
 
 // Optional fields
-impl<V, I, K, C, S> DcSdJwtBuilder<V, I, K, C, S> {
+impl<V, I, K, C, S> SdJwtVcBuilder<V, I, K, C, S> {
     /// Set the credential Holder.
     #[must_use]
     pub fn holder(mut self, holder: impl Into<String>) -> Self {
@@ -163,11 +163,11 @@ impl<V, I, K, C, S> DcSdJwtBuilder<V, I, K, C, S> {
 }
 
 // Signer
-impl<V, I, K, C> DcSdJwtBuilder<V, I, K, C, NoSigner> {
+impl<V, I, K, C> SdJwtVcBuilder<V, I, K, C, NoSigner> {
     /// Set the credential Signer.
     #[must_use]
-    pub fn signer<S: Signer>(self, signer: &'_ S) -> DcSdJwtBuilder<V, I, K, C, HasSigner<'_, S>> {
-        DcSdJwtBuilder {
+    pub fn signer<S: Signer>(self, signer: &'_ S) -> SdJwtVcBuilder<V, I, K, C, HasSigner<'_, S>> {
+        SdJwtVcBuilder {
             vct: self.vct,
             issuer: self.issuer,
             key_binding: self.key_binding,
@@ -178,7 +178,7 @@ impl<V, I, K, C> DcSdJwtBuilder<V, I, K, C, NoSigner> {
     }
 }
 
-impl<S: Signer> DcSdJwtBuilder<Vct, HasIssuer, HasKeyBinding, HasClaims, HasSigner<'_, S>> {
+impl<S: Signer> SdJwtVcBuilder<Vct, HasIssuer, HasKeyBinding, HasClaims, HasSigner<'_, S>> {
     /// Build the SD-JWT credential, returning a base64url-encoded, JSON SD-JWT
     /// with the format `<Issuer-signed JWT>~<Disclosure 1>~<Disclosure 2>~...~`
     ///
@@ -233,7 +233,7 @@ mod tests {
     use rand_core::OsRng;
     use serde_json::json;
 
-    use super::DcSdJwtBuilder;
+    use super::SdJwtVcBuilder;
 
     #[tokio::test]
     async fn test_claims() {
@@ -260,7 +260,7 @@ mod tests {
         };
 
         // serialize to SD-JWT
-        let sd_jwt = DcSdJwtBuilder::new()
+        let sd_jwt = SdJwtVcBuilder::new()
             .vct("https://credentials.example.com/identity_credential")
             .issuer("https://example.com")
             .key_binding(jwk)

@@ -7,7 +7,7 @@ use std::future::Future;
 
 use super::provider;
 pub use crate::core::OneMany;
-pub use crate::w3c_vc::vc::CredentialStatus;
+pub use crate::w3c::CredentialStatus;
 
 /// The `Status` trait specifies how status information can be looked up for a
 /// credential.

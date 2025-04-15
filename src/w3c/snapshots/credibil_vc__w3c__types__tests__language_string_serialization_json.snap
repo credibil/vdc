@@ -1,5 +1,5 @@
 ---
-source: src/w3c_vc/types.rs
+source: src/w3c/types.rs
 assertion_line: 185
 expression: serialized
 ---

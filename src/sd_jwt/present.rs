@@ -10,7 +10,7 @@ use crate::server;
 
 /// Generate an IETF `dc+sd-jwt` format credential.
 #[derive(Debug)]
-pub struct PresentationBuilder<Q, V, S> {
+pub struct SdJwtVpBuilder<Q, V, S> {
     queryable: Q,
     verifier: V,
     nonce: Option<String>,
@@ -38,13 +38,13 @@ pub struct NoSigner;
 #[doc(hidden)]
 pub struct HasSigner<'a, S: Signer>(pub &'a S);
 
-impl Default for PresentationBuilder<NoQueryable, NoVerifier, NoSigner> {
+impl Default for SdJwtVpBuilder<NoQueryable, NoVerifier, NoSigner> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl PresentationBuilder<NoQueryable, NoVerifier, NoSigner> {
+impl SdJwtVpBuilder<NoQueryable, NoVerifier, NoSigner> {
     /// Create a new builder.
     #[must_use]
     pub const fn new() -> Self {
@@ -58,11 +58,11 @@ impl PresentationBuilder<NoQueryable, NoVerifier, NoSigner> {
 }
 
 // Credentials to include in the presentation
-impl<V, S> PresentationBuilder<NoQueryable, V, S> {
+impl<V, S> SdJwtVpBuilder<NoQueryable, V, S> {
     /// Set the claims for the ISO mDL credential.
     #[must_use]
-    pub fn queryable(self, queryable: Queryable) -> PresentationBuilder<HasQueryable, V, S> {
-        PresentationBuilder {
+    pub fn queryable(self, queryable: Queryable) -> SdJwtVpBuilder<HasQueryable, V, S> {
+        SdJwtVpBuilder {
             queryable: HasQueryable(queryable),
             verifier: self.verifier,
             nonce: self.nonce,
@@ -72,7 +72,7 @@ impl<V, S> PresentationBuilder<NoQueryable, V, S> {
 }
 
 // Credentials to include in the presentation
-impl<Q, S> PresentationBuilder<Q, HasVerifier, S> {
+impl<Q, S> SdJwtVpBuilder<Q, HasVerifier, S> {
     /// Set the claims for the ISO mDL credential.
     #[must_use]
     pub fn verifier(self, verifier: String) -> Self {
@@ -86,7 +86,7 @@ impl<Q, S> PresentationBuilder<Q, HasVerifier, S> {
 }
 
 // Optional fields
-impl<Q, V, S> PresentationBuilder<Q, V, S> {
+impl<Q, V, S> SdJwtVpBuilder<Q, V, S> {
     /// Set the credential Holder.
     #[must_use]
     pub fn nonce(mut self, nonce: impl Into<String>) -> Self {
@@ -96,11 +96,11 @@ impl<Q, V, S> PresentationBuilder<Q, V, S> {
 }
 
 // Signer
-impl<Q, V> PresentationBuilder<Q, V, NoSigner> {
+impl<Q, V> SdJwtVpBuilder<Q, V, NoSigner> {
     /// Set the credential Signer.
     #[must_use]
-    pub fn signer<S: Signer>(self, signer: &'_ S) -> PresentationBuilder<Q, V, HasSigner<'_, S>> {
-        PresentationBuilder {
+    pub fn signer<S: Signer>(self, signer: &'_ S) -> SdJwtVpBuilder<Q, V, HasSigner<'_, S>> {
+        SdJwtVpBuilder {
             queryable: self.queryable,
             verifier: self.verifier,
             nonce: self.nonce,
@@ -109,7 +109,7 @@ impl<Q, V> PresentationBuilder<Q, V, NoSigner> {
     }
 }
 
-impl<S: Signer> PresentationBuilder<HasQueryable, HasVerifier, HasSigner<'_, S>> {
+impl<S: Signer> SdJwtVpBuilder<HasQueryable, HasVerifier, HasSigner<'_, S>> {
     /// Build the SD-JWT credential, returning a base64url-encoded, JSON SD-JWT
     /// with the format `<Issuer-signed JWT>~<Disclosure 1>~<Disclosure 2>~...~`
     ///
