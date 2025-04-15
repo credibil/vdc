@@ -138,7 +138,7 @@ async fn deferred() {
     let Credential { credential } = credentials.first().expect("should have credential");
 
     // verify the credential proof
-    let token = credential.as_string().expect("should be a string");
+    let token = credential.as_str().expect("should be a string");
     let resolver = async |kid: String| did_jwk(&kid, &provider).await;
     let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
 

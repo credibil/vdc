@@ -72,8 +72,8 @@ impl Body for AuthorzationResponse {}
 // Check integrity, authenticity, and holder binding of each Presentation
 // in the VP Token according to the rules for the Presentation's format.
 
-// Verfiy the vp_token and presentation subm
-#[allow(clippy::too_many_lines)]
+// Verfiy the `vp_token` and presentation submission against the `dcql_query`
+// in the request.
 async fn verify(provider: impl Provider, request: &AuthorzationResponse) -> Result<()> {
     tracing::debug!("response::verify");
 
@@ -84,25 +84,25 @@ async fn verify(provider: impl Provider, request: &AuthorzationResponse) -> Resu
     let Ok(state) = StateStore::get::<State>(&provider, state_key).await else {
         return Err(Error::InvalidRequest("state not found".to_string()));
     };
+
     let saved_req = &state.request_object;
 
-    let _vp_token = request.vp_token.clone();
-
-    // let mut vps = vec![];
-
     // check nonce matches
-    // for vp_val in &vp_token.to_vec() {
-    //     let (vp, nonce) = match w3c_vc::proof::verify(Verify::Vp(vp_val), provider.clone()).await {
-    //         Ok(Payload::Vp { vp, nonce, .. }) => (vp, nonce),
-    //         Ok(_) => return Err(Error::InvalidRequest("proof payload is invalid".to_string())),
-    //         Err(e) => return Err(Error::ServerError(format!("issue verifying VP proof: {e}"))),
-    //     };
+    for (query_id, vps) in &request.vp_token {
+        //     let (vp, nonce) = match w3c_vc::proof::verify(Verify::Vp(vp_val), provider.clone()).await {
+        //         Ok(Payload::Vp { vp, nonce, .. }) => (vp, nonce),
+        //         Ok(_) => return Err(Error::InvalidRequest("proof payload is invalid".to_string())),
+        //         Err(e) => return Err(Error::ServerError(format!("issue verifying VP proof: {e}"))),
+        //     };
 
-    //     if nonce != saved_req.nonce {
-    //         return Err(Error::InvalidRequest("nonce does not match".to_string()));
-    //     }
-    //     vps.push(vp);
-    // }
+        //     if nonce != saved_req.nonce {
+        //         return Err(Error::InvalidRequest("nonce does not match".to_string()));
+        //     }
+        //     vps.push(vp);
+
+        println!("query_id: {query_id}");
+        println!("vps: {vps:?}");
+    }
 
     let dcql_query = &saved_req.dcql_query;
     println!("dcql_query: {dcql_query:?}");

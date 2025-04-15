@@ -39,7 +39,7 @@ impl<T> From<String> for Kind<T> {
 
 impl<T> Kind<T> {
     /// Returns `true` if the quota is a single object.
-    pub const fn as_string(&self) -> Option<&str> {
+    pub const fn as_str(&self) -> Option<&str> {
         match self {
             Self::String(s) => Some(s.as_str()),
             Self::Object(_) => None,

@@ -48,9 +48,8 @@ pub struct VerifiablePresentation {
     #[serde(rename = "type")]
     pub type_: OneMany<String>,
 
-    /// The verifiableCredential property MUST be constructed from one or more
-    /// verifiable credentials, or of data derived from verifiable
-    /// credentials in a cryptographically verifiable format.
+    /// One or more Verifiable Credentials, or data derived from Verifiable
+    /// Credentials in a cryptographically verifiable format.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub verifiable_credential: Option<Vec<Kind<VerifiableCredential>>>,
 

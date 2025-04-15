@@ -122,7 +122,7 @@ async fn two_proofs() {
         let Credential { credential } = credential;
 
         // verify the credential proof
-        let token = credential.as_string().expect("should be a string");
+        let token = credential.as_str().expect("should be a string");
         let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
 
         assert_eq!(jwt.claims.iss, ISSUER_ID);
@@ -213,7 +213,7 @@ async fn sd_jwt() {
     let Credential { credential } = &credentials[0];
 
     // verify the credential proof
-    let sd_jwt = credential.as_string().expect("should be a string");
+    let sd_jwt = credential.as_str().expect("should be a string");
     let parts = sd_jwt.split_once('~').expect("should split");
 
     let token = parts.0;

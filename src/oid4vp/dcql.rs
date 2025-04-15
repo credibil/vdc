@@ -181,18 +181,18 @@ impl MetadataQuery {
                     credential_definition,
                 } = meta
                 {
-                    // all credential types must match query
-                    let mut matched = 0;
-                    for vc_type in &credential_definition.type_ {
-                        for type_value in type_values {
-                            if type_value.contains(vc_type) {
-                                matched += 1;
-                                break;
+                    // all `credential_definition.type` values must be
+                    // contained in a single `type_values` set
+                    'next_set: for type_value in type_values {
+                        for vc_type in &credential_definition.type_ {
+                            if !type_value.contains(vc_type) {
+                                continue 'next_set;
                             }
                         }
+                        // if we get here, `type_values` references
+                        // `credential_definition.type` entries
+                        return true;
                     }
-
-                    return matched == type_values.len();
                 }
             }
         }

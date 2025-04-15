@@ -9,240 +9,28 @@
 //!
 //! [I-D.ietf-oauth-sd-jwt-vc]: https://www.ietf.org/archive/id/draft-ietf-oauth-selective-disclosure-jwt-17.html
 
+mod issue;
+mod present;
+
 use anyhow::Result;
 use base64ct::{Base64UrlUnpadded, Encoding};
-use chrono::serde::ts_seconds_option;
+use chrono::serde::{ts_seconds, ts_seconds_option};
 use chrono::{DateTime, Utc};
 use credibil_did::PublicKeyJwk;
-use credibil_infosec::{Jws, Signer};
 use rand::{Rng, rng};
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value, json};
+use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
-use crate::oid4vci::JwtType;
-use crate::server;
+pub use self::issue::DcSdJwtBuilder;
+pub use self::present::PresentationBuilder;
 
-/// Generate an IETF `dc+sd-jwt` format credential.
-#[derive(Debug)]
-pub struct DcSdJwtBuilder<V, I, K, C, S> {
-    vct: V,
-    issuer: I,
-    key_binding: K,
-    claims: C,
-    holder: Option<String>,
-    // status: Option<OneMany<CredentialStatus>>,
-    signer: S,
-}
-
-/// Builder has no credential configuration.
-#[doc(hidden)]
-pub struct NoVct;
-/// Builder has credential configuration.
-#[doc(hidden)]
-pub struct Vct(String);
-
-/// Builder has no issuer.
-#[doc(hidden)]
-pub struct NoIssuer;
-/// Builder has issuer.
-#[doc(hidden)]
-pub struct HasIssuer(String);
-
-/// Builder has no key_binding.
-#[doc(hidden)]
-pub struct NoKeyBinding;
-/// Builder has key_binding.
-#[doc(hidden)]
-pub struct HasKeyBinding(PublicKeyJwk);
-
-/// Builder has no claims.
-#[doc(hidden)]
-pub struct NoClaims;
-/// Builder has claims.
-#[doc(hidden)]
-pub struct HasClaims(Map<String, Value>);
-
-/// Builder has no signer.
-#[doc(hidden)]
-pub struct NoSigner;
-/// Builder state has a signer.
-#[doc(hidden)]
-pub struct HasSigner<'a, S: Signer>(pub &'a S);
-
-impl Default for DcSdJwtBuilder<NoVct, NoIssuer, NoKeyBinding, NoClaims, NoSigner> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl DcSdJwtBuilder<NoVct, NoIssuer, NoKeyBinding, NoClaims, NoSigner> {
-    /// Create a new builder.
-    #[must_use]
-    pub const fn new() -> Self {
-        Self {
-            vct: NoVct,
-            issuer: NoIssuer,
-            key_binding: NoKeyBinding,
-            claims: NoClaims,
-            holder: None,
-            signer: NoSigner,
-        }
-    }
-}
-
-// Credential configuration
-impl<I, K, C, S> DcSdJwtBuilder<NoVct, I, K, C, S> {
-    /// Set the claims for the ISO mDL credential.
-    #[must_use]
-    pub fn vct(self, vct: impl Into<String>) -> DcSdJwtBuilder<Vct, I, K, C, S> {
-        DcSdJwtBuilder {
-            vct: Vct(vct.into()),
-            issuer: self.issuer,
-            key_binding: self.key_binding,
-            claims: self.claims,
-            holder: self.holder,
-            signer: self.signer,
-        }
-    }
-}
-
-// Issuer
-impl<V, K, C, S> DcSdJwtBuilder<V, NoIssuer, K, C, S> {
-    /// Set the claims for the ISO mDL credential.
-    #[must_use]
-    pub fn issuer(self, issuer: impl Into<String>) -> DcSdJwtBuilder<V, HasIssuer, K, C, S> {
-        DcSdJwtBuilder {
-            vct: self.vct,
-            issuer: HasIssuer(issuer.into()),
-            key_binding: self.key_binding,
-            claims: self.claims,
-            holder: self.holder,
-            signer: self.signer,
-        }
-    }
-}
-
-// KeyBinding
-impl<V, I, C, S> DcSdJwtBuilder<V, I, NoKeyBinding, C, S> {
-    /// Set the claims for the ISO mDL credential.
-    #[must_use]
-    pub fn key_binding(
-        self, key_binding: PublicKeyJwk,
-    ) -> DcSdJwtBuilder<V, I, HasKeyBinding, C, S> {
-        DcSdJwtBuilder {
-            vct: self.vct,
-            issuer: self.issuer,
-            key_binding: HasKeyBinding(key_binding),
-            claims: self.claims,
-            holder: self.holder,
-            signer: self.signer,
-        }
-    }
-}
-
-// Claims
-impl<V, I, K, S> DcSdJwtBuilder<V, I, K, NoClaims, S> {
-    /// Set the claims for the ISO mDL credential.
-    #[must_use]
-    pub fn claims(self, claims: Map<String, Value>) -> DcSdJwtBuilder<V, I, K, HasClaims, S> {
-        DcSdJwtBuilder {
-            vct: self.vct,
-            issuer: self.issuer,
-            key_binding: self.key_binding,
-            claims: HasClaims(claims),
-            holder: self.holder,
-            signer: self.signer,
-        }
-    }
-}
-
-// Optional fields
-impl<V, I, K, C, S> DcSdJwtBuilder<V, I, K, C, S> {
-    /// Set the credential Holder.
-    #[must_use]
-    pub fn holder(mut self, holder: impl Into<String>) -> Self {
-        self.holder = Some(holder.into());
-        self
-    }
-}
-
-// Signer
-impl<V, I, K, C> DcSdJwtBuilder<V, I, K, C, NoSigner> {
-    /// Set the credential Signer.
-    #[must_use]
-    pub fn signer<S: Signer>(self, signer: &'_ S) -> DcSdJwtBuilder<V, I, K, C, HasSigner<'_, S>> {
-        DcSdJwtBuilder {
-            vct: self.vct,
-            issuer: self.issuer,
-            key_binding: self.key_binding,
-            claims: self.claims,
-            holder: self.holder,
-            signer: HasSigner(signer),
-        }
-    }
-}
-
-impl<S: Signer> DcSdJwtBuilder<Vct, HasIssuer, HasKeyBinding, HasClaims, HasSigner<'_, S>> {
-    /// Build the SD-JWT credential, returning a base64url-encoded, JSON SD-JWT
-    /// with the format `<Issuer-signed JWT>~<Disclosure 1>~<Disclosure 2>~...~`
-    ///
-    /// # Errors
-    /// TODO: Document errors
-    pub async fn build(self) -> Result<String> {
-        // for each disclosure:
-        //  1. construct an array ["<b64 Salt>","<Claim Name>","<Claim Value>"].
-        //  2. JSON-encode the array.
-        //  3. base64url-encode the JSON array.
-        let mut disclosures = vec![];
-        let mut sd_hashes = vec![];
-        for (name, value) in self.claims.0 {
-            let salt = Base64UrlUnpadded::encode_string(&rng().random::<[u8; 16]>());
-            let sd_json = serde_json::to_vec(&json!([salt, name, value]))?;
-            let disclosure = Base64UrlUnpadded::encode_string(&sd_json);
-            let sd_hash = Base64UrlUnpadded::encode_string(Sha256::digest(&disclosure).as_slice());
-
-            disclosures.push(disclosure);
-            sd_hashes.push(sd_hash);
-        }
-
-        // create JWT (and sign)
-        let claims = SdJwtClaims {
-            sd: sd_hashes.clone(),
-            iss: self.issuer.0,
-            iat: Some(Utc::now()),
-            // exp: Some(Utc::now()),
-            vct: self.vct.0,
-            sd_alg: Some("sha-256".to_string()),
-            cnf: Some(Binding::Jwk(self.key_binding.0)),
-            // status: None,
-            sub: self.holder,
-
-            ..SdJwtClaims::default()
-        };
-
-        let jws = Jws::builder()
-            .typ(JwtType::SdJwt)
-            .payload(claims)
-            .add_signer(self.signer.0)
-            .build()
-            .await
-            .map_err(|e| server!("issue signing SD-JWT: {e}"))?
-            .to_string();
-
-        // concatenate disclosures
-        let sd_jwt = format!("{jws}~{}", disclosures.join("~"));
-
-        Ok(sd_jwt)
-    }
-}
-
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 /// Claims that can be included in the payload of SD-JWT VCs.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct SdJwtClaims {
     /// Digests of selective disclosure claims. Each digest is a hash (using
-    /// `_sd_alg` hashing algortith) of the base65url-encoded Disclosure.
+    /// `_sd_alg` hashing algorithm) of the base64url-encoded Disclosure.
     #[serde(rename = "_sd")]
     pub sd: Vec<String>,
 
@@ -287,104 +75,119 @@ pub struct SdJwtClaims {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sub: Option<String>,
 
-    /// Contains a public key associated with the key binding (as presented to
-    /// the Issuer via proof-of-possession of key material) in order to provide
+    /// Contains a public key associated with the key binding (provided by the
+    /// Wallet via proof-of-possession of key material) in order to provide
     /// confirmation of cryptographic Key Binding.
     ///
     /// The Key Binding JWT in the SD-JWT presentation must be secured by the
     /// key identified in this claim.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub cnf: Option<Binding>,
+    pub cnf: Option<KeyBinding>,
 
     /// The information on how to read the status of the Verifiable Credential.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<String>,
 }
 
+/// Key Binding JWT is used in SD-JWT presentations when requested by the
+/// Verifier.
+///
+/// A Key Binding JWT is "tied to" an SD-JWT when its payload is signed using
+/// the key included in the SD-JWT payload, and the KB-JWT contains a hash
+/// of the SD-JWT in its `sd_hash` claim.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct KbJwtClaims {
+    /// The value of nonce from the Authorization Request.
+    pub nonce: String,
+
+    /// The Client Identifier, except for requests over the DC API where it
+    /// MUST be the Origin prefixed with origin.
+    pub aud: String,
+
+    /// The time of issuance of the Key Binding JWT.
+    #[serde(with = "ts_seconds")]
+    pub iat: DateTime<Utc>,
+
+    /// The base64url-encoded hash value over the Issuer-signed JWT and the
+    /// selected Disclosures.
+    pub sd_hash: String,
+}
+
 /// The type of binding between the SD-JWT and the public key.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum Binding {
+pub enum KeyBinding {
     /// The public key is bound to the SD-JWT using a JWK.
     Jwk(PublicKeyJwk),
 }
 
-#[cfg(test)]
-mod tests {
-    use anyhow::Result;
-    use credibil_infosec::{Algorithm, Curve, KeyType, PublicKeyJwk, Signer};
-    use ed25519_dalek::{Signer as _, SigningKey};
-    use rand_core::OsRng;
-    use serde_json::json;
+/// A claim disclosure.
+pub struct Disclosure {
+    /// The claim name.
+    pub name: String,
 
-    use super::DcSdJwtBuilder;
+    /// The disclosure value.
+    pub value: Value,
 
-    #[tokio::test]
-    async fn test_claims() {
-        // create claims
-        let claims_json = json!({
-            "given_name": "Alice",
-            "family_name": "Holder",
-            "address": {
-                "street_address": "123 Elm St",
-                "locality": "Hollywood",
-                "region": "CA",
-                "postal_code": "90210",
-                "country": "USA"
-            },
-            "birthdate": "2000-01-01"
-        });
-        let claims = claims_json.as_object().unwrap();
+    salt: String,
+}
 
-        let jwk = PublicKeyJwk {
-            kty: KeyType::Okp,
-            crv: Curve::Ed25519,
-            x: "x".to_string(),
-            ..PublicKeyJwk::default()
-        };
-
-        // serialize to SD-JWT
-        let sd_jwt = DcSdJwtBuilder::new()
-            .vct("https://credentials.example.com/identity_credential")
-            .issuer("https://example.com")
-            .key_binding(jwk)
-            .claims(claims.clone())
-            .signer(&Keyring::new())
-            .build()
-            .await
-            .expect("should build");
-
-        println!("{sd_jwt}");
-    }
-
-    #[derive(Clone, Debug)]
-    pub struct Keyring {
-        signing_key: SigningKey,
-    }
-
-    impl Keyring {
-        pub fn new() -> Self {
-            Self {
-                signing_key: SigningKey::generate(&mut OsRng),
-            }
+impl Disclosure {
+    /// Create a new disclosure.
+    pub fn new(name: impl Into<String>, value: Value) -> Self {
+        Self {
+            name: name.into(),
+            value,
+            salt: Base64UrlUnpadded::encode_string(&rng().random::<[u8; 16]>()),
         }
     }
 
-    impl Signer for Keyring {
-        async fn try_sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
-            Ok(self.signing_key.sign(msg).to_bytes().to_vec())
-        }
+    /// `Base64Url` encode the disclosure as JSON array of the form:
+    /// `["<b64 Salt>","<Claim Name>","<Claim Value>"]`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the encoding fails.
+    pub fn encoded(&self) -> Result<String> {
+        let sd_json = serde_json::to_vec(&json!([self.salt, self.name, self.value]))?;
+        Ok(Base64UrlUnpadded::encode_string(&sd_json))
+    }
 
-        async fn verifying_key(&self) -> Result<Vec<u8>> {
-            Ok(self.signing_key.verifying_key().as_bytes().to_vec())
-        }
+    /// Generate the disclosure digest. Each digest is a base64url-encoded hash
+    /// (using `_sd_alg` hashing algorithm) of the encoded Disclosure.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the encoding fails.
+    pub fn hashed(&self) -> Result<String> {
+        Ok(Base64UrlUnpadded::encode_string(Sha256::digest(&self.encoded()?).as_slice()))
+    }
+}
 
-        fn algorithm(&self) -> Algorithm {
-            Algorithm::EdDSA
-        }
+/// JWT `typ` headers options.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub enum JwtType {
+    /// JWT `typ` for SD-JWT credentials.
+    #[serde(rename = "dc+sd-jwt")]
+    #[default]
+    SdJwt,
 
-        async fn verification_method(&self) -> Result<String> {
-            Ok("did:example:123#key-1".to_string())
+    /// JWT `typ` for Key Binding JWT.
+    #[serde(rename = "kb+jwt")]
+    KbJwt,
+}
+
+impl From<JwtType> for String {
+    fn from(t: JwtType) -> Self {
+        From::from(&t)
+    }
+}
+
+impl From<&JwtType> for String {
+    fn from(t: &JwtType) -> Self {
+        match t {
+            JwtType::SdJwt => "dc+sd-jwt".to_string(),
+            JwtType::KbJwt => "kb+jwt".to_string(),
         }
     }
 }
