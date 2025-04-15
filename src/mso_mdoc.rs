@@ -12,7 +12,7 @@ use coset::{CoseSign1Builder, HeaderBuilder, iana};
 use credibil_did::SignerExt;
 use credibil_infosec::cose::{CoseKey, Tag24};
 use credibil_infosec::jose::jws::Key;
-use credibil_infosec::{Algorithm, Curve, KeyType, Signer};
+use credibil_infosec::{Algorithm, Curve, KeyType};
 pub use mdoc::{IssuerSigned, IssuerSignedItem};
 pub use mso::{DigestIdGenerator, MobileSecurityObject};
 use rand::{Rng, rng};

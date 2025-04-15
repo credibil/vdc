@@ -13,7 +13,7 @@ pub mod vc;
 pub mod vp;
 
 use anyhow::anyhow;
-use credibil_did::{key, SignerExt};
+use credibil_did::SignerExt;
 use credibil_infosec::jose::jws;
 use serde_json::{Map, Value};
 

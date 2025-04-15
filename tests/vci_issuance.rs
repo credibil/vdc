@@ -12,6 +12,7 @@ mod wallet;
 use std::sync::LazyLock;
 
 use base64ct::{Base64UrlUnpadded, Encoding};
+use credibil_did::SignerExt;
 use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
 use credibil_vc::BlockStore;
 use credibil_vc::core::did_jwk;
@@ -68,19 +69,26 @@ async fn two_proofs() {
     let nonce =
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
+    let key_ref_1 = BOB_KEYRING.verification_method().await.expect("should get key reference");
+
     // proof of possession of key material
     let jws_1 = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
+        .key_ref(&key_ref_1)
         .build()
         .await
         .expect("builds JWS");
 
+    let keyring_2 = wallet::keyring();
+    let key_ref_2 = keyring_2.verification_method().await.expect("should get key reference");
+
     let jws_2 = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .add_signer(&wallet::keyring())
+        .add_signer(&keyring_2)
+        .key_ref(&key_ref_2)
         .build()
         .await
         .expect("builds JWS");
@@ -169,11 +177,14 @@ async fn sd_jwt() {
     let nonce =
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
+    let key_ref = BOB_KEYRING.verification_method().await.expect("should get key reference");
+
     // proof of possession of key material
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
+        .key_ref(&key_ref)
         .build()
         .await
         .expect("builds JWS");

@@ -11,7 +11,6 @@ use bitvec::bits;
 use bitvec::order::Lsb0;
 use bitvec::view::BitView;
 use credibil_did::SignerExt;
-use credibil_infosec::Signer;
 use credibil_infosec::jose::jws;
 use flate2::write::GzEncoder;
 use serde_json::{Map, Value};

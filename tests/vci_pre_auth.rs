@@ -9,6 +9,7 @@ mod wallet;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
+use credibil_did::SignerExt;
 use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
 use credibil_vc::core::did_jwk;
 use credibil_vc::oid4vci::types::{
@@ -65,11 +66,14 @@ async fn offer_val() {
     let nonce =
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
+    let key_ref = BOB_KEYRING.verification_method().await.expect("should get key reference");
+
     // proof of possession of key material
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
+        .key_ref(&key_ref)
         .build()
         .await
         .expect("builds JWS");
@@ -198,6 +202,8 @@ async fn two_datasets() {
         ("PHLDeveloper", vec!["A. Developer", "Lead"]),
     ]);
 
+    let key_ref = BOB_KEYRING.verification_method().await.expect("should get key reference");
+
     for identifier in &details[0].credential_identifiers {
         let nonce = endpoint::handle(ISSUER_ID, NonceRequest, &provider)
             .await
@@ -208,6 +214,7 @@ async fn two_datasets() {
             .typ(JwtType::ProofJwt)
             .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
             .add_signer(&*BOB_KEYRING)
+            .key_ref(&key_ref)
             .build()
             .await
             .expect("builds JWS");
@@ -307,11 +314,14 @@ async fn reduce_credentials() {
     let nonce =
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
+    let key_ref = BOB_KEYRING.verification_method().await.expect("should get key reference");
+
     // proof of possession of key material
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
+        .key_ref(&key_ref)
         .build()
         .await
         .expect("builds JWS");
@@ -400,12 +410,15 @@ async fn reduce_claims() {
     // --------------------------------------------------
     let nonce =
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
+    
+    let key_ref = BOB_KEYRING.verification_method().await.expect("should get key reference");
 
     // proof of possession of key material
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
+        .key_ref(&key_ref)
         .build()
         .await
         .expect("builds JWS");
@@ -490,11 +503,14 @@ async fn notify_accepted() {
     let nonce =
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
+    let key_ref = BOB_KEYRING.verification_method().await.expect("should get key reference");
+
     // proof of possession of key material
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
+        .key_ref(&key_ref)
         .build()
         .await
         .expect("builds JWS");

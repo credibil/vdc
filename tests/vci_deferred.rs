@@ -67,9 +67,7 @@ async fn deferred() {
     let nonce =
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
-    let key_ref = BOB_KEYRING.verification_method()
-        .await
-        .expect("should get key reference");
+    let key_ref = BOB_KEYRING.verification_method().await.expect("should get key reference");
 
     // proof of possession of key material
     let jws = JwsBuilder::new()

@@ -33,7 +33,6 @@ use std::fmt::Display;
 use anyhow::bail;
 use chrono::{DateTime, Utc};
 use credibil_did::{DidResolver, SignerExt};
-use credibil_infosec::Signer;
 use credibil_infosec::jose::{jws, jwt};
 use serde::{Deserialize, Serialize};
 
