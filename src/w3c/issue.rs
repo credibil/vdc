@@ -14,8 +14,9 @@ use serde_json::{Map, Value};
 
 use crate::core::{Kind, OneMany};
 use crate::oid4vci::types::{CredentialConfiguration, CredentialDisplay, FormatProfile};
-use crate::w3c::types::{LangString, Language};
-use crate::w3c::{CredentialStatus, CredentialSubject, VerifiableCredential, W3cVcClaims};
+use crate::w3c::{
+    CredentialStatus, CredentialSubject, LangString, Language, VerifiableCredential, W3cVcClaims,
+};
 
 /// Generate a W3C `jwt_vc_json` format credential.
 #[derive(Debug)]

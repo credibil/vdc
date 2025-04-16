@@ -8,13 +8,13 @@
 //! machine-verifiable.
 
 mod issue;
-pub mod proof;
 mod store;
-pub mod types;
+pub mod verify;
 
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Display;
+use std::ops::Deref;
 use std::str::FromStr;
 
 use anyhow::bail;
@@ -28,8 +28,6 @@ use uuid::Uuid;
 pub use self::issue::W3cVcBuilder;
 pub use self::store::to_queryable;
 use crate::core::{Kind, OneMany};
-use crate::w3c::proof::Proof;
-use crate::w3c::types::LangString;
 
 /// `VerifiableCredential` represents a naive implementation of the W3C
 /// Verifiable Credential data model v1.1.
@@ -696,6 +694,274 @@ impl FromStr for VerifiablePresentation {
     }
 }
 
+/// To be verifiable, a credential must contain at least one proof mechanism,
+/// and details necessary to evaluate that proof.
+///
+/// A proof may be external (an enveloping proof) or internal (an embedded
+/// proof).
+///
+/// Enveloping proofs are implemented using JOSE and COSE, while embedded proofs
+/// are implemented using the `Proof` object described here.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", default)]
+#[allow(clippy::struct_field_names)]
+pub struct Proof {
+    /// An optional identifier for the proof. MUST be a URL, such as a UUID as a
+    /// URN e.g. "`urn:uuid:6a1676b8-b51f-11ed-937b-d76685a20ff5`".
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+
+    /// The specific proof type. MUST map to a URL. Examples include
+    /// "`DataIntegrityProof`" and "`Ed25519Signature2020`". The type determines
+    /// the other fields required to secure and verify the proof.
+    ///
+    /// When set to "`DataIntegrityProof`", the `cryptosuite` and the
+    /// `proofValue` properties MUST be set.
+    #[serde(rename = "type")]
+    pub type_: String,
+
+    /// The value of the cryptosuite property identifies the cryptographic
+    /// suite. If subtypes are supported, it MUST be the <https://w3id.org/security#cryptosuiteString>
+    /// subtype of string.
+    ///
+    /// For example, 'ecdsa-rdfc-2019', 'eddsa-2022'
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cryptosuite: Option<String>,
+
+    /// The reason for the proof. MUST map to a URL. The proof purpose acts as a
+    /// safeguard to prevent the proof from being misused.
+    pub proof_purpose: String,
+
+    /// Used to verify the proof. MUST map to a URL. For example, a link to a
+    /// public key that is used by a verifier during the verification
+    /// process. e.g did:example:123456789abcdefghi#keys-1.
+    pub verification_method: String,
+
+    /// The date-time the proof was created. MUST be an XMLSCHEMA11-2 date-time.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created: Option<DateTime<Utc>>,
+
+    /// The date-time the proof expires. MUST be an XMLSCHEMA11-2 date-time.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expires: Option<DateTime<Utc>>,
+
+    /// One or more security domains in which the proof is meant to be used.
+    /// MUST be either a string, or a set of strings. SHOULD be used by the
+    /// verifier to ensure the proof is used in the correct security domain.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub domain: Option<OneMany<String>>,
+
+    /// Used to mitigate replay attacks. SHOULD be included if a domain is
+    /// specified.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub challenge: Option<String>,
+
+    /// Contains the data needed to verify the proof using the
+    /// verificationMethod specified. MUST be a MULTIBASE-encoded binary
+    /// value.
+    pub proof_value: String,
+
+    /// Each value identifies another data integrity proof that MUST verify
+    /// before the current proof is processed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub previous_proof: Option<OneMany<String>>,
+
+    /// Supplied by the proof creator. Can be used to increase privacy by
+    /// decreasing linkability that results from deterministically generated
+    /// signatures.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nonce: Option<String>,
+}
+
+/// `Payload` is used to identify the type of proof to be created.
+#[derive(Debug, Deserialize, Serialize)]
+#[allow(clippy::large_enum_variant)]
+pub enum Payload {
+    /// A Verifiable Credential proof encoded as a JWT.
+    Vc {
+        /// The Credential to create a proof for.
+        vc: VerifiableCredential,
+
+        /// The issuance date and time of the Credential.
+        issued_at: DateTime<Utc>,
+    },
+
+    /// A Verifiable Presentation proof encoded as a JWT.
+    Vp {
+        /// The Presentation to create a proof for.
+        vp: VerifiablePresentation,
+
+        /// The Verifier's OpenID `client_id` (from Presentation request).
+        client_id: String,
+
+        /// The Verifier's `nonce` (from Presentation request).
+        nonce: String,
+    },
+}
+
+/// Data type to verify.
+pub enum Verify<'a> {
+    /// A Verifiable Presentation proof either encoded as a JWT or with an
+    /// embedded a Data Integrity Proof.
+    Vp(&'a Kind<VerifiablePresentation>),
+}
+
+/// The JWS `typ` header parameter.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+pub enum Type {
+    /// General purpose JWT type.
+    #[default]
+    #[serde(rename = "jwt")]
+    Jwt,
+
+    /// JWT `typ` for Authorization Request Object.
+    #[serde(rename = "oauth-authz-req+jwt")]
+    OauthAuthzReqJwt,
+}
+
+impl From<Type> for String {
+    fn from(t: Type) -> Self {
+        match t {
+            Type::Jwt => "jwt".to_string(),
+            Type::OauthAuthzReqJwt => "oauth-authz-req+jwt".to_string(),
+        }
+    }
+}
+
+impl Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s: String = self.clone().into();
+        write!(f, "{s}")
+    }
+}
+
+/// `LangString` is a string that has one or more language representations.
+///
+/// <https://www.w3.org/TR/vc-data-model-2.0/#language-and-base-direction>
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(transparent)]
+pub struct LangString(Kind<OneMany<Language>>);
+
+impl LangString {
+    /// Create a new `LangString` from a simple string.
+    #[must_use]
+    pub fn new_string(value: &str) -> Self {
+        Self(Kind::String(value.to_string()))
+    }
+
+    /// Create a new `LangString` from a single language object.
+    #[must_use]
+    pub const fn new_object(value: Language) -> Self {
+        Self(Kind::Object(OneMany::One(value)))
+    }
+
+    /// Add a language object to the `LangString`.
+    pub fn add(&mut self, value: Language) {
+        match &self.0 {
+            Kind::String(s) => {
+                let existing = Language {
+                    value: s.clone(),
+                    ..Language::default()
+                };
+                self.0 = Kind::Object(OneMany::Many(vec![existing, value]));
+            }
+            Kind::Object(lang_values) => {
+                let mut new_values = lang_values.clone();
+                new_values.add(value);
+                self.0 = Kind::Object(new_values.clone());
+            }
+        }
+    }
+
+    /// Length of the `LangString` is the number of language objects.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        match &self.0 {
+            Kind::String(_) => 1,
+            Kind::Object(lang_values) => lang_values.len(),
+        }
+    }
+
+    /// Check if the `LangString` is empty.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// Extract a value for the provided language tag.
+    ///
+    /// If the language string is a simple string, the value is returned as is.
+    /// If the language string is an object, the value for the provided language
+    /// tag is returned.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the language tag is not found.
+    pub fn value(&self, language: &str) -> anyhow::Result<String> {
+        match &self.0 {
+            Kind::String(s) => Ok(s.to_string()),
+            Kind::Object(lang_values) => match lang_values {
+                OneMany::One(lang_value) => {
+                    if lang_value.language == Some(language.to_string()) {
+                        Ok(lang_value.value.clone())
+                    } else {
+                        Err(anyhow::anyhow!("Language tag not found"))
+                    }
+                }
+                OneMany::Many(lang_values) => {
+                    for lang_value in lang_values {
+                        if lang_value.language == Some(language.to_string()) {
+                            return Ok(lang_value.value.clone());
+                        }
+                    }
+                    Err(anyhow::anyhow!("Language tag not found"))
+                }
+            },
+        }
+    }
+}
+
+impl Deref for LangString {
+    type Target = Kind<OneMany<Language>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+/// `Language` is a description of a string in a specific language.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[allow(clippy::struct_field_names)]
+pub struct Language {
+    /// Value of the string
+    #[serde(rename = "@value")]
+    pub value: String,
+
+    /// Language-tag as defined in [rfc5646](https://www.rfc-editor.org/rfc/rfc5646)
+    ///
+    /// A missing language tag implies that the string is in the default language.
+    #[serde(rename = "@language")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub language: Option<String>,
+
+    /// Base direction of the text when bidirectional text is displayed.
+    #[serde(rename = "@direction")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub direction: Option<Direction>,
+}
+
+/// Base direction of the text when bidirectional text is displayed.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+pub enum Direction {
+    /// Left-to-right
+    #[serde(rename = "ltr")]
+    Ltr,
+
+    /// Right-to-left
+    #[serde(rename = "rtl")]
+    Rtl,
+}
+
 #[cfg(test)]
 mod tests {
     use chrono::TimeZone;
@@ -907,5 +1173,57 @@ mod tests {
             .add_type("EmployeeIDCredential")
             .add_credential(Kind::Object(vc))
             .build()
+    }
+
+    #[derive(Deserialize, Serialize)]
+    struct Info {
+        name: LangString,
+        description: LangString,
+        other: Option<LangString>,
+    }
+
+    fn info_sample() -> serde_json::Value {
+        json!({
+            "name": {
+                "@value": "Alice",
+                "@language": "en",
+            },
+            "description": [
+                {
+                    "@value": "HTML and CSS: Designing and Creating Websites",
+                    "@language": "en"
+                },
+                {
+                    "@value": "HTML و CSS: تصميم و إنشاء مواقع الويب",
+                    "@language": "ar",
+                    "@direction": "rtl"
+                }
+            ],
+            "other": "Just a string"
+        })
+    }
+
+    #[test]
+    fn language_serialization() {
+        let json = info_sample();
+
+        let info: Info = serde_json::from_value(json.clone()).unwrap();
+        assert_eq!(info.name.value("en").unwrap(), "Alice");
+
+        let serialized = serde_json::to_value(&info).unwrap();
+        assert_eq!(json, serialized);
+    }
+
+    #[test]
+    fn language_value() {
+        let json = info_sample();
+        let info: Info = serde_json::from_value(json).unwrap();
+
+        assert_eq!(info.name.value("en").unwrap(), "Alice");
+        assert_eq!(
+            info.other.expect("option should be some").value("en").unwrap(),
+            "Just a string"
+        );
+        info.description.value("es").expect_err("Spanish language tag should not be found");
     }
 }

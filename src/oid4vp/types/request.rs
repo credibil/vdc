@@ -13,7 +13,7 @@ use serde_json::Value;
 use crate::Kind;
 use crate::core::urlencode;
 use crate::oid4vp::types::{DcqlQuery, VerifierMetadata, Wallet};
-use crate::w3c::proof::Type;
+use crate::w3c::Type;
 
 /// The Request Object Request is created by the Verifier to generate an
 /// Authorization Request Object.

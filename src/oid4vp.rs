@@ -173,7 +173,8 @@ mod state;
 
 /// Proofs
 pub mod proof {
-    pub use crate::w3c::proof::{Payload, create};
+    pub use crate::w3c::Payload;
+    pub use crate::w3c::verify::create;
 }
 
 // Re-export types

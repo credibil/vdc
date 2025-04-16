@@ -21,7 +21,7 @@ use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
 use crate::oid4vp::types::{ClientIdentifier, RequestUriRequest, RequestUriResponse};
 use crate::oid4vp::{Error, Result};
-use crate::w3c::proof::Type;
+use crate::w3c::Type;
 
 /// Endpoint for the Wallet to request the Verifier's Request Object when
 /// engaged in a cross-device flow.
