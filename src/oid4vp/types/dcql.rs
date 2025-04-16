@@ -1,20 +1,15 @@
 //! # Digital Credentials Query Language (DCQL)
 
 use std::fmt::{Display, Formatter};
-use std::str::FromStr;
 
-use anyhow::{Result, anyhow};
-use base64ct::{Base64UrlUnpadded, Encoding};
-use credibil_infosec::Jws;
-use credibil_infosec::cose::cbor;
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::Kind;
-use crate::mso_mdoc::{IssuerSigned, MobileSecurityObject};
-use crate::oid4vci::types::{Credential, CredentialDefinition, FormatProfile};
-use crate::sd_jwt::SdJwtClaims;
-use crate::w3c::{VerifiableCredential, W3cVcClaims};
+use crate::core::Kind;
+use crate::oid4vci::types::FormatProfile;
+use crate::w3c::VerifiableCredential;
+use crate::{mso_mdoc, sd_jwt, w3c};
 
 /// DCQL query for requesting Verifiable Presentations.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
@@ -265,7 +260,7 @@ pub struct Queryable {
     pub claims: Vec<Claim>,
 
     /// The original issued credential.
-    pub issued: Kind<VerifiableCredential>,
+    pub issued: IssuedFormat,
 }
 
 /// A generic credential claim to use with DCQL queries.
@@ -278,222 +273,33 @@ pub struct Claim {
     pub value: Value,
 }
 
-impl TryFrom<Credential> for Queryable {
+/// The format of the requested credential.
+#[derive(Clone, Debug)]
+#[allow(clippy::large_enum_variant)]
+pub enum IssuedFormat {
+    /// A W3C Verifiable Credential as JWT.
+    JwtVcJson(String),
+
+    /// A W3C Verifiable Credential not using JSON-LD.
+    LdpVc(VerifiableCredential),
+
+    /// An ISO mDL (ISO.18013-5) mobile driving licence format credential.
+    MsoMdoc(String),
+
+    /// An IETF SD-JWT format credential.
+    DcSdJwt(String),
+}
+
+impl TryFrom<IssuedFormat> for Queryable {
     type Error = anyhow::Error;
 
-    fn try_from(credential: Credential) -> Result<Self> {
-        match &credential.credential {
-            Kind::String(encoded) => {
-                if encoded.starts_with("ey") {
-                    from_json(encoded)
-                } else {
-                    from_cbor(encoded)
-                }
-            }
-            Kind::Object(_) => Err(anyhow!("credential is not a string")),
+    fn try_from(format: IssuedFormat) -> Result<Self> {
+        match format {
+            IssuedFormat::JwtVcJson(issued) => w3c::to_queryable(Kind::String(issued)),
+            IssuedFormat::LdpVc(issued) => w3c::to_queryable(Kind::Object(issued)),
+            IssuedFormat::MsoMdoc(issued) => mso_mdoc::to_queryable(&issued),
+            IssuedFormat::DcSdJwt(issued) => sd_jwt::to_queryable(&issued),
         }
-    }
-}
-
-// impl TryFrom<&Value> for Queryable {
-//     type Error = anyhow::Error;
-
-//     fn try_from(value: &Value) -> Result<Self> {
-//         match value {
-//             Value::String(encoded) => {
-//                 if encoded.starts_with("ey") {
-//                     from_json(encoded)
-//                 } else {
-//                     from_cbor(encoded)
-//                 }
-//             }
-//             _ => Err(anyhow!("unexpected VC format: {value}")),
-//         }
-//     }
-// }
-
-// impl TryFrom<&Queryable> for Value {
-//     type Error = anyhow::Error;
-
-//     fn try_from(queryable: &Queryable) -> Result<Self> {
-//         let mut value = match &queryable.profile {
-//             FormatProfile::JwtVcJson {
-//                 credential_definition,
-//             } => {
-//                 json!({
-//                     "@context": credential_definition.context,
-//                     "type": credential_definition.type_,
-//                 })
-//             }
-//             FormatProfile::DcSdJwt { vct } => json!({"vct": vct}),
-//             FormatProfile::MsoMdoc { doctype } => json!({"doctype": doctype}),
-//             _ => {
-//                 return Err(anyhow!("unsupported profile"));
-//             }
-//         };
-
-//         let mut default = Map::new();
-
-//         for claim in &queryable.claims {
-//             let mut claims_map = value.as_object_mut().unwrap_or(&mut default);
-
-//             for (i, key) in claim.path.iter().enumerate() {
-//                 if i == claim.path.len() - 1 {
-//                     claims_map.insert(key.to_string(), claim.value.clone());
-//                 } else {
-//                     if !claims_map.contains_key(key) {
-//                         claims_map.insert(key.to_string(), json!({}));
-//                     }
-//                     claims_map = claims_map.get_mut(key).unwrap().as_object_mut().unwrap();
-//                 }
-//             }
-//         }
-
-//         Ok(value)
-//     }
-// }
-
-fn from_json(json_enc: &str) -> Result<Queryable> {
-    let mut split = json_enc.split('~');
-    let Some(jwt_enc) = split.next() else {
-        return Err(anyhow!("missing encoded part"));
-    };
-    let jws = Jws::from_str(jwt_enc)?;
-
-    match jws.signatures[0].protected.typ.as_str() {
-        "dc+sd-jwt" => from_sd_jwt(json_enc),
-        "jwt" => from_vc_json(json_enc),
-        _ => todo!("unsupported JWT type"),
-    }
-}
-
-fn from_sd_jwt(json_enc: &str) -> Result<Queryable> {
-    let mut split = json_enc.split('~');
-
-    let Some(jwt_enc) = split.next() else {
-        return Err(anyhow!("missing encoded part"));
-    };
-    let jws = Jws::from_str(jwt_enc)?;
-
-    // extract claims from disclosures
-    let mut claims = vec![];
-    for encoded in split {
-        let bytes = Base64UrlUnpadded::decode_vec(encoded)?;
-        let value: Value = serde_json::from_slice(&bytes)?;
-
-        let Some(disclosure) = value.as_array() else {
-            return Err(anyhow!("disclosure is not an array"));
-        };
-        let Some(root) = disclosure[1].as_str() else {
-            return Err(anyhow!("first element in a disclosure should be a string"));
-        };
-
-        let nested = unpack_json(vec![root.to_string()], &disclosure[2]);
-        claims.extend(nested);
-    }
-
-    let sd_jwt: SdJwtClaims = jws.payload().expect("should be a payload");
-
-    Ok(Queryable {
-        profile: FormatProfile::DcSdJwt { vct: sd_jwt.vct },
-        claims,
-        issued: Kind::String(jwt_enc.to_string()),
-    })
-}
-
-fn from_vc_json(json_enc: &str) -> Result<Queryable> {
-    let jws = Jws::from_str(json_enc)?;
-    let jwt_claims: W3cVcClaims = jws.payload().expect("should be a payload");
-
-    let vc = jwt_claims.vc;
-    let mut claims = vec![];
-
-    for subj in &vc.credential_subject.to_vec() {
-        let value = Value::Object(subj.claims.clone());
-        let nested = unpack_json(vec!["credentialSubject".to_string()], &value);
-        claims.extend(nested);
-    }
-
-    Ok(Queryable {
-        profile: FormatProfile::JwtVcJson {
-            credential_definition: CredentialDefinition {
-                context: None,
-                type_: vc.type_.to_vec(),
-            },
-        },
-        claims,
-        issued: Kind::String(json_enc.to_string()),
-    })
-}
-
-fn from_cbor(mdoc_str: &str) -> Result<Queryable> {
-    let mdoc_bytes = Base64UrlUnpadded::decode_vec(mdoc_str)?;
-    let mdoc: IssuerSigned = cbor::from_slice(&mdoc_bytes)?;
-
-    let mut claims = vec![];
-    for (name_space, tags) in &mdoc.name_spaces {
-        let mut path = vec![name_space.clone()];
-        for tag in tags {
-            path.push(tag.element_identifier.clone());
-            let nested = unpack_cbor(path.clone(), &tag.element_value);
-            claims.extend(nested);
-        }
-    }
-
-    let Some(mso_bytes) = mdoc.issuer_auth.0.payload else {
-        return Err(anyhow!("missing MSO payload"));
-    };
-    let mso: MobileSecurityObject = cbor::from_slice(&mso_bytes)?;
-
-    Ok(Queryable {
-        profile: FormatProfile::MsoMdoc {
-            doctype: mso.doc_type,
-        },
-        claims,
-        issued: Kind::String(mdoc_str.to_string()),
-    })
-}
-
-fn unpack_json(path: Vec<String>, value: &Value) -> Vec<Claim> {
-    match value {
-        Value::Object(claims_map) => {
-            let mut claims = vec![];
-
-            for (key, value) in claims_map {
-                let mut new_path = path.clone();
-                new_path.push(key.to_string());
-                claims.extend(unpack_json(new_path, value));
-            }
-
-            claims
-        }
-        _ => vec![Claim {
-            path,
-            value: value.clone(),
-        }],
-    }
-}
-
-fn unpack_cbor(path: Vec<String>, value: &ciborium::Value) -> Vec<Claim> {
-    match value {
-        ciborium::Value::Map(map) => {
-            let mut claims = vec![];
-
-            for (key, value) in map {
-                let mut new_path = path.clone();
-                new_path.push(key.as_text().unwrap().to_string());
-                claims.extend(unpack_cbor(new_path, value));
-            }
-
-            claims
-        }
-        ciborium::Value::Text(txt) => {
-            vec![Claim {
-                path,
-                value: serde_json::Value::String(txt.to_string()),
-            }]
-        }
-        _ => todo!(),
     }
 }
 

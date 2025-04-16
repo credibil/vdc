@@ -11,6 +11,7 @@
 
 mod issue;
 mod present;
+mod store;
 
 use std::collections::{BTreeMap, HashSet};
 
@@ -21,6 +22,8 @@ use credibil_infosec::cose::{CoseKey, Tag24, cbor};
 pub use issue::MsoMdocBuilder;
 use rand::Rng;
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de, ser};
+
+pub use self::store::to_queryable;
 
 type NameSpace = String;
 

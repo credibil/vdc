@@ -9,6 +9,7 @@
 
 mod issue;
 pub mod proof;
+mod store;
 pub mod types;
 
 use std::collections::HashMap;
@@ -25,6 +26,7 @@ use serde_json::{Map, Value};
 use uuid::Uuid;
 
 pub use self::issue::W3cVcBuilder;
+pub use self::store::to_queryable;
 use crate::core::{Kind, OneMany};
 use crate::w3c::proof::Proof;
 use crate::w3c::types::LangString;

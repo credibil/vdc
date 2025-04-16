@@ -4,6 +4,7 @@ use chrono::Utc;
 use credibil_infosec::{Jws, Signer};
 use sha2::{Digest, Sha256};
 
+use crate::oid4vp::IssuedFormat;
 use crate::oid4vp::types::Queryable;
 use crate::sd_jwt::{Disclosure, JwtType, KbJwtClaims};
 use crate::server;
@@ -111,7 +112,7 @@ impl<Q, V> SdJwtVpBuilder<Q, V, NoSigner> {
 
 impl<S: Signer> SdJwtVpBuilder<HasQueryable, HasVerifier, HasSigner<'_, S>> {
     /// Build the SD-JWT credential, returning a base64url-encoded, JSON SD-JWT
-    /// with the format `<Issuer-signed JWT>~<Disclosure 1>~<Disclosure 2>~...~`
+    /// with the format: `<Issuer-signed JWT>~<Disclosure 1>~<Disclosure 2>~...~<KB-JWT>`.
     ///
     /// # Errors
     /// TODO: Document errors
@@ -119,7 +120,7 @@ impl<S: Signer> SdJwtVpBuilder<HasQueryable, HasVerifier, HasSigner<'_, S>> {
         let queryable = self.queryable.0;
 
         // 1. issued SD-JWT
-        let Some(issued) = queryable.issued.as_str() else {
+        let IssuedFormat::DcSdJwt(issued) = queryable.issued else {
             return Err(anyhow!("Invalid issued claim type"));
         };
 

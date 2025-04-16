@@ -8,9 +8,8 @@ mod wallet;
 use std::sync::LazyLock;
 
 use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
-use credibil_vc::Kind;
 use credibil_vc::mso_mdoc::MsoMdocBuilder;
-use credibil_vc::oid4vci::types::Credential;
+use credibil_vc::oid4vp::IssuedFormat;
 use credibil_vc::oid4vp::types::DcqlQuery;
 use credibil_vc::sd_jwt::SdJwtVcBuilder;
 use futures::executor::block_on;
@@ -371,8 +370,8 @@ async fn load_wallet() -> wallet::Store {
         },
         "birthdate": "2000-01-01"
     });
-    let vc = sd_jwt(vct, claims.as_object().unwrap().clone()).await;
-    store.add(vc);
+    let jwt = sd_jwt(vct, claims.as_object().unwrap().clone()).await;
+    store.add(IssuedFormat::DcSdJwt(jwt));
 
     let vct = "https://othercredentials.example/pid";
     let claims = json!({
@@ -387,8 +386,8 @@ async fn load_wallet() -> wallet::Store {
         },
         "birthdate": "2000-01-01"
     });
-    let vc = sd_jwt(vct, claims.as_object().unwrap().clone()).await;
-    store.add(vc);
+    let jwt = sd_jwt(vct, claims.as_object().unwrap().clone()).await;
+    store.add(IssuedFormat::DcSdJwt(jwt));
 
     let vct = "https://cred.example/residence_credential";
     let claims = json!({
@@ -398,15 +397,15 @@ async fn load_wallet() -> wallet::Store {
             "postal_code": "90210",
         },
     });
-    let vc = sd_jwt(vct, claims.as_object().unwrap().clone()).await;
-    store.add(vc);
+    let jwt = sd_jwt(vct, claims.as_object().unwrap().clone()).await;
+    store.add(IssuedFormat::DcSdJwt(jwt));
 
     let vct = "https://company.example/company_rewards";
     let claims = json!({
         "rewards_number": "1234567890",
     });
-    let vc = sd_jwt(vct, claims.as_object().unwrap().clone()).await;
-    store.add(vc);
+    let jwt = sd_jwt(vct, claims.as_object().unwrap().clone()).await;
+    store.add(IssuedFormat::DcSdJwt(jwt));
 
     let doctype = "org.iso.18013.5.1.mDL";
     let claims = json!({
@@ -416,8 +415,8 @@ async fn load_wallet() -> wallet::Store {
             "portrait": "https://example.com/portrait.jpg",
         },
     });
-    let vc = mso_mdoc(doctype, claims.as_object().unwrap().clone()).await;
-    store.add(vc);
+    let mdoc = mso_mdoc(doctype, claims.as_object().unwrap().clone()).await;
+    store.add(IssuedFormat::MsoMdoc(mdoc));
 
     let doctype = "org.iso.7367.1.mVRC";
     let claims = json!({
@@ -430,14 +429,14 @@ async fn load_wallet() -> wallet::Store {
             "portrait": "https://example.com/portrait.jpg",
         },
     });
-    let vc = mso_mdoc(doctype, claims.as_object().unwrap().clone()).await;
-    store.add(vc);
+    let mdoc = mso_mdoc(doctype, claims.as_object().unwrap().clone()).await;
+    store.add(IssuedFormat::MsoMdoc(mdoc));
 
     store
 }
 
-async fn sd_jwt(vct: &str, claims: Map<String, Value>) -> Credential {
-    let dc = SdJwtVcBuilder::new()
+async fn sd_jwt(vct: &str, claims: Map<String, Value>) -> String {
+    SdJwtVcBuilder::new()
         .vct(vct)
         .claims(claims)
         .issuer("https://example.com")
@@ -450,23 +449,15 @@ async fn sd_jwt(vct: &str, claims: Map<String, Value>) -> Credential {
         .signer(&Keyring::new())
         .build()
         .await
-        .expect("should build");
-
-    Credential {
-        credential: Kind::String(dc),
-    }
+        .expect("should build")
 }
 
-async fn mso_mdoc(doctype: &str, claims: Map<String, Value>) -> Credential {
-    let mdoc = MsoMdocBuilder::new()
+async fn mso_mdoc(doctype: &str, claims: Map<String, Value>) -> String {
+    MsoMdocBuilder::new()
         .doctype(doctype)
         .claims(claims)
         .signer(&Keyring::new())
         .build()
         .await
-        .expect("should build");
-
-    Credential {
-        credential: Kind::String(mdoc),
-    }
+        .expect("should build")
 }
