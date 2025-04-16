@@ -188,6 +188,7 @@ impl<S: Signer> SdJwtVcBuilder<Vct, HasIssuer, HasKeyBinding, HasClaims, HasSign
         let mut disclosures = vec![];
         let mut sd_hashes = vec![];
 
+        // TODO: create disclosure for nested claims
         // create disclosures
         for (name, value) in self.claims.0 {
             let disclosure = Disclosure::new(name, value);

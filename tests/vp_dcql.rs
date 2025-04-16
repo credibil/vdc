@@ -9,6 +9,7 @@ use std::sync::LazyLock;
 
 use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
 use credibil_vc::mso_mdoc::MsoMdocBuilder;
+use credibil_vc::oid4vp::RequestedFormat;
 use credibil_vc::oid4vp::types::DcqlQuery;
 use credibil_vc::sd_jwt::SdJwtVcBuilder;
 use credibil_vc::{mso_mdoc, sd_jwt};
@@ -16,6 +17,7 @@ use futures::executor::block_on;
 use serde_json::{Map, Value, json};
 
 use self::kms::Keyring;
+use crate::sd_jwt::SdJwtVpBuilder;
 
 // Create a mock wallet populated with test credentials.
 static WALLET_DB: LazyLock<wallet::Store> =
@@ -50,8 +52,8 @@ fn multiple_claims() {
 }
 
 // Should return multiple Credentials.
-#[test]
-fn multiple_credentials() {
+#[tokio::test]
+async fn multiple_credentials() {
     let all_vcs = WALLET_DB.fetch();
 
     let query_json = json!({
@@ -65,7 +67,8 @@ fn multiple_credentials() {
                 "claims": [
                     {"path": ["given_name"]},
                     {"path": ["family_name"]},
-                    {"path": ["address", "street_address"]}
+                    {"path": ["address"]}
+                    // {"path": ["address", "street_address"]}
                 ]
             },
             {
@@ -88,7 +91,22 @@ fn multiple_credentials() {
 
     // 1. build presentation
     for selected in results {
-        println!("selected credential: {:?}", selected);
+        let cred_query =
+            query.credentials.iter().find(|c| c.id == selected.query_id).expect("should find");
+
+        if cred_query.format != RequestedFormat::DcSdJwt {
+            continue;
+        }
+
+        let vp = SdJwtVpBuilder::new()
+            .verifier("https://verifier.example.com")
+            .selected(selected)
+            .signer(&Keyring::new())
+            .build()
+            .await
+            .expect("should build");
+
+        println!("vp_token: {vp}");
     }
 
     // 2. send vp_token to verifier

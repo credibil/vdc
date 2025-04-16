@@ -4,15 +4,14 @@ use chrono::Utc;
 use credibil_infosec::{Jws, Signer};
 use sha2::{Digest, Sha256};
 
-
-use crate::oid4vp::types::Queryable;
+use crate::oid4vp::types::Selected;
 use crate::sd_jwt::{Disclosure, JwtType, KbJwtClaims};
 use crate::server;
 
 /// Generate an IETF `dc+sd-jwt` format credential.
 #[derive(Debug)]
-pub struct SdJwtVpBuilder<Q, V, S> {
-    queryable: Q,
+pub struct SdJwtVpBuilder<C, V, S> {
+    selected: C,
     verifier: V,
     nonce: Option<String>,
     signer: S,
@@ -20,10 +19,10 @@ pub struct SdJwtVpBuilder<Q, V, S> {
 
 /// Builder has no claims.
 #[doc(hidden)]
-pub struct NoQueryable;
+pub struct NoSelected;
 /// Builder has claims.
 #[doc(hidden)]
-pub struct HasQueryable(Queryable);
+pub struct HasSelected<'a>(Selected<'a>);
 
 /// Builder has no issuer.
 #[doc(hidden)]
@@ -39,18 +38,18 @@ pub struct NoSigner;
 #[doc(hidden)]
 pub struct HasSigner<'a, S: Signer>(pub &'a S);
 
-impl Default for SdJwtVpBuilder<NoQueryable, NoVerifier, NoSigner> {
+impl Default for SdJwtVpBuilder<NoSelected, NoVerifier, NoSigner> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl SdJwtVpBuilder<NoQueryable, NoVerifier, NoSigner> {
+impl SdJwtVpBuilder<NoSelected, NoVerifier, NoSigner> {
     /// Create a new builder.
     #[must_use]
     pub const fn new() -> Self {
         Self {
-            queryable: NoQueryable,
+            selected: NoSelected,
             verifier: NoVerifier,
             nonce: None,
             signer: NoSigner,
@@ -59,12 +58,12 @@ impl SdJwtVpBuilder<NoQueryable, NoVerifier, NoSigner> {
 }
 
 // Credentials to include in the presentation
-impl<V, S> SdJwtVpBuilder<NoQueryable, V, S> {
+impl<V, S> SdJwtVpBuilder<NoSelected, V, S> {
     /// Set the claims for the ISO mDL credential.
     #[must_use]
-    pub fn queryable(self, queryable: Queryable) -> SdJwtVpBuilder<HasQueryable, V, S> {
+    pub fn selected(self, selected: Selected) -> SdJwtVpBuilder<HasSelected, V, S> {
         SdJwtVpBuilder {
-            queryable: HasQueryable(queryable),
+            selected: HasSelected(selected),
             verifier: self.verifier,
             nonce: self.nonce,
             signer: self.signer,
@@ -73,13 +72,13 @@ impl<V, S> SdJwtVpBuilder<NoQueryable, V, S> {
 }
 
 // Credentials to include in the presentation
-impl<Q, S> SdJwtVpBuilder<Q, HasVerifier, S> {
+impl<C, S> SdJwtVpBuilder<C, NoVerifier, S> {
     /// Set the claims for the ISO mDL credential.
     #[must_use]
-    pub fn verifier(self, verifier: String) -> Self {
-        Self {
-            queryable: self.queryable,
-            verifier: HasVerifier(verifier),
+    pub fn verifier(self, verifier: impl Into<String>) -> SdJwtVpBuilder<C, HasVerifier, S> {
+        SdJwtVpBuilder {
+            selected: self.selected,
+            verifier: HasVerifier(verifier.into()),
             nonce: self.nonce,
             signer: self.signer,
         }
@@ -87,7 +86,7 @@ impl<Q, S> SdJwtVpBuilder<Q, HasVerifier, S> {
 }
 
 // Optional fields
-impl<Q, V, S> SdJwtVpBuilder<Q, V, S> {
+impl<C, V, S> SdJwtVpBuilder<C, V, S> {
     /// Set the credential Holder.
     #[must_use]
     pub fn nonce(mut self, nonce: impl Into<String>) -> Self {
@@ -97,12 +96,12 @@ impl<Q, V, S> SdJwtVpBuilder<Q, V, S> {
 }
 
 // Signer
-impl<Q, V> SdJwtVpBuilder<Q, V, NoSigner> {
+impl<C, V> SdJwtVpBuilder<C, V, NoSigner> {
     /// Set the credential Signer.
     #[must_use]
-    pub fn signer<S: Signer>(self, signer: &'_ S) -> SdJwtVpBuilder<Q, V, HasSigner<'_, S>> {
+    pub fn signer<S: Signer>(self, signer: &'_ S) -> SdJwtVpBuilder<C, V, HasSigner<'_, S>> {
         SdJwtVpBuilder {
-            queryable: self.queryable,
+            selected: self.selected,
             verifier: self.verifier,
             nonce: self.nonce,
             signer: HasSigner(signer),
@@ -110,23 +109,23 @@ impl<Q, V> SdJwtVpBuilder<Q, V, NoSigner> {
     }
 }
 
-impl<S: Signer> SdJwtVpBuilder<HasQueryable, HasVerifier, HasSigner<'_, S>> {
+impl<'a, S: Signer> SdJwtVpBuilder<HasSelected<'a>, HasVerifier, HasSigner<'_, S>> {
     /// Build the SD-JWT credential, returning a base64url-encoded, JSON SD-JWT
     /// with the format: `<Issuer-signed JWT>~<Disclosure 1>~<Disclosure 2>~...~<KB-JWT>`.
     ///
     /// # Errors
     /// TODO: Document errors
     pub async fn build(self) -> Result<String> {
-        let queryable = self.queryable.0;
+        let selected = self.selected.0;
 
         // 1. issued SD-JWT
-        let Some(credential) = queryable.credential.as_str() else {
+        let Some(credential) = selected.credential.as_str() else {
             return Err(anyhow!("Invalid issued claim type"));
         };
 
         // 2. disclosures
         let mut disclosures = vec![];
-        for claim in &queryable.claims {
+        for claim in &selected.claims {
             let disclosure =
                 Disclosure::new(&claim.path[claim.path.len() - 1], claim.value.clone());
             disclosures.push(disclosure.encoded()?);
