@@ -10,7 +10,6 @@ use credibil_infosec::Jws;
 use credibil_infosec::cose::cbor;
 use credibil_vc::mso_mdoc::{IssuerSigned, MobileSecurityObject};
 use credibil_vc::oid4vci::types::{Credential, FormatProfile};
-use credibil_vc::oid4vp::IssuedFormat;
 use credibil_vc::oid4vp::types::{Claim, Queryable};
 use credibil_vc::sd_jwt::SdJwtClaims;
 use serde_json::Value;
@@ -31,8 +30,8 @@ impl Store {
     }
 
     // Add a credential to the store.
-    pub fn add(&mut self, issued: IssuedFormat) {
-        let queryable = Queryable::try_from(issued).expect("should decode");
+    pub fn add(&mut self, queryable: Queryable) {
+        //let queryable = Queryable::try_from(issued).expect("should decode");
         self.store.push(queryable);
     }
 

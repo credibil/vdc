@@ -7,8 +7,9 @@ use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_infosec::Jws;
 use serde_json::Value;
 
+use crate::core::Kind;
 use crate::oid4vci::types::FormatProfile;
-use crate::oid4vp::types::{Claim, IssuedFormat, Queryable};
+use crate::oid4vp::types::{Claim, Queryable};
 use crate::sd_jwt::SdJwtClaims;
 
 /// Convert a `dc+sd-jwt` encoded credential to a `Queryable` object.
@@ -16,8 +17,8 @@ use crate::sd_jwt::SdJwtClaims;
 /// # Errors
 ///
 /// Returns an error if the decoding fails.
-pub fn to_queryable(encoded: &str) -> Result<Queryable> {
-    let mut split = encoded.split('~');
+pub fn to_queryable(issued: &str) -> Result<Queryable> {
+    let mut split = issued.split('~');
 
     let Some(credential) = split.next() else {
         return Err(anyhow!("missing encoded part"));
@@ -26,8 +27,8 @@ pub fn to_queryable(encoded: &str) -> Result<Queryable> {
 
     // extract claims from disclosures
     let mut claims = vec![];
-    for encoded in split {
-        let bytes = Base64UrlUnpadded::decode_vec(encoded)?;
+    for issued in split {
+        let bytes = Base64UrlUnpadded::decode_vec(issued)?;
         let value: Value = serde_json::from_slice(&bytes)?;
 
         let Some(disclosure) = value.as_array() else {
@@ -44,9 +45,9 @@ pub fn to_queryable(encoded: &str) -> Result<Queryable> {
     let sd_jwt: SdJwtClaims = jws.payload()?;
 
     Ok(Queryable {
-        profile: FormatProfile::DcSdJwt { vct: sd_jwt.vct },
+        meta: FormatProfile::DcSdJwt { vct: sd_jwt.vct },
         claims,
-        issued: IssuedFormat::DcSdJwt(credential.to_string()),
+        credential: Kind::String(credential.to_string()),
     })
 }
 

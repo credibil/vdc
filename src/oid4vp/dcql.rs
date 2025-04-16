@@ -4,8 +4,8 @@ use anyhow::{Result, anyhow};
 
 use crate::oid4vci::types::FormatProfile;
 use crate::oid4vp::types::{
-    Claim, ClaimQuery, CredentialFormat, CredentialQuery, CredentialSetQuery, DcqlQuery,
-    MetadataQuery, Queryable,
+    Claim, ClaimQuery, CredentialQuery, CredentialSetQuery, DcqlQuery, MetadataQuery, Queryable,
+    RequestedFormat, Selected,
 };
 
 impl DcqlQuery {
@@ -13,11 +13,11 @@ impl DcqlQuery {
     ///
     /// # Errors
     /// TODO: add errors
-    pub fn execute<'a>(&self, fetch_vcs: &'a [Queryable]) -> Result<Vec<&'a Queryable>> {
+    pub fn execute<'a>(&'a self, all_vcs: &'a [Queryable]) -> Result<Vec<Selected<'a>>> {
         // EITHER find matching VCs for each CredentialSetQuery
         if let Some(sets) = &self.credential_sets {
             return sets.iter().try_fold(vec![], |mut matched, query| {
-                let vcs = query.execute(&self.credentials, fetch_vcs)?;
+                let vcs = query.execute(&self.credentials, all_vcs)?;
                 matched.extend(vcs);
                 Ok(matched)
             });
@@ -25,7 +25,7 @@ impl DcqlQuery {
 
         // OR find matching VCs for each CredentialQuery
         let matched = self.credentials.iter().fold(vec![], |mut matched, query| {
-            if let Some(vcs) = query.execute(fetch_vcs) {
+            if let Some(vcs) = query.execute(all_vcs) {
                 matched.extend(vcs);
             }
             matched
@@ -38,8 +38,8 @@ impl DcqlQuery {
 impl CredentialSetQuery {
     /// Execute credential set query.
     fn execute<'a>(
-        &self, credentials: &[CredentialQuery], fetch_vcs: &'a [Queryable],
-    ) -> Result<Vec<&'a Queryable>> {
+        &'a self, credentials: &'a [CredentialQuery], all_vcs: &'a [Queryable],
+    ) -> Result<Vec<Selected<'a>>> {
         // iterate until we find an `option` where every CredentialQuery is satisfied
         'next_option: for option in &self.options {
             // match ALL credential queries in the option set
@@ -52,7 +52,7 @@ impl CredentialSetQuery {
                 };
 
                 // execute credential query
-                let Some(vcs) = cq.execute(fetch_vcs) else {
+                let Some(vcs) = cq.execute(all_vcs) else {
                     continue 'next_option;
                 };
                 matches.extend(vcs);
@@ -71,18 +71,32 @@ impl CredentialSetQuery {
 
 impl CredentialQuery {
     /// Execute the credential query.
-    fn execute<'a>(&self, fetch_vcs: &'a [Queryable]) -> Option<Vec<&'a Queryable>> {
+    fn execute<'a>(&'a self, all_vcs: &'a [Queryable]) -> Option<Vec<Selected<'a>>> {
         if !self.multiple.unwrap_or_default() {
             // return first matching credential
-            let matched = fetch_vcs.iter().find(|vc| self.is_match(vc).is_some())?;
-            return Some(vec![matched]);
+            for q in all_vcs {
+                if let Some(claims) = self.is_match(q) {
+                    return Some(vec![Selected {
+                        query_id: &self.id,
+                        claims,
+                        credential: &q.credential,
+                    }]);
+                }
+            }
         }
 
         // return all matching credentials
-        let matches = fetch_vcs
-            .iter()
-            .filter(|vc| self.is_match(vc).is_some())
-            .collect::<Vec<&'a Queryable>>();
+        let mut matches = vec![];
+        for q in all_vcs {
+            if let Some(claims) = self.is_match(q) {
+                matches.push(Selected {
+                    query_id: &self.id,
+                    claims,
+                    credential: &q.credential,
+                });
+            }
+        }
+
         if matches.is_empty() {
             return None;
         }
@@ -91,12 +105,12 @@ impl CredentialQuery {
     }
 
     /// Determines whether the specified credential matches the query.
-    fn is_match(&self, credential: &Queryable) -> Option<Vec<Claim>> {
+    fn is_match<'a>(&'a self, queryable: &'a Queryable) -> Option<Vec<&'a Claim>> {
         // format match
-        let format = match &credential.profile {
-            FormatProfile::MsoMdoc { .. } => CredentialFormat::MsoMdoc,
-            FormatProfile::DcSdJwt { .. } => CredentialFormat::DcSdJwt,
-            FormatProfile::JwtVcJson { .. } => CredentialFormat::JwtVcJson,
+        let format = match &queryable.meta {
+            FormatProfile::MsoMdoc { .. } => RequestedFormat::MsoMdoc,
+            FormatProfile::DcSdJwt { .. } => RequestedFormat::DcSdJwt,
+            FormatProfile::JwtVcJson { .. } => RequestedFormat::JwtVcJson,
             _ => return None,
         };
         if self.format != format {
@@ -105,20 +119,20 @@ impl CredentialQuery {
 
         // metadata match
         if let Some(meta) = &self.meta {
-            if !meta.is_match(&credential.profile) {
+            if !meta.is_match(&queryable.meta) {
                 return None;
             }
         }
 
         // claims match
-        self.match_claims(credential).ok()
+        self.match_claims(queryable).ok()
     }
 
     /// Find matching claims in the credential.
-    fn match_claims(&self, credential: &Queryable) -> Result<Vec<Claim>> {
+    fn match_claims<'a>(&'a self, credential: &'a Queryable) -> Result<Vec<&'a Claim>> {
         // when no claim queries are specified, return all claims
         let Some(claims) = &self.claims else {
-            return Ok(credential.claims.clone());
+            return Ok(credential.claims.iter().collect());
         };
 
         // when no claim sets are specified, return claims matching claim queries
@@ -203,9 +217,9 @@ impl MetadataQuery {
 
 impl ClaimQuery {
     /// Execute claim query to find matching claims
-    fn execute(&self, credential: &Queryable) -> Option<Vec<Claim>> {
+    fn execute<'a>(&'a self, credential: &'a Queryable) -> Option<Vec<&'a Claim>> {
         let matches =
-            credential.claims.iter().filter(|c| self.is_match(c)).cloned().collect::<Vec<Claim>>();
+            credential.claims.iter().filter(|c| self.is_match(c)).collect::<Vec<&Claim>>();
 
         if matches.is_empty() {
             return None;

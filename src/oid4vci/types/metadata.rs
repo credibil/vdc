@@ -456,16 +456,14 @@ pub enum FormatProfile {
     /// An ISO mDL (ISO.18013-5) mobile driving licence format credential.
     #[serde(rename = "mso_mdoc")]
     MsoMdoc {
-        /// The Credential type, as defined in ISO.18013-5.
+        /// The credential type.
         doctype: String,
     },
 
     /// An IETF SD-JWT format credential.
     #[serde(rename = "dc+sd-jwt")]
     DcSdJwt {
-        /// The Verifiable Credential type. The `vct` value MUST be a
-        /// case-sensitive String or URI serving as an identifier for
-        /// the type of the SD-JWT VC.
+        /// The SD-JWT VC type identifier.
         vct: String,
     },
 }

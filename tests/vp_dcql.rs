@@ -9,21 +9,22 @@ use std::sync::LazyLock;
 
 use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
 use credibil_vc::mso_mdoc::MsoMdocBuilder;
-use credibil_vc::oid4vp::IssuedFormat;
 use credibil_vc::oid4vp::types::DcqlQuery;
 use credibil_vc::sd_jwt::SdJwtVcBuilder;
+use credibil_vc::{mso_mdoc, sd_jwt};
 use futures::executor::block_on;
 use serde_json::{Map, Value, json};
 
 use self::kms::Keyring;
 
 // Create a mock wallet populated with test credentials.
-static WALLET: LazyLock<wallet::Store> = LazyLock::new(|| block_on(async { load_wallet().await }));
+static WALLET_DB: LazyLock<wallet::Store> =
+    LazyLock::new(|| block_on(async { load_wallet().await }));
 
 // Should request a Credential with the claims `vehicle_holder` and `first_name`.
 #[test]
 fn multiple_claims() {
-    let all_vcs = WALLET.fetch();
+    let all_vcs = WALLET_DB.fetch();
 
     let query_json = json!({
         "credentials": [{
@@ -40,14 +41,18 @@ fn multiple_claims() {
     });
 
     let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
-    let res = query.execute(all_vcs).expect("should execute");
-    assert_eq!(res.len(), 1);
+    let results = query.execute(all_vcs).expect("should execute");
+    assert_eq!(results.len(), 1);
+
+    // 1. build presentation
+
+    // 2. send vp_token to verifier
 }
 
 // Should return multiple Credentials.
 #[test]
 fn multiple_credentials() {
-    let all_vcs = WALLET.fetch();
+    let all_vcs = WALLET_DB.fetch();
 
     let query_json = json!({
         "credentials": [
@@ -78,8 +83,15 @@ fn multiple_credentials() {
     });
 
     let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
-    let res = query.execute(all_vcs).expect("should execute");
-    assert_eq!(res.len(), 2);
+    let results = query.execute(all_vcs).expect("should execute");
+    assert_eq!(results.len(), 2);
+
+    // 1. build presentation
+    for selected in results {
+        println!("selected credential: {:?}", selected);
+    }
+
+    // 2. send vp_token to verifier
 }
 
 // Should return one of a `pid`, OR the `other_pid`, OR both
@@ -88,7 +100,7 @@ fn multiple_credentials() {
 // Should also optionally return the `nice_to_have` credential.
 #[test]
 fn complex_query() {
-    let all_vcs = WALLET.fetch();
+    let all_vcs = WALLET_DB.fetch();
 
     let query_json = json!({
         "credentials": [
@@ -170,14 +182,14 @@ fn complex_query() {
     });
 
     let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
-    let res = query.execute(all_vcs).expect("should execute");
-    assert_eq!(res.len(), 2);
+    let results = query.execute(all_vcs).expect("should execute");
+    assert_eq!(results.len(), 2);
 }
 
 // Should return an ID and address from any credential.
 #[test]
 fn any_credential() {
-    let all_vcs = WALLET.fetch();
+    let all_vcs = WALLET_DB.fetch();
 
     let query_json = json!({
         "credentials": [
@@ -278,8 +290,8 @@ fn any_credential() {
     });
 
     let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
-    let res = query.execute(all_vcs).expect("should execute");
-    assert_eq!(res.len(), 2);
+    let results = query.execute(all_vcs).expect("should execute");
+    assert_eq!(results.len(), 2);
 }
 
 // Should return the mandatory claims `last_name` and `date_of_birth`, and
@@ -287,7 +299,7 @@ fn any_credential() {
 // the claims `locality` and `region`.
 #[test]
 fn alt_claims() {
-    let all_vcs = WALLET.fetch();
+    let all_vcs = WALLET_DB.fetch();
 
     let query_json = json!({
         "credentials": [
@@ -313,15 +325,15 @@ fn alt_claims() {
     });
 
     let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
-    let res = query.execute(all_vcs).expect("should execute");
-    assert_eq!(res.len(), 1);
+    let results = query.execute(all_vcs).expect("should execute");
+    assert_eq!(results.len(), 1);
 }
 
 // Should return a credential for a request using specific values for the
 // `last_name` and `postal_code` claims.
 #[test]
 fn specific_values() {
-    let all_vcs = WALLET.fetch();
+    let all_vcs = WALLET_DB.fetch();
 
     let query_json = json!({
         "credentials": [
@@ -348,8 +360,8 @@ fn specific_values() {
     });
 
     let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
-    let res = query.execute(all_vcs).expect("should execute");
-    assert_eq!(res.len(), 1);
+    let results = query.execute(all_vcs).expect("should execute");
+    assert_eq!(results.len(), 1);
 }
 
 // Initialise a mock "wallet" with test credentials.
@@ -371,7 +383,8 @@ async fn load_wallet() -> wallet::Store {
         "birthdate": "2000-01-01"
     });
     let jwt = sd_jwt(vct, claims.as_object().unwrap().clone()).await;
-    store.add(IssuedFormat::DcSdJwt(jwt));
+    let q = sd_jwt::to_queryable(&jwt).expect("should be SD-JWT");
+    store.add(q);
 
     let vct = "https://othercredentials.example/pid";
     let claims = json!({
@@ -387,7 +400,8 @@ async fn load_wallet() -> wallet::Store {
         "birthdate": "2000-01-01"
     });
     let jwt = sd_jwt(vct, claims.as_object().unwrap().clone()).await;
-    store.add(IssuedFormat::DcSdJwt(jwt));
+    let q = sd_jwt::to_queryable(&jwt).expect("should be SD-JWT");
+    store.add(q);
 
     let vct = "https://cred.example/residence_credential";
     let claims = json!({
@@ -398,14 +412,16 @@ async fn load_wallet() -> wallet::Store {
         },
     });
     let jwt = sd_jwt(vct, claims.as_object().unwrap().clone()).await;
-    store.add(IssuedFormat::DcSdJwt(jwt));
+    let q = sd_jwt::to_queryable(&jwt).expect("should be SD-JWT");
+    store.add(q);
 
     let vct = "https://company.example/company_rewards";
     let claims = json!({
         "rewards_number": "1234567890",
     });
     let jwt = sd_jwt(vct, claims.as_object().unwrap().clone()).await;
-    store.add(IssuedFormat::DcSdJwt(jwt));
+    let q = sd_jwt::to_queryable(&jwt).expect("should be SD-JWT");
+    store.add(q);
 
     let doctype = "org.iso.18013.5.1.mDL";
     let claims = json!({
@@ -416,7 +432,8 @@ async fn load_wallet() -> wallet::Store {
         },
     });
     let mdoc = mso_mdoc(doctype, claims.as_object().unwrap().clone()).await;
-    store.add(IssuedFormat::MsoMdoc(mdoc));
+    let q = mso_mdoc::to_queryable(&mdoc).expect("should be mdoc");
+    store.add(q);
 
     let doctype = "org.iso.7367.1.mVRC";
     let claims = json!({
@@ -430,7 +447,8 @@ async fn load_wallet() -> wallet::Store {
         },
     });
     let mdoc = mso_mdoc(doctype, claims.as_object().unwrap().clone()).await;
-    store.add(IssuedFormat::MsoMdoc(mdoc));
+    let q = mso_mdoc::to_queryable(&mdoc).expect("should be mdoc");
+    store.add(q);
 
     store
 }

@@ -8,7 +8,7 @@ use serde_json::Value;
 
 use crate::core::Kind;
 use crate::oid4vci::types::{CredentialDefinition, FormatProfile};
-use crate::oid4vp::types::{Claim, IssuedFormat, Queryable};
+use crate::oid4vp::types::{Claim, Queryable};
 use crate::w3c::{VerifiableCredential, W3cVcClaims};
 
 /// Convert a `w3c` credential to a `Queryable` object.
@@ -16,30 +16,30 @@ use crate::w3c::{VerifiableCredential, W3cVcClaims};
 /// # Errors
 ///
 /// Returns an error if the decoding fails.
-pub fn to_queryable(vc_kind: Kind<VerifiableCredential>) -> Result<Queryable> {
-    let (vc, profile, issued) = match vc_kind {
+pub fn to_queryable(issued: Kind<VerifiableCredential>) -> Result<Queryable> {
+    let (vc, meta) = match &issued {
         Kind::String(encoded) => {
-            let jws = Jws::from_str(&encoded)?;
+            let jws = Jws::from_str(encoded)?;
             let jwt_claims: W3cVcClaims = jws.payload()?;
             let vc = jwt_claims.vc;
 
-            let profile = FormatProfile::JwtVcJson {
+            let meta = FormatProfile::JwtVcJson {
                 credential_definition: CredentialDefinition {
                     context: None,
                     type_: vc.clone().type_.to_vec(),
                 },
             };
 
-            (vc, profile, IssuedFormat::JwtVcJson(encoded))
+            (vc, meta)
         }
         Kind::Object(vc) => {
-            let profile = FormatProfile::LdpVc {
+            let meta = FormatProfile::LdpVc {
                 credential_definition: CredentialDefinition {
                     context: None,
                     type_: vc.clone().type_.to_vec(),
                 },
             };
-            (vc.clone(), profile, IssuedFormat::LdpVc(vc))
+            (vc.clone(), meta)
         }
     };
 
@@ -52,9 +52,9 @@ pub fn to_queryable(vc_kind: Kind<VerifiableCredential>) -> Result<Queryable> {
     }
 
     Ok(Queryable {
-        profile,
+        meta,
         claims,
-        issued,
+        credential: issued,
     })
 }
 

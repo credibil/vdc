@@ -2,14 +2,12 @@
 
 use std::fmt::{Display, Formatter};
 
-use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::core::Kind;
 use crate::oid4vci::types::FormatProfile;
 use crate::w3c::VerifiableCredential;
-use crate::{mso_mdoc, sd_jwt, w3c};
 
 /// DCQL query for requesting Verifiable Presentations.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
@@ -30,7 +28,7 @@ pub struct CredentialQuery {
     pub id: String,
 
     /// The format of the requested credential
-    pub format: CredentialFormat,
+    pub format: RequestedFormat,
 
     /// Indicates whether multiple credentials can be returned for this
     /// query. Defaults to false.
@@ -62,6 +60,19 @@ pub struct CredentialQuery {
     /// consists of one or more `claims` identifiers (i.e. `ClaimsQuery.id`).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub claim_sets: Option<Vec<Vec<String>>>,
+}
+
+/// DCQL query for requesting Verifiable Presentations.
+#[derive(Clone, Debug)]
+pub struct Selected<'a> {
+    /// Identifies the query the credential is a match for.
+    pub query_id: &'a str,
+
+    /// Selected claims to match tose requested in the query.
+    pub claims: Vec<&'a Claim>,
+
+    /// Additional constraints on requested credentials.
+    pub credential: &'a Kind<VerifiableCredential>,
 }
 
 /// Contains a request for one or more credentials that satisfy a particular
@@ -168,7 +179,7 @@ pub enum MetadataQuery {
 
 /// The format of the requested credential.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq, Hash)]
-pub enum CredentialFormat {
+pub enum RequestedFormat {
     /// A W3C Verifiable Credential.
     #[serde(rename = "jwt_vc_json")]
     #[default]
@@ -191,7 +202,7 @@ pub enum CredentialFormat {
     DcSdJwt,
 }
 
-impl Display for CredentialFormat {
+impl Display for RequestedFormat {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::JwtVcJson => write!(f, "jwt_vc_json"),
@@ -253,14 +264,14 @@ pub enum AuthorityType {
 /// Implemented by wallets in order to support DCQL queries.
 #[derive(Debug)]
 pub struct Queryable {
-    /// The credential's format profile.
-    pub profile: FormatProfile,
+    /// The credential's queryable metadata.
+    pub meta: FormatProfile,
 
     /// The credential's claims.
     pub claims: Vec<Claim>,
 
-    /// The original issued credential.
-    pub issued: IssuedFormat,
+    /// The credential, as issued.
+    pub credential: Kind<VerifiableCredential>,
 }
 
 /// A generic credential claim to use with DCQL queries.
@@ -271,36 +282,6 @@ pub struct Claim {
 
     /// The claim's values.
     pub value: Value,
-}
-
-/// The format of the requested credential.
-#[derive(Clone, Debug)]
-#[allow(clippy::large_enum_variant)]
-pub enum IssuedFormat {
-    /// A W3C Verifiable Credential as JWT.
-    JwtVcJson(String),
-
-    /// A W3C Verifiable Credential not using JSON-LD.
-    LdpVc(VerifiableCredential),
-
-    /// An ISO mDL (ISO.18013-5) mobile driving licence format credential.
-    MsoMdoc(String),
-
-    /// An IETF SD-JWT format credential.
-    DcSdJwt(String),
-}
-
-impl TryFrom<IssuedFormat> for Queryable {
-    type Error = anyhow::Error;
-
-    fn try_from(format: IssuedFormat) -> Result<Self> {
-        match format {
-            IssuedFormat::JwtVcJson(issued) => w3c::to_queryable(Kind::String(issued)),
-            IssuedFormat::LdpVc(issued) => w3c::to_queryable(Kind::Object(issued)),
-            IssuedFormat::MsoMdoc(issued) => mso_mdoc::to_queryable(&issued),
-            IssuedFormat::DcSdJwt(issued) => sd_jwt::to_queryable(&issued),
-        }
-    }
 }
 
 #[cfg(test)]

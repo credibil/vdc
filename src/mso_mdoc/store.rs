@@ -4,17 +4,18 @@ use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_infosec::cose::cbor;
 
+use crate::core::Kind;
 use crate::mso_mdoc::{IssuerSigned, MobileSecurityObject};
 use crate::oid4vci::types::FormatProfile;
-use crate::oid4vp::types::{Claim, IssuedFormat, Queryable};
+use crate::oid4vp::types::{Claim, Queryable};
 
 /// Convert a `mso_mdoc` encoded credential to a `Queryable` object.
-/// 
+///
 /// # Errors
-/// 
+///
 /// Returns an error if the decoding fails.
-pub fn to_queryable(encoded: &str) -> Result<Queryable> {
-    let mdoc_bytes = Base64UrlUnpadded::decode_vec(encoded)?;
+pub fn to_queryable(issued: &str) -> Result<Queryable> {
+    let mdoc_bytes = Base64UrlUnpadded::decode_vec(issued)?;
     let mdoc: IssuerSigned = cbor::from_slice(&mdoc_bytes)?;
 
     let mut claims = vec![];
@@ -33,11 +34,11 @@ pub fn to_queryable(encoded: &str) -> Result<Queryable> {
     let mso: MobileSecurityObject = cbor::from_slice(&mso_bytes)?;
 
     Ok(Queryable {
-        profile: FormatProfile::MsoMdoc {
+        meta: FormatProfile::MsoMdoc {
             doctype: mso.doc_type,
         },
         claims,
-        issued: IssuedFormat::MsoMdoc(encoded.to_string()),
+        credential: Kind::String(issued.to_string()),
     })
 }
 
