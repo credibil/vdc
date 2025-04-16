@@ -7,8 +7,8 @@ mod kms;
 
 use anyhow::Result;
 use blockstore::InMemoryBlockstore;
-use credibil_did::{DidResolver, Document};
-use credibil_infosec::{Algorithm, Signer};
+use credibil_did::{DidResolver, Document, SignerExt};
+use credibil_infosec::{jose::jws::Key, Algorithm, Signer};
 use credibil_vc::status::issuer::Status;
 use kms::Keyring;
 
@@ -50,8 +50,10 @@ impl Signer for ProviderImpl {
     fn algorithm(&self) -> Algorithm {
         self.keyring.algorithm()
     }
+}
 
-    async fn verification_method(&self) -> Result<String> {
+impl SignerExt for ProviderImpl {
+    async fn verification_method(&self) -> Result<Key> {
         self.keyring.verification_method().await
     }
 }

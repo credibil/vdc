@@ -10,6 +10,7 @@ mod wallet;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
+use credibil_did::SignerExt;
 use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
 use credibil_vc::BlockStore;
 use credibil_vc::core::did_jwk;
@@ -66,11 +67,14 @@ async fn deferred() {
     let nonce =
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
+    let key_ref = BOB_KEYRING.verification_method().await.expect("should get key reference");
+
     // proof of possession of key material
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
         .add_signer(&*BOB_KEYRING)
+        .key_ref(&key_ref)
         .build()
         .await
         .expect("builds JWS");

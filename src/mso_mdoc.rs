@@ -5,12 +5,14 @@
 mod mdoc;
 mod mso;
 
-use anyhow::anyhow;
+use anyhow::{anyhow, bail};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use ciborium::cbor;
 use coset::{CoseSign1Builder, HeaderBuilder, iana};
+use credibil_did::SignerExt;
 use credibil_infosec::cose::{CoseKey, Tag24};
-use credibil_infosec::{Algorithm, Curve, KeyType, Signer};
+use credibil_infosec::jose::jws::Key;
+use credibil_infosec::{Algorithm, Curve, KeyType};
 pub use mdoc::{IssuerSigned, IssuerSignedItem};
 pub use mso::{DigestIdGenerator, MobileSecurityObject};
 use rand::{Rng, rng};
@@ -30,7 +32,7 @@ pub struct MsoMdocBuilder<C, S> {
 pub struct NoSigner;
 /// Builder state has a signer.
 #[doc(hidden)]
-pub struct HasSigner<'a, S: Signer>(pub &'a S);
+pub struct HasSigner<'a, S: SignerExt>(pub &'a S);
 
 /// Builder has no claims.
 #[doc(hidden)]
@@ -59,7 +61,7 @@ impl<C, S> MsoMdocBuilder<C, S> {
 
 impl<C> MsoMdocBuilder<C, NoSigner> {
     /// Set the credential Signer.
-    pub fn signer<S: Signer>(self, signer: &'_ S) -> MsoMdocBuilder<C, HasSigner<'_, S>> {
+    pub fn signer<S: SignerExt>(self, signer: &'_ S) -> MsoMdocBuilder<C, HasSigner<'_, S>> {
         MsoMdocBuilder {
             doctype: self.doctype,
             claims: self.claims,
@@ -79,7 +81,7 @@ impl<S> MsoMdocBuilder<NoClaims, S> {
     }
 }
 
-impl<S: Signer> MsoMdocBuilder<HasClaims, HasSigner<'_, S>> {
+impl<S: SignerExt> MsoMdocBuilder<HasClaims, HasSigner<'_, S>> {
     /// Build the ISO mDL credential, returning a base64url-encoded,
     /// CBOR-encoded, ISO mDL.
     ///
@@ -140,7 +142,9 @@ impl<S: Signer> MsoMdocBuilder<HasClaims, HasSigner<'_, S>> {
             Algorithm::ES256K => return Err(anyhow!("unsupported algorithm")),
         };
 
-        let verification_method = signer.verification_method().await?;
+        let Key::KeyId(verification_method) = signer.verification_method().await? else {
+            bail!("invalid verification method");
+        };
         let key_id = verification_method.as_bytes().to_vec();
 
         let protected = HeaderBuilder::new().algorithm(algorithm).build();
@@ -238,9 +242,11 @@ mod tests {
         fn algorithm(&self) -> Algorithm {
             Algorithm::EdDSA
         }
+    }
 
-        async fn verification_method(&self) -> Result<String> {
-            Ok("did:example:123#key-1".to_string())
+    impl SignerExt for Keyring {
+        async fn verification_method(&self) -> Result<Key> {
+            Ok(Key::KeyId("did:example:123#key-1".to_string()))
         }
     }
 }

@@ -44,10 +44,16 @@ pub async fn request_object(
         return Err(Error::InvalidRequest("client ID mismatch".to_string()));
     }
 
+    // Get the resolvable key ID (or JWK) from the trust provider.
+    let key_id = provider.verification_method().await.map_err(|e| {
+        Error::ServerError(format!("issue getting verification method: {e}"))
+    })?;
+
     let jws = JwsBuilder::new()
         .typ(Type::OauthAuthzReqJwt)
         .payload(&req_obj)
         .add_signer(provider)
+        .key_ref(&key_id)
         .build()
         .await
         .map_err(|e| Error::ServerError(format!("issue building jwt: {e}")))?;

@@ -10,7 +10,7 @@ use base64ct::{Base64UrlUnpadded, Encoding};
 use bitvec::bits;
 use bitvec::order::Lsb0;
 use bitvec::view::BitView;
-use credibil_infosec::Signer;
+use credibil_did::SignerExt;
 use credibil_infosec::jose::jws;
 use flate2::write::GzEncoder;
 use serde_json::{Map, Value};
@@ -116,7 +116,7 @@ pub fn bitstring(config: &ListConfig, issued: &[StatusLogEntry]) -> anyhow::Resu
 /// * signing errors.
 pub async fn credential(
     credential_issuer: &str, config: &ListConfig, status_list_base_url: &str, bitstring: &str,
-    ttl: Option<u64>, signer: &impl Signer,
+    ttl: Option<u64>, signer: &impl SignerExt,
 ) -> anyhow::Result<String> {
     let mut base_url = status_list_base_url.to_string();
     if !base_url.ends_with('/') {
@@ -146,7 +146,9 @@ pub async fn credential(
         ..VerifiableCredential::default()
     };
 
-    jws::encode(&W3cVcClaims::from(vc), signer)
+    let key = signer.verification_method().await?;
+
+    jws::encode(&W3cVcClaims::from(vc), &key, signer)
         .await
         .map_err(|e| anyhow!("issue generating `jwt_vc_json` credential: {e}"))
 }

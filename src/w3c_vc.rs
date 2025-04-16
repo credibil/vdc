@@ -13,7 +13,7 @@ pub mod vc;
 pub mod vp;
 
 use anyhow::anyhow;
-use credibil_infosec::Signer;
+use credibil_did::SignerExt;
 use credibil_infosec::jose::jws;
 use serde_json::{Map, Value};
 
@@ -70,7 +70,7 @@ pub struct HasClaims(Map<String, Value>);
 pub struct NoSigner;
 /// Builder state has a signer.
 #[doc(hidden)]
-pub struct HasSigner<'a, S: Signer>(pub &'a S);
+pub struct HasSigner<'a, S: SignerExt>(pub &'a S);
 
 impl Default for W3cVcBuilder<NoConfig, NoIssuer, NoHolder, NoClaims, NoSigner> {
     fn default() -> Self {
@@ -159,7 +159,7 @@ impl<G, I, H, S> W3cVcBuilder<G, I, H, NoClaims, S> {
 impl<G, I, H, C> W3cVcBuilder<G, I, H, C, NoSigner> {
     /// Set the credential Signer.
     #[must_use]
-    pub fn signer<S: Signer>(self, signer: &'_ S) -> W3cVcBuilder<G, I, H, C, HasSigner<'_, S>> {
+    pub fn signer<S: SignerExt>(self, signer: &'_ S) -> W3cVcBuilder<G, I, H, C, HasSigner<'_, S>> {
         W3cVcBuilder {
             config: self.config,
             issuer: self.issuer,
@@ -180,7 +180,7 @@ impl<G, I, H, C, S> W3cVcBuilder<G, I, H, C, S> {
     }
 }
 
-impl<S: Signer> W3cVcBuilder<HasConfig, HasIssuer, HasHolder, HasClaims, HasSigner<'_, S>> {
+impl<S: SignerExt> W3cVcBuilder<HasConfig, HasIssuer, HasHolder, HasClaims, HasSigner<'_, S>> {
     /// Build the W3C credential, returning a base64url-encoded JSON JWT.
     ///
     /// # Errors
@@ -225,8 +225,10 @@ impl<S: Signer> W3cVcBuilder<HasConfig, HasIssuer, HasHolder, HasClaims, HasSign
             ..VerifiableCredential::default()
         };
 
+        let key = self.signer.0.verification_method().await?;
+
         // encode to JWT
-        jws::encode(&W3cVcClaims::from(vc), self.signer.0)
+        jws::encode(&W3cVcClaims::from(vc), &key, self.signer.0)
             .await
             .map_err(|e| anyhow!("issue generating `jwt_vc_json` credential: {e}"))
     }
