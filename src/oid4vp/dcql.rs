@@ -38,7 +38,7 @@ impl DcqlQuery {
 impl CredentialSetQuery {
     /// Execute credential set query.
     fn execute<'a>(
-        &'a self, credentials: &'a [CredentialQuery], all_vcs: &'a [Queryable],
+        &self, credentials: &'a [CredentialQuery], all_vcs: &'a [Queryable],
     ) -> Result<Vec<Selected<'a>>> {
         // iterate until we find an `option` where every CredentialQuery is satisfied
         'next_option: for option in &self.options {
@@ -105,7 +105,7 @@ impl CredentialQuery {
     }
 
     /// Determines whether the specified credential matches the query.
-    fn is_match<'a>(&'a self, queryable: &'a Queryable) -> Option<Vec<&'a Claim>> {
+    fn is_match<'a>(&self, queryable: &'a Queryable) -> Option<Vec<&'a Claim>> {
         // format match
         let format = match &queryable.meta {
             FormatProfile::MsoMdoc { .. } => RequestedFormat::MsoMdoc,
@@ -129,7 +129,7 @@ impl CredentialQuery {
     }
 
     /// Find matching claims in the credential.
-    fn match_claims<'a>(&'a self, credential: &'a Queryable) -> Result<Vec<&'a Claim>> {
+    fn match_claims<'a>(&self, credential: &'a Queryable) -> Result<Vec<&'a Claim>> {
         // when no claim queries are specified, return all claims
         let Some(claims) = &self.claims else {
             return Ok(credential.claims.iter().collect());
@@ -217,7 +217,7 @@ impl MetadataQuery {
 
 impl ClaimQuery {
     /// Execute claim query to find matching claims
-    fn execute<'a>(&'a self, credential: &'a Queryable) -> Option<Vec<&'a Claim>> {
+    fn execute<'a>(&self, credential: &'a Queryable) -> Option<Vec<&'a Claim>> {
         let matches =
             credential.claims.iter().filter(|c| self.is_match(c)).collect::<Vec<&Claim>>();
 
