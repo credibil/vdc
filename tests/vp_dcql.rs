@@ -5,6 +5,7 @@ mod kms;
 #[path = "../examples/wallet/mod.rs"]
 mod wallet;
 
+use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
@@ -89,25 +90,35 @@ async fn multiple_credentials() {
     let results = query.execute(all_vcs).expect("should execute");
     assert_eq!(results.len(), 2);
 
-    // 1. build presentation
-    for selected in results {
+    let mut vp_token = HashMap::<String, Vec<String>>::new();
+
+    // create an entry for each credential query
+    for result in results {
         let cred_query =
-            query.credentials.iter().find(|c| c.id == selected.query_id).expect("should find");
+            query.credentials.iter().find(|c| c.id == result.query_id).expect("should find");
 
         if cred_query.format != RequestedFormat::DcSdJwt {
             continue;
         }
 
-        let vp = SdJwtVpBuilder::new()
-            .verifier("https://verifier.example.com")
-            .selected(selected)
-            .signer(&Keyring::new())
-            .build()
-            .await
-            .expect("should build");
+        let mut presentations = vec![];
 
-        println!("vp_token: {vp}");
+        // create presentation for each credential
+        for matched in result.matches {
+            let vp = SdJwtVpBuilder::new()
+                .verifier("https://verifier.example.com")
+                .matched(matched)
+                .signer(&Keyring::new())
+                .build()
+                .await
+                .expect("should build");
+            presentations.push(vp);
+        }
+
+        vp_token.insert(cred_query.id.clone(), presentations);
     }
+
+    println!("{vp_token:?}");
 
     // 2. send vp_token to verifier
 }

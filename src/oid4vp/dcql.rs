@@ -4,8 +4,8 @@ use anyhow::{Result, anyhow};
 
 use crate::oid4vci::types::FormatProfile;
 use crate::oid4vp::types::{
-    Claim, ClaimQuery, CredentialQuery, CredentialSetQuery, DcqlQuery, MetadataQuery, Queryable,
-    RequestedFormat, Selected,
+    Claim, ClaimQuery, CredentialQuery, CredentialSetQuery, DcqlQuery, Matched, MetadataQuery,
+    QueryResult, Queryable, RequestedFormat,
 };
 
 impl DcqlQuery {
@@ -13,20 +13,20 @@ impl DcqlQuery {
     ///
     /// # Errors
     /// TODO: add errors
-    pub fn execute<'a>(&'a self, all_vcs: &'a [Queryable]) -> Result<Vec<Selected<'a>>> {
+    pub fn execute<'a>(&'a self, all_vcs: &'a [Queryable]) -> Result<Vec<QueryResult<'a>>> {
         // EITHER find matching VCs for each CredentialSetQuery
         if let Some(sets) = &self.credential_sets {
             return sets.iter().try_fold(vec![], |mut matched, query| {
-                let vcs = query.execute(&self.credentials, all_vcs)?;
-                matched.extend(vcs);
+                let results = query.execute(&self.credentials, all_vcs)?;
+                matched.extend(results);
                 Ok(matched)
             });
         }
 
         // OR find matching VCs for each CredentialQuery
         let matched = self.credentials.iter().fold(vec![], |mut matched, query| {
-            if let Some(vcs) = query.execute(all_vcs) {
-                matched.extend(vcs);
+            if let Some(result) = query.execute(all_vcs) {
+                matched.push(result);
             }
             matched
         });
@@ -39,7 +39,7 @@ impl CredentialSetQuery {
     /// Execute credential set query.
     fn execute<'a>(
         &self, credentials: &'a [CredentialQuery], all_vcs: &'a [Queryable],
-    ) -> Result<Vec<Selected<'a>>> {
+    ) -> Result<Vec<QueryResult<'a>>> {
         // iterate until we find an `option` where every CredentialQuery is satisfied
         'next_option: for option in &self.options {
             // match ALL credential queries in the option set
@@ -52,10 +52,10 @@ impl CredentialSetQuery {
                 };
 
                 // execute credential query
-                let Some(vcs) = cq.execute(all_vcs) else {
+                let Some(result) = cq.execute(all_vcs) else {
                     continue 'next_option;
                 };
-                matches.extend(vcs);
+                matches.push(result);
             }
 
             return Ok(matches);
@@ -71,29 +71,20 @@ impl CredentialSetQuery {
 
 impl CredentialQuery {
     /// Execute the credential query.
-    fn execute<'a>(&'a self, all_vcs: &'a [Queryable]) -> Option<Vec<Selected<'a>>> {
-        if !self.multiple.unwrap_or_default() {
-            // return first matching credential
-            for q in all_vcs {
-                if let Some(claims) = self.is_match(q) {
-                    return Some(vec![Selected {
-                        query_id: &self.id,
-                        claims,
-                        credential: &q.credential,
-                    }]);
-                }
-            }
-        }
+    fn execute<'a>(&'a self, all_vcs: &'a [Queryable]) -> Option<QueryResult<'a>> {
+        let multiple = self.multiple.unwrap_or_default();
 
         // return all matching credentials
         let mut matches = vec![];
         for q in all_vcs {
             if let Some(claims) = self.is_match(q) {
-                matches.push(Selected {
-                    query_id: &self.id,
+                matches.push(Matched {
                     claims,
-                    credential: &q.credential,
+                    issued: &q.credential,
                 });
+                if multiple {
+                    break;
+                }
             }
         }
 
@@ -101,7 +92,10 @@ impl CredentialQuery {
             return None;
         }
 
-        Some(matches)
+        Some(QueryResult {
+            query_id: &self.id,
+            matches,
+        })
     }
 
     /// Determines whether the specified credential matches the query.

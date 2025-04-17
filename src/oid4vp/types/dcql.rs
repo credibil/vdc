@@ -62,19 +62,6 @@ pub struct CredentialQuery {
     pub claim_sets: Option<Vec<Vec<String>>>,
 }
 
-/// DCQL query for requesting Verifiable Presentations.
-#[derive(Clone, Debug)]
-pub struct Selected<'a> {
-    /// Identifies the query the credential is a match for.
-    pub query_id: &'a str,
-
-    /// Selected claims to match tose requested in the query.
-    pub claims: Vec<&'a Claim>,
-
-    /// Additional constraints on requested credentials.
-    pub credential: &'a Kind<VerifiableCredential>,
-}
-
 /// Contains a request for one or more credentials that satisfy a particular
 /// use case for the Verifier.
 ///
@@ -282,6 +269,26 @@ pub struct Claim {
 
     /// The claim's values.
     pub value: Value,
+}
+
+/// `QueryResult` credentials matching a Credential Query.
+#[derive(Clone, Debug)]
+pub struct QueryResult<'a> {
+    /// Identifies the query the credential is a match for.
+    pub query_id: &'a str,
+
+    /// Additional constraints on requested credentials.
+    pub matches: Vec<Matched<'a>>,
+}
+
+/// `QueryResult` credentials matching a Credential Query.
+#[derive(Clone, Debug)]
+pub struct Matched<'a> {
+    /// Claims match those requested in the Claims Query.
+    pub claims: Vec<&'a Claim>,
+
+    /// The original issued credential.
+    pub issued: &'a Kind<VerifiableCredential>,
 }
 
 #[cfg(test)]
