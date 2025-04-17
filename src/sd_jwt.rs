@@ -12,7 +12,7 @@
 mod issue;
 mod present;
 mod store;
-// mod verify;
+mod verify;
 
 use anyhow::Result;
 use base64ct::{Base64UrlUnpadded, Encoding};
@@ -27,6 +27,7 @@ use sha2::{Digest, Sha256};
 pub use self::issue::SdJwtVcBuilder;
 pub use self::present::SdJwtVpBuilder;
 pub use self::store::to_queryable;
+pub use self::verify::verify;
 
 /// Claims that can be included in the payload of SD-JWT VCs.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]

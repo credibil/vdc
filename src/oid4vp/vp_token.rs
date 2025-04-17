@@ -8,12 +8,14 @@ use credibil_infosec::Signer;
 use crate::oid4vp::types::{QueryResult, RequestedFormat};
 use crate::sd_jwt::SdJwtVpBuilder;
 
+use super::ClientIdentifier;
+
 /// Generate a Verifiable Presentation (VP) token.
 ///
 /// # Errors
 ///
 /// Returns an error when building a presentation from a `QueryResult` fails.
-pub async fn generate(
+pub async fn generate(client_id: &ClientIdentifier,
     results: &[QueryResult<'_>], signer: &impl Signer,
 ) -> Result<HashMap<String, Vec<String>>> {
     let mut token = HashMap::<String, Vec<String>>::new();
@@ -27,7 +29,7 @@ pub async fn generate(
             RequestedFormat::DcSdJwt => {
                 for matched in &result.matches {
                     let vp = SdJwtVpBuilder::new()
-                        .verifier("https://verifier.example.com")
+                        .client_id(client_id.to_string())
                         .matched(matched)
                         .signer(signer)
                         .build()

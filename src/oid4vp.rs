@@ -172,12 +172,6 @@ mod error;
 mod handlers;
 mod state;
 
-/// Proofs
-pub mod proof {
-    pub use crate::w3c::Payload;
-    pub use crate::w3c::verify::create;
-}
-
 // Re-export types
 pub use crate::oid4vp::types::*;
 pub use crate::w3c::VerifiablePresentation;

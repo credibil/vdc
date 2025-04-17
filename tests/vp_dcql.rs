@@ -61,7 +61,8 @@ async fn multiple_credentials() {
     BlockStore::put(&provider, "owner", "VERIFIER", VERIFIER_ID, data::VERIFIER).await.unwrap();
 
     // --------------------------------------------------
-    // Verifier creates an Authorization Request to send to the Wallet
+    // Verifier creates an Authorization Request requesting presentation of
+    // credentials and sends to Wallet
     // --------------------------------------------------
     let query_json = json!({
         "credentials": [
@@ -91,9 +92,10 @@ async fn multiple_credentials() {
             }
         ]
     });
+    let query = serde_json::from_value(query_json).expect("should deserialize");
 
     let request = GenerateRequest {
-        query: serde_json::from_value(query_json).expect("should deserialize"),
+        query,
         client_id: VERIFIER_ID.to_string(),
         // device_flow: DeviceFlow::CrossDevice,
         device_flow: DeviceFlow::SameDevice,
@@ -101,32 +103,36 @@ async fn multiple_credentials() {
     let response =
         endpoint::handle(VERIFIER_ID, request, &provider).await.expect("should create request");
 
-    let generated: GenerateResponse = response.body;
-
-    // --------------------------------------------------
-    // Wallet executes the query to find credentials
-    // --------------------------------------------------
-    let GenerateResponse::Object(req_obj) = generated else {
+    // extract request object and send to Wallet
+    let GenerateResponse::Object(request_object) = response.body else {
         panic!("should be object");
     };
-    let all_vcs = WALLET_DB.fetch();
 
-    let results = req_obj.dcql_query.execute(all_vcs).expect("should execute");
+    // --------------------------------------------------
+    // Wallet processes the Authorization Request and returns an Authorization
+    // Response with the requested presentations in the VP token.
+    // --------------------------------------------------
+    // execute query
+    let stored_vcs = WALLET_DB.fetch();
+    let results = request_object.dcql_query.execute(stored_vcs).expect("should execute");
     assert_eq!(results.len(), 2);
 
-    // --------------------------------------------------
-    // Wallet returns an authorization response with results as a VP token
-    // --------------------------------------------------
-    let vp_token = vp_token::generate(&results, &Keyring::new()).await.expect("should get token");
+    let vp_token = vp_token::generate(&request_object.client_id, &results, &Keyring::new())
+        .await
+        .expect("should get token");
     assert_eq!(vp_token.len(), 1);
 
     let request = AuthorzationResponse {
         vp_token,
-        state: req_obj.state,
+        state: request_object.state,
     };
     let response =
         endpoint::handle(VERIFIER_ID, request, &provider).await.expect("should create offer");
-    println!("response: {:?}", response);
+
+    // --------------------------------------------------
+    // Wallet follows Verifier's redirect.
+    // --------------------------------------------------
+    println!("{response:?}");
 }
 
 // Should return one of a `pid`, OR the `other_pid`, OR both
