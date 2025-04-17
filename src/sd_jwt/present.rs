@@ -22,7 +22,7 @@ pub struct SdJwtVpBuilder<C, V, S> {
 pub struct NoMatched;
 /// Builder has claims.
 #[doc(hidden)]
-pub struct HasMatched<'a>(Matched<'a>);
+pub struct HasMatched<'a>(&'a Matched<'a>);
 
 /// Builder has no issuer.
 #[doc(hidden)]
@@ -58,10 +58,10 @@ impl SdJwtVpBuilder<NoMatched, NoVerifier, NoSigner> {
 }
 
 // Credentials to include in the presentation
-impl<V, S> SdJwtVpBuilder<NoMatched, V, S> {
+impl<'a, V, S> SdJwtVpBuilder<NoMatched, V, S> {
     /// Set the claims for the ISO mDL credential.
     #[must_use]
-    pub fn matched(self, matched: Matched) -> SdJwtVpBuilder<HasMatched, V, S> {
+    pub fn matched(self, matched: &'a Matched) -> SdJwtVpBuilder<HasMatched<'a>, V, S> {
         SdJwtVpBuilder {
             matched: HasMatched(matched),
             verifier: self.verifier,

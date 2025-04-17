@@ -93,7 +93,7 @@ impl CredentialQuery {
         }
 
         Some(QueryResult {
-            query_id: &self.id,
+            query: self,
             matches,
         })
     }

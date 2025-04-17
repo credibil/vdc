@@ -5,20 +5,18 @@ mod kms;
 #[path = "../examples/wallet/mod.rs"]
 mod wallet;
 
-use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
 use credibil_vc::mso_mdoc::MsoMdocBuilder;
-use credibil_vc::oid4vp::RequestedFormat;
 use credibil_vc::oid4vp::types::DcqlQuery;
+use credibil_vc::oid4vp::vp_token;
 use credibil_vc::sd_jwt::SdJwtVcBuilder;
 use credibil_vc::{mso_mdoc, sd_jwt};
 use futures::executor::block_on;
 use serde_json::{Map, Value, json};
 
 use self::kms::Keyring;
-use crate::sd_jwt::SdJwtVpBuilder;
 
 // Create a mock wallet populated with test credentials.
 static WALLET_DB: LazyLock<wallet::Store> =
@@ -46,10 +44,6 @@ fn multiple_claims() {
     let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
     let results = query.execute(all_vcs).expect("should execute");
     assert_eq!(results.len(), 1);
-
-    // 1. build presentation
-
-    // 2. send vp_token to verifier
 }
 
 // Should return multiple Credentials.
@@ -90,35 +84,8 @@ async fn multiple_credentials() {
     let results = query.execute(all_vcs).expect("should execute");
     assert_eq!(results.len(), 2);
 
-    let mut vp_token = HashMap::<String, Vec<String>>::new();
-
-    // create an entry for each credential query
-    for result in results {
-        let cred_query =
-            query.credentials.iter().find(|c| c.id == result.query_id).expect("should find");
-
-        if cred_query.format != RequestedFormat::DcSdJwt {
-            continue;
-        }
-
-        let mut presentations = vec![];
-
-        // create presentation for each credential
-        for matched in result.matches {
-            let vp = SdJwtVpBuilder::new()
-                .verifier("https://verifier.example.com")
-                .matched(matched)
-                .signer(&Keyring::new())
-                .build()
-                .await
-                .expect("should build");
-            presentations.push(vp);
-        }
-
-        vp_token.insert(cred_query.id.clone(), presentations);
-    }
-
-    println!("{vp_token:?}");
+    let vp_token = vp_token::generate(&results, &Keyring::new()).await.expect("should get token");
+    assert_eq!(vp_token.len(), 1);
 
     // 2. send vp_token to verifier
 }

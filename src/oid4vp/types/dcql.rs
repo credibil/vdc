@@ -275,7 +275,7 @@ pub struct Claim {
 #[derive(Clone, Debug)]
 pub struct QueryResult<'a> {
     /// Identifies the query the credential is a match for.
-    pub query_id: &'a str,
+    pub query: &'a CredentialQuery,
 
     /// Additional constraints on requested credentials.
     pub matches: Vec<Matched<'a>>,

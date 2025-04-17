@@ -166,6 +166,7 @@ pub mod dcql;
 pub mod endpoint;
 pub mod provider;
 pub mod types;
+pub mod vp_token;
 
 mod error;
 mod handlers;
