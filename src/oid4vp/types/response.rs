@@ -3,15 +3,15 @@ use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
-use crate::core::Kind;
-use crate::w3c::VerifiablePresentation;
+// use crate::core::Kind;
+// use crate::w3c::VerifiablePresentation;
 
 /// Authorization Response request object is used by Wallets to send a VP Token
 /// and Presentation Submission to the Verifier who initiated the verification.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct AuthorzationResponse {
     /// The VP Token returned by the Wallet.
-    pub vp_token: HashMap<String, Vec<Kind<VerifiablePresentation>>>,
+    pub vp_token: HashMap<String, Vec<String>>,
 
     /// The client state value from the Authorization Request.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -103,15 +103,11 @@ pub struct RedirectResponse {
 mod tests {
 
     use super::*;
-    use crate::core::Kind;
 
     #[test]
     fn form_encode() {
         let request = AuthorzationResponse {
-            vp_token: HashMap::from([(
-                "my_credential".to_string(),
-                vec![Kind::String("eyJ.etc".to_string())],
-            )]),
+            vp_token: HashMap::from([("my_credential".to_string(), vec!["eyJ.etc".to_string()])]),
             state: None,
         };
 

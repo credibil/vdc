@@ -18,9 +18,10 @@ use credibil_vc::oid4vci::types::{
 };
 use credibil_vc::oid4vci::{JwtType, endpoint};
 use credibil_vc::{BlockStore, OneMany};
-use provider::{BOB_ID, ISSUER_ID, ProviderImpl};
 use serde_json::json;
-use wallet::Keyring;
+
+use self::provider::{BOB_ID, ISSUER_ID, ProviderImpl};
+use self::wallet::Keyring;
 
 static BOB_KEYRING: LazyLock<Keyring> = LazyLock::new(wallet::keyring);
 

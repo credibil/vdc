@@ -2,6 +2,8 @@
 
 #[path = "../examples/kms/mod.rs"]
 mod kms;
+#[path = "../examples/verifier/provider/mod.rs"]
+mod provider;
 #[path = "../examples/wallet/mod.rs"]
 mod wallet;
 
@@ -10,13 +12,14 @@ use std::sync::LazyLock;
 use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
 use credibil_vc::mso_mdoc::MsoMdocBuilder;
 use credibil_vc::oid4vp::types::DcqlQuery;
-use credibil_vc::oid4vp::vp_token;
+use credibil_vc::oid4vp::{AuthorzationResponse, endpoint, vp_token};
 use credibil_vc::sd_jwt::SdJwtVcBuilder;
 use credibil_vc::{mso_mdoc, sd_jwt};
 use futures::executor::block_on;
 use serde_json::{Map, Value, json};
 
 use self::kms::Keyring;
+use self::provider::{ProviderImpl, VERIFIER_ID};
 
 // Create a mock wallet populated with test credentials.
 static WALLET_DB: LazyLock<wallet::Store> =
@@ -49,8 +52,12 @@ fn multiple_claims() {
 // Should return multiple Credentials.
 #[tokio::test]
 async fn multiple_credentials() {
+    let provider = ProviderImpl::new();
     let all_vcs = WALLET_DB.fetch();
 
+    // --------------------------------------------------
+    // The Verifier creates a query for credentials
+    // --------------------------------------------------
     let query_json = json!({
         "credentials": [
             {
@@ -80,14 +87,26 @@ async fn multiple_credentials() {
         ]
     });
 
+    // --------------------------------------------------
+    // The Wallet executes the query to find credentials
+    // --------------------------------------------------
     let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
     let results = query.execute(all_vcs).expect("should execute");
     assert_eq!(results.len(), 2);
 
+    // --------------------------------------------------
+    // The Wallet returns an authorization response with results as a VP token
+    // --------------------------------------------------
     let vp_token = vp_token::generate(&results, &Keyring::new()).await.expect("should get token");
     assert_eq!(vp_token.len(), 1);
 
-    // 2. send vp_token to verifier
+    let request = AuthorzationResponse {
+        vp_token,
+        state: None,
+    };
+    let response =
+        endpoint::handle(VERIFIER_ID, request, &provider).await.expect("should create offer");
+    println!("response: {:?}", response);
 }
 
 // Should return one of a `pid`, OR the `other_pid`, OR both
