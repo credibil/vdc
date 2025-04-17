@@ -92,10 +92,7 @@ impl CredentialQuery {
             return None;
         }
 
-        Some(QueryResult {
-            query: self,
-            matches,
-        })
+        Some(QueryResult { query: self, matches })
     }
 
     /// Determines whether the specified credential matches the query.

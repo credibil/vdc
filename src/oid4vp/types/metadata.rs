@@ -83,9 +83,17 @@ pub struct VerifierMetadata {
 /// [Credential Format Profiles]: (https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-format-profiles)
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
 pub enum Format {
-    /// W3C Verifiable Credential.
+    /// W3C JWT JSON Verifiable Credential.
+    #[serde(rename = "jwt_vc_json")]
+    JwtVcJson,
+
+    /// W3C JWT JSON Verifiable Presentation.
     #[serde(rename = "jwt_vp_json")]
     JwtVpJson,
+
+    /// W3C JWT JSON Verifiable Presentation.
+    #[serde(rename = "dc+sd-jwt")]
+    DcSdJwt,
 }
 
 /// Used to define the format and proof types of Verifiable Presentations and
@@ -99,6 +107,16 @@ pub struct VpFormat {
     /// Algorithms supported by the format.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub alg_values_supported: Option<Vec<String>>,
+
+    /// SD-JWT algorithms supported.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "sd-jwt_alg_values")]
+    pub sd_jwt_alg_values: Option<Vec<String>>,
+
+    /// KB-JWT algorithms supported.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "kb-jwt_alg_values")]
+    pub kb_jwt_alg_values: Option<Vec<String>>,
 }
 
 /// /// Client Identifier schemes that may be supported by the Wallet.

@@ -58,7 +58,6 @@ async fn create_request(
         expires_at: Utc::now() + Expire::Request.duration(),
         request_object: req_obj,
     };
-
     StateStore::put(provider, &uri_token, &state, state.expires_at)
         .await
         .map_err(|e| Error::ServerError(format!("issue saving state: {e}")))?;

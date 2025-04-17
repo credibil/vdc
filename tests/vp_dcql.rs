@@ -1,5 +1,7 @@
 //! Tests for the Verifier API
 
+#[path = "../examples/verifier/data/mod.rs"]
+mod data;
 #[path = "../examples/kms/mod.rs"]
 mod kms;
 #[path = "../examples/verifier/provider/mod.rs"]
@@ -12,9 +14,11 @@ use std::sync::LazyLock;
 use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
 use credibil_vc::mso_mdoc::MsoMdocBuilder;
 use credibil_vc::oid4vp::types::DcqlQuery;
-use credibil_vc::oid4vp::{AuthorzationResponse, endpoint, vp_token};
+use credibil_vc::oid4vp::{
+    AuthorzationResponse, DeviceFlow, GenerateRequest, GenerateResponse, endpoint, vp_token,
+};
 use credibil_vc::sd_jwt::SdJwtVcBuilder;
-use credibil_vc::{mso_mdoc, sd_jwt};
+use credibil_vc::{BlockStore, mso_mdoc, sd_jwt};
 use futures::executor::block_on;
 use serde_json::{Map, Value, json};
 
@@ -53,10 +57,11 @@ fn multiple_claims() {
 #[tokio::test]
 async fn multiple_credentials() {
     let provider = ProviderImpl::new();
-    let all_vcs = WALLET_DB.fetch();
+
+    BlockStore::put(&provider, "owner", "VERIFIER", VERIFIER_ID, data::VERIFIER).await.unwrap();
 
     // --------------------------------------------------
-    // The Verifier creates a query for credentials
+    // Verifier creates an Authorization Request to send to the Wallet
     // --------------------------------------------------
     let query_json = json!({
         "credentials": [
@@ -87,22 +92,37 @@ async fn multiple_credentials() {
         ]
     });
 
+    let request = GenerateRequest {
+        query: serde_json::from_value(query_json).expect("should deserialize"),
+        client_id: VERIFIER_ID.to_string(),
+        // device_flow: DeviceFlow::CrossDevice,
+        device_flow: DeviceFlow::SameDevice,
+    };
+    let response =
+        endpoint::handle(VERIFIER_ID, request, &provider).await.expect("should create request");
+
+    let generated: GenerateResponse = response.body;
+
     // --------------------------------------------------
-    // The Wallet executes the query to find credentials
+    // Wallet executes the query to find credentials
     // --------------------------------------------------
-    let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
-    let results = query.execute(all_vcs).expect("should execute");
+    let GenerateResponse::Object(req_obj) = generated else {
+        panic!("should be object");
+    };
+    let all_vcs = WALLET_DB.fetch();
+
+    let results = req_obj.dcql_query.execute(all_vcs).expect("should execute");
     assert_eq!(results.len(), 2);
 
     // --------------------------------------------------
-    // The Wallet returns an authorization response with results as a VP token
+    // Wallet returns an authorization response with results as a VP token
     // --------------------------------------------------
     let vp_token = vp_token::generate(&results, &Keyring::new()).await.expect("should get token");
     assert_eq!(vp_token.len(), 1);
 
     let request = AuthorzationResponse {
         vp_token,
-        state: None,
+        state: req_obj.state,
     };
     let response =
         endpoint::handle(VERIFIER_ID, request, &provider).await.expect("should create offer");

@@ -28,7 +28,7 @@ pub struct OAuthClient {
 
     /// Time at which the client identifier was issued, as Unix time.
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(with = "ts_seconds_option")]
+    #[serde(with = "ts_seconds_option", default)]
     pub client_id_issued_at: Option<DateTime<Utc>>,
 
     /// OAuth 2.0 client secret string. If issued, this MUST be unique for each
