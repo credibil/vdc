@@ -8,9 +8,9 @@ use credibil_infosec::Jws;
 use serde_json::Value;
 
 use crate::core::Kind;
-use crate::oid4vci::types::FormatProfile;
+use crate::format::FormatProfile;
+use crate::format::sd_jwt::SdJwtClaims;
 use crate::oid4vp::types::{Claim, Queryable};
-use crate::sd_jwt::SdJwtClaims;
 
 /// Convert a `dc+sd-jwt` encoded credential to a `Queryable` object.
 ///

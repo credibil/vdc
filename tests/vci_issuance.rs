@@ -14,12 +14,12 @@ use std::sync::LazyLock;
 use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
 use credibil_vc::core::did_jwk;
+use credibil_vc::format::sd_jwt::SdJwtClaims;
 use credibil_vc::oid4vci::types::{
     CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, CredentialResponse,
     NonceRequest, ProofClaims, TokenGrantType, TokenRequest, W3cVcClaims,
 };
 use credibil_vc::oid4vci::{JwtType, endpoint};
-use credibil_vc::sd_jwt::SdJwtClaims;
 use credibil_vc::{BlockStore, OneMany};
 use provider::{BOB_ID, ISSUER_ID, ProviderImpl};
 use serde_json::json;

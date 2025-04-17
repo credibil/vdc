@@ -5,8 +5,8 @@ use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_infosec::cose::cbor;
 
 use crate::core::Kind;
-use crate::mso_mdoc::{IssuerSigned, MobileSecurityObject};
-use crate::oid4vci::types::FormatProfile;
+use crate::format::FormatProfile;
+use crate::format::mso_mdoc::{IssuerSigned, MobileSecurityObject};
 use crate::oid4vp::types::{Claim, Queryable};
 
 /// Convert a `mso_mdoc` encoded credential to a `Queryable` object.

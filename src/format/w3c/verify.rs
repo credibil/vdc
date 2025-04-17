@@ -34,7 +34,7 @@
 // use credibil_infosec::jose::{jws, jwt};
 
 // use crate::core::{Kind, OneMany, did_jwk};
-// use crate::w3c::{Payload, Verify, VpClaims, W3cVcClaims};
+// use crate::format::w3c::{Payload, Verify, VpClaims, W3cVcClaims};
 
 // /// Create a proof from a proof provider.
 // ///

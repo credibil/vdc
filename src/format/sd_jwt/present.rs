@@ -4,8 +4,8 @@ use chrono::Utc;
 use credibil_infosec::{Jws, Signer};
 use sha2::{Digest, Sha256};
 
+use crate::format::sd_jwt::{Disclosure, JwtType, KbJwtClaims};
 use crate::oid4vp::types::Matched;
-use crate::sd_jwt::{Disclosure, JwtType, KbJwtClaims};
 use crate::server;
 
 /// Generate an IETF `dc+sd-jwt` format credential.
@@ -75,7 +75,9 @@ impl<'a, V, S> SdJwtVpBuilder<NoMatched, V, S> {
 impl<C, S> SdJwtVpBuilder<C, NoClientIdentifier, S> {
     /// Set the claims for the ISO mDL credential.
     #[must_use]
-    pub fn client_id(self, client_id: impl Into<String>) -> SdJwtVpBuilder<C, HasClientIdentifier, S> {
+    pub fn client_id(
+        self, client_id: impl Into<String>,
+    ) -> SdJwtVpBuilder<C, HasClientIdentifier, S> {
         SdJwtVpBuilder {
             matched: self.matched,
             client_id: HasClientIdentifier(client_id.into()),

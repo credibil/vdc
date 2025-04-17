@@ -7,9 +7,10 @@ use credibil_infosec::Jws;
 use serde_json::Value;
 
 use crate::core::Kind;
-use crate::oid4vci::types::{CredentialDefinition, FormatProfile};
+use crate::format::FormatProfile;
+use crate::format::w3c::{VerifiableCredential, W3cVcClaims};
+use crate::oid4vci::types::CredentialDefinition;
 use crate::oid4vp::types::{Claim, Queryable};
-use crate::w3c::{VerifiableCredential, W3cVcClaims};
 
 /// Convert a `w3c` credential to a `Queryable` object.
 ///

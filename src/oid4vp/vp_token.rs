@@ -5,18 +5,17 @@ use std::collections::HashMap;
 use anyhow::Result;
 use credibil_infosec::Signer;
 
-use crate::oid4vp::types::{QueryResult, RequestedFormat};
-use crate::sd_jwt::SdJwtVpBuilder;
-
 use super::ClientIdentifier;
+use crate::format::sd_jwt::SdJwtVpBuilder;
+use crate::oid4vp::types::{QueryResult, RequestedFormat};
 
 /// Generate a Verifiable Presentation (VP) token.
 ///
 /// # Errors
 ///
 /// Returns an error when building a presentation from a `QueryResult` fails.
-pub async fn generate(client_id: &ClientIdentifier,
-    results: &[QueryResult<'_>], signer: &impl Signer,
+pub async fn generate(
+    client_id: &ClientIdentifier, results: &[QueryResult<'_>], signer: &impl Signer,
 ) -> Result<HashMap<String, Vec<String>>> {
     let mut token = HashMap::<String, Vec<String>>::new();
 

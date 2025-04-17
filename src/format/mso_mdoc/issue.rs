@@ -12,7 +12,7 @@ use rand::{Rng, rng};
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 
-pub use crate::mso_mdoc::{
+pub use crate::format::mso_mdoc::{
     DigestIdGenerator, IssuerAuth, IssuerSigned, IssuerSignedItem, MobileSecurityObject,
 };
 
@@ -178,7 +178,7 @@ mod tests {
     use serde_json::json;
 
     use super::*;
-    use crate::mso_mdoc::DigestAlgorithm;
+    use crate::format::mso_mdoc::DigestAlgorithm;
 
     #[tokio::test]
     async fn roundtrip() {

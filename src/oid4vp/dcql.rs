@@ -2,7 +2,7 @@
 
 use anyhow::{Result, anyhow};
 
-use crate::oid4vci::types::FormatProfile;
+use crate::format::FormatProfile;
 use crate::oid4vp::types::{
     Claim, ClaimQuery, CredentialQuery, CredentialSetQuery, DcqlQuery, Matched, MetadataQuery,
     QueryResult, Queryable, RequestedFormat,

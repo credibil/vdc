@@ -12,13 +12,14 @@ mod wallet;
 use std::sync::LazyLock;
 
 use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
-use credibil_vc::mso_mdoc::MsoMdocBuilder;
+use credibil_vc::BlockStore;
+use credibil_vc::format::mso_mdoc::MsoMdocBuilder;
+use credibil_vc::format::sd_jwt::SdJwtVcBuilder;
+use credibil_vc::format::{mso_mdoc, sd_jwt};
 use credibil_vc::oid4vp::types::DcqlQuery;
 use credibil_vc::oid4vp::{
     AuthorzationResponse, DeviceFlow, GenerateRequest, GenerateResponse, endpoint, vp_token,
 };
-use credibil_vc::sd_jwt::SdJwtVcBuilder;
-use credibil_vc::{BlockStore, mso_mdoc, sd_jwt};
 use futures::executor::block_on;
 use serde_json::{Map, Value, json};
 

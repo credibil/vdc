@@ -6,7 +6,7 @@
 
 // use crate::oid4vp::IssuedFormat;
 // use crate::oid4vp::types::Queryable;
-// use crate::sd_jwt::{Disclosure, JwtType, KbJwtClaims};
+// use crate::format::sd_jwt::{Disclosure, JwtType, KbJwtClaims};
 // use crate::server;
 
 // /// Generate an IETF `dc+sd-jwt` format credential.

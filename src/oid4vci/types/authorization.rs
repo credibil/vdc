@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use super::ClaimsDescription;
 use crate::core::urlencode;
+use crate::format::FormatProfile;
 use crate::oauth;
-use crate::oid4vci::types::FormatProfile;
 
 /// An Authorization Request type.
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]

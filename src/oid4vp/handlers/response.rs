@@ -21,12 +21,12 @@
 //! If the Response Type value is "code" (Authorization Code Grant Type), the VP
 //! Token is provided in the Token Response.
 
+use crate::format::sd_jwt;
 use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
 use crate::oid4vp::types::{AuthorzationResponse, RedirectResponse, RequestedFormat};
 use crate::oid4vp::{Error, Result};
-use crate::sd_jwt;
 
 /// Endpoint for the Wallet to respond Verifier's Authorization Request.
 ///

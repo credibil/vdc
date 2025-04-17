@@ -15,7 +15,7 @@ use credibil_did::PublicKeyJwk;
 use credibil_infosec::{Jws, Signer};
 use serde_json::{Map, Value};
 
-use crate::sd_jwt::{Disclosure, JwtType, KeyBinding, SdJwtClaims};
+use crate::format::sd_jwt::{Disclosure, JwtType, KeyBinding, SdJwtClaims};
 use crate::server;
 
 /// Generate an IETF `dc+sd-jwt` format credential.

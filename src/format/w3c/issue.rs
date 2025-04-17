@@ -13,10 +13,11 @@ use credibil_infosec::jose::jws;
 use serde_json::{Map, Value};
 
 use crate::core::{Kind, OneMany};
-use crate::oid4vci::types::{CredentialConfiguration, CredentialDisplay, FormatProfile};
-use crate::w3c::{
+use crate::format::FormatProfile;
+use crate::format::w3c::{
     CredentialStatus, CredentialSubject, LangString, Language, VerifiableCredential, W3cVcClaims,
 };
+use crate::oid4vci::types::{CredentialConfiguration, CredentialDisplay};
 
 /// Generate a W3C `jwt_vc_json` format credential.
 #[derive(Debug)]

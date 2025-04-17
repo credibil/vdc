@@ -15,20 +15,21 @@ use chrono::Utc;
 use credibil_infosec::jose::jws::{self, Key};
 
 use crate::core::{did_jwk, generate};
-use crate::mso_mdoc::MsoMdocBuilder;
+use crate::format::FormatProfile;
+use crate::format::mso_mdoc::MsoMdocBuilder;
+use crate::format::sd_jwt::SdJwtVcBuilder;
+use crate::format::w3c::W3cVcBuilder;
 use crate::oid4vci::endpoint::{Body, Handler, Request, Response};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Deferrance, Expire, Stage, State};
 use crate::oid4vci::types::{
     AuthorizedDetail, Credential, CredentialConfiguration, CredentialHeaders, CredentialRequest,
-    CredentialResponse, Dataset, FormatProfile, Issuer, MultipleProofs, Proof, ProofClaims,
-    RequestBy, SingleProof,
+    CredentialResponse, Dataset, Issuer, MultipleProofs, Proof, ProofClaims, RequestBy,
+    SingleProof,
 };
 use crate::oid4vci::{Error, JwtType, Result};
-use crate::sd_jwt::SdJwtVcBuilder;
 use crate::server;
 use crate::status::issuer::Status;
-use crate::w3c::W3cVcBuilder;
 
 /// Credential request handler.
 ///
