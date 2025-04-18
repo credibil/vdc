@@ -3,7 +3,8 @@
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
-use credibil_infosec::Signer;
+use credibil_did::SignerExt;
+use credibil_infosec::jose::jws::Key;
 use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
 use credibil_vc::core::did_jwk;
 use credibil_vc::oid4vci::types::{
@@ -61,9 +62,12 @@ async fn deferred() {
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
+    let key = CAROL.verification_method().await.expect("should have did");
+
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
+        .key_ref(&key)
         .add_signer(&*CAROL)
         .build()
         .await
@@ -137,8 +141,10 @@ async fn deferred() {
     let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
 
     // verify the credential
-    let carol_vm = CAROL.verification_method().await.expect("should have did");
-    let carol_did = carol_vm.split('#').next().expect("should have did");
+    let Key::KeyId(carol_kid) = CAROL.verification_method().await.unwrap() else {
+        panic!("should have did");
+    };
+    let carol_did = carol_kid.split('#').next().expect("should have did");
 
     assert_eq!(jwt.claims.iss, ISSUER_ID);
     assert_eq!(jwt.claims.sub, carol_did);

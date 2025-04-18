@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use credibil_infosec::Signer;
+use credibil_did::SignerExt;
 
 use super::ClientIdentifier;
 use crate::format::sd_jwt::SdJwtVpBuilder;
@@ -15,7 +15,7 @@ use crate::oid4vp::types::{QueryResult, RequestedFormat};
 ///
 /// Returns an error when building a presentation from a `QueryResult` fails.
 pub async fn generate(
-    client_id: &ClientIdentifier, results: &[QueryResult<'_>], signer: &impl Signer,
+    client_id: &ClientIdentifier, results: &[QueryResult<'_>], signer: &impl SignerExt,
 ) -> Result<HashMap<String, Vec<String>>> {
     let mut token = HashMap::<String, Vec<String>>::new();
 

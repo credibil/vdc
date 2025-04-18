@@ -4,8 +4,9 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use base64ct::{Base64UrlUnpadded, Encoding};
-use credibil_did::{DidResolver, Document};
+use credibil_did::{DidResolver, Document, SignerExt};
 use credibil_infosec::cose::cbor;
+use credibil_infosec::jose::jws::Key;
 use credibil_infosec::{Algorithm, Jws, Signer};
 use credibil_vc::format::FormatProfile;
 use credibil_vc::format::mso_mdoc::{IssuerSigned, MobileSecurityObject};
@@ -61,8 +62,10 @@ impl Signer for Wallet {
     fn algorithm(&self) -> Algorithm {
         self.keyring.algorithm()
     }
+}
 
-    async fn verification_method(&self) -> Result<String> {
+impl SignerExt for Wallet {
+    async fn verification_method(&self) -> Result<Key> {
         self.keyring.verification_method().await
     }
 }

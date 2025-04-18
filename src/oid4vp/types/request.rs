@@ -3,8 +3,8 @@ use std::io::Cursor;
 
 use anyhow::{Result, anyhow};
 use base64ct::{Base64, Encoding};
+pub use credibil_did::SignerExt;
 use credibil_infosec::PublicKeyJwk;
-pub use credibil_infosec::Signer;
 use credibil_infosec::jose::jws;
 use qrcode::QrCode;
 use serde::{Deserialize, Serialize};
@@ -83,7 +83,7 @@ impl GenerateResponse {
     /// set or the respective field cannot be represented as a base64-encoded PNG
     /// image of a QR code.
     pub async fn to_qrcode(
-        &self, endpoint: Option<&str>, signer: &impl Signer,
+        &self, endpoint: Option<&str>, signer: &impl SignerExt,
     ) -> anyhow::Result<String> {
         match self {
             Self::Object(req_obj) => {
@@ -189,7 +189,7 @@ impl RequestObject {
     ///
     /// Returns an `Error::ServerError` error if the Request Object cannot be
     /// serialized.
-    pub async fn to_qrcode(&self, endpoint: &str, signer: &impl Signer) -> Result<String> {
+    pub async fn to_qrcode(&self, endpoint: &str, signer: &impl SignerExt) -> Result<String> {
         // let qs = self.url_params().map_err(|e| anyhow!("Failed to generate querystring: {e}"))?;
         let qs = self.url_value(signer).await?;
 
@@ -228,12 +228,13 @@ impl RequestObject {
     ///
     /// Returns an `Error::ServerError` error if the Request Object cannot be
     /// serialized.
-    pub async fn url_value(&self, signer: &impl Signer) -> Result<String> {
+    pub async fn url_value(&self, signer: &impl SignerExt) -> Result<String> {
         let payload: RequestObjectClaims = self.clone().into();
 
         let jws = jws::JwsBuilder::new()
             .typ(Type::OauthAuthzReqJwt)
             .payload(payload)
+            .key_ref(&signer.verification_method().await?)
             .add_signer(signer)
             .build()
             .await
@@ -566,9 +567,7 @@ impl From<RequestObject> for RequestObjectClaims {
 
 #[cfg(test)]
 mod tests {
-    use credibil_infosec::{Algorithm, Signer};
-    use ed25519_dalek::{Signer as _, SigningKey};
-    use rand_core::OsRng;
+    use provider::verifier::Verifier;
 
     use super::*;
 
@@ -619,42 +618,11 @@ mod tests {
             wallet_nonce: None,
         };
 
-        let serialized = request_object.url_value(&Keyring::new()).await.unwrap();
+        let serialized = request_object.url_value(&Verifier::new()).await.unwrap();
         // let serialized = request_object.url_params().unwrap();
         println!("{serialized}");
 
         // let deserialized: RequestObject = serde_json::from_str(&serialized).unwrap();
         // assert_eq!(request_object, deserialized);
-    }
-
-    #[derive(Clone, Debug)]
-    pub struct Keyring {
-        signing_key: SigningKey,
-    }
-
-    impl Keyring {
-        pub fn new() -> Self {
-            Self {
-                signing_key: SigningKey::generate(&mut OsRng),
-            }
-        }
-    }
-
-    impl Signer for Keyring {
-        async fn try_sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
-            Ok(self.signing_key.sign(msg).to_bytes().to_vec())
-        }
-
-        async fn verifying_key(&self) -> Result<Vec<u8>> {
-            Ok(self.signing_key.verifying_key().as_bytes().to_vec())
-        }
-
-        fn algorithm(&self) -> Algorithm {
-            Algorithm::EdDSA
-        }
-
-        async fn verification_method(&self) -> Result<String> {
-            Ok("did:example:123#key-1".to_string())
-        }
     }
 }

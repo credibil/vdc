@@ -5,18 +5,18 @@ use std::future::Future;
 use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
 use credibil_did::DidResolver;
-pub use credibil_infosec::Signer;
+pub use credibil_did::SignerExt;
 use serde::{Deserialize, Serialize};
 
 use crate::BlockStore;
 use crate::oid4vp::types::{Verifier, Wallet};
 
 /// Verifier Provider trait.
-pub trait Provider: Metadata + StateStore + Signer + DidResolver + Clone {}
+pub trait Provider: Metadata + StateStore + SignerExt + DidResolver + Clone {}
 
 /// A blanket implementation for `Provider` trait so that any type implementing
 /// the required super traits is considered a `Provider`.
-impl<T> Provider for T where T: Metadata + StateStore + Signer + DidResolver + Clone {}
+impl<T> Provider for T where T: Metadata + StateStore + SignerExt + DidResolver + Clone {}
 
 /// The `Metadata` trait is used by implementers to provide `Verifier` (client)
 /// metadata to the library.

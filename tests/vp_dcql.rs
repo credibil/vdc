@@ -2,7 +2,9 @@
 
 use std::sync::LazyLock;
 
-use credibil_infosec::{PublicKeyJwk, Signer};
+use credibil_did::SignerExt;
+use credibil_infosec::PublicKeyJwk;
+use credibil_infosec::jose::jws::Key;
 use credibil_vc::BlockStore;
 use credibil_vc::core::did_jwk;
 use credibil_vc::format::mso_mdoc::MsoMdocBuilder;
@@ -397,7 +399,10 @@ async fn specific_values() {
 // Initialise a mock "wallet" with test credentials.
 async fn populate() -> Wallet {
     let mut wallet = Wallet::new();
-    let did_url = wallet.verification_method().await.unwrap();
+
+    let Key::KeyId(did_url) = wallet.verification_method().await.unwrap() else {
+        panic!("should have did");
+    };
     let holder_jwk = did_jwk(&did_url, &wallet).await.expect("should get key");
 
     // load credentials

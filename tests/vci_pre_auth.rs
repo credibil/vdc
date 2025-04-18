@@ -3,7 +3,8 @@
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
-use credibil_infosec::Signer;
+use credibil_did::SignerExt;
+use credibil_infosec::jose::jws::Key;
 use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
 use credibil_vc::core::did_jwk;
 use credibil_vc::oid4vci::types::{
@@ -61,9 +62,11 @@ async fn offer_val() {
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
+    let bob_key = BOB.verification_method().await.expect("should have key");
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
+        .key_ref(&bob_key)
         .add_signer(&*BOB)
         .build()
         .await
@@ -100,8 +103,10 @@ async fn offer_val() {
     let resolver = async |kid: String| did_jwk(&kid, &provider).await;
     let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
 
-    let bob_vm = BOB.verification_method().await.expect("should have did");
-    let bob_did = bob_vm.split('#').next().expect("should have did");
+    let Key::KeyId(bob_kid) = BOB.verification_method().await.unwrap() else {
+        panic!("should have did");
+    };
+    let bob_did = bob_kid.split('#').next().expect("should have did");
 
     assert_eq!(jwt.claims.iss, ISSUER_ID);
     assert_eq!(jwt.claims.sub, bob_did.to_string());
@@ -205,9 +210,11 @@ async fn two_datasets() {
             .expect("should return nonce");
 
         // proof of possession of key material
+        let bob_key = BOB.verification_method().await.expect("should have key");
         let jws = JwsBuilder::new()
             .typ(JwtType::ProofJwt)
             .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
+            .key_ref(&bob_key)
             .add_signer(&*BOB)
             .build()
             .await
@@ -309,9 +316,11 @@ async fn reduce_credentials() {
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
+    let bob_key = BOB.verification_method().await.expect("should have key");
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
+        .key_ref(&bob_key)
         .add_signer(&*BOB)
         .build()
         .await
@@ -403,9 +412,11 @@ async fn reduce_claims() {
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
+    let bob_key = BOB.verification_method().await.expect("should have key");
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
+        .key_ref(&bob_key)
         .add_signer(&*BOB)
         .build()
         .await
@@ -444,8 +455,10 @@ async fn reduce_claims() {
     let resolver = async |kid: String| did_jwk(&kid, &provider).await;
     let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
 
-    let bob_vm = BOB.verification_method().await.expect("should have did");
-    let bob_did = bob_vm.split('#').next().expect("should have did");
+    let Key::KeyId(bob_kid) = BOB.verification_method().await.unwrap() else {
+        panic!("should have did");
+    };
+    let bob_did = bob_kid.split('#').next().expect("should have did");
 
     assert_eq!(jwt.claims.iss, ISSUER_ID);
     assert_eq!(jwt.claims.sub, bob_did.to_string());
@@ -499,9 +512,11 @@ async fn notify_accepted() {
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
+    let bob_key = BOB.verification_method().await.expect("should have key");
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
+        .key_ref(&bob_key)
         .add_signer(&*BOB)
         .build()
         .await

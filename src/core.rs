@@ -11,7 +11,8 @@ pub mod strings;
 pub mod urlencode;
 
 use anyhow::{Result, anyhow};
-use credibil_did::{DidResolver, PublicKeyJwk, Resource};
+use credibil_did::{DidResolver, Resource};
+use credibil_infosec::PublicKeyJwk;
 use serde::{Deserialize, Serialize};
 
 /// `Kind` allows serde to serialize/deserialize a string or an object.

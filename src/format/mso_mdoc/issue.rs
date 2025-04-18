@@ -6,8 +6,10 @@ use anyhow::anyhow;
 use base64ct::{Base64UrlUnpadded, Encoding};
 use ciborium::cbor;
 use coset::{CoseSign1Builder, HeaderBuilder, iana};
+use credibil_did::SignerExt;
 use credibil_infosec::cose::{CoseKey, Tag24};
-use credibil_infosec::{Algorithm, Curve, KeyType, Signer};
+use credibil_infosec::jose::jws::Key;
+use credibil_infosec::{Algorithm, Curve, KeyType};
 use rand::{Rng, rng};
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
@@ -29,7 +31,7 @@ pub struct MsoMdocBuilder<C, S> {
 pub struct NoSigner;
 /// Builder state has a signer.
 #[doc(hidden)]
-pub struct HasSigner<'a, S: Signer>(pub &'a S);
+pub struct HasSigner<'a, S: SignerExt>(pub &'a S);
 
 /// Builder has no claims.
 #[doc(hidden)]
@@ -66,8 +68,8 @@ impl<C, S> MsoMdocBuilder<C, S> {
 }
 
 impl<C> MsoMdocBuilder<C, NoSigner> {
-    /// Set the credential Signer.
-    pub fn signer<S: Signer>(self, signer: &'_ S) -> MsoMdocBuilder<C, HasSigner<'_, S>> {
+    /// Set the credential `SignerExt`.
+    pub fn signer<S: SignerExt>(self, signer: &'_ S) -> MsoMdocBuilder<C, HasSigner<'_, S>> {
         MsoMdocBuilder {
             doctype: self.doctype,
             claims: self.claims,
@@ -87,7 +89,7 @@ impl<S> MsoMdocBuilder<NoClaims, S> {
     }
 }
 
-impl<S: Signer> MsoMdocBuilder<HasClaims, HasSigner<'_, S>> {
+impl<S: SignerExt> MsoMdocBuilder<HasClaims, HasSigner<'_, S>> {
     /// Build the ISO mDL credential, returning a base64url-encoded,
     /// CBOR-encoded, ISO mDL.
     ///
@@ -148,11 +150,12 @@ impl<S: Signer> MsoMdocBuilder<HasClaims, HasSigner<'_, S>> {
             Algorithm::ES256K => return Err(anyhow!("unsupported algorithm")),
         };
 
-        let verification_method = signer.verification_method().await?;
-        let key_id = verification_method.as_bytes().to_vec();
+        let Key::KeyId(key_id) = signer.verification_method().await? else {
+            return Err(anyhow!("invalid verification method"));
+        };
 
         let protected = HeaderBuilder::new().algorithm(algorithm).build();
-        let unprotected = HeaderBuilder::new().key_id(key_id).build();
+        let unprotected = HeaderBuilder::new().key_id(key_id.into_bytes()).build();
         let cose_sign_1 = CoseSign1Builder::new()
             .protected(protected)
             .unprotected(unprotected)
@@ -170,11 +173,9 @@ impl<S: Signer> MsoMdocBuilder<HasClaims, HasSigner<'_, S>> {
 
 #[cfg(test)]
 mod tests {
-    use anyhow::Result;
+    use credibil_infosec::KeyType;
     use credibil_infosec::cose::cbor;
-    use credibil_infosec::{Algorithm, KeyType, Signer};
-    use ed25519_dalek::{Signer as _, SigningKey};
-    use rand_core::OsRng;
+    use provider::issuer::Issuer;
     use serde_json::json;
 
     use super::*;
@@ -194,7 +195,7 @@ mod tests {
         let mdl = MsoMdocBuilder::new()
             .doctype("org.iso.18013.5.1.mDL")
             .claims(claims.clone())
-            .signer(&Keyring::new())
+            .signer(&Issuer::new())
             .build()
             .await
             .expect("should build");
@@ -208,36 +209,5 @@ mod tests {
 
         assert_eq!(mso.digest_algorithm, DigestAlgorithm::Sha256);
         assert_eq!(mso.device_key_info.device_key.kty, KeyType::Okp);
-    }
-
-    #[derive(Clone, Debug)]
-    pub struct Keyring {
-        signing_key: SigningKey,
-    }
-
-    impl Keyring {
-        pub fn new() -> Self {
-            Self {
-                signing_key: SigningKey::generate(&mut OsRng),
-            }
-        }
-    }
-
-    impl Signer for Keyring {
-        async fn try_sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
-            Ok(self.signing_key.sign(msg).to_bytes().to_vec())
-        }
-
-        async fn verifying_key(&self) -> Result<Vec<u8>> {
-            Ok(self.signing_key.verifying_key().as_bytes().to_vec())
-        }
-
-        fn algorithm(&self) -> Algorithm {
-            Algorithm::EdDSA
-        }
-
-        async fn verification_method(&self) -> Result<String> {
-            Ok("did:example:123#key-1".to_string())
-        }
     }
 }

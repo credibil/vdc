@@ -1,7 +1,8 @@
 #![allow(dead_code)]
 
 use anyhow::Result;
-use credibil_did::{DidResolver, Document};
+use credibil_did::{DidResolver, Document, SignerExt};
+use credibil_infosec::jose::jws::Key;
 use credibil_infosec::{self, Algorithm, PublicKey, Receiver, SharedSecret, Signer};
 use credibil_vc::BlockStore;
 
@@ -48,8 +49,10 @@ impl Signer for Verifier {
     fn algorithm(&self) -> Algorithm {
         self.keyring.algorithm()
     }
+}
 
-    async fn verification_method(&self) -> Result<String> {
+impl SignerExt for Verifier {
+    async fn verification_method(&self) -> Result<Key> {
         self.keyring.verification_method().await
     }
 }

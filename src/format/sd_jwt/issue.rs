@@ -11,8 +11,8 @@
 
 use anyhow::Result;
 use chrono::Utc;
-use credibil_did::PublicKeyJwk;
-use credibil_infosec::{Jws, Signer};
+use credibil_did::SignerExt;
+use credibil_infosec::{Jws, PublicKeyJwk};
 use serde_json::{Map, Value};
 
 use crate::format::sd_jwt::{Disclosure, JwtType, KeyBinding, SdJwtClaims};
@@ -63,7 +63,7 @@ pub struct HasClaims(Map<String, Value>);
 pub struct NoSigner;
 /// Builder state has a signer.
 #[doc(hidden)]
-pub struct HasSigner<'a, S: Signer>(pub &'a S);
+pub struct HasSigner<'a, S: SignerExt>(pub &'a S);
 
 impl Default for SdJwtVcBuilder<NoVct, NoIssuer, NoKeyBinding, NoClaims, NoSigner> {
     fn default() -> Self {
@@ -162,11 +162,13 @@ impl<V, I, K, C, S> SdJwtVcBuilder<V, I, K, C, S> {
     }
 }
 
-// Signer
+// SignerExt
 impl<V, I, K, C> SdJwtVcBuilder<V, I, K, C, NoSigner> {
-    /// Set the credential Signer.
+    /// Set the credential `SignerExt`.
     #[must_use]
-    pub fn signer<S: Signer>(self, signer: &'_ S) -> SdJwtVcBuilder<V, I, K, C, HasSigner<'_, S>> {
+    pub fn signer<S: SignerExt>(
+        self, signer: &'_ S,
+    ) -> SdJwtVcBuilder<V, I, K, C, HasSigner<'_, S>> {
         SdJwtVcBuilder {
             vct: self.vct,
             issuer: self.issuer,
@@ -178,7 +180,7 @@ impl<V, I, K, C> SdJwtVcBuilder<V, I, K, C, NoSigner> {
     }
 }
 
-impl<S: Signer> SdJwtVcBuilder<Vct, HasIssuer, HasKeyBinding, HasClaims, HasSigner<'_, S>> {
+impl<S: SignerExt> SdJwtVcBuilder<Vct, HasIssuer, HasKeyBinding, HasClaims, HasSigner<'_, S>> {
     /// Build the SD-JWT credential, returning a base64url-encoded, JSON SD-JWT
     /// with the format `<Issuer-signed JWT>~<Disclosure 1>~<Disclosure 2>~...~`
     ///
@@ -213,6 +215,7 @@ impl<S: Signer> SdJwtVcBuilder<Vct, HasIssuer, HasKeyBinding, HasClaims, HasSign
         let jws = Jws::builder()
             .typ(JwtType::SdJwt)
             .payload(claims)
+            .key_ref(&self.signer.0.verification_method().await?)
             .add_signer(self.signer.0)
             .build()
             .await
@@ -228,10 +231,8 @@ impl<S: Signer> SdJwtVcBuilder<Vct, HasIssuer, HasKeyBinding, HasClaims, HasSign
 
 #[cfg(test)]
 mod tests {
-    use anyhow::Result;
-    use credibil_infosec::{Algorithm, Curve, KeyType, PublicKeyJwk, Signer};
-    use ed25519_dalek::{Signer as _, SigningKey};
-    use rand_core::OsRng;
+    use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
+    use provider::issuer::Issuer;
     use serde_json::json;
 
     use super::SdJwtVcBuilder;
@@ -266,42 +267,11 @@ mod tests {
             .issuer("https://example.com")
             .key_binding(jwk)
             .claims(claims.clone())
-            .signer(&Keyring::new())
+            .signer(&Issuer::new())
             .build()
             .await
             .expect("should build");
 
         println!("{sd_jwt}");
-    }
-
-    #[derive(Clone, Debug)]
-    pub struct Keyring {
-        signing_key: SigningKey,
-    }
-
-    impl Keyring {
-        pub fn new() -> Self {
-            Self {
-                signing_key: SigningKey::generate(&mut OsRng),
-            }
-        }
-    }
-
-    impl Signer for Keyring {
-        async fn try_sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
-            Ok(self.signing_key.sign(msg).to_bytes().to_vec())
-        }
-
-        async fn verifying_key(&self) -> Result<Vec<u8>> {
-            Ok(self.signing_key.verifying_key().as_bytes().to_vec())
-        }
-
-        fn algorithm(&self) -> Algorithm {
-            Algorithm::EdDSA
-        }
-
-        async fn verification_method(&self) -> Result<String> {
-            Ok("did:example:123#key-1".to_string())
-        }
     }
 }

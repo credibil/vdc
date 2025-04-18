@@ -5,7 +5,8 @@
 use std::sync::LazyLock;
 
 use base64ct::{Base64UrlUnpadded, Encoding};
-use credibil_infosec::Signer;
+use credibil_did::SignerExt;
+use credibil_infosec::jose::jws::Key;
 use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
 use credibil_vc::core::did_jwk;
 use credibil_vc::format::sd_jwt::SdJwtClaims;
@@ -63,18 +64,22 @@ async fn two_proofs() {
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
+    let bob_key = BOB.verification_method().await.expect("should have key");
     let jws_1 = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
+        .key_ref(&bob_key)
         .add_signer(&*BOB)
         .build()
         .await
         .expect("builds JWS");
 
     let dan = Wallet::new();
+    let dan_key = dan.verification_method().await.expect("should have key");
     let jws_2 = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
+        .key_ref(&dan_key)
         .add_signer(&dan)
         .build()
         .await
@@ -109,10 +114,15 @@ async fn two_proofs() {
 
     assert_eq!(credentials.len(), 2);
 
-    let bob_vm = BOB.verification_method().await.expect("should have did");
-    let bob_did = bob_vm.split('#').next().expect("should have did");
-    let dan_vm = dan.verification_method().await.expect("should have did");
-    let dan_did = dan_vm.split('#').next().expect("should have did");
+    let Key::KeyId(bob_kid) = BOB.verification_method().await.unwrap() else {
+        panic!("should have did");
+    };
+    let bob_did = bob_kid.split('#').next().expect("should have did");
+
+    let Key::KeyId(dan_kid) = dan.verification_method().await.unwrap() else {
+        panic!("should have did");
+    };
+    let dan_did = dan_kid.split('#').next().expect("should have did");
 
     let resolver = async |kid: String| did_jwk(&kid, &provider).await;
     let dids = vec![bob_did.to_string(), dan_did.to_string()];
@@ -174,9 +184,11 @@ async fn sd_jwt() {
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
+    let bob_key = BOB.verification_method().await.expect("should have key");
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
+        .key_ref(&bob_key)
         .add_signer(&*BOB)
         .build()
         .await
@@ -220,8 +232,10 @@ async fn sd_jwt() {
     let jwt: Jwt<SdJwtClaims> = jws::decode(token, resolver).await.expect("should decode");
 
     // verify the credential
-    let bob_vm = BOB.verification_method().await.expect("should have did");
-    let bob_did = bob_vm.split('#').next().expect("should have did");
+    let Key::KeyId(bob_kid) = BOB.verification_method().await.unwrap() else {
+        panic!("should have did");
+    };
+    let bob_did = bob_kid.split('#').next().expect("should have did");
 
     assert_eq!(jwt.header.typ, "dc+sd-jwt");
     assert_eq!(jwt.claims.iss, ISSUER_ID);

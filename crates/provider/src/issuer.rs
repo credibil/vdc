@@ -1,7 +1,8 @@
 #![allow(unused)]
 
 use anyhow::Result;
-use credibil_did::{DidResolver, Document};
+use credibil_did::{DidResolver, Document, SignerExt};
+use credibil_infosec::jose::jws::Key;
 use credibil_infosec::{Algorithm, Signer};
 use credibil_vc::BlockStore;
 use credibil_vc::status::issuer::Status;
@@ -55,8 +56,10 @@ impl Signer for Issuer {
     fn algorithm(&self) -> Algorithm {
         self.keyring.algorithm()
     }
+}
 
-    async fn verification_method(&self) -> Result<String> {
+impl SignerExt for Issuer {
+    async fn verification_method(&self) -> Result<Key> {
         self.keyring.verification_method().await
     }
 }
