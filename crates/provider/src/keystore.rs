@@ -21,35 +21,17 @@ static DID_STORE: LazyLock<Arc<Mutex<HashMap<String, Document>>>> =
 
 #[derive(Clone, Debug)]
 pub struct Keyring {
-    pub url: String,
+    url: String,
     did: String,
     signing_key: SigningKey,
     verifying_key: ed25519_dalek::VerifyingKey,
 }
 
-enum DidMethod {
-    Key,
-    Web,
-}
-
 impl Keyring {
     pub fn new() -> Self {
-        Self::new_web()
-    }
-
-    pub fn new_web() -> Self {
-        Self::generate(DidMethod::Web)
-    }
-
-    pub fn new_key() -> Self {
-        Self::generate(DidMethod::Key)
-    }
-
-    fn generate(method: DidMethod) -> Self {
         // generate key pair
         let signing_key = SigningKey::generate(&mut OsRng);
         let verifying_key = signing_key.verifying_key();
-
         let url = format!("https://credibil.io/{}", generate::uri_token());
 
         let mut keyring = Self {
@@ -62,11 +44,7 @@ impl Keyring {
         // generate did:web document
         let mut options = CreateOptions::default();
         options.enable_encryption_key_derivation = true;
-
-        let document = match method {
-            DidMethod::Key => DidKey::create(&keyring, options).expect("should create"),
-            DidMethod::Web => DidWeb::create(&url, &keyring, options).expect("should create"),
-        };
+        let document = DidWeb::create(&url, &keyring, options).expect("should create");
 
         keyring.did = document.id.clone();
         DID_STORE.lock().expect("should lock").insert(url, document);
