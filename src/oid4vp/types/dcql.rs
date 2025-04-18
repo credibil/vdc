@@ -249,7 +249,7 @@ pub enum AuthorityType {
 }
 
 /// Implemented by wallets in order to support DCQL queries.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Queryable {
     /// The credential's queryable metadata.
     pub meta: FormatProfile,

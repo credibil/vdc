@@ -104,6 +104,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
 
 [[package]]
+name = "async-lazy"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42b26d628201db54edfaa7e0f9848295b272610d97759a0ff61d6de7bb885b5f"
+dependencies = [
+ "tokio",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -596,6 +605,7 @@ name = "credibil-vc"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-lazy",
  "axum",
  "axum-extra",
  "base64ct",

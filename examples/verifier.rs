@@ -1,6 +1,6 @@
-//! # Verifiable Credential ProviderImpl
+//! # Verifiable Credential Verifier
 //!
-//! This is a simple Verifiable Credential ProviderImpl (VCP) that implements the
+//! This is a simple Verifiable Credential Verifier (VCP) that implements the
 //! [Verifiable Credential HTTP API](
 //! https://identity.foundation/verifiable-credential/spec/#http-api).
 
@@ -17,7 +17,7 @@ use credibil_vc::oid4vp::{
     RequestUriRequest, RequestUriResponse, endpoint,
 };
 use provider::verifier::data::VERIFIER;
-use provider::verifier::{ProviderImpl, VERIFIER_ID};
+use provider::verifier::{VERIFIER_ID, Verifier};
 use serde::Serialize;
 use serde_json::json;
 use tokio::net::TcpListener;
@@ -29,7 +29,7 @@ use tracing_subscriber::FmtSubscriber;
 #[allow(clippy::needless_return)]
 #[tokio::main]
 async fn main() {
-    let provider = ProviderImpl::new();
+    let provider = Verifier::new();
 
     // add some data
     BlockStore::put(&provider, "owner", "VERIFIER", VERIFIER_ID, VERIFIER).await.unwrap();
@@ -56,7 +56,7 @@ async fn main() {
 // Generate Authorization Request endpoint
 #[axum::debug_handler]
 async fn create_request(
-    State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
+    State(provider): State<Verifier>, TypedHeader(host): TypedHeader<Host>,
     Json(request): Json<GenerateRequest>,
 ) -> HttpResult<GenerateResponse> {
     endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
@@ -65,8 +65,7 @@ async fn create_request(
 // Retrieve Authorization Request Object endpoint
 #[axum::debug_handler]
 async fn request_uri(
-    State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
-    Path(id): Path<String>,
+    State(provider): State<Verifier>, TypedHeader(host): TypedHeader<Host>, Path(id): Path<String>,
 ) -> HttpResult<RequestUriResponse> {
     // TODO: add wallet_metadata and wallet_nonce
     let request = RequestUriRequest {
@@ -80,7 +79,7 @@ async fn request_uri(
 // Wallet Authorization response endpoint
 #[axum::debug_handler]
 async fn response(
-    State(provider): State<ProviderImpl>, TypedHeader(host): TypedHeader<Host>,
+    State(provider): State<Verifier>, TypedHeader(host): TypedHeader<Host>,
     Form(request): Form<String>,
 ) -> impl IntoResponse {
     let Ok(req) = AuthorzationResponse::form_decode(&request) else {

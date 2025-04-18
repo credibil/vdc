@@ -2,32 +2,30 @@
 
 use std::sync::LazyLock;
 
-// use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
-// use credibil_did::KeyPurpose;
-// use credibil_did::{DidOperator, DidResolver};
+use credibil_infosec::{PublicKeyJwk, Signer};
 use credibil_vc::BlockStore;
+use credibil_vc::core::did_jwk;
 use credibil_vc::format::mso_mdoc::MsoMdocBuilder;
 use credibil_vc::format::sd_jwt::SdJwtVcBuilder;
 use credibil_vc::format::{mso_mdoc, sd_jwt};
-use credibil_vc::infosec::PublicKeyJwk;
 use credibil_vc::oid4vp::types::DcqlQuery;
 use credibil_vc::oid4vp::{
     AuthorzationResponse, DeviceFlow, GenerateRequest, GenerateResponse, endpoint, vp_token,
 };
 use futures::executor::block_on;
-use provider::verifier::{ProviderImpl, VERIFIER_ID, data};
-use provider::wallet;
-use serde_json::{Map, Value, json};
+use provider::issuer::{ISSUER_ID, Issuer};
+use provider::verifier::{VERIFIER_ID, Verifier, data};
+use provider::wallet::Wallet;
+use serde_json::{Value, json};
 
-// Create a mock wallet populated with test credentials.
-static WALLET_DB: LazyLock<wallet::Store> =
-    LazyLock::new(|| block_on(async { load_wallet().await }));
-static ISSUER: LazyLock<ProviderImpl> = LazyLock::new(ProviderImpl::new);
+static VERIFIER: LazyLock<Verifier> = LazyLock::new(Verifier::new);
+static WALLET: LazyLock<Wallet> = LazyLock::new(|| block_on(async { populate().await }));
+static ISSUER: LazyLock<Issuer> = LazyLock::new(Issuer::new);
 
 // Should request a Credential with the claims `vehicle_holder` and `first_name`.
-#[test]
-fn multiple_claims() {
-    let all_vcs = WALLET_DB.fetch();
+#[tokio::test]
+async fn multiple_claims() {
+    let all_vcs = WALLET.fetch();
 
     let query_json = json!({
         "credentials": [{
@@ -51,13 +49,7 @@ fn multiple_claims() {
 // Should return multiple Credentials.
 #[tokio::test]
 async fn multiple_credentials() {
-    let provider = ProviderImpl::new();
-
-    // let url = &ISSUER.url;
-    // let did_url = format!("{url}/did.json");
-    // provider.add_did(url.clone(), (*ISSUER).resolve(&did_url).await.unwrap()).unwrap();
-
-    BlockStore::put(&provider, "owner", "VERIFIER", VERIFIER_ID, data::VERIFIER).await.unwrap();
+    BlockStore::put(&*VERIFIER, "owner", "VERIFIER", VERIFIER_ID, data::VERIFIER).await.unwrap();
 
     // --------------------------------------------------
     // Verifier creates an Authorization Request to request presentation of
@@ -99,7 +91,7 @@ async fn multiple_credentials() {
         device_flow: DeviceFlow::SameDevice,
     };
     let response =
-        endpoint::handle(VERIFIER_ID, request, &provider).await.expect("should create request");
+        endpoint::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
 
     // extract request object and send to Wallet
     let GenerateResponse::Object(request_object) = response.body else {
@@ -110,12 +102,11 @@ async fn multiple_credentials() {
     // Wallet processes the Authorization Request and returns an Authorization
     // Response with the requested presentations in the VP token.
     // --------------------------------------------------
-    // execute query
-    let stored_vcs = WALLET_DB.fetch();
+    let stored_vcs = WALLET.fetch();
     let results = request_object.dcql_query.execute(stored_vcs).expect("should execute");
     assert_eq!(results.len(), 2);
 
-    let vp_token = vp_token::generate(&request_object.client_id, &results, &provider)
+    let vp_token = vp_token::generate(&request_object.client_id, &results, &*WALLET)
         .await
         .expect("should get token");
     assert_eq!(vp_token.len(), 1);
@@ -125,7 +116,7 @@ async fn multiple_credentials() {
         state: request_object.state,
     };
     let response =
-        endpoint::handle(VERIFIER_ID, request, &provider).await.expect("should create request");
+        endpoint::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
 
     // --------------------------------------------------
     // Wallet follows Verifier's redirect.
@@ -137,9 +128,9 @@ async fn multiple_credentials() {
 // `pid_reduced_cred_1` and `pid_reduced_cred_2` credentials.
 //
 // Should also optionally return the `nice_to_have` credential.
-#[test]
-fn complex_query() {
-    let all_vcs = WALLET_DB.fetch();
+#[tokio::test]
+async fn complex_query() {
+    let all_vcs = WALLET.fetch();
 
     let query_json = json!({
         "credentials": [
@@ -226,9 +217,9 @@ fn complex_query() {
 }
 
 // Should return an ID and address from any credential.
-#[test]
-fn any_credential() {
-    let all_vcs = WALLET_DB.fetch();
+#[tokio::test]
+async fn any_credential() {
+    let all_vcs = WALLET.fetch();
 
     let query_json = json!({
         "credentials": [
@@ -336,9 +327,9 @@ fn any_credential() {
 // Should return the mandatory claims `last_name` and `date_of_birth`, and
 // either the claim `postal_code`, or, if that is not available, both of
 // the claims `locality` and `region`.
-#[test]
-fn alt_claims() {
-    let all_vcs = WALLET_DB.fetch();
+#[tokio::test]
+async fn alt_claims() {
+    let all_vcs = WALLET.fetch();
 
     let query_json = json!({
         "credentials": [
@@ -370,9 +361,9 @@ fn alt_claims() {
 
 // Should return a credential for a request using specific values for the
 // `last_name` and `postal_code` claims.
-#[test]
-fn specific_values() {
-    let all_vcs = WALLET_DB.fetch();
+#[tokio::test]
+async fn specific_values() {
+    let all_vcs = WALLET.fetch();
 
     let query_json = json!({
         "credentials": [
@@ -404,8 +395,10 @@ fn specific_values() {
 }
 
 // Initialise a mock "wallet" with test credentials.
-async fn load_wallet() -> wallet::Store {
-    let mut store = wallet::Store::new();
+async fn populate() -> Wallet {
+    let mut wallet = Wallet::new();
+    let did_url = wallet.verification_method().await.unwrap();
+    let holder_jwk = did_jwk(&did_url, &wallet).await.expect("should get key");
 
     // load credentials
     let vct = "https://credentials.example.com/identity_credential";
@@ -421,9 +414,9 @@ async fn load_wallet() -> wallet::Store {
         },
         "birthdate": "2000-01-01"
     });
-    let jwt = sd_jwt(vct, claims.as_object().unwrap().clone()).await;
+    let jwt = sd_jwt(vct, claims, &holder_jwk).await;
     let q = sd_jwt::to_queryable(&jwt).expect("should be SD-JWT");
-    store.add(q);
+    wallet.add(q);
 
     let vct = "https://othercredentials.example/pid";
     let claims = json!({
@@ -438,9 +431,9 @@ async fn load_wallet() -> wallet::Store {
         },
         "birthdate": "2000-01-01"
     });
-    let jwt = sd_jwt(vct, claims.as_object().unwrap().clone()).await;
+    let jwt = sd_jwt(vct, claims, &holder_jwk).await;
     let q = sd_jwt::to_queryable(&jwt).expect("should be SD-JWT");
-    store.add(q);
+    wallet.add(q);
 
     let vct = "https://cred.example/residence_credential";
     let claims = json!({
@@ -450,17 +443,17 @@ async fn load_wallet() -> wallet::Store {
             "postal_code": "90210",
         },
     });
-    let jwt = sd_jwt(vct, claims.as_object().unwrap().clone()).await;
+    let jwt = sd_jwt(vct, claims, &holder_jwk).await;
     let q = sd_jwt::to_queryable(&jwt).expect("should be SD-JWT");
-    store.add(q);
+    wallet.add(q);
 
     let vct = "https://company.example/company_rewards";
     let claims = json!({
         "rewards_number": "1234567890",
     });
-    let jwt = sd_jwt(vct, claims.as_object().unwrap().clone()).await;
+    let jwt = sd_jwt(vct, claims, &holder_jwk).await;
     let q = sd_jwt::to_queryable(&jwt).expect("should be SD-JWT");
-    store.add(q);
+    wallet.add(q);
 
     let doctype = "org.iso.18013.5.1.mDL";
     let claims = json!({
@@ -470,9 +463,9 @@ async fn load_wallet() -> wallet::Store {
             "portrait": "https://example.com/portrait.jpg",
         },
     });
-    let mdoc = mso_mdoc(doctype, claims.as_object().unwrap().clone()).await;
+    let mdoc = mso_mdoc(doctype, claims).await;
     let q = mso_mdoc::to_queryable(&mdoc).expect("should be mdoc");
-    store.add(q);
+    wallet.add(q);
 
     let doctype = "org.iso.7367.1.mVRC";
     let claims = json!({
@@ -485,31 +478,29 @@ async fn load_wallet() -> wallet::Store {
             "portrait": "https://example.com/portrait.jpg",
         },
     });
-    let mdoc = mso_mdoc(doctype, claims.as_object().unwrap().clone()).await;
+    let mdoc = mso_mdoc(doctype, claims).await;
     let q = mso_mdoc::to_queryable(&mdoc).expect("should be mdoc");
-    store.add(q);
+    wallet.add(q);
 
-    store
+    wallet
 }
 
-async fn sd_jwt(vct: &str, claims: Map<String, Value>) -> String {
-    // let public_jwk = ISSUER.verification(KeyPurpose::VerificationMethod).unwrap();
-
+async fn sd_jwt(vct: &str, claims: Value, holder_jwk: &PublicKeyJwk) -> String {
     SdJwtVcBuilder::new()
         .vct(vct)
-        .claims(claims)
-        .issuer("https://credibil.io")
-        .key_binding(PublicKeyJwk::default())
+        .claims(claims.as_object().unwrap().clone())
+        .issuer(ISSUER_ID)
+        .key_binding(holder_jwk.clone())
         .signer(&*ISSUER)
         .build()
         .await
         .expect("should build")
 }
 
-async fn mso_mdoc(doctype: &str, claims: Map<String, Value>) -> String {
+async fn mso_mdoc(doctype: &str, claims: Value) -> String {
     MsoMdocBuilder::new()
         .doctype(doctype)
-        .claims(claims)
+        .claims(claims.as_object().unwrap().clone())
         .signer(&*ISSUER)
         .build()
         .await

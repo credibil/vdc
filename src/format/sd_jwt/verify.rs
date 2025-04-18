@@ -32,13 +32,11 @@ pub async fn verify(vp: &str, resolver: &impl DidResolver) -> Result<()> {
     //  2. it should contain a hash of the sd-jwt + disclosures
     //  3. the `nonce` should contain the authorization request nonce
     //  4. the `aud` claim should match the client identifier
-    let Some(KeyBinding::Jwk(jwk)) = &sd_jwt.claims.cnf else {
+    let Some(KeyBinding::Jwk(holder_jwk)) = &sd_jwt.claims.cnf else {
         return Err(anyhow!("`cnf` claim not found in SD-JWT"));
     };
 
-    println!("jwk: {jwk:?}");
-
-    let resolver = async |_| async { Ok(jwk.clone()) }.await;
+    let resolver = async |_| async { Ok(holder_jwk.clone()) }.await;
     let jwt = split.last().ok_or_else(|| anyhow!("Invalid SD-JWT presentation"))?;
     let kb_jwt: Jwt<KbJwtClaims> = jws::decode(jwt, resolver).await?;
 

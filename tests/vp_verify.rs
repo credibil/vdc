@@ -4,12 +4,12 @@
 // use credibil_vc::oid4vp::types::GenerateRequest;
 // use insta::assert_yaml_snapshot as assert_snapshot;
 // use serde_json::json;
-use provider::verifier::ProviderImpl;
+use provider::verifier::Verifier;
 // use utils::wallet::{self, Keyring};
 
 #[tokio::test]
 async fn same_device() {
-    let _provider = ProviderImpl::new();
+    let _provider = Verifier::new();
 
     // --------------------------------------------------
     // Alice creates a presentation requesto to send to Bob

@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
+use credibil_infosec::Signer;
 use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
 use credibil_vc::core::did_jwk;
 use credibil_vc::oid4vci::types::{
@@ -12,18 +13,17 @@ use credibil_vc::oid4vci::types::{
 };
 use credibil_vc::oid4vci::{JwtType, endpoint};
 use credibil_vc::{BlockStore, OneMany};
-use provider::issuer::{CAROL_ID, ISSUER_ID, ProviderImpl, data};
-use provider::keystore::Keyring;
-use provider::wallet;
+use provider::issuer::{CAROL_ID, ISSUER_ID, Issuer, data};
+use provider::wallet::Wallet;
 use serde_json::json;
 
-static CAROL_KEYRING: LazyLock<Keyring> = LazyLock::new(wallet::keyring);
+static CAROL: LazyLock<Wallet> = LazyLock::new(Wallet::new);
 
 // Should return a credential when using the pre-authorized code flow and the
 // credential offer to the Wallet is made by value.
 #[tokio::test]
 async fn deferred() {
-    let provider = ProviderImpl::new();
+    let provider = Issuer::new();
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
@@ -64,7 +64,7 @@ async fn deferred() {
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .add_signer(&*CAROL_KEYRING)
+        .add_signer(&*CAROL)
         .build()
         .await
         .expect("builds JWS");
@@ -137,12 +137,15 @@ async fn deferred() {
     let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
 
     // verify the credential
+    let carol_vm = CAROL.verification_method().await.expect("should have did");
+    let carol_did = carol_vm.split('#').next().expect("should have did");
+
     assert_eq!(jwt.claims.iss, ISSUER_ID);
-    assert_eq!(jwt.claims.sub, CAROL_KEYRING.did());
+    assert_eq!(jwt.claims.sub, carol_did);
 
     let OneMany::One(subject) = jwt.claims.vc.credential_subject else {
         panic!("should be a single credential subject");
     };
-    assert_eq!(subject.id, Some(CAROL_KEYRING.did()));
+    assert_eq!(subject.id, Some(carol_did.to_string()));
     assert_eq!(subject.claims.get("family_name"), Some(&json!("Person")));
 }

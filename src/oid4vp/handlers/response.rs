@@ -102,7 +102,7 @@ async fn verify(provider: &impl Provider, request: &AuthorzationResponse) -> Res
         for vp in presentations {
             match query.format {
                 RequestedFormat::DcSdJwt => {
-                    sd_jwt::verify(&vp, provider).await.map_err(|e| {
+                    sd_jwt::verify(vp, provider).await.map_err(|e| {
                         Error::InvalidRequest(format!("failed to verify sd-jwt presentation: {e}"))
                     })?;
                     // sd_jwt::verify(

@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
+use credibil_infosec::Signer;
 use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
 use credibil_vc::core::did_jwk;
 use credibil_vc::oid4vci::types::{
@@ -12,18 +13,17 @@ use credibil_vc::oid4vci::types::{
 };
 use credibil_vc::oid4vci::{JwtType, endpoint};
 use credibil_vc::{BlockStore, OneMany};
-use provider::issuer::{BOB_ID, ISSUER_ID, ProviderImpl, data};
-use provider::keystore::Keyring;
-use provider::wallet;
+use provider::issuer::{BOB_ID, ISSUER_ID, Issuer, data};
+use provider::wallet::Wallet;
 use serde_json::json;
 
-static BOB_KEYRING: LazyLock<Keyring> = LazyLock::new(wallet::keyring);
+static BOB: LazyLock<Wallet> = LazyLock::new(Wallet::new);
 
 // Should return a credential when using the pre-authorized code flow and the
 // credential offer to the Wallet is made by value.
 #[tokio::test]
 async fn offer_val() {
-    let provider = ProviderImpl::new();
+    let provider = Issuer::new();
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
@@ -64,7 +64,7 @@ async fn offer_val() {
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .add_signer(&*BOB_KEYRING)
+        .add_signer(&*BOB)
         .build()
         .await
         .expect("builds JWS");
@@ -100,13 +100,16 @@ async fn offer_val() {
     let resolver = async |kid: String| did_jwk(&kid, &provider).await;
     let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
 
+    let bob_vm = BOB.verification_method().await.expect("should have did");
+    let bob_did = bob_vm.split('#').next().expect("should have did");
+
     assert_eq!(jwt.claims.iss, ISSUER_ID);
-    assert_eq!(jwt.claims.sub, BOB_KEYRING.did());
+    assert_eq!(jwt.claims.sub, bob_did.to_string());
 
     let OneMany::One(subject) = jwt.claims.vc.credential_subject else {
         panic!("should be a single credential subject");
     };
-    assert_eq!(subject.id, Some(BOB_KEYRING.did()));
+    assert_eq!(subject.id, Some(bob_did.to_string()));
     assert_eq!(subject.claims.get("family_name"), Some(&json!("Person")));
 }
 
@@ -114,7 +117,7 @@ async fn offer_val() {
 // credential offer to the Wallet is made by reference.
 #[tokio::test]
 async fn offer_ref() {
-    let provider = ProviderImpl::new();
+    let provider = Issuer::new();
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
@@ -156,7 +159,7 @@ async fn offer_ref() {
 // configuration id.
 #[tokio::test]
 async fn two_datasets() {
-    let provider = ProviderImpl::new();
+    let provider = Issuer::new();
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
@@ -205,7 +208,7 @@ async fn two_datasets() {
         let jws = JwsBuilder::new()
             .typ(JwtType::ProofJwt)
             .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-            .add_signer(&*BOB_KEYRING)
+            .add_signer(&*BOB)
             .build()
             .await
             .expect("builds JWS");
@@ -254,7 +257,7 @@ async fn two_datasets() {
 // requested in the token request.
 #[tokio::test]
 async fn reduce_credentials() {
-    let provider = ProviderImpl::new();
+    let provider = Issuer::new();
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
@@ -309,7 +312,7 @@ async fn reduce_credentials() {
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .add_signer(&*BOB_KEYRING)
+        .add_signer(&*BOB)
         .build()
         .await
         .expect("builds JWS");
@@ -355,7 +358,7 @@ async fn reduce_credentials() {
 // Should return fewer claims when requested in token request.
 #[tokio::test]
 async fn reduce_claims() {
-    let provider = ProviderImpl::new();
+    let provider = Issuer::new();
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
@@ -403,7 +406,7 @@ async fn reduce_claims() {
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .add_signer(&*BOB_KEYRING)
+        .add_signer(&*BOB)
         .build()
         .await
         .expect("builds JWS");
@@ -441,13 +444,16 @@ async fn reduce_claims() {
     let resolver = async |kid: String| did_jwk(&kid, &provider).await;
     let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
 
+    let bob_vm = BOB.verification_method().await.expect("should have did");
+    let bob_did = bob_vm.split('#').next().expect("should have did");
+
     assert_eq!(jwt.claims.iss, ISSUER_ID);
-    assert_eq!(jwt.claims.sub, BOB_KEYRING.did());
+    assert_eq!(jwt.claims.sub, bob_did.to_string());
 
     let OneMany::One(subject) = jwt.claims.vc.credential_subject else {
         panic!("should be a single credential subject");
     };
-    assert_eq!(subject.id, Some(BOB_KEYRING.did()));
+    assert_eq!(subject.id, Some(bob_did.to_string()));
     assert_eq!(subject.claims.get("family_name"), Some(&json!("Person")));
     assert_eq!(subject.claims.get("email"), None);
 }
@@ -455,7 +461,7 @@ async fn reduce_claims() {
 // Should handle an acceptance notication from the wallet.
 #[tokio::test]
 async fn notify_accepted() {
-    let provider = ProviderImpl::new();
+    let provider = Issuer::new();
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
@@ -496,7 +502,7 @@ async fn notify_accepted() {
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .add_signer(&*BOB_KEYRING)
+        .add_signer(&*BOB)
         .build()
         .await
         .expect("builds JWS");

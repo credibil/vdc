@@ -22,12 +22,12 @@ pub mod data {
 }
 
 #[derive(Clone, Debug)]
-pub struct ProviderImpl {
+pub struct Issuer {
     keyring: Keyring,
     blockstore: Mockstore,
 }
 
-impl ProviderImpl {
+impl Issuer {
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -37,13 +37,13 @@ impl ProviderImpl {
     }
 }
 
-impl DidResolver for ProviderImpl {
+impl DidResolver for Issuer {
     async fn resolve(&self, url: &str) -> anyhow::Result<Document> {
         self.keyring.resolve(url).await
     }
 }
 
-impl Signer for ProviderImpl {
+impl Signer for Issuer {
     async fn try_sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
         self.keyring.try_sign(msg).await
     }
@@ -61,7 +61,7 @@ impl Signer for ProviderImpl {
     }
 }
 
-impl BlockStore for ProviderImpl {
+impl BlockStore for Issuer {
     async fn put(&self, owner: &str, partition: &str, key: &str, block: &[u8]) -> Result<()> {
         self.blockstore.put(owner, partition, key, block).await
     }
@@ -79,4 +79,4 @@ impl BlockStore for ProviderImpl {
     }
 }
 
-impl Status for ProviderImpl {}
+impl Status for Issuer {}

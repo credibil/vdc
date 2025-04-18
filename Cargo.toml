@@ -55,6 +55,7 @@ tracing.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
+async-lazy = "0.1.2"
 axum = { version = "0.8.3", features = ["macros"] }
 axum-extra = { version = "0.10.1", features = ["typed-header"] }
 blockstore = "0.7.1"
@@ -111,7 +112,6 @@ pedantic = "warn"
 nursery = "warn"
 
 [workspace.dependencies]
-ed25519-dalek = "2.1.1"
 anyhow = "1.0.97"
 base64ct = { version = "1.7.3", features = ["std"] }
 chrono = { version = "0.4.40", features = ["serde"] }
@@ -119,6 +119,7 @@ credibil-did = "0.1.2"
 credibil-infosec = "0.1.2"
 credibil-vc = { path = "." }
 derive_builder = "0.20.2"
+ed25519-dalek = "2.1.1"
 fastrand = "2.3.0"
 rand = "0.9.0"
 serde = { version = "1.0.219", features = ["derive"] }

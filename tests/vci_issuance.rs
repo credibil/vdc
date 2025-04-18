@@ -5,6 +5,7 @@
 use std::sync::LazyLock;
 
 use base64ct::{Base64UrlUnpadded, Encoding};
+use credibil_infosec::Signer;
 use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
 use credibil_vc::core::did_jwk;
 use credibil_vc::format::sd_jwt::SdJwtClaims;
@@ -14,18 +15,17 @@ use credibil_vc::oid4vci::types::{
 };
 use credibil_vc::oid4vci::{JwtType, endpoint};
 use credibil_vc::{BlockStore, OneMany};
-use provider::issuer::{BOB_ID, ISSUER_ID, ProviderImpl, data};
-use provider::keystore::Keyring;
-use provider::wallet;
+use provider::issuer::{BOB_ID, ISSUER_ID, Issuer, data};
+use provider::wallet::Wallet;
 use serde_json::json;
 use sha2::{Digest, Sha256};
 
-static BOB_KEYRING: LazyLock<Keyring> = LazyLock::new(wallet::keyring);
+static BOB: LazyLock<Wallet> = LazyLock::new(Wallet::new);
 
 // Should allow the Wallet to provide 2 JWT proofs when requesting a credential.
 #[tokio::test]
 async fn two_proofs() {
-    let provider = ProviderImpl::new();
+    let provider = Issuer::new();
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
@@ -66,12 +66,12 @@ async fn two_proofs() {
     let jws_1 = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .add_signer(&*BOB_KEYRING)
+        .add_signer(&*BOB)
         .build()
         .await
         .expect("builds JWS");
 
-    let dan = wallet::keyring();
+    let dan = Wallet::new();
     let jws_2 = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
@@ -109,8 +109,13 @@ async fn two_proofs() {
 
     assert_eq!(credentials.len(), 2);
 
+    let bob_vm = BOB.verification_method().await.expect("should have did");
+    let bob_did = bob_vm.split('#').next().expect("should have did");
+    let dan_vm = dan.verification_method().await.expect("should have did");
+    let dan_did = dan_vm.split('#').next().expect("should have did");
+
     let resolver = async |kid: String| did_jwk(&kid, &provider).await;
-    let dids = vec![BOB_KEYRING.did(), dan.did()];
+    let dids = vec![bob_did.to_string(), dan_did.to_string()];
 
     for (i, credential) in credentials.iter().enumerate() {
         let Credential { credential } = credential;
@@ -133,7 +138,7 @@ async fn two_proofs() {
 // Should issue a SD-JWT credential.
 #[tokio::test]
 async fn sd_jwt() {
-    let provider = ProviderImpl::new();
+    let provider = Issuer::new();
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
@@ -172,7 +177,7 @@ async fn sd_jwt() {
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .add_signer(&*BOB_KEYRING)
+        .add_signer(&*BOB)
         .build()
         .await
         .expect("builds JWS");
@@ -215,10 +220,13 @@ async fn sd_jwt() {
     let jwt: Jwt<SdJwtClaims> = jws::decode(token, resolver).await.expect("should decode");
 
     // verify the credential
+    let bob_vm = BOB.verification_method().await.expect("should have did");
+    let bob_did = bob_vm.split('#').next().expect("should have did");
+
     assert_eq!(jwt.header.typ, "dc+sd-jwt");
     assert_eq!(jwt.claims.iss, ISSUER_ID);
     assert_eq!(jwt.claims.vct, "Identity_SD_JWT");
-    assert_eq!(jwt.claims.sub, Some(BOB_KEYRING.did()));
+    assert_eq!(jwt.claims.sub, Some(bob_did.to_string()));
 
     // verify disclosures
     let disclosures = parts.1.split('~').collect::<Vec<&str>>();
