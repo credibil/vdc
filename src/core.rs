@@ -131,10 +131,7 @@ impl<T: Clone + Default + PartialEq> OneMany<T> {
 /// # Errors
 ///
 /// TODO: Document errors
-pub async fn did_jwk<R>(did_url: &str, resolver: &R) -> Result<PublicKeyJwk>
-where
-    R: DidResolver + Send + Sync,
-{
+pub async fn did_jwk(did_url: &str, resolver: &impl DidResolver) -> Result<PublicKeyJwk> {
     let deref = credibil_did::dereference(did_url, None, resolver.clone())
         .await
         .map_err(|e| anyhow!("issue dereferencing DID URL: {e}"))?;

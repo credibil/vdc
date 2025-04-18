@@ -38,7 +38,7 @@ async fn response(
     _verifier: &str, provider: &impl Provider, request: AuthorzationResponse,
 ) -> Result<RedirectResponse> {
     // TODO: handle case where Wallet returns error instead of submission
-    verify(provider.clone(), &request).await?;
+    verify(provider, &request).await?;
 
     // clear state
     let Some(state_key) = &request.state else {
@@ -75,12 +75,12 @@ impl Body for AuthorzationResponse {}
 
 // Verfiy the `vp_token` and presentation submission against the `dcql_query`
 // in the request.
-async fn verify(provider: impl Provider, request: &AuthorzationResponse) -> Result<()> {
+async fn verify(provider: &impl Provider, request: &AuthorzationResponse) -> Result<()> {
     // get state by client state key
     let Some(state_key) = &request.state else {
         return Err(Error::InvalidRequest("client state not found".to_string()));
     };
-    let Ok(state) = StateStore::get::<State>(&provider, state_key).await else {
+    let Ok(state) = StateStore::get::<State>(provider, state_key).await else {
         return Err(Error::InvalidRequest("state not found".to_string()));
     };
 
@@ -99,24 +99,26 @@ async fn verify(provider: impl Provider, request: &AuthorzationResponse) -> Resu
             return Err(Error::InvalidRequest(format!("query not found: {query_id}")));
         };
 
-        match query.format {
-            RequestedFormat::DcSdJwt => {
-                sd_jwt::verify().await.map_err(|e| {
-                    Error::InvalidRequest(format!("failed to verify sd-jwt presentation: {e}"))
-                })?;
-                // sd_jwt::verify(
-                //     &request_object.client_id,
-                //     &query.id,
-                //     &query.format,
-                //     &presentations,
-                // )
-                // .await
-            }
-            _ => {
-                return Err(Error::InvalidRequest(format!(
-                    "unsupported format: {:?}",
-                    query.format
-                )));
+        for vp in presentations {
+            match query.format {
+                RequestedFormat::DcSdJwt => {
+                    sd_jwt::verify(&vp, provider).await.map_err(|e| {
+                        Error::InvalidRequest(format!("failed to verify sd-jwt presentation: {e}"))
+                    })?;
+                    // sd_jwt::verify(
+                    //     &request_object.client_id,
+                    //     &query.id,
+                    //     &query.format,
+                    //     &presentations,
+                    // )
+                    // .await
+                }
+                _ => {
+                    return Err(Error::InvalidRequest(format!(
+                        "unsupported format: {:?}",
+                        query.format
+                    )));
+                }
             }
         }
 
@@ -128,7 +130,6 @@ async fn verify(provider: impl Provider, request: &AuthorzationResponse) -> Resu
     }
 
     // let dcql_query = &request_object.dcql_query;
-    // println!("dcql_query: {dcql_query:?}");
 
     // FIXME: look up credential status using status.id
     // if let Some(_status) = &vc.credential_status {

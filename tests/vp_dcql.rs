@@ -11,11 +11,14 @@ mod wallet;
 
 use std::sync::LazyLock;
 
-use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
+// use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
+// use credibil_did::KeyPurpose;
+// use credibil_did::{DidOperator, DidResolver};
 use credibil_vc::BlockStore;
 use credibil_vc::format::mso_mdoc::MsoMdocBuilder;
 use credibil_vc::format::sd_jwt::SdJwtVcBuilder;
 use credibil_vc::format::{mso_mdoc, sd_jwt};
+use credibil_vc::infosec::PublicKeyJwk;
 use credibil_vc::oid4vp::types::DcqlQuery;
 use credibil_vc::oid4vp::{
     AuthorzationResponse, DeviceFlow, GenerateRequest, GenerateResponse, endpoint, vp_token,
@@ -23,12 +26,12 @@ use credibil_vc::oid4vp::{
 use futures::executor::block_on;
 use serde_json::{Map, Value, json};
 
-use self::kms::Keyring;
 use self::provider::{ProviderImpl, VERIFIER_ID};
 
 // Create a mock wallet populated with test credentials.
 static WALLET_DB: LazyLock<wallet::Store> =
     LazyLock::new(|| block_on(async { load_wallet().await }));
+static ISSUER: LazyLock<ProviderImpl> = LazyLock::new(ProviderImpl::new);
 
 // Should request a Credential with the claims `vehicle_holder` and `first_name`.
 #[test]
@@ -58,11 +61,17 @@ fn multiple_claims() {
 #[tokio::test]
 async fn multiple_credentials() {
     let provider = ProviderImpl::new();
+    let provider2 = ProviderImpl::new();
+
+    // let url = &ISSUER.url;
+    // let did_url = format!("{url}/did.json");
+    // provider.add_did(url.clone(), (*ISSUER).resolve(&did_url).await.unwrap()).unwrap();
 
     BlockStore::put(&provider, "owner", "VERIFIER", VERIFIER_ID, data::VERIFIER).await.unwrap();
 
+
     // --------------------------------------------------
-    // Verifier creates an Authorization Request requesting presentation of
+    // Verifier creates an Authorization Request to request presentation of
     // credentials and sends to Wallet
     // --------------------------------------------------
     let query_json = json!({
@@ -77,7 +86,6 @@ async fn multiple_credentials() {
                     {"path": ["given_name"]},
                     {"path": ["family_name"]},
                     {"path": ["address"]}
-                    // {"path": ["address", "street_address"]}
                 ]
             },
             {
@@ -118,7 +126,7 @@ async fn multiple_credentials() {
     let results = request_object.dcql_query.execute(stored_vcs).expect("should execute");
     assert_eq!(results.len(), 2);
 
-    let vp_token = vp_token::generate(&request_object.client_id, &results, &Keyring::new())
+    let vp_token = vp_token::generate(&request_object.client_id, &results, &provider)
         .await
         .expect("should get token");
     assert_eq!(vp_token.len(), 1);
@@ -128,7 +136,7 @@ async fn multiple_credentials() {
         state: request_object.state,
     };
     let response =
-        endpoint::handle(VERIFIER_ID, request, &provider).await.expect("should create offer");
+        endpoint::handle(VERIFIER_ID, request, &provider).await.expect("should create request");
 
     // --------------------------------------------------
     // Wallet follows Verifier's redirect.
@@ -496,17 +504,14 @@ async fn load_wallet() -> wallet::Store {
 }
 
 async fn sd_jwt(vct: &str, claims: Map<String, Value>) -> String {
+    // let public_jwk = ISSUER.verification(KeyPurpose::VerificationMethod).unwrap();
+
     SdJwtVcBuilder::new()
         .vct(vct)
         .claims(claims)
-        .issuer("https://example.com")
-        .key_binding(PublicKeyJwk {
-            kty: KeyType::Okp,
-            crv: Curve::Ed25519,
-            x: "x".to_string(),
-            ..PublicKeyJwk::default()
-        })
-        .signer(&Keyring::new())
+        .issuer("https://credibil.io")
+        .key_binding(PublicKeyJwk::default())
+        .signer(&*ISSUER)
         .build()
         .await
         .expect("should build")
@@ -516,7 +521,7 @@ async fn mso_mdoc(doctype: &str, claims: Map<String, Value>) -> String {
     MsoMdocBuilder::new()
         .doctype(doctype)
         .claims(claims)
-        .signer(&Keyring::new())
+        .signer(&*ISSUER)
         .build()
         .await
         .expect("should build")

@@ -6,7 +6,7 @@ use std::sync::{Arc, LazyLock, Mutex};
 use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_did::document::{CreateOptions, Document};
-use credibil_did::key::DidKey;
+use credibil_did::key::{self, DidKey};
 use credibil_did::web::DidWeb;
 use credibil_did::{DidOperator, DidResolver, KeyPurpose};
 use credibil_infosec::{Algorithm, Curve, KeyType, PublicKeyJwk, Signer};
@@ -19,7 +19,7 @@ static DID_STORE: LazyLock<Arc<Mutex<HashMap<String, Document>>>> =
 
 #[derive(Clone, Debug)]
 pub struct Keyring {
-    url: String,
+    pub url: String,
     did: String,
     signing_key: SigningKey,
     verifying_key: ed25519_dalek::VerifyingKey,
@@ -118,6 +118,7 @@ impl DidOperator for Keyring {
 
 impl DidResolver for Keyring {
     async fn resolve(&self, url: &str) -> anyhow::Result<Document> {
+        // get unique key from url
         let key = url.strip_suffix("/did.json").unwrap();
         let store = DID_STORE.lock().expect("should lock");
         store.get(key).cloned().ok_or_else(|| anyhow!("document not found"))
