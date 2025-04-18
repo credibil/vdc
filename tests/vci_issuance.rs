@@ -63,6 +63,8 @@ async fn two_proofs() {
     let nonce =
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
+    let key_ref_1 = BOB_KEYRING.verification_method().await.expect("should get key reference");
+
     // proof of possession of key material
     let bob_key = BOB.verification_method().await.expect("should have key");
     let jws_1 = JwsBuilder::new()
@@ -182,6 +184,8 @@ async fn sd_jwt() {
     // --------------------------------------------------
     let nonce =
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
+
+    let key_ref = BOB_KEYRING.verification_method().await.expect("should get key reference");
 
     // proof of possession of key material
     let bob_key = BOB.verification_method().await.expect("should have key");

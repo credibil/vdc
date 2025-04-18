@@ -220,6 +220,8 @@ impl<S: SignerExt> W3cVcBuilder<HasConfig, HasIssuer, HasHolder, HasClaims, HasS
             ..VerifiableCredential::default()
         };
 
+        let key = self.signer.0.verification_method().await?;
+
         // encode to JWT
         let key = self.signer.0.verification_method().await?;
         jws::encode(&W3cVcClaims::from(vc), &key, self.signer.0)

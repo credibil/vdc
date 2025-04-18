@@ -61,6 +61,8 @@ async fn offer_val() {
     let nonce =
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
+    let key_ref = BOB_KEYRING.verification_method().await.expect("should get key reference");
+
     // proof of possession of key material
     let bob_key = BOB.verification_method().await.expect("should have key");
     let jws = JwsBuilder::new()
@@ -204,6 +206,8 @@ async fn two_datasets() {
         ("PHLDeveloper", vec!["A. Developer", "Lead"]),
     ]);
 
+    let key_ref = BOB_KEYRING.verification_method().await.expect("should get key reference");
+
     for identifier in &details[0].credential_identifiers {
         let nonce = endpoint::handle(ISSUER_ID, NonceRequest, &provider)
             .await
@@ -315,6 +319,8 @@ async fn reduce_credentials() {
     let nonce =
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
+    let key_ref = BOB_KEYRING.verification_method().await.expect("should get key reference");
+
     // proof of possession of key material
     let bob_key = BOB.verification_method().await.expect("should have key");
     let jws = JwsBuilder::new()
@@ -410,6 +416,8 @@ async fn reduce_claims() {
     // --------------------------------------------------
     let nonce =
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
+    
+    let key_ref = BOB_KEYRING.verification_method().await.expect("should get key reference");
 
     // proof of possession of key material
     let bob_key = BOB.verification_method().await.expect("should have key");
@@ -510,6 +518,8 @@ async fn notify_accepted() {
     // --------------------------------------------------
     let nonce =
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
+
+    let key_ref = BOB_KEYRING.verification_method().await.expect("should get key reference");
 
     // proof of possession of key material
     let bob_key = BOB.verification_method().await.expect("should have key");
