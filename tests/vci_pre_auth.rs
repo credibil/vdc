@@ -1,15 +1,10 @@
 //! Pre-Authorized Code Flow Tests
-#[path = "../examples/issuer/data/mod.rs"]
-mod data;
-#[path = "../examples/issuer/provider/mod.rs"]
-mod provider;
-#[path = "../examples/wallet/mod.rs"]
-mod wallet;
 
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use credibil_did::SignerExt;
+use credibil_infosec::jose::jws::Key;
 use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
 use credibil_vc::core::did_jwk;
 use credibil_vc::oid4vci::types::{
@@ -19,27 +14,27 @@ use credibil_vc::oid4vci::types::{
 };
 use credibil_vc::oid4vci::{JwtType, endpoint};
 use credibil_vc::{BlockStore, OneMany};
-use insta::assert_yaml_snapshot as assert_snapshot;
-use provider::{ISSUER_ID, NORMAL, ProviderImpl};
-use wallet::Keyring;
+use provider::issuer::{BOB_ID, ISSUER_ID, Issuer, data};
+use provider::wallet::Wallet;
+use serde_json::json;
 
-static BOB_KEYRING: LazyLock<Keyring> = LazyLock::new(wallet::keyring);
+static BOB: LazyLock<Wallet> = LazyLock::new(Wallet::new);
 
 // Should return a credential when using the pre-authorized code flow and the
 // credential offer to the Wallet is made by value.
 #[tokio::test]
 async fn offer_val() {
-    let provider = ProviderImpl::new();
+    let provider = Issuer::new();
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", NORMAL, data::NORMAL_USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(NORMAL)
+        .subject_id(BOB_ID)
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
@@ -66,14 +61,13 @@ async fn offer_val() {
     let nonce =
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
-    let key_ref = BOB_KEYRING.verification_method().await.expect("should get key reference");
-
     // proof of possession of key material
+    let bob_key = BOB.verification_method().await.expect("should have key");
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .add_signer(&*BOB_KEYRING)
-        .key_ref(&key_ref)
+        .key_ref(&bob_key)
+        .add_signer(&*BOB)
         .build()
         .await
         .expect("builds JWS");
@@ -105,32 +99,40 @@ async fn offer_val() {
     };
     let Credential { credential } = credentials.first().expect("should have credential");
 
-    let token = credential.as_string().expect("should be a string");
+    let token = credential.as_str().expect("should be a string");
     let resolver = async |kid: String| did_jwk(&kid, &provider).await;
     let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
 
-    assert_snapshot!("offer_val", jwt.claims.vc, {
-        ".validFrom" => "[validFrom]",
-        ".credentialSubject" => insta::sorted_redaction(),
-        ".credentialSubject.id" => "[id]"
-    });
+    let Key::KeyId(bob_kid) = BOB.verification_method().await.unwrap() else {
+        panic!("should have did");
+    };
+    let bob_did = bob_kid.split('#').next().expect("should have did");
+
+    assert_eq!(jwt.claims.iss, ISSUER_ID);
+    assert_eq!(jwt.claims.sub, bob_did.to_string());
+
+    let OneMany::One(subject) = jwt.claims.vc.credential_subject else {
+        panic!("should be a single credential subject");
+    };
+    assert_eq!(subject.id, Some(bob_did.to_string()));
+    assert_eq!(subject.claims.get("family_name"), Some(&json!("Person")));
 }
 
 // Should return a credential when using the pre-authorized code flow and the
 // credential offer to the Wallet is made by reference.
 #[tokio::test]
 async fn offer_ref() {
-    let provider = ProviderImpl::new();
+    let provider = Issuer::new();
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", NORMAL, data::NORMAL_USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(NORMAL)
+        .subject_id(BOB_ID)
         .with_credential("EmployeeID_W3C_VC")
         .by_ref(true)
         .build();
@@ -162,17 +164,17 @@ async fn offer_ref() {
 // configuration id.
 #[tokio::test]
 async fn two_datasets() {
-    let provider = ProviderImpl::new();
+    let provider = Issuer::new();
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", NORMAL, data::NORMAL_USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(NORMAL)
+        .subject_id(BOB_ID)
         .with_credential("Developer_W3C_VC")
         .build();
     let response =
@@ -202,19 +204,18 @@ async fn two_datasets() {
         ("PHLDeveloper", vec!["A. Developer", "Lead"]),
     ]);
 
-    let key_ref = BOB_KEYRING.verification_method().await.expect("should get key reference");
-
     for identifier in &details[0].credential_identifiers {
         let nonce = endpoint::handle(ISSUER_ID, NonceRequest, &provider)
             .await
             .expect("should return nonce");
 
         // proof of possession of key material
+        let bob_key = BOB.verification_method().await.expect("should have key");
         let jws = JwsBuilder::new()
             .typ(JwtType::ProofJwt)
             .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-            .add_signer(&*BOB_KEYRING)
-            .key_ref(&key_ref)
+            .key_ref(&bob_key)
+            .add_signer(&*BOB)
             .build()
             .await
             .expect("builds JWS");
@@ -246,7 +247,7 @@ async fn two_datasets() {
         let Credential { credential } = credentials.first().expect("should have credential");
 
         // verify the credential proof
-        let token = credential.as_string().expect("should be a string");
+        let token = credential.as_str().expect("should be a string");
         let resolver = async |kid: String| did_jwk(&kid, &provider).await;
         let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
 
@@ -263,17 +264,17 @@ async fn two_datasets() {
 // requested in the token request.
 #[tokio::test]
 async fn reduce_credentials() {
-    let provider = ProviderImpl::new();
+    let provider = Issuer::new();
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", NORMAL, data::NORMAL_USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob with 2 credentials
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(NORMAL)
+        .subject_id(BOB_ID)
         .with_credential("Developer_W3C_VC")
         .with_credential("EmployeeID_W3C_VC")
         .build();
@@ -314,14 +315,13 @@ async fn reduce_credentials() {
     let nonce =
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
-    let key_ref = BOB_KEYRING.verification_method().await.expect("should get key reference");
-
     // proof of possession of key material
+    let bob_key = BOB.verification_method().await.expect("should have key");
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .add_signer(&*BOB_KEYRING)
-        .key_ref(&key_ref)
+        .key_ref(&bob_key)
+        .add_signer(&*BOB)
         .build()
         .await
         .expect("builds JWS");
@@ -352,7 +352,7 @@ async fn reduce_credentials() {
     let Credential { credential } = credentials.first().expect("should have credential");
 
     // verify the credential proof
-    let token = credential.as_string().expect("should be a string");
+    let token = credential.as_str().expect("should be a string");
     let resolver = async |kid: String| did_jwk(&kid, &provider).await;
     let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
 
@@ -367,17 +367,17 @@ async fn reduce_credentials() {
 // Should return fewer claims when requested in token request.
 #[tokio::test]
 async fn reduce_claims() {
-    let provider = ProviderImpl::new();
+    let provider = Issuer::new();
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", NORMAL, data::NORMAL_USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(NORMAL)
+        .subject_id(BOB_ID)
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
@@ -411,14 +411,13 @@ async fn reduce_claims() {
     let nonce =
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
     
-    let key_ref = BOB_KEYRING.verification_method().await.expect("should get key reference");
-
     // proof of possession of key material
+    let bob_key = BOB.verification_method().await.expect("should have key");
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .add_signer(&*BOB_KEYRING)
-        .key_ref(&key_ref)
+        .key_ref(&bob_key)
+        .add_signer(&*BOB)
         .build()
         .await
         .expect("builds JWS");
@@ -452,31 +451,40 @@ async fn reduce_claims() {
     let Credential { credential } = credentials.first().expect("should have credential");
 
     // verify the credential proof
-    let token = credential.as_string().expect("should be a string");
+    let token = credential.as_str().expect("should be a string");
     let resolver = async |kid: String| did_jwk(&kid, &provider).await;
     let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
 
-    assert_snapshot!("reduce_claims", jwt.claims.vc, {
-        ".validFrom" => "[validFrom]",
-        ".credentialSubject" => insta::sorted_redaction(),
-        ".credentialSubject.id" => "[id]"
-    });
+    let Key::KeyId(bob_kid) = BOB.verification_method().await.unwrap() else {
+        panic!("should have did");
+    };
+    let bob_did = bob_kid.split('#').next().expect("should have did");
+
+    assert_eq!(jwt.claims.iss, ISSUER_ID);
+    assert_eq!(jwt.claims.sub, bob_did.to_string());
+
+    let OneMany::One(subject) = jwt.claims.vc.credential_subject else {
+        panic!("should be a single credential subject");
+    };
+    assert_eq!(subject.id, Some(bob_did.to_string()));
+    assert_eq!(subject.claims.get("family_name"), Some(&json!("Person")));
+    assert_eq!(subject.claims.get("email"), None);
 }
 
 // Should handle an acceptance notication from the wallet.
 #[tokio::test]
 async fn notify_accepted() {
-    let provider = ProviderImpl::new();
+    let provider = Issuer::new();
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", NORMAL, data::NORMAL_USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(NORMAL)
+        .subject_id(BOB_ID)
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
@@ -503,14 +511,13 @@ async fn notify_accepted() {
     let nonce =
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
-    let key_ref = BOB_KEYRING.verification_method().await.expect("should get key reference");
-
     // proof of possession of key material
+    let bob_key = BOB.verification_method().await.expect("should have key");
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .add_signer(&*BOB_KEYRING)
-        .key_ref(&key_ref)
+        .key_ref(&bob_key)
+        .add_signer(&*BOB)
         .build()
         .await
         .expect("builds JWS");

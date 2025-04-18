@@ -118,7 +118,7 @@ impl<T: BlockStore> Metadata for T {
 
         let block = serde_json::to_vec(&client)?;
         BlockStore::put(self, "owner", CLIENT, &client.oauth.client_id, &block).await?;
-        Ok(client.clone())
+        Ok(client)
     }
 }
 

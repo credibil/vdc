@@ -2,47 +2,41 @@
 
 //! Pre-Authorized Code Flow Tests
 
-#[path = "../examples/issuer/data/mod.rs"]
-mod data;
-#[path = "../examples/issuer/provider/mod.rs"]
-mod provider;
-#[path = "../examples/wallet/mod.rs"]
-mod wallet;
-
 use std::sync::LazyLock;
 
 use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_did::SignerExt;
+use credibil_infosec::jose::jws::Key;
 use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
-use credibil_vc::BlockStore;
 use credibil_vc::core::did_jwk;
+use credibil_vc::format::sd_jwt::SdJwtClaims;
 use credibil_vc::oid4vci::types::{
     CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, CredentialResponse,
     NonceRequest, ProofClaims, TokenGrantType, TokenRequest, W3cVcClaims,
 };
 use credibil_vc::oid4vci::{JwtType, endpoint};
-use credibil_vc::sd_jwt::SdJwtClaims;
-use insta::assert_yaml_snapshot as assert_snapshot;
-use provider::{ISSUER_ID, NORMAL, ProviderImpl};
+use credibil_vc::{BlockStore, OneMany};
+use provider::issuer::{BOB_ID, ISSUER_ID, Issuer, data};
+use provider::wallet::Wallet;
+use serde_json::json;
 use sha2::{Digest, Sha256};
-use wallet::Keyring;
 
-static BOB_KEYRING: LazyLock<Keyring> = LazyLock::new(wallet::keyring);
+static BOB: LazyLock<Wallet> = LazyLock::new(Wallet::new);
 
 // Should allow the Wallet to provide 2 JWT proofs when requesting a credential.
 #[tokio::test]
 async fn two_proofs() {
-    let provider = ProviderImpl::new();
+    let provider = Issuer::new();
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", NORMAL, data::NORMAL_USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(NORMAL)
+        .subject_id(BOB_ID)
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
@@ -69,26 +63,24 @@ async fn two_proofs() {
     let nonce =
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
-    let key_ref_1 = BOB_KEYRING.verification_method().await.expect("should get key reference");
-
     // proof of possession of key material
+    let bob_key = BOB.verification_method().await.expect("should have key");
     let jws_1 = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .add_signer(&*BOB_KEYRING)
-        .key_ref(&key_ref_1)
+        .key_ref(&bob_key)
+        .add_signer(&*BOB)
         .build()
         .await
         .expect("builds JWS");
 
-    let keyring_2 = wallet::keyring();
-    let key_ref_2 = keyring_2.verification_method().await.expect("should get key reference");
-
+    let dan = Wallet::new();
+    let dan_key = dan.verification_method().await.expect("should have key");
     let jws_2 = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .add_signer(&keyring_2)
-        .key_ref(&key_ref_2)
+        .key_ref(&dan_key)
+        .add_signer(&dan)
         .build()
         .await
         .expect("builds JWS");
@@ -122,37 +114,51 @@ async fn two_proofs() {
 
     assert_eq!(credentials.len(), 2);
 
+    let Key::KeyId(bob_kid) = BOB.verification_method().await.unwrap() else {
+        panic!("should have did");
+    };
+    let bob_did = bob_kid.split('#').next().expect("should have did");
+
+    let Key::KeyId(dan_kid) = dan.verification_method().await.unwrap() else {
+        panic!("should have did");
+    };
+    let dan_did = dan_kid.split('#').next().expect("should have did");
+
     let resolver = async |kid: String| did_jwk(&kid, &provider).await;
+    let dids = vec![bob_did.to_string(), dan_did.to_string()];
 
     for (i, credential) in credentials.iter().enumerate() {
         let Credential { credential } = credential;
 
         // verify the credential proof
-        let token = credential.as_string().expect("should be a string");
+        let token = credential.as_str().expect("should be a string");
         let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
 
-        assert_snapshot!(format!("vc_{i}"), jwt.claims.vc, {
-            ".validFrom" => "[validFrom]",
-            ".credentialSubject" => insta::sorted_redaction(),
-            ".credentialSubject.id" => "[id]"
-        });
+        assert_eq!(jwt.claims.iss, ISSUER_ID);
+        assert_eq!(jwt.claims.sub, dids[i]);
+
+        let OneMany::One(subject) = jwt.claims.vc.credential_subject else {
+            panic!("should be a single credential subject");
+        };
+        assert_eq!(subject.id, Some(dids[i].clone()));
+        assert_eq!(subject.claims.get("family_name"), Some(&json!("Person")));
     }
 }
 
 // Should issue a SD-JWT credential.
 #[tokio::test]
 async fn sd_jwt() {
-    let provider = ProviderImpl::new();
+    let provider = Issuer::new();
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", NORMAL, data::NORMAL_USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request =
-        CreateOfferRequest::builder().subject_id(NORMAL).with_credential("Identity_SD_JWT").build();
+        CreateOfferRequest::builder().subject_id(BOB_ID).with_credential("Identity_SD_JWT").build();
     let response =
         endpoint::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
 
@@ -177,14 +183,13 @@ async fn sd_jwt() {
     let nonce =
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
-    let key_ref = BOB_KEYRING.verification_method().await.expect("should get key reference");
-
     // proof of possession of key material
+    let bob_key = BOB.verification_method().await.expect("should have key");
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .add_signer(&*BOB_KEYRING)
-        .key_ref(&key_ref)
+        .key_ref(&bob_key)
+        .add_signer(&*BOB)
         .build()
         .await
         .expect("builds JWS");
@@ -219,30 +224,27 @@ async fn sd_jwt() {
     let Credential { credential } = &credentials[0];
 
     // verify the credential proof
-    let sd_jwt = credential.as_string().expect("should be a string");
+    let sd_jwt = credential.as_str().expect("should be a string");
     let parts = sd_jwt.split_once('~').expect("should split");
 
     let token = parts.0;
     let resolver = async |kid: String| did_jwk(&kid, &provider).await;
     let jwt: Jwt<SdJwtClaims> = jws::decode(token, resolver).await.expect("should decode");
 
-    assert_snapshot!("sd_jwt", jwt, {
-        ".header.kid" => "[kid]",
-        ".claims._sd" => "[_sd]",
-        ".claims.iat" => "[iat]",
-        ".claims.sub" => "[sub]",
-        ".claims.cnf" => "[cnf]",
-    });
+    // verify the credential
+    let Key::KeyId(bob_kid) = BOB.verification_method().await.unwrap() else {
+        panic!("should have did");
+    };
+    let bob_did = bob_kid.split('#').next().expect("should have did");
+
+    assert_eq!(jwt.header.typ, "dc+sd-jwt");
+    assert_eq!(jwt.claims.iss, ISSUER_ID);
+    assert_eq!(jwt.claims.vct, "Identity_SD_JWT");
+    assert_eq!(jwt.claims.sub, Some(bob_did.to_string()));
 
     // verify disclosures
     let disclosures = parts.1.split('~').collect::<Vec<&str>>();
     for d in &disclosures {
-        // let sd_bytes = Base64UrlUnpadded::decode_vec(d).expect("should decode");
-        // let sd_json: serde_json::Value =
-        //     serde_json::from_slice(&sd_bytes).expect("should deserialize");
-        // let array = sd_json.as_array().expect("should be an array");
-        // let salt = array[0].as_str().expect("should be a string");
-
         let sd_hash = Base64UrlUnpadded::encode_string(Sha256::digest(d).as_slice());
         assert!(jwt.claims.sd.contains(&sd_hash), "disclosure not found");
     }

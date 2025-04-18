@@ -9,7 +9,7 @@ use credibil_vc::oid4vci::endpoint;
 use credibil_vc::oid4vci::types::{CreateOfferRequest, FormatProfile, ProfileW3c, SendType};
 use rstest::rstest;
 use serde_json::json;
-use test_issuer::{CREDENTIAL_ISSUER, NORMAL, PENDING, ProviderImpl};
+use test_issuer::{BOB_ID, CAROL_ID, CREDENTIAL_ISSUER, ProviderImpl};
 use utils::{Issuance, provider};
 
 /// Immediate and deferred issuance variants
@@ -20,8 +20,8 @@ async fn issuance(provider: ProviderImpl, #[case] issue: Issuance) {
     utils::init_tracer();
 
     let subject_id = match issue {
-        Issuance::Immediate => NORMAL,
-        Issuance::Deferred => PENDING,
+        Issuance::Immediate => BOB_ID,
+        Issuance::Deferred => CAROL_ID,
     };
 
     let value = json! ({
@@ -55,7 +55,7 @@ async fn format(provider: ProviderImpl, #[case] credential_format: FormatProfile
     let value = json!({
         "credential_issuer": CREDENTIAL_ISSUER,
         "credential_configuration_ids": ["EmployeeID_W3C_VC"],
-        "subject_id": NORMAL,
+        "subject_id": BOB_ID,
          "grant_types": ["urn:ietf:params:oauth:grant-type:pre-authorized_code"],
         "tx_code_required": true,
         "send_type": SendType::ByVal,
@@ -82,7 +82,7 @@ async fn authorization(provider: ProviderImpl) {
     let value = json!({
         "credential_issuer": CREDENTIAL_ISSUER,
         "credential_configuration_ids": ["EmployeeID_W3C_VC"],
-        "subject_id": NORMAL,
+        "subject_id": BOB_ID,
         "tx_code_required": true,
         "send_type": SendType::ByVal,
     });
@@ -110,7 +110,7 @@ async fn offer_type(provider: ProviderImpl, #[case] send_type: SendType) {
     let value = json!({
         "credential_issuer": CREDENTIAL_ISSUER,
         "credential_configuration_ids": ["EmployeeID_W3C_VC"],
-        "subject_id": NORMAL,
+        "subject_id": BOB_ID,
         "grant_types": ["urn:ietf:params:oauth:grant-type:pre-authorized_code"],
         "tx_code_required": true,
         "send_type": send_type,

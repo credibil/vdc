@@ -14,7 +14,7 @@ use credibil_vc::oid4vci::{Error, Result, endpoint};
 use insta::assert_yaml_snapshot as assert_snapshot;
 use serde_json::json;
 use sha2::{Digest, Sha256};
-use test_issuer::{CLIENT_ID, CREDENTIAL_ISSUER, NORMAL, ProviderImpl};
+use test_issuer::{CLIENT_ID, CREDENTIAL_ISSUER, BOB_ID, ProviderImpl};
 
 pub const CODE_VERIFIER: &str = "ABCDEF12345";
 pub const REDIRECT_URI: &str = "http://localhost:3000/callback";
@@ -108,7 +108,7 @@ impl Wallet {
                     }
                 }
             }],
-            "subject_id": NORMAL,
+            "subject_id": BOB_ID,
             "wallet_issuer": CREDENTIAL_ISSUER
         });
         // let request = serde_json::from_value(value).expect("request is valid");

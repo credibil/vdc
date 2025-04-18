@@ -31,7 +31,7 @@ impl<T: Serialize> IntoHttp for Result<endpoint::Response<T>> {
             Err(e) => {
                 let body = serde_json::to_vec(&e).unwrap_or_default();
                 Response::builder()
-                    .status(StatusCode::INTERNAL_SERVER_ERROR)
+                    .status(StatusCode::BAD_REQUEST)
                     .header(header::CONTENT_TYPE, "application/json")
                     .body(Self::Body::from(body))
             }

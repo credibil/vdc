@@ -11,7 +11,7 @@ use credibil_vc::oid4vci::{AuthorizationRequest, Error, endpoint};
 use insta::assert_yaml_snapshot as assert_snapshot;
 use serde_json::json;
 use sha2::{Digest, Sha256};
-use test_issuer::{CLIENT_ID, CREDENTIAL_ISSUER, NORMAL};
+use test_issuer::{CLIENT_ID, CREDENTIAL_ISSUER, BOB_ID};
 
 #[tokio::test]
 async fn authorize_configuration_id() {
@@ -30,7 +30,7 @@ async fn authorize_configuration_id() {
         .with_authorization_detail(
             AuthorizationDetailBuilder::new().credential_configuration_id("EmployeeID_W3C_VC").build(),
         )
-        .subject_id(NORMAL)
+        .subject_id(BOB_ID)
         .build();
 
     let response = endpoint::handle(CREDENTIAL_ISSUER, request, &provider).await.expect("ok");
@@ -63,7 +63,7 @@ async fn authorize_format() {
                 ]
             }
         }],
-        "subject_id": NORMAL,
+        "subject_id": BOB_ID,
         "wallet_issuer": CREDENTIAL_ISSUER
     });
 
@@ -98,7 +98,7 @@ async fn authorize_scope() {
         "code_challenge": Base64UrlUnpadded::encode_string(&Sha256::digest("ABCDEF12345")),
         "code_challenge_method": "S256",
         "scope": "EmployeeIDCredential",
-        "subject_id": NORMAL,
+        "subject_id": BOB_ID,
         "wallet_issuer": CREDENTIAL_ISSUER
     });
 
@@ -147,7 +147,7 @@ async fn authorize_claims() {
                 }
             }
         }],
-        "subject_id": NORMAL,
+        "subject_id": BOB_ID,
         "wallet_issuer": CREDENTIAL_ISSUER
     });
 
@@ -196,7 +196,7 @@ async fn authorize_claims_err() {
                 }
             }
         }],
-        "subject_id": NORMAL,
+        "subject_id": BOB_ID,
         "wallet_issuer": CREDENTIAL_ISSUER
     });
 

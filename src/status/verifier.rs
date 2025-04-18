@@ -7,7 +7,7 @@ use std::future::Future;
 
 use super::error::Error;
 use super::provider;
-use crate::w3c_vc::vc::CredentialStatus;
+use crate::format::w3c::CredentialStatus;
 
 /// The `Status` trait is used to proxy the resolution of a credential status.
 ///

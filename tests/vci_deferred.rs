@@ -1,18 +1,11 @@
 //! Deferred Issuance Tests
 
-#[path = "../examples/issuer/data/mod.rs"]
-mod data;
-#[path = "../examples/issuer/provider/mod.rs"]
-mod provider;
-#[path = "../examples/wallet/mod.rs"]
-mod wallet;
-
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use credibil_did::SignerExt;
+use credibil_infosec::jose::jws::Key;
 use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
-use credibil_vc::BlockStore;
 use credibil_vc::core::did_jwk;
 use credibil_vc::oid4vci::types::{
     CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, CredentialResponse,
@@ -20,27 +13,28 @@ use credibil_vc::oid4vci::types::{
     TokenRequest, W3cVcClaims,
 };
 use credibil_vc::oid4vci::{JwtType, endpoint};
-use insta::assert_yaml_snapshot as assert_snapshot;
-use provider::{ISSUER_ID, PENDING, ProviderImpl};
-use wallet::Keyring;
+use credibil_vc::{BlockStore, OneMany};
+use provider::issuer::{CAROL_ID, ISSUER_ID, Issuer, data};
+use provider::wallet::Wallet;
+use serde_json::json;
 
-static BOB_KEYRING: LazyLock<Keyring> = LazyLock::new(wallet::keyring);
+static CAROL: LazyLock<Wallet> = LazyLock::new(Wallet::new);
 
 // Should return a credential when using the pre-authorized code flow and the
 // credential offer to the Wallet is made by value.
 #[tokio::test]
 async fn deferred() {
-    let provider = ProviderImpl::new();
+    let provider = Issuer::new();
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", PENDING, data::PENDING_USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", CAROL_ID, data::PENDING_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(PENDING)
+        .subject_id(CAROL_ID)
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
@@ -67,14 +61,14 @@ async fn deferred() {
     let nonce =
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
-    let key_ref = BOB_KEYRING.verification_method().await.expect("should get key reference");
-
     // proof of possession of key material
+    let key = CAROL.verification_method().await.expect("should have did");
+
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .add_signer(&*BOB_KEYRING)
-        .key_ref(&key_ref)
+        .key_ref(&key)
+        .add_signer(&*CAROL)
         .build()
         .await
         .expect("builds JWS");
@@ -111,8 +105,8 @@ async fn deferred() {
     subject.insert(credential_identifier.to_string(), credential);
     let data = serde_json::to_vec(&subject).unwrap();
 
-    BlockStore::delete(&provider, "owner", "SUBJECT", PENDING).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", PENDING, &data).await.unwrap();
+    BlockStore::delete(&provider, "owner", "SUBJECT", CAROL_ID).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", CAROL_ID, &data).await.unwrap();
 
     // --------------------------------------------------
     // After a brief wait Bob retrieves the credential
@@ -142,13 +136,22 @@ async fn deferred() {
     let Credential { credential } = credentials.first().expect("should have credential");
 
     // verify the credential proof
-    let token = credential.as_string().expect("should be a string");
+    let token = credential.as_str().expect("should be a string");
     let resolver = async |kid: String| did_jwk(&kid, &provider).await;
     let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
 
-    assert_snapshot!("issued", jwt.claims.vc, {
-        ".validFrom" => "[validFrom]",
-        ".credentialSubject" => insta::sorted_redaction(),
-        ".credentialSubject.id" => "[id]"
-    });
+    // verify the credential
+    let Key::KeyId(carol_kid) = CAROL.verification_method().await.unwrap() else {
+        panic!("should have did");
+    };
+    let carol_did = carol_kid.split('#').next().expect("should have did");
+
+    assert_eq!(jwt.claims.iss, ISSUER_ID);
+    assert_eq!(jwt.claims.sub, carol_did);
+
+    let OneMany::One(subject) = jwt.claims.vc.credential_subject else {
+        panic!("should be a single credential subject");
+    };
+    assert_eq!(subject.id, Some(carol_did.to_string()));
+    assert_eq!(subject.claims.get("family_name"), Some(&json!("Person")));
 }

@@ -5,6 +5,9 @@
 use std::fmt::{self, Display};
 use std::str::FromStr;
 
+use chrono::serde::ts_seconds_option;
+use chrono::{DateTime, Utc};
+use credibil_infosec::Algorithm;
 use serde::{Deserialize, Serialize};
 
 use crate::invalid;
@@ -25,7 +28,8 @@ pub struct OAuthClient {
 
     /// Time at which the client identifier was issued, as Unix time.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub client_id_issued_at: Option<i64>,
+    #[serde(with = "ts_seconds_option", default)]
+    pub client_id_issued_at: Option<DateTime<Utc>>,
 
     /// OAuth 2.0 client secret string. If issued, this MUST be unique for each
     /// `client_id` and SHOULD be unique for multiple instances of a client
@@ -121,12 +125,6 @@ pub struct OAuthClient {
     /// false.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub require_pushed_authorization_requests: Option<bool>,
-
-    /// Credential Offer Endpoint of for Wallets. If the Credential Issuer is
-    /// unable to perform discovery of the Wallet's Credential Offer Endpoint,
-    /// the following custom URL scheme is used: `openid-credential-offer://`
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub credential_offer_endpoint: Option<String>,
 }
 
 impl OAuthClient {
@@ -210,7 +208,7 @@ pub struct OAuthServer {
     /// for the `private_key_jwt` and `client_secret_jwt` authentication
     /// methods.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub token_endpoint_auth_signing_alg_values_supported: Option<Vec<TokenEndpointAuthSigningAlg>>,
+    pub token_endpoint_auth_signing_alg_values_supported: Option<Vec<Algorithm>>,
 
     /// URL to information developers might need when using the authorization
     /// server.
@@ -245,7 +243,7 @@ pub struct OAuthServer {
     /// endpoint for the `private_key_jwt` and `client_secret_jwt`
     /// authentication methods.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub revocation_endpoint_auth_signing_alg_values_supported: Option<Vec<String>>,
+    pub revocation_endpoint_auth_signing_alg_values_supported: Option<Vec<Algorithm>>,
 
     /// URL of the authorization server's introspection endpoint.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -261,7 +259,7 @@ pub struct OAuthServer {
     /// endpoint for the `private_key_jwt` and `client_secret_jwt`
     /// authentication methods.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub introspection_endpoint_auth_signing_alg_values_supported: Option<Vec<String>>,
+    pub introspection_endpoint_auth_signing_alg_values_supported: Option<Vec<Algorithm>>,
 
     /// Proof Key for Code Exchange (PKCE) code challenge methods supported.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -367,21 +365,6 @@ pub enum TokenEndpointAuth {
     //
     // /// The client uses HTTP Basic.
     // ClientSecretBasic,
-}
-
-/// JWS algorithms supported by the token endpoint for the signature on the JWT
-/// used to authenticate the client at the endpoint for `private_key_jwt` and
-/// `client_secret_jwt` authentication methods.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub enum TokenEndpointAuthSigningAlg {
-    /// Algorithm for the secp256k1 curve
-    #[serde(rename = "ES256K")]
-    ES256K,
-
-    /// Algorithm for the Ed25519 curve
-    #[default]
-    #[serde(rename = "EdDSA")]
-    EdDSA,
 }
 
 /// Proof Key for Code Exchange (PKCE) code challenge methods supported.

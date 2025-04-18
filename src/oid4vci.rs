@@ -105,8 +105,7 @@ pub mod pkce {
 
 /// Proofs
 pub mod proof {
-    pub use crate::w3c_vc::proof::{Payload, Type, Verify, verify};
-    pub use crate::w3c_vc::vc::W3cVcClaims;
+    pub use crate::format::w3c::{Payload, Type, Verify, W3cVcClaims};
 }
 
 /// Status

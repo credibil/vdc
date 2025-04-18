@@ -147,8 +147,8 @@
 //! async fn request_object(
 //!     State(endpoint): State<Arc<Endpoint<Provider>>>, TypedHeader(host): TypedHeader<Host>,
 //!     Path(client_state): Path<String>,
-//! ) -> AxResult<RequestObjectResponse> {
-//!     let req = RequestObjectRequest {
+//! ) -> AxResult<RequestUriResponse> {
+//!     let req = RequestUriRequest {
 //!         client_id: format!("http://{}", host),
 //!         state: client_state,
 //!     };
@@ -162,26 +162,19 @@
 //! [JWT VC Presentation Profile]: (https://identity.foundation/jwt-vc-presentation-profile)
 
 pub mod client;
+pub mod dcql;
 pub mod endpoint;
 pub mod provider;
 pub mod types;
+pub mod vp_token;
 
 mod error;
 mod handlers;
 mod state;
 
-/// Proofs
-pub mod proof {
-    pub use crate::w3c_vc::proof::{Payload, create};
-}
-
 // Re-export types
-pub use crate::dif_exch::{
-    Claims, Constraints, DescriptorMap, Field, Filter, FilterValue, InputDescriptor, PathNested,
-    PresentationSubmission,
-};
+pub use crate::format::w3c::VerifiablePresentation;
 pub use crate::oid4vp::types::*;
-pub use crate::w3c_vc::vp::VerifiablePresentation;
 
 /// Re-export status traits and types.
 pub mod status {

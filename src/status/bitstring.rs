@@ -15,9 +15,9 @@ use credibil_infosec::jose::jws;
 use flate2::write::GzEncoder;
 use serde_json::{Map, Value};
 
+use crate::format::w3c::{CredentialSubject, StatusPurpose, VerifiableCredential, W3cVcClaims};
 use crate::status::config::ListConfig;
 use crate::status::log::StatusLogEntry;
-use crate::w3c_vc::vc::{CredentialSubject, StatusPurpose, VerifiableCredential, W3cVcClaims};
 use crate::{Kind, OneMany};
 
 // TODO: Configurable.
@@ -146,7 +146,10 @@ pub async fn credential(
         ..VerifiableCredential::default()
     };
 
-    let key = signer.verification_method().await?;
+    let key = signer
+        .verification_method()
+        .await
+        .map_err(|e| anyhow!("issue getting signing key: {e}"))?;
 
     jws::encode(&W3cVcClaims::from(vc), &key, signer)
         .await

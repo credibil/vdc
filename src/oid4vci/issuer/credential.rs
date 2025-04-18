@@ -15,20 +15,21 @@ use chrono::Utc;
 use credibil_infosec::jose::jws::{self, Key};
 
 use crate::core::{did_jwk, generate};
-use crate::mso_mdoc::MsoMdocBuilder;
+use crate::format::FormatProfile;
+use crate::format::mso_mdoc::MsoMdocBuilder;
+use crate::format::sd_jwt::SdJwtVcBuilder;
+use crate::format::w3c::W3cVcBuilder;
 use crate::oid4vci::endpoint::{Body, Handler, Request, Response};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Deferrance, Expire, Stage, State};
 use crate::oid4vci::types::{
     AuthorizedDetail, Credential, CredentialConfiguration, CredentialHeaders, CredentialRequest,
-    CredentialResponse, Dataset, FormatProfile, Issuer, MultipleProofs, Proof, ProofClaims,
-    RequestBy, SingleProof,
+    CredentialResponse, Dataset, Issuer, MultipleProofs, Proof, ProofClaims, RequestBy,
+    SingleProof,
 };
 use crate::oid4vci::{Error, JwtType, Result};
-use crate::sd_jwt::DcSdJwtBuilder;
 use crate::server;
 use crate::status::issuer::Status;
-use crate::w3c_vc::W3cVcBuilder;
 
 /// Credential request handler.
 ///
@@ -252,25 +253,27 @@ impl Context {
                         .build()
                         .await
                         .map_err(|e| server!("issue creating `jwt_vc_json` credential: {e}"))?;
+
                     Credential {
                         credential: jwt.into(),
                     }
                 }
 
-                FormatProfile::MsoMdoc { .. } => {
+                FormatProfile::MsoMdoc { doctype } => {
                     let mdl = MsoMdocBuilder::new()
-                        .doctype("org.iso.18013.5.1.mDL")
+                        .doctype(doctype)
                         .claims(dataset.claims.clone())
                         .signer(provider)
                         .build()
                         .await
                         .map_err(|e| server!("issue creating `mso_mdoc` credential: {e}"))?;
+
                     Credential {
                         credential: mdl.into(),
                     }
                 }
 
-                FormatProfile::DcSdJwt { .. } => {
+                FormatProfile::DcSdJwt { vct } => {
                     // TODO: cache the result of jwk when verifying proof (`verify` method)
                     let jwk = did_jwk(kid, provider).await.map_err(|e| {
                         server!("issue retrieving JWK for `dc+sd-jwt` credential: {e}")
@@ -279,8 +282,8 @@ impl Context {
                         return Err(Error::InvalidProof("Proof JWT DID is invalid".to_string()));
                     };
 
-                    let sd_jwt = DcSdJwtBuilder::new()
-                        .config(self.configuration.clone())
+                    let sd_jwt = SdJwtVcBuilder::new()
+                        .vct(vct)
                         .issuer(self.issuer.credential_issuer.clone())
                         .claims(dataset.claims.clone())
                         .key_binding(jwk)
@@ -289,6 +292,7 @@ impl Context {
                         .build()
                         .await
                         .map_err(|e| server!("issue creating `dc+sd-jwt` credential: {e}"))?;
+
                     Credential {
                         credential: sd_jwt.into(),
                     }

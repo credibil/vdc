@@ -1,24 +1,21 @@
 //! Tests for the Verifier API
 
-#[path = "../examples/verifier/provider/mod.rs"]
-mod provider;
-
 // use credibil_vc::oid4vp::endpoint;
 // use credibil_vc::oid4vp::types::GenerateRequest;
 // use insta::assert_yaml_snapshot as assert_snapshot;
 // use serde_json::json;
-use provider::ProviderImpl;
+use provider::verifier::Verifier;
 // use utils::wallet::{self, Keyring};
 
 #[tokio::test]
 async fn same_device() {
-    let _provider = ProviderImpl::new();
+    let _provider = Verifier::new();
 
     // --------------------------------------------------
     // Alice creates a presentation requesto to send to Bob
     // --------------------------------------------------
     // let request = GenerateRequest::builder()
-    //     .subject_id(NORMAL)
+    //     .subject_id(BOB_ID)
     //     .with_credential("EmployeeID_W3C_VC")
     //     .build();
     // let response =

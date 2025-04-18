@@ -1,10 +1,10 @@
 use std::collections::HashMap;
-use std::fmt::{self, Debug};
 
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 
 use crate::core::strings::title_case;
+use crate::format::FormatProfile;
 use crate::oauth::{OAuthClient, OAuthServer};
 
 /// Request to retrieve the Credential Issuer's configuration.
@@ -418,137 +418,6 @@ impl CredentialConfiguration {
         claim_set
     }
 }
-
-/// Format Profile defines supported Credential data models. Each profile
-/// defines a specific set of parameters or claims used to support a particular
-/// format.
-///
-/// See <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html#name-credential-format-profiles>
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(tag = "format")]
-pub enum FormatProfile {
-    /// A W3C Verifiable Credential.
-    ///
-    /// When this format is specified, Credential Offer, Authorization Details,
-    /// Credential Request, and Credential Issuer metadata, including
-    /// `credential_definition` object, MUST NOT be processed using JSON-LD
-    /// rules.
-    #[serde(rename = "jwt_vc_json")]
-    JwtVcJson {
-        /// The detailed description of the W3C Credential type.
-        credential_definition: CredentialDefinition,
-    },
-
-    /// A W3C Verifiable Credential not  using JSON-LD.
-    #[serde(rename = "ldp-vc")]
-    LdpVc {
-        /// The detailed description of the W3C Credential type.
-        credential_definition: CredentialDefinition,
-    },
-
-    /// A W3C Verifiable Credential using JSON-LD.
-    #[serde(rename = "jwt_vc_json-ld")]
-    JwtVcJsonLd {
-        /// The detailed description of the W3C Credential type.
-        credential_definition: CredentialDefinition,
-    },
-
-    /// An ISO mDL (ISO.18013-5) mobile driving licence format credential.
-    #[serde(rename = "mso_mdoc")]
-    MsoMdoc {
-        /// The Credential type, as defined in ISO.18013-5.
-        doctype: String,
-    },
-
-    /// An IETF SD-JWT format credential.
-    #[serde(rename = "dc+sd-jwt")]
-    DcSdJwt {
-        /// The Verifiable Credential type. The `vct` value MUST be a
-        /// case-sensitive String or URI serving as an identifier for
-        /// the type of the SD-JWT VC.
-        vct: String,
-    },
-}
-
-impl Default for FormatProfile {
-    fn default() -> Self {
-        Self::JwtVcJson {
-            credential_definition: CredentialDefinition::default(),
-        }
-    }
-}
-
-impl fmt::Display for FormatProfile {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::JwtVcJson { .. } => write!(f, "jwt_vc_json"),
-            Self::LdpVc { .. } => write!(f, "ldp_vc"),
-            Self::JwtVcJsonLd { .. } => write!(f, "jwt_vc_json-ld"),
-            Self::MsoMdoc { .. } => write!(f, "mso_mdoc"),
-            Self::DcSdJwt { .. } => write!(f, "dc+sd-jwt"),
-        }
-    }
-}
-
-// impl PartialEq for FormatProfile {
-//     fn eq(&self, other: &Self) -> bool {
-//         match self {
-//             Self::JwtVcJson {
-//                 credential_definition,
-//             } => {
-//                 if let Self::JwtVcJson {
-//                     credential_definition: other_credential_definition,
-//                 } = other
-//                 {
-//                     credential_definition == other_credential_definition
-//                 } else {
-//                     false
-//                 }
-//             }
-//             Self::LdpVc {
-//                 credential_definition,
-//             } => {
-//                 if let Self::LdpVc {
-//                     credential_definition: other_credential_definition,
-//                 } = other
-//                 {
-//                     credential_definition == other_credential_definition
-//                 } else {
-//                     false
-//                 }
-//             }
-//             Self::JwtVcJsonLd {
-//                 credential_definition,
-//             } => {
-//                 if let Self::JwtVcJsonLd {
-//                     credential_definition: other_credential_definition,
-//                 } = other
-//                 {
-//                     credential_definition == other_credential_definition
-//                 } else {
-//                     false
-//                 }
-//             }
-//             Self::MsoMdoc { doctype } => {
-//                 if let Self::MsoMdoc {
-//                     doctype: other_doctype,
-//                 } = other
-//                 {
-//                     doctype == other_doctype
-//                 } else {
-//                     false
-//                 }
-//             }
-//             Self::DcSdJwt { vct } => {
-//                 if let Self::DcSdJwt { vct: other_vct } = other {
-//                     vct == other_vct
-//                 } else {
-//                     false
-//                 }
-//             }
-//         }
-//     }
-// }
 
 /// Claim entry. Either a set of nested `Claim`s or a single `ClaimDisplay`.
 #[derive(Clone, Default, Debug, Deserialize, Serialize, PartialEq, Eq)]

@@ -1,0 +1,35 @@
+{
+    "client_id": "http://localhost:8080",
+    "client_name": "Verifier",
+    "redirect_uris": [
+        "http://localhost:3000/callback"
+    ],
+    "response_types": [
+        "vp_token",
+        "id_token vp_token"
+    ],
+    "vp_formats": {
+        "jwt_vc_json": {
+            "alg_values_supported": [
+                "ES256K",
+                "ES384"
+            ]
+        },
+        "jwt_vp_json": {
+            "alg_values_supported": [
+                "ES256K",
+                "EdDSA"
+            ]
+        },
+        "dc+sd-jwt": {
+            "sd-jwt_alg_values": [
+                "ES256",
+                "ES384"
+            ],
+            "kb-jwt_alg_values": [
+                "ES256",
+                "ES384"
+            ]
+        }
+    }
+}

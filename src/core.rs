@@ -11,7 +11,8 @@ pub mod strings;
 pub mod urlencode;
 
 use anyhow::{Result, anyhow};
-use credibil_did::{DidResolver, PublicKeyJwk, Resource};
+use credibil_did::{DidResolver, Resource};
+use credibil_infosec::PublicKeyJwk;
 use serde::{Deserialize, Serialize};
 
 /// `Kind` allows serde to serialize/deserialize a string or an object.
@@ -39,7 +40,7 @@ impl<T> From<String> for Kind<T> {
 
 impl<T> Kind<T> {
     /// Returns `true` if the quota is a single object.
-    pub const fn as_string(&self) -> Option<&str> {
+    pub const fn as_str(&self) -> Option<&str> {
         match self {
             Self::String(s) => Some(s.as_str()),
             Self::Object(_) => None,
@@ -88,11 +89,11 @@ impl<T: Clone + Default + PartialEq> OneMany<T> {
         }
     }
 
-    /// Returns `true` if the quota contains an array of objects.
-    pub const fn as_many(&self) -> Option<&[T]> {
+    /// Returns the `OneMany` as a Vec regardless of contents.
+    pub fn to_vec(self) -> Vec<T> {
         match self {
-            Self::One(_) => None,
-            Self::Many(m) => Some(m.as_slice()),
+            Self::One(one) => vec![one],
+            Self::Many(many) => many,
         }
     }
 
@@ -131,10 +132,7 @@ impl<T: Clone + Default + PartialEq> OneMany<T> {
 /// # Errors
 ///
 /// TODO: Document errors
-pub async fn did_jwk<R>(did_url: &str, resolver: &R) -> Result<PublicKeyJwk>
-where
-    R: DidResolver + Send + Sync,
-{
+pub async fn did_jwk(did_url: &str, resolver: &impl DidResolver) -> Result<PublicKeyJwk> {
     let deref = credibil_did::dereference(did_url, None, resolver.clone())
         .await
         .map_err(|e| anyhow!("issue dereferencing DID URL: {e}"))?;

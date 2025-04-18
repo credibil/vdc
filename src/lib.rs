@@ -17,13 +17,9 @@ pub mod oid4vci;
 pub mod oid4vp;
 
 pub mod core;
-pub mod dif_exch;
+pub mod format;
 pub mod oauth;
-pub mod sd_jwt;
 pub mod status;
-
-mod mso_mdoc;
-mod w3c_vc;
 
 /// Re-export DID resolution
 pub mod did {

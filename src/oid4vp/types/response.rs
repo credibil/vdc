@@ -3,88 +3,64 @@ use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
-use crate::core::Kind;
-use crate::dif_exch::PresentationSubmission;
-use crate::w3c_vc::vp::VerifiablePresentation;
+// use crate::core::Kind;
+// use crate::format::w3c::VerifiablePresentation;
 
 /// Authorization Response request object is used by Wallets to send a VP Token
 /// and Presentation Submission to the Verifier who initiated the verification.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct AuthorzationResponse {
-    /// One or more Verifiable Presentations represented as base64url encoded
-    /// strings and/or JSON objects. The VP format determines the encoding.
-    /// The encoding follows the same format-based rules as for Credential
-    /// issuance (Appendix E of the [OpenID4VCI] specification).
-    ///
-    /// When a single Verifiable Presentation is returned, array syntax MUST NOT
-    /// be used.
-    ///
-    /// [OpenID4VCI]: (https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub vp_token: Option<Vec<Kind<VerifiablePresentation>>>,
-
-    /// The `presentation_submission` element as defined in
-    /// [DIF.PresentationExchange]. It contains mappings between the
-    /// requested Verifiable Credentials and where to find them within the
-    /// returned VP Token.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub presentation_submission: Option<PresentationSubmission>,
+    /// The VP Token returned by the Wallet.
+    pub vp_token: HashMap<String, Vec<String>>,
 
     /// The client state value from the Authorization Request.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub state: Option<String>,
 }
 
+// FIXME: align serialization/deserialization with spec
 impl AuthorzationResponse {
-    /// Create a `HashMap` representation of the `AuthorzationResponse` suitable for
-    /// use in an HTML form post.
+    /// Create a `application/x-www-form-urlencoded` string of the
+    /// `AuthorzationResponse` suitable for use in an HTML form post.
     ///
     /// # Errors
+    ///
     /// Will return an error if any nested objects cannot be serialized and
     /// URL-encoded.
-    pub fn form_encode(&self) -> anyhow::Result<HashMap<String, String>> {
-        let mut map = HashMap::new();
-        if let Some(vp_token) = &self.vp_token {
-            let as_json = serde_json::to_string(vp_token)?;
-            map.insert("vp_token".to_string(), urlencoding::encode(&as_json).to_string());
-        }
-        if let Some(presentation_submission) = &self.presentation_submission {
-            let as_json = serde_json::to_string(presentation_submission)?;
-            map.insert(
-                "presentation_submission".to_string(),
-                urlencoding::encode(&as_json).to_string(),
-            );
-        }
+    pub fn form_encode(&self) -> anyhow::Result<String> {
+        let mut encoder = form_urlencoded::Serializer::new(String::new());
+
+        encoder.append_pair("vp_token", &serde_json::to_string(&self.vp_token)?);
+
         if let Some(state) = &self.state {
-            map.insert("state".to_string(), state.into());
+            encoder.append_pair("state", state);
         }
-        Ok(map)
+
+        Ok(encoder.finish())
     }
 
-    /// Create a `AuthorzationResponse` from a `HashMap` representation.
+    /// Create a `AuthorzationResponse` from a
+    /// `application/x-www-form-urlencoded` string.
     ///
     /// Suitable for
     /// use in a verifier's response endpoint that receives a form post before
     /// passing the `AuthorzationResponse` to the `response` handler.
     ///
+    ///
     /// # Errors
     /// Will return an error if any nested objects cannot be deserialized from
     /// URL-encoded JSON strings.
-    pub fn form_decode(map: &HashMap<String, String>) -> anyhow::Result<Self> {
+    pub fn form_decode(form: &str) -> anyhow::Result<Self> {
         let mut req = Self::default();
-        if let Some(vp_token) = map.get("vp_token") {
-            let decoded = urlencoding::decode(vp_token)?;
-            let vp_token: Vec<Kind<VerifiablePresentation>> = serde_json::from_str(&decoded)?;
-            req.vp_token = Some(vp_token);
+        let decoded = form_urlencoded::parse(form.as_bytes())
+            .into_owned()
+            .collect::<HashMap<String, String>>();
+
+        if let Some(vp_token) = decoded.get("vp_token") {
+            req.vp_token = serde_json::from_str(vp_token)?;
         }
-        if let Some(presentation_submission) = map.get("presentation_submission") {
-            let decoded = urlencoding::decode(presentation_submission)?;
-            let presentation_submission: PresentationSubmission = serde_json::from_str(&decoded)?;
-            req.presentation_submission = Some(presentation_submission);
-        }
-        if let Some(state) = map.get("state") {
-            req.state = Some(state.to_string());
-        }
+        req.state = decoded.get("state").cloned();
+
         Ok(req)
     }
 }
@@ -121,4 +97,24 @@ pub struct RedirectResponse {
     /// `response_code` is returned to the Verifier when the Wallet follows
     /// the redirect in the `redirect_uri` parameter.
     pub response_code: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn form_encode() {
+        let request = AuthorzationResponse {
+            vp_token: HashMap::from([("my_credential".to_string(), vec!["eyJ.etc".to_string()])]),
+            state: None,
+        };
+
+        let encoded = request.form_encode().expect("should encode");
+        assert_eq!(encoded, "vp_token=%7B%22my_credential%22%3A%5B%22eyJ.etc%22%5D%7D");
+
+        let decoded = AuthorzationResponse::form_decode(&encoded).expect("should decode");
+        assert_eq!(request, decoded);
+    }
 }

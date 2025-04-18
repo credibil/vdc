@@ -1,6 +1,0 @@
----
-source: tests/notification.rs
-assertion_line: 41
-expression: response
----
-{}
