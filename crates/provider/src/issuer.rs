@@ -1,22 +1,25 @@
 #![allow(unused)]
 
-#[path = "../../blockstore/mod.rs"]
-mod blockstore;
-#[path = "../../kms/mod.rs"]
-mod kms;
-
 use anyhow::Result;
 use credibil_did::{DidResolver, Document};
 use credibil_infosec::{Algorithm, Signer};
 use credibil_vc::BlockStore;
 use credibil_vc::status::issuer::Status;
 
-use self::blockstore::Mockstore;
-use self::kms::Keyring;
+use crate::blockstore::Mockstore;
+use crate::keystore::Keyring;
 
 pub const ISSUER_ID: &str = "http://credibil.io";
 pub const BOB_ID: &str = "bob";
 pub const CAROL_ID: &str = "carol";
+
+pub mod data {
+    pub const CLIENT: &[u8] = include_bytes!("../data/issuer/client.json");
+    pub const ISSUER: &[u8] = include_bytes!("../data/issuer/issuer.json");
+    pub const SERVER: &[u8] = include_bytes!("../data/issuer/server.json");
+    pub const NORMAL_USER: &[u8] = include_bytes!("../data/issuer/normal-user.json");
+    pub const PENDING_USER: &[u8] = include_bytes!("../data/issuer/pending-user.json");
+}
 
 #[derive(Clone, Debug)]
 pub struct ProviderImpl {
@@ -30,13 +33,6 @@ impl ProviderImpl {
         Self {
             keyring: Keyring::new(),
             blockstore: Mockstore::new(),
-        }
-    }
-
-    pub fn with_blockstore(blockstore: Mockstore) -> Self {
-        Self {
-            keyring: Keyring::new(),
-            blockstore,
         }
     }
 }

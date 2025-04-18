@@ -19,10 +19,6 @@ impl Mockstore {
         Self {}
     }
 
-    pub fn dump(&self) {
-        println!("Blockstore: {:?}", BLOCKSTORE);
-    }
-
     pub async fn put(&self, owner: &str, partition: &str, key: &str, block: &[u8]) -> Result<()> {
         let cid = unique_cid(owner, partition, key)?;
         BLOCKSTORE.put_keyed(&cid, block).await.map_err(Into::into)
@@ -39,10 +35,6 @@ impl Mockstore {
     pub async fn delete(&self, owner: &str, partition: &str, key: &str) -> Result<()> {
         let cid = unique_cid(owner, partition, key)?;
         Ok(BLOCKSTORE.remove(&cid).await?)
-    }
-
-    pub async fn purge(&self, _owner: &str, _partition: &str) -> Result<()> {
-        unimplemented!()
     }
 }
 

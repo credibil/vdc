@@ -1,8 +1,5 @@
 #![allow(unused)]
 
-#[path = "../kms/mod.rs"]
-mod kms;
-
 use std::str::FromStr;
 
 use base64ct::{Base64UrlUnpadded, Encoding};
@@ -15,7 +12,8 @@ use credibil_vc::oid4vci::types::Credential;
 use credibil_vc::oid4vp::types::{Claim, Queryable};
 use serde_json::Value;
 
-pub use self::kms::Keyring;
+use crate::blockstore::Mockstore;
+use crate::keystore::Keyring;
 
 pub fn keyring() -> Keyring {
     Keyring::new_key()

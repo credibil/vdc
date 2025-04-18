@@ -14,6 +14,8 @@ use credibil_vc::core::generate;
 use ed25519_dalek::{Signer as _, SigningKey};
 use rand_core::OsRng;
 
+use crate::blockstore::Mockstore;
+
 static DID_STORE: LazyLock<Arc<Mutex<HashMap<String, Document>>>> =
     LazyLock::new(|| Arc::new(Mutex::new(HashMap::new())));
 
@@ -118,7 +120,6 @@ impl DidOperator for Keyring {
 
 impl DidResolver for Keyring {
     async fn resolve(&self, url: &str) -> anyhow::Result<Document> {
-        // get unique key from url
         let key = url.strip_suffix("/did.json").unwrap();
         let store = DID_STORE.lock().expect("should lock");
         store.get(key).cloned().ok_or_else(|| anyhow!("document not found"))

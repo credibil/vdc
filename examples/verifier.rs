@@ -4,9 +4,6 @@
 //! [Verifiable Credential HTTP API](
 //! https://identity.foundation/verifiable-credential/spec/#http-api).
 
-#[path = "../verifier/provider/mod.rs"]
-mod provider;
-
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -19,7 +16,8 @@ use credibil_vc::oid4vp::{
     self, AuthorzationResponse, GenerateRequest, GenerateResponse, RedirectResponse,
     RequestUriRequest, RequestUriResponse, endpoint,
 };
-use provider::{ProviderImpl, VERIFIER_ID};
+use provider::verifier::data::VERIFIER;
+use provider::verifier::{ProviderImpl, VERIFIER_ID};
 use serde::Serialize;
 use serde_json::json;
 use tokio::net::TcpListener;
@@ -27,8 +25,6 @@ use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
-
-const VERIFIER: &[u8] = include_bytes!("../issuer/data/issuer.json");
 
 #[allow(clippy::needless_return)]
 #[tokio::main]

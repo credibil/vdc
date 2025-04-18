@@ -1,13 +1,10 @@
 //! Tests for the Verifier API
 
-#[path = "../examples/verifier/provider/mod.rs"]
-mod provider;
-
 // use credibil_vc::oid4vp::endpoint;
 // use credibil_vc::oid4vp::types::GenerateRequest;
 // use insta::assert_yaml_snapshot as assert_snapshot;
 // use serde_json::json;
-use provider::ProviderImpl;
+use provider::verifier::ProviderImpl;
 // use utils::wallet::{self, Keyring};
 
 #[tokio::test]

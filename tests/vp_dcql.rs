@@ -1,14 +1,5 @@
 //! Tests for the Verifier API
 
-#[path = "../examples/verifier/data/mod.rs"]
-mod data;
-#[path = "../examples/kms/mod.rs"]
-mod kms;
-#[path = "../examples/verifier/provider/mod.rs"]
-mod provider;
-#[path = "../examples/wallet/mod.rs"]
-mod wallet;
-
 use std::sync::LazyLock;
 
 // use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
@@ -24,9 +15,9 @@ use credibil_vc::oid4vp::{
     AuthorzationResponse, DeviceFlow, GenerateRequest, GenerateResponse, endpoint, vp_token,
 };
 use futures::executor::block_on;
+use provider::verifier::{ProviderImpl, VERIFIER_ID, data};
+use provider::wallet;
 use serde_json::{Map, Value, json};
-
-use self::provider::{ProviderImpl, VERIFIER_ID};
 
 // Create a mock wallet populated with test credentials.
 static WALLET_DB: LazyLock<wallet::Store> =
@@ -61,14 +52,12 @@ fn multiple_claims() {
 #[tokio::test]
 async fn multiple_credentials() {
     let provider = ProviderImpl::new();
-    let provider2 = ProviderImpl::new();
 
     // let url = &ISSUER.url;
     // let did_url = format!("{url}/did.json");
     // provider.add_did(url.clone(), (*ISSUER).resolve(&did_url).await.unwrap()).unwrap();
 
     BlockStore::put(&provider, "owner", "VERIFIER", VERIFIER_ID, data::VERIFIER).await.unwrap();
-
 
     // --------------------------------------------------
     // Verifier creates an Authorization Request to request presentation of

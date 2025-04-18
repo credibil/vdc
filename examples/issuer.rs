@@ -2,9 +2,6 @@
 //!
 //! This example demonstrates how to use the Verifiable Credential Issuer (VCI)
 
-#[path = "../issuer/provider/mod.rs"]
-mod provider;
-
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
@@ -26,7 +23,8 @@ use credibil_vc::oid4vci::types::{
 };
 use credibil_vc::{BlockStore, urlencode};
 use oauth2::CsrfToken;
-use provider::{BOB_ID, ISSUER_ID, ProviderImpl};
+use provider::issuer::data::{CLIENT, ISSUER, NORMAL_USER as USER, SERVER};
+use provider::issuer::{BOB_ID, ISSUER_ID, ProviderImpl};
 use serde::Deserialize;
 use serde_json::json;
 use tokio::net::TcpListener;
@@ -37,10 +35,6 @@ use tower_http::trace::TraceLayer;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
 
-const ISSUER: &[u8] = include_bytes!("../issuer/data/issuer.json");
-const SERVER: &[u8] = include_bytes!("../issuer/data/server.json");
-const USER: &[u8] = include_bytes!("../issuer/data/normal-user.json");
-const CLIENT: &[u8] = include_bytes!("../issuer/data/client.json");
 const CLIENT_ID: &str = "96bfb9cb-0513-7d64-5532-bed74c48f9ab";
 
 static AUTH_REQUESTS: LazyLock<RwLock<HashMap<String, AuthorizationRequest>>> =

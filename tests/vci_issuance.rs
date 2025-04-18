@@ -2,13 +2,6 @@
 
 //! Pre-Authorized Code Flow Tests
 
-#[path = "../examples/issuer/data/mod.rs"]
-mod data;
-#[path = "../examples/issuer/provider/mod.rs"]
-mod provider;
-#[path = "../examples/wallet/mod.rs"]
-mod wallet;
-
 use std::sync::LazyLock;
 
 use base64ct::{Base64UrlUnpadded, Encoding};
@@ -21,10 +14,11 @@ use credibil_vc::oid4vci::types::{
 };
 use credibil_vc::oid4vci::{JwtType, endpoint};
 use credibil_vc::{BlockStore, OneMany};
-use provider::{BOB_ID, ISSUER_ID, ProviderImpl};
+use provider::issuer::{BOB_ID, ISSUER_ID, ProviderImpl, data};
+use provider::keystore::Keyring;
+use provider::wallet;
 use serde_json::json;
 use sha2::{Digest, Sha256};
-use wallet::Keyring;
 
 static BOB_KEYRING: LazyLock<Keyring> = LazyLock::new(wallet::keyring);
 

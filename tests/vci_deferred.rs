@@ -1,12 +1,5 @@
 //! Deferred Issuance Tests
 
-#[path = "../examples/issuer/data/mod.rs"]
-mod data;
-#[path = "../examples/issuer/provider/mod.rs"]
-mod provider;
-#[path = "../examples/wallet/mod.rs"]
-mod wallet;
-
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
@@ -19,9 +12,10 @@ use credibil_vc::oid4vci::types::{
 };
 use credibil_vc::oid4vci::{JwtType, endpoint};
 use credibil_vc::{BlockStore, OneMany};
-use provider::{CAROL_ID, ISSUER_ID, ProviderImpl};
+use provider::issuer::{CAROL_ID, ISSUER_ID, ProviderImpl, data};
+use provider::keystore::Keyring;
+use provider::wallet;
 use serde_json::json;
-use wallet::Keyring;
 
 static CAROL_KEYRING: LazyLock<Keyring> = LazyLock::new(wallet::keyring);
 

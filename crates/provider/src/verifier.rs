@@ -1,19 +1,18 @@
 #![allow(dead_code)]
 
-#[path = "../../blockstore/mod.rs"]
-mod blockstore;
-#[path = "../../kms/mod.rs"]
-mod kms;
-
 use anyhow::Result;
 use credibil_did::{DidResolver, Document};
 use credibil_infosec::{self, Algorithm, PublicKey, Receiver, SharedSecret, Signer};
 use credibil_vc::BlockStore;
 
-use self::blockstore::Mockstore;
-use self::kms::Keyring;
+use crate::blockstore::Mockstore;
+use crate::keystore::Keyring;
 
 pub const VERIFIER_ID: &str = "http://localhost:8080";
+
+pub mod data {
+    pub const VERIFIER: &[u8] = include_bytes!("../data/verifier/verifier.json");
+}
 
 #[derive(Clone, Debug)]
 pub struct ProviderImpl {
