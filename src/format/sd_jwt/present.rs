@@ -1,9 +1,7 @@
 use anyhow::{Result, anyhow};
-use base64ct::{Base64UrlUnpadded, Encoding};
 use chrono::Utc;
 use credibil_did::SignerExt;
 use credibil_infosec::Jws;
-use sha2::{Digest, Sha256};
 
 use crate::format::sd_jwt::{Disclosure, JwtType, KbJwtClaims};
 use crate::oid4vp::types::Matched;
@@ -136,13 +134,12 @@ impl<S: SignerExt> SdJwtVpBuilder<HasMatched<'_>, HasClientIdentifier, HasSigner
 
         // 3. key binding JWT
         let sd = format!("{credential}~{}", disclosures.join("~"));
-        let sd_hash = Sha256::digest(&sd);
 
         let claims = KbJwtClaims {
             nonce: self.nonce.unwrap_or_default(),
             aud: self.client_id.0,
             iat: Utc::now(),
-            sd_hash: Base64UrlUnpadded::encode_string(sd_hash.as_slice()),
+            sd_hash: super::sd_hash(&sd),
         };
 
         let kb_jwt = Jws::builder()

@@ -104,8 +104,8 @@ pub struct KbJwtClaims {
     /// The value of nonce from the Authorization Request.
     pub nonce: String,
 
-    /// The Client Identifier, except for requests over the DC API where it
-    /// MUST be the Origin prefixed with origin.
+    /// The Verifier's Client Identifier, except for requests over the DC API
+    /// where it MUST be the Origin prefixed with origin.
     pub aud: String,
 
     /// The time of issuance of the Key Binding JWT.
@@ -164,7 +164,7 @@ impl Disclosure {
     ///
     /// Returns an error if the encoding fails.
     pub fn hashed(&self) -> Result<String> {
-        Ok(Base64UrlUnpadded::encode_string(Sha256::digest(&self.encoded()?).as_slice()))
+        Ok(sd_hash(&self.encoded()?))
     }
 }
 
@@ -194,4 +194,8 @@ impl From<&JwtType> for String {
             JwtType::KbJwt => "kb+jwt".to_string(),
         }
     }
+}
+
+fn sd_hash(value: &str) -> String {
+    Base64UrlUnpadded::encode_string(Sha256::digest(value).as_slice())
 }

@@ -108,9 +108,8 @@ async fn multiple_credentials() {
     let results = request_object.dcql_query.execute(stored_vcs).expect("should execute");
     assert_eq!(results.len(), 2);
 
-    let vp_token = vp_token::generate(&request_object.client_id, &results, &*WALLET)
-        .await
-        .expect("should get token");
+    let vp_token =
+        vp_token::generate(&request_object, &results, &*WALLET).await.expect("should get token");
     assert_eq!(vp_token.len(), 1);
 
     let request = AuthorzationResponse {

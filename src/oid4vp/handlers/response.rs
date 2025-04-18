@@ -102,20 +102,13 @@ async fn verify(provider: &impl Provider, request: &AuthorzationResponse) -> Res
         for vp in presentations {
             match query.format {
                 RequestedFormat::DcSdJwt => {
-                    sd_jwt::verify(vp, provider).await.map_err(|e| {
-                        Error::InvalidRequest(format!("failed to verify sd-jwt presentation: {e}"))
+                    sd_jwt::verify(vp, &request_object, provider).await.map_err(|e| {
+                        Error::InvalidRequest(format!("failed to verify presentation: {e}"))
                     })?;
-                    // sd_jwt::verify(
-                    //     &request_object.client_id,
-                    //     &query.id,
-                    //     &query.format,
-                    //     &presentations,
-                    // )
-                    // .await
                 }
                 _ => {
                     return Err(Error::InvalidRequest(format!(
-                        "unsupported format: {:?}",
+                        "unsupported format: {}",
                         query.format
                     )));
                 }
@@ -125,8 +118,6 @@ async fn verify(provider: &impl Provider, request: &AuthorzationResponse) -> Res
         // if nonce != request_object.nonce {
         //     return Err(Error::InvalidRequest("nonce does not match".to_string()));
         // }
-
-        println!("vps: {presentations:?}");
     }
 
     // let dcql_query = &request_object.dcql_query;
