@@ -8,7 +8,7 @@ use credibil_vc::BlockStore;
 use credibil_vc::status::issuer::Status;
 
 use crate::blockstore::Mockstore;
-use crate::keystore::Keyring;
+use crate::identity::Identity;
 
 pub const ISSUER_ID: &str = "http://credibil.io";
 pub const BOB_ID: &str = "bob";
@@ -22,9 +22,9 @@ pub mod data {
     pub const PENDING_USER: &[u8] = include_bytes!("../data/issuer/pending-user.json");
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Issuer {
-    keyring: Keyring,
+    identity: Identity,
     blockstore: Mockstore,
 }
 
@@ -32,7 +32,7 @@ impl Issuer {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            keyring: Keyring::new(),
+            identity: Identity::new(),
             blockstore: Mockstore::new(),
         }
     }
@@ -40,27 +40,27 @@ impl Issuer {
 
 impl DidResolver for Issuer {
     async fn resolve(&self, url: &str) -> anyhow::Result<Document> {
-        self.keyring.resolve(url).await
+        self.identity.resolve(url).await
     }
 }
 
 impl Signer for Issuer {
     async fn try_sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
-        self.keyring.try_sign(msg).await
+        self.identity.try_sign(msg).await
     }
 
     async fn verifying_key(&self) -> Result<Vec<u8>> {
-        self.keyring.verifying_key().await
+        self.identity.verifying_key().await
     }
 
     fn algorithm(&self) -> Algorithm {
-        self.keyring.algorithm()
+        self.identity.algorithm()
     }
 }
 
 impl SignerExt for Issuer {
     async fn verification_method(&self) -> Result<Key> {
-        self.keyring.verification_method().await
+        self.identity.verification_method().await
     }
 }
 

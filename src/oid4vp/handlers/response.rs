@@ -69,7 +69,6 @@ impl Handler for Request<AuthorzationResponse, NoHeaders> {
 
 impl Body for AuthorzationResponse {}
 
-
 // Verfiy the `vp_token` and presentation against the `dcql_query`.
 async fn verify(provider: &impl Provider, request: &AuthorzationResponse) -> Result<()> {
     // get state by client state key

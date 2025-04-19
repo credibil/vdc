@@ -148,9 +148,9 @@ impl Disclosure {
     }
 
     /// Unpack a base64url-encoded disclosure.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Returns an error if the decoding fails or if the disclosure is not a
     /// JSON array of length 3.
     pub fn from(encoded: &str) -> Result<Self> {

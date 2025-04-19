@@ -7,7 +7,7 @@ use credibil_infosec::{self, Algorithm, PublicKey, Receiver, SharedSecret, Signe
 use credibil_vc::BlockStore;
 
 use crate::blockstore::Mockstore;
-use crate::keystore::Keyring;
+use crate::identity::Identity;
 
 pub const VERIFIER_ID: &str = "http://localhost:8080";
 
@@ -15,9 +15,9 @@ pub mod data {
     pub const VERIFIER: &[u8] = include_bytes!("../data/verifier/verifier.json");
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Verifier {
-    keyring: Keyring,
+    identity: Identity,
     blockstore: Mockstore,
 }
 
@@ -25,7 +25,7 @@ impl Verifier {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            keyring: Keyring::new(),
+            identity: Identity::new(),
             blockstore: Mockstore::new(),
         }
     }
@@ -33,27 +33,27 @@ impl Verifier {
 
 impl DidResolver for Verifier {
     async fn resolve(&self, url: &str) -> anyhow::Result<Document> {
-        self.keyring.resolve(url).await
+        self.identity.resolve(url).await
     }
 }
 
 impl Signer for Verifier {
     async fn try_sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
-        self.keyring.try_sign(msg).await
+        self.identity.try_sign(msg).await
     }
 
     async fn verifying_key(&self) -> Result<Vec<u8>> {
-        self.keyring.verifying_key().await
+        self.identity.verifying_key().await
     }
 
     fn algorithm(&self) -> Algorithm {
-        self.keyring.algorithm()
+        self.identity.algorithm()
     }
 }
 
 impl SignerExt for Verifier {
     async fn verification_method(&self) -> Result<Key> {
-        self.keyring.verification_method().await
+        self.identity.verification_method().await
     }
 }
 

@@ -122,7 +122,6 @@ async fn multiple_credentials() {
     // --------------------------------------------------
     let response =
         endpoint::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
-        
 
     // --------------------------------------------------
     // Wallet follows Verifier's redirect.

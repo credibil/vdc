@@ -5,5 +5,5 @@ pub mod verifier;
 pub mod wallet;
 
 mod blockstore;
-mod keystore;
 mod identity;
+mod keystore;
