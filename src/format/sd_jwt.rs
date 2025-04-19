@@ -79,9 +79,9 @@ pub struct SdJwtClaims {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sub: Option<String>,
 
-    /// Contains a public key associated with the key binding (provided by the
-    /// Wallet via proof-of-possession of key material) in order to provide
-    /// confirmation of cryptographic Key Binding.
+    /// The confirmation claim holds the Wallet's public key provided via
+    /// proof-of-possession of key material. It is used to provide confirmation
+    /// of cryptographic Key Binding for presentations.
     ///
     /// The Key Binding JWT in the SD-JWT presentation must be secured by the
     /// key identified in this claim.
@@ -117,12 +117,24 @@ pub struct KbJwtClaims {
     pub sd_hash: String,
 }
 
-/// The type of binding between the SD-JWT and the public key.
+/// The type of Proof-of-Possession public key to use in SD-JWT key binding.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum KeyBinding {
-    /// The public key is bound to the SD-JWT using a JWK.
+    /// A public key JWK.
     Jwk(PublicKeyJwk),
+
+    /// A public key Key ID.
+    Kid(String),
+
+    /// A URL to a JWK Set and Key ID referencing a public key within the set.
+    Jku {
+        /// The URL of the JWK Set.
+        jku: String,
+
+        /// The Key ID of a public key.
+        kid: String,
+    },
 }
 
 /// A claim disclosure.
