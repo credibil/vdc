@@ -31,7 +31,7 @@ base64ct.workspace = true
 bitvec = "1.0.1"
 bytes = "1.10.1"
 chrono = { version = "0.4.40", features = ["serde"] }
-ciborium = "0.2.2"
+ciborium.workspace = true
 coset = "0.3.8"
 credibil-did.workspace = true
 credibil-infosec.workspace = true
@@ -57,7 +57,7 @@ uuid = { version = "1.16.0", features = ["fast-rng", "v4"] }
 axum = { version = "0.8.3", features = ["macros"] }
 axum-extra = { version = "0.10.1", features = ["typed-header"] }
 ed25519-dalek.workspace = true
-futures = "0.3.31"
+futures.workspace = true
 insta = { version = "1.42.2", features = ["redactions", "yaml"] }
 oauth2 = { version = "5.0.0" }
 provider = { path = "crates/provider" }
@@ -113,9 +113,11 @@ credibil-did = "0.1.2"
 credibil-infosec = "0.1.2"
 credibil-vc = { path = "." }
 ed25519-dalek = "2.1.1"
+futures = "0.3.31"
 rand_core = "0.6.4"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140", features = ["alloc"] }
+ciborium = "0.2.2"
 
 [patch.crates-io]
 # credibil-did = { path = "../did" }

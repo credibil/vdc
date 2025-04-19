@@ -2122,6 +2122,7 @@ dependencies = [
  "credibil-infosec",
  "credibil-vc",
  "ed25519-dalek",
+ "futures",
  "multihash-codetable",
  "rand_core 0.6.4",
  "serde",

@@ -52,15 +52,17 @@ pub async fn verify(
         return Err(anyhow!("kb-jwt `sd_hash` claim is invalid"));
     }
 
-    // verify the `nonce` claim
+    // verify `nonce` claim
     if kb_jwt.claims.nonce != request_object.nonce {
         return Err(anyhow!("kb-jwt `sd_hash` claim is invalid"));
     }
 
-    // verify the `aud` claim
+    // verify `aud` claim
     if kb_jwt.claims.aud != request_object.client_id.to_string() {
         return Err(anyhow!("kb-jwt `sd_hash` claim is invalid"));
     }
+
+    // FIXME: verify disclosures `_sd_alg`
 
     // unpack each disclosure and verify
     // let dcql_query = &request_object.dcql_query;
@@ -78,8 +80,6 @@ pub async fn verify(
         };
         claims.push(claim);
     }
-
-    // verify disclosures `_sd_alg`
 
     Ok(claims)
 }
