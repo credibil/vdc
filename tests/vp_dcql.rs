@@ -116,13 +116,19 @@ async fn multiple_credentials() {
         vp_token,
         state: request_object.state,
     };
+
+    // --------------------------------------------------
+    // Verifier processes the Wallets's Authorization Response.
+    // --------------------------------------------------
     let response =
         endpoint::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
+        
 
     // --------------------------------------------------
     // Wallet follows Verifier's redirect.
     // --------------------------------------------------
-    println!("{response:?}");
+    assert_eq!(response.status, 200);
+    assert_eq!(response.body.redirect_uri.unwrap(), "http://localhost:3000/cb");
 }
 
 // Should return one of a `pid`, OR the `other_pid`, OR both

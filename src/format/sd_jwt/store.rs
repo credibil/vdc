@@ -47,7 +47,7 @@ pub fn to_queryable(issued: &str) -> Result<Queryable> {
     Ok(Queryable {
         meta: FormatProfile::DcSdJwt { vct: sd_jwt.vct },
         claims,
-        credential: Kind::String(credential.to_string()),
+        credential: Kind::String(issued.to_string()),
     })
 }
 

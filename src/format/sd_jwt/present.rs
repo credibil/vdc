@@ -1,3 +1,5 @@
+//! # SD-JWT Presentation
+
 use anyhow::{Result, anyhow};
 use chrono::Utc;
 use credibil_did::SignerExt;
@@ -119,21 +121,36 @@ impl<S: SignerExt> SdJwtVpBuilder<HasMatched<'_>, HasClientIdentifier, HasSigner
     pub async fn build(self) -> Result<String> {
         let matched = self.matched.0;
 
-        // 1. issued SD-JWT
+        // issued SD-JWT (including disclosures)
         let Some(credential) = matched.issued.as_str() else {
             return Err(anyhow!("Invalid issued claim type"));
         };
 
-        // 2. disclosures
-        let mut disclosures = vec![];
-        for claim in &matched.claims {
-            let disclosure =
-                Disclosure::new(&claim.path[claim.path.len() - 1], claim.value.clone());
-            disclosures.push(disclosure.encoded()?);
+        // unpack disclosures
+        let split = credential.split('~').collect::<Vec<_>>();
+        if split.len() < 2 {
+            return Err(anyhow!("invalid sd-jwt credential"));
         }
 
-        // 3. key binding JWT
-        let sd = format!("{credential}~{}", disclosures.join("~"));
+        let mut unpacked = vec![];
+        for encoded in &split[1..split.len()] {
+            unpacked.push(Disclosure::from(encoded)?);
+        }
+
+        // select disclosures to include in the presentation
+        let mut selected = vec![];
+        for claim in &matched.claims {
+            let Some(disclosure) =
+                unpacked.iter().find(|d| d.name == claim.path[claim.path.len() - 1])
+            else {
+                return Err(anyhow!("disclosure not found"));
+            };
+
+            selected.push(disclosure.encode()?);
+        }
+
+        // key binding JWT
+        let sd = format!("{credential}~{}", selected.join("~"));
 
         let claims = KbJwtClaims {
             nonce: self.nonce.unwrap_or_default(),

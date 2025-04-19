@@ -7,7 +7,7 @@ use credibil_infosec::jose::jwt::Jwt;
 
 use crate::core::did_jwk;
 use crate::format::sd_jwt::{KbJwtClaims, KeyBinding, SdJwtClaims};
-use crate::oid4vp::RequestObject;
+use crate::oid4vp::{Claim, RequestObject};
 
 /// Verifies an SD-JWT presentation (KB-JWT, and associated disclosures).
 ///
@@ -17,7 +17,7 @@ use crate::oid4vp::RequestObject;
 /// fails.
 pub async fn verify(
     vp: &str, request_object: &RequestObject, resolver: &impl DidResolver,
-) -> Result<()> {
+) -> Result<Vec<Claim>> {
     // extract components of the sd-jwt presentation
     let split = vp.split('~').collect::<Vec<_>>();
     if split.len() < 2 {
@@ -62,9 +62,24 @@ pub async fn verify(
         return Err(anyhow!("kb-jwt `sd_hash` claim is invalid"));
     }
 
-    // unpack the sd-jwt and verify
-    // unpack disclosures and verify against  sd-jwt `_sd` & `_sd_alg`
-    // return the disclosures and metadata
+    // unpack each disclosure and verify
+    // let dcql_query = &request_object.dcql_query;
 
-    Ok(())
+    let mut claims = vec![];
+    for encoded in disclosures {
+        let disclosure = super::Disclosure::from(encoded)?;
+        if !sd_jwt.claims.sd.contains(&disclosure.hash()?) {
+            return Err(anyhow!("disclosure not in sd-jwt `sd` claim"));
+        }
+
+        let claim = Claim {
+            path: vec![disclosure.name.clone()],
+            value: disclosure.value.clone(),
+        };
+        claims.push(claim);
+    }
+
+    // verify disclosures `_sd_alg`
+
+    Ok(claims)
 }

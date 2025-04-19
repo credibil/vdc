@@ -37,10 +37,10 @@ use crate::oid4vp::{Error, Result};
 async fn response(
     _verifier: &str, provider: &impl Provider, request: AuthorzationResponse,
 ) -> Result<RedirectResponse> {
-    // TODO: handle case where Wallet returns error instead of submission
+    // FIXME: handle case where Wallet returns error instead of presentation
     verify(provider, &request).await?;
 
-    // clear state
+    // retrive state and clear
     let Some(state_key) = &request.state else {
         return Err(Error::InvalidRequest("client state not found".to_string()));
     };
@@ -49,8 +49,8 @@ async fn response(
         .map_err(|e| Error::ServerError(format!("issue purging state: {e}")))?;
 
     Ok(RedirectResponse {
-        // TODO: add response to state using `response_code` so Wallet can fetch full response
-        // TODO: align redirct_uri to spec
+        // FIXME: add response to state using `response_code` so Wallet can fetch full response
+        // FIXME: align redirct_uri to spec
         // redirect_uri: Some(format!("http://localhost:3000/cb#response_code={}", "1234")),
         redirect_uri: Some("http://localhost:3000/cb".to_string()),
         response_code: None,
@@ -69,12 +69,8 @@ impl Handler for Request<AuthorzationResponse, NoHeaders> {
 
 impl Body for AuthorzationResponse {}
 
-// TODO: validate  Verifiable Presentation by format
-// Check integrity, authenticity, and holder binding of each Presentation
-// in the VP Token according to the rules for the Presentation's format.
 
-// Verfiy the `vp_token` and presentation submission against the `dcql_query`
-// in the request.
+// Verfiy the `vp_token` and presentation against the `dcql_query`.
 async fn verify(provider: &impl Provider, request: &AuthorzationResponse) -> Result<()> {
     // get state by client state key
     let Some(state_key) = &request.state else {
@@ -93,18 +89,18 @@ async fn verify(provider: &impl Provider, request: &AuthorzationResponse) -> Res
     //  - verify query constraints have been met
     //  - verify VC is valid (hasn't expired, been revoked, etc)
 
-    // check nonce matches
+    // process each presentation
     for (query_id, presentations) in &request.vp_token {
         let Some(query) = dcql_query.credentials.iter().find(|q| q.id == *query_id) else {
             return Err(Error::InvalidRequest(format!("query not found: {query_id}")));
         };
 
         for vp in presentations {
-            match query.format {
+            let claims = match query.format {
                 RequestedFormat::DcSdJwt => {
-                    sd_jwt::verify(vp, &request_object, provider).await.map_err(|e| {
+                    sd_jwt::verify(vp, request_object, provider).await.map_err(|e| {
                         Error::InvalidRequest(format!("failed to verify presentation: {e}"))
-                    })?;
+                    })?
                 }
                 _ => {
                     return Err(Error::InvalidRequest(format!(
@@ -112,15 +108,11 @@ async fn verify(provider: &impl Provider, request: &AuthorzationResponse) -> Res
                         query.format
                     )));
                 }
-            }
+            };
+
+            println!("claims: {claims:?}");
         }
-
-        // if nonce != request_object.nonce {
-        //     return Err(Error::InvalidRequest("nonce does not match".to_string()));
-        // }
     }
-
-    // let dcql_query = &request_object.dcql_query;
 
     // FIXME: look up credential status using status.id
     // if let Some(_status) = &vc.credential_status {
