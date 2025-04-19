@@ -479,7 +479,7 @@ async fn populate() -> Wallet {
         "birthdate": "2000-01-01"
     });
     let jwt = sd_jwt(vct, claims, &holder_jwk).await;
-    let q = sd_jwt::to_queryable(&jwt).expect("should be SD-JWT");
+    let q = sd_jwt::to_queryable(&jwt, &*ISSUER).await.expect("should be SD-JWT");
     wallet.add(q);
 
     let vct = "https://othercredentials.example/pid";
@@ -496,7 +496,7 @@ async fn populate() -> Wallet {
         "birthdate": "2000-01-01"
     });
     let jwt = sd_jwt(vct, claims, &holder_jwk).await;
-    let q = sd_jwt::to_queryable(&jwt).expect("should be SD-JWT");
+    let q = sd_jwt::to_queryable(&jwt, &*ISSUER).await.expect("should be SD-JWT");
     wallet.add(q);
 
     let vct = "https://cred.example/residence_credential";
@@ -508,7 +508,7 @@ async fn populate() -> Wallet {
         },
     });
     let jwt = sd_jwt(vct, claims, &holder_jwk).await;
-    let q = sd_jwt::to_queryable(&jwt).expect("should be SD-JWT");
+    let q = sd_jwt::to_queryable(&jwt, &*ISSUER).await.expect("should be SD-JWT");
     wallet.add(q);
 
     let vct = "https://company.example/company_rewards";
@@ -516,7 +516,7 @@ async fn populate() -> Wallet {
         "rewards_number": "1234567890",
     });
     let jwt = sd_jwt(vct, claims, &holder_jwk).await;
-    let q = sd_jwt::to_queryable(&jwt).expect("should be SD-JWT");
+    let q = sd_jwt::to_queryable(&jwt, &*ISSUER).await.expect("should be SD-JWT");
     wallet.add(q);
 
     let doctype = "org.iso.18013.5.1.mDL";

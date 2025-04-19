@@ -5,9 +5,14 @@ use credibil_did::DidResolver;
 use credibil_infosec::jose::jws;
 use credibil_infosec::jose::jwt::Jwt;
 
+
 use crate::core::did_jwk;
-use crate::format::sd_jwt::{KbJwtClaims, KeyBinding, SdJwtClaims};
-use crate::oid4vp::{Claim, RequestObject};
+use crate::format::sd_jwt::{Disclosure, KbJwtClaims, KeyBinding, SdJwtClaims};
+use crate::oid4vp::types::{Claim, RequestObject};
+
+
+
+
 
 /// Verifies an SD-JWT presentation (KB-JWT, and associated disclosures).
 ///
@@ -15,7 +20,7 @@ use crate::oid4vp::{Claim, RequestObject};
 ///
 /// Returns an error if the SD-JWT presentation is invalid or if verification
 /// fails.
-pub async fn verify(
+pub async fn verify_vp(
     vp: &str, request_object: &RequestObject, resolver: &impl DidResolver,
 ) -> Result<Vec<Claim>> {
     // extract components of the sd-jwt presentation
@@ -39,7 +44,7 @@ pub async fn verify(
     //  3. the `nonce` should contain the authorization request nonce
     //  4. the `aud` claim should match the client identifier
 
-    // very Holder signature against sd-jwt `cnf` public key
+    // very Holder signature against `cnf` claim of issued credential
     let Some(KeyBinding::Jwk(holder_jwk)) = &sd_jwt.claims.cnf else {
         return Err(anyhow!("sd-jwt `cnf` claim not found"));
     };
@@ -51,12 +56,10 @@ pub async fn verify(
     if kb_jwt.claims.sd_hash != sd_hash {
         return Err(anyhow!("kb-jwt `sd_hash` claim is invalid"));
     }
-
     // verify `nonce` claim
     if kb_jwt.claims.nonce != request_object.nonce {
         return Err(anyhow!("kb-jwt `sd_hash` claim is invalid"));
     }
-
     // verify `aud` claim
     if kb_jwt.claims.aud != request_object.client_id.to_string() {
         return Err(anyhow!("kb-jwt `sd_hash` claim is invalid"));
@@ -69,7 +72,7 @@ pub async fn verify(
 
     let mut claims = vec![];
     for encoded in disclosures {
-        let disclosure = super::Disclosure::from(encoded)?;
+        let disclosure = Disclosure::from(encoded)?;
         if !sd_jwt.claims.sd.contains(&disclosure.hash()?) {
             return Err(anyhow!("disclosure not in sd-jwt `sd` claim"));
         }
