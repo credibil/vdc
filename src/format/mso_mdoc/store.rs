@@ -44,17 +44,12 @@ pub fn to_queryable(issued: &str) -> Result<Queryable> {
 
 fn unpack_claims(path: Vec<String>, value: &ciborium::Value) -> Vec<Claim> {
     match value {
-        ciborium::Value::Map(map) => {
-            let mut claims = vec![];
-
-            for (key, value) in map {
-                let mut new_path = path.clone();
-                new_path.push(key.as_text().unwrap().to_string());
-                claims.extend(unpack_claims(new_path, value));
-            }
-
-            claims
-        }
+        ciborium::Value::Map(map) => map.iter().fold(vec![], |mut acc, (key, value)| {
+            let mut new_path = path.clone();
+            new_path.push(key.as_text().unwrap_or_default().to_string());
+            acc.extend(unpack_claims(new_path, value));
+            acc
+        }),
         ciborium::Value::Text(txt) => {
             vec![Claim {
                 path,

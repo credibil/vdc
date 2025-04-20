@@ -11,9 +11,9 @@ use crate::server;
 
 /// Generate an IETF `dc+sd-jwt` format credential.
 #[derive(Debug)]
-pub struct SdJwtVpBuilder<C, V, S> {
-    matched: C,
-    client_id: V,
+pub struct SdJwtVpBuilder<M, C, S> {
+    matched: M,
+    client_id: C,
     nonce: Option<String>,
     signer: S,
 }
@@ -59,10 +59,10 @@ impl SdJwtVpBuilder<NoMatched, NoClientIdentifier, NoSigner> {
 }
 
 // Credentials to include in the presentation
-impl<'a, V, S> SdJwtVpBuilder<NoMatched, V, S> {
+impl<'a, C, S> SdJwtVpBuilder<NoMatched, C, S> {
     /// Set the claims for the ISO mDL credential.
     #[must_use]
-    pub fn matched(self, matched: &'a Matched) -> SdJwtVpBuilder<HasMatched<'a>, V, S> {
+    pub fn matched(self, matched: &'a Matched) -> SdJwtVpBuilder<HasMatched<'a>, C, S> {
         SdJwtVpBuilder {
             matched: HasMatched(matched),
             client_id: self.client_id,
@@ -73,12 +73,12 @@ impl<'a, V, S> SdJwtVpBuilder<NoMatched, V, S> {
 }
 
 // Credentials to include in the presentation
-impl<C, S> SdJwtVpBuilder<C, NoClientIdentifier, S> {
+impl<M, S> SdJwtVpBuilder<M, NoClientIdentifier, S> {
     /// Set the claims for the ISO mDL credential.
     #[must_use]
     pub fn client_id(
         self, client_id: impl Into<String>,
-    ) -> SdJwtVpBuilder<C, HasClientIdentifier, S> {
+    ) -> SdJwtVpBuilder<M, HasClientIdentifier, S> {
         SdJwtVpBuilder {
             matched: self.matched,
             client_id: HasClientIdentifier(client_id.into()),
@@ -89,7 +89,7 @@ impl<C, S> SdJwtVpBuilder<C, NoClientIdentifier, S> {
 }
 
 // Optional fields
-impl<C, V, S> SdJwtVpBuilder<C, V, S> {
+impl<M, C, S> SdJwtVpBuilder<M, C, S> {
     /// Set the credential Holder.
     #[must_use]
     pub fn nonce(mut self, nonce: impl Into<String>) -> Self {
@@ -99,10 +99,10 @@ impl<C, V, S> SdJwtVpBuilder<C, V, S> {
 }
 
 // SignerExt
-impl<C, V> SdJwtVpBuilder<C, V, NoSigner> {
+impl<M, C> SdJwtVpBuilder<M, C, NoSigner> {
     /// Set the credential `SignerExt`.
     #[must_use]
-    pub fn signer<S: SignerExt>(self, signer: &'_ S) -> SdJwtVpBuilder<C, V, HasSigner<'_, S>> {
+    pub fn signer<S: SignerExt>(self, signer: &'_ S) -> SdJwtVpBuilder<M, C, HasSigner<'_, S>> {
         SdJwtVpBuilder {
             matched: self.matched,
             client_id: self.client_id,
@@ -127,31 +127,25 @@ impl<S: SignerExt> SdJwtVpBuilder<HasMatched<'_>, HasClientIdentifier, HasSigner
         };
 
         // unpack disclosures
-        let split = credential.split('~').collect::<Vec<_>>();
-        if split.len() < 2 {
-            return Err(anyhow!("invalid sd-jwt credential"));
-        }
+        let mut split = credential.split('~');
+        split.next().ok_or_else(|| anyhow!("missing issuer-signed JWT"))?;
 
-        let mut unpacked = vec![];
-        for encoded in &split[1..split.len()] {
-            unpacked.push(Disclosure::from(encoded)?);
-        }
+        let disclosures =
+            split.map(|encoded| Disclosure::from(encoded)).collect::<Result<Vec<_>>>()?;
 
         // select disclosures to include in the presentation
         let mut selected = vec![];
         for claim in &matched.claims {
             let Some(disclosure) =
-                unpacked.iter().find(|d| d.name == claim.path[claim.path.len() - 1])
+                disclosures.iter().find(|d| d.name == claim.path[claim.path.len() - 1])
             else {
                 return Err(anyhow!("disclosure not found"));
             };
-
             selected.push(disclosure.encode()?);
         }
 
         // key binding JWT
         let sd = format!("{credential}~{}", selected.join("~"));
-
         let claims = KbJwtClaims {
             nonce: self.nonce.unwrap_or_default(),
             aud: self.client_id.0,
@@ -169,8 +163,7 @@ impl<S: SignerExt> SdJwtVpBuilder<HasMatched<'_>, HasClientIdentifier, HasSigner
             .map_err(|e| server!("issue signing KB-JWT: {e}"))?
             .to_string();
 
-        // assemble
-        let presentation = format!("{sd}~{kb_jwt}");
-        Ok(presentation)
+        // assemble presentation
+        Ok(format!("{sd}~{kb_jwt}"))
     }
 }

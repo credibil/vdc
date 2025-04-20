@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use anyhow::Result;
 use credibil_did::SignerExt;
 
+use crate::format::mso_mdoc::DeviceResponseBuilder;
 use crate::format::sd_jwt::SdJwtVpBuilder;
 use crate::oid4vp::types::{QueryResult, RequestObject, RequestedFormat};
 
@@ -37,7 +38,16 @@ pub async fn generate(
                 }
             }
             RequestedFormat::MsoMdoc => {
-                continue;
+                for matched in &result.matches {
+                    let vp = DeviceResponseBuilder::new()
+                        .client_id(request_object.client_id.to_string())
+                        .nonce(request_object.nonce.clone())
+                        .matched(matched)
+                        .signer(signer)
+                        .build()
+                        .await?;
+                    presentations.push(vp);
+                }
             }
             RequestedFormat::JwtVcJson | RequestedFormat::JwtVcJsonLd | RequestedFormat::LdpVc => {
                 todo!()

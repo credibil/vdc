@@ -17,25 +17,92 @@ use std::collections::{BTreeMap, HashSet};
 
 use chrono::{Duration, SecondsFormat, Utc};
 use ciborium::Value;
-use coset::{AsCborValue, CoseSign1};
+use coset::{AsCborValue, CoseMac0, CoseSign1};
 use credibil_infosec::cose::{CoseKey, Tag24, cbor};
-pub use issue::MsoMdocBuilder;
 use rand::Rng;
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de, ser};
 
+pub use self::issue::MsoMdocBuilder;
+pub use self::present::DeviceResponseBuilder;
 pub use self::store::to_queryable;
 
-type NameSpace = String;
+// ----------------------------------------------------------------------------
+/// # 8.3.1 Data model
+// ----------------------------------------------------------------------------
+/// Document type
+///
+/// See 8.3.1 Data model, pg 29.
+pub type DocType = String;
+
+/// Element namespace
+///
+/// See 8.3.1 Data model, pg 29.
+pub type NameSpace = String;
+
+/// Data element identifier
+///
+/// See 8.3.1 Data model, pg 29.
+pub type DataElementIdentifier = String;
+
+/// Data element identifier
+///
+/// See 8.3.1 Data model, pg 29.
+pub type DataElementValue = Value;
+
+// ----------------------------------------------------------------------------
+/// # 8.3.2.1.2.2 Device retrieval mdoc response (pg 30)
+// ----------------------------------------------------------------------------
+
+/// Device retrieval mdoc response.
+///
+/// The MSO is used to provide Issuer data authentication for the associated
+/// `mdoc`. It contains a signed digest (e.g. SHA-256) of the `mdoc`, including
+/// the digests in the MSO.
+///
+/// See 8.3.2.1.2.2 Device retrieval mdoc response, pg 30.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeviceResponse {
+    /// Version of the DeviceResponse structure.
+    pub version: String,
+
+    /// Returned documents.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub documents: Option<Vec<Document>>,
+
+    /// Error codes for unreturned documents.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub document_errors: Option<BTreeMap<DocType, ErrorCode>>,
+
+    /// Status code.
+    pub status: u64,
+}
+
+/// Document to return in the device response.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Document {
+    /// Returned data elements for each namespace (`IssuerNameSpaces` element)
+    pub doc_type: DocType,
+
+    /// Returned data elements signed by the issuer.
+    pub issuer_signed: IssuerSigned,
+
+    /// Returned data elements signed by the mdoc device.
+    pub device_signed: DeviceSigned,
+
+    /// Error codes for each namespace.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub errors: Option<Errors>,
+}
 
 /// Data elements (claims) returned by the Issuer. Each data element is
 /// hashed and signed by the Issuer in the MSO.
-///
-/// See 8.3.2.1.2.2 Device retrieval mdoc response.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IssuerSigned {
     /// Returned data elements for each namespace (`IssuerNameSpaces` element)
-    pub name_spaces: BTreeMap<NameSpace, Vec<IssuerSignedItemBytes>>,
+    pub name_spaces: IssuerNameSpaces,
 
     /// The mobile security object (MSO) for issuer data authentication.
     /// `COSE_Sign1` with a payload of `MobileSecurityObjectBytes`
@@ -67,8 +134,10 @@ impl Default for IssuerSigned {
     }
 }
 
-/// `IssuerSignedItemBytes` represents the tagged `IssuerSignedItem` after
-/// CBOR serialization:  `#6.24(bstr .cbor IssuerSignedItem)`
+/// Returned data elements for each namespace
+pub type IssuerNameSpaces = BTreeMap<NameSpace, Vec<IssuerSignedItemBytes>>;
+
+/// CBOR serialized, tagged `IssuerSignedItem`.
 pub type IssuerSignedItemBytes = Tag24<IssuerSignedItem>;
 
 /// Issuer-signed data element
@@ -82,11 +151,58 @@ pub struct IssuerSignedItem {
     pub random: Vec<u8>,
 
     /// Data element identifier. For example, "`family_name`"
-    pub element_identifier: String,
+    pub element_identifier: DataElementIdentifier,
 
     /// Data element value. For example, "`Smith`"
-    pub element_value: ciborium::Value,
+    pub element_value: DataElementValue,
 }
+
+/// Used by the mdoc device to sign the data elements in the `Document`.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeviceSigned {
+    /// Returned data elements
+    pub name_spaces: DeviceNameSpacesBytes,
+
+    /// Contains the device authentication for mdoc authentication
+    pub device_auth: DeviceAuth,
+}
+
+/// CBOR serialized, tagged `DeviceNameSpaces`.
+pub type DeviceNameSpacesBytes = Tag24<DeviceNameSpaces>;
+
+/// Returned data elements for each namespace.
+pub type DeviceNameSpaces = BTreeMap<NameSpace, Vec<DeviceSignedItems>>;
+
+/// Returned data elements (identifier and value) for each namespace.
+pub type DeviceSignedItems = BTreeMap<String, ciborium::Value>;
+
+/// Device authentication used to authenticate the mdoc response.
+///
+/// N.B. a single mdoc authentication key cannot be used to produce both
+/// signature and MAC.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeviceAuth {
+    /// EdDSA signature
+    device_signature: DeviceSignature,
+
+    /// ECDH-agreed MAC
+    device_mac: DeviceMac,
+}
+
+/// Error codes for each namespace.
+pub type Errors = BTreeMap<NameSpace, Vec<ErrorItems>>;
+
+/// Error code per data element
+pub type ErrorItems = BTreeMap<DataElementIdentifier, ErrorCode>;
+
+/// Error code.
+pub type ErrorCode = i64;
+
+// ----------------------------------------------------------------------------
+/// # 9.1.2.4 Signing method and structure for MSO (pg 50)
+// ----------------------------------------------------------------------------
 
 /// `IssuerAuth` is comprised of an MSO encapsulated and signed by an untagged
 /// `COSE_Sign1` type (RFC 8152).
@@ -116,7 +232,7 @@ impl<'de> Deserialize<'de> for IssuerAuth {
 /// `mdoc`. It contains a signed digest (e.g. SHA-256) of the `mdoc`, including
 /// the digests in the MSO.
 ///
-/// See 9.1.2.4 Signing method and structure for MSO.
+/// See 9.1.2.4 Signing method and structure for MSO, pg 50.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MobileSecurityObject {
@@ -199,6 +315,8 @@ pub enum DigestAlgorithm {
 /// Used to hold the mdoc authentication public key and information related to
 /// this key. Encoded as an untagged `COSE_Key` element as specified in
 /// [RFC 9052] and [RFC 9053].
+///
+/// See 9.1.2.4 Signing method and structure for MSO, pg 50
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DeviceKeyInfo {
@@ -207,11 +325,11 @@ pub struct DeviceKeyInfo {
 
     /// Key authorizations
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub key_authorizations: Option<Vec<KeyAuthorization>>,
+    pub key_authorizations: Option<KeyAuthorizations>,
 
     /// Key info
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub key_info: Option<BTreeMap<i64, ciborium::Value>>,
+    pub key_info: Option<BTreeMap<i64, Value>>,
 }
 
 /// Name spaces authorized for the MSO
@@ -223,13 +341,12 @@ pub type AuthorizedDataElements = BTreeMap<NameSpace, DataElementsArray>;
 /// Array of data element identifiers
 pub type DataElementsArray = Vec<DataElementIdentifier>;
 
-/// Data element identifier
-pub type DataElementIdentifier = String;
-
-/// Key authorization
+/// Key authorizations
+///
+/// See 9.1.2.4 Signing method and structure for MSO, pg 50
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct KeyAuthorization {
+pub struct KeyAuthorizations {
     /// Key authorization namespace
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name_spaces: Option<AuthorizedNameSpaces>,
@@ -241,6 +358,8 @@ pub struct KeyAuthorization {
 }
 
 /// Contains information related to the validity of the MSO and its signature.
+///
+/// See 9.1.2.4 Signing method and structure for MSO, pg 50.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ValidityInfo {
@@ -288,5 +407,74 @@ impl DigestIdGenerator {
 impl Default for DigestIdGenerator {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+// ----------------------------------------------------------------------------
+/// # 9.1.3.4 mdoc authentication (pg 54)
+// ----------------------------------------------------------------------------
+
+/// Device authentication used to authenticate the mdoc response.
+///
+/// ```rust,ignore
+/// use ciborium::Value;
+///
+/// let device_authentication = vec![
+///     Value::String("DeviceAuthentication"),
+///     Value::Object(SessionTranscript),
+///     Value::Object(DocType),
+///     Value::Bytes(DeviceNameSpacesBytes),
+/// ];
+/// ```
+pub type DeviceAuthentication = Vec<Value>;
+
+/// CBOR serialized, tagged `DeviceAuthentication`.
+pub type DeviceAuthenticationBytes = Tag24<DeviceAuthentication>;
+
+// let signature = signer.sign(&device_authentication_bytes).await;
+//
+// let cose_sign_1 = CoseSign1Builder::new()
+//     .protected(protected)
+//     .unprotected(unprotected)
+//     .payload(null) // <- !! use a null value for the payload
+//     .signature(signature)
+//     .build();
+
+/// Used by `DeviceAuth` to authenticate the mdoc using an ECDSA/EdDSA
+/// signature.
+///
+/// See 9.1.3.6 mdoc ECDSA / EdDSA Authentication, pg 54
+#[derive(Clone, Debug, Default)]
+pub struct DeviceSignature(pub CoseSign1);
+
+impl Serialize for DeviceSignature {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.0.clone().to_cbor_value().map_err(ser::Error::custom)?.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for DeviceSignature {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = Value::deserialize(deserializer)?;
+        CoseSign1::from_cbor_value(value).map_err(de::Error::custom).map(Self)
+    }
+}
+
+/// Used by `DeviceAuth` to authenticate the mdoc using an ECKA-DH derived MAC.
+///
+/// See 9.1.3.5 mdoc MAC Authentication, pg 54
+#[derive(Clone, Debug, Default)]
+pub struct DeviceMac(pub CoseMac0);
+
+impl Serialize for DeviceMac {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.0.clone().to_cbor_value().map_err(ser::Error::custom)?.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for DeviceMac {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = Value::deserialize(deserializer)?;
+        CoseMac0::from_cbor_value(value).map_err(de::Error::custom).map(Self)
     }
 }

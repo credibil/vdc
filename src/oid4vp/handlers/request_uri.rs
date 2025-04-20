@@ -69,10 +69,10 @@ pub async fn request_uri(
         .build()
         .await
         .map_err(|e| Error::ServerError(format!("issue building jwt: {e}")))?;
-    let req_obj_jwt =
-        jws.encode().map_err(|e| Error::ServerError(format!("issue encoding jwt: {e}")))?;
 
-    Ok(RequestUriResponse::Jwt(req_obj_jwt))
+    Ok(RequestUriResponse::Jwt(
+        jws.encode().map_err(|e| Error::ServerError(format!("issue encoding jwt: {e}")))?,
+    ))
 }
 
 impl Handler for Request<RequestUriRequest, NoHeaders> {
