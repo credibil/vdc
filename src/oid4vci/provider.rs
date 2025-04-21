@@ -61,7 +61,7 @@ pub trait StateStore: Send + Sync {
     /// Retrieve data using the provided key.
     fn get<T>(&self, key: &str) -> impl Future<Output = Result<T>> + Send
     where
-        T: for<'a> Deserialize<'a>;
+        T: for<'de> Deserialize<'de>;
 
     /// Remove data using the key provided.
     fn purge(&self, key: &str) -> impl Future<Output = Result<()>> + Send;
@@ -134,7 +134,7 @@ impl<T: BlockStore> StateStore for T {
 
     async fn get<S>(&self, key: &str) -> Result<S>
     where
-        S: for<'a> Deserialize<'a>,
+        S: for<'de> Deserialize<'de>,
     {
         let Some(block) = BlockStore::get(self, "owner", STATE, key).await? else {
             return Err(anyhow!("could not find client"));
