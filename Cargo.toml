@@ -109,6 +109,7 @@ nursery = "warn"
 [workspace.dependencies]
 anyhow = "1.0.98"
 base64ct = { version = "1.7.3", features = ["std"] }
+ciborium = "0.2.2"
 credibil-did = "0.1.2"
 credibil-infosec = "0.1.2"
 credibil-vc = { path = "." }
@@ -117,7 +118,6 @@ futures = "0.3.31"
 rand_core = "0.6.4"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140", features = ["alloc"] }
-ciborium = "0.2.2"
 
 [patch.crates-io]
 # credibil-did = { path = "../did" }

@@ -26,6 +26,77 @@ pub use self::issue::MsoMdocBuilder;
 pub use self::present::DeviceResponseBuilder;
 pub use self::store::to_queryable;
 
+// /// Wrap types that require tagging with tag 24.
+// #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+// pub struct Tag24<T>(pub T);
+
+// impl<T> TaggedCborSerializable for Tag24<T>
+// where
+//     Tag24<T>: for<'a> Deserialize<'a> + Serialize,
+// {
+//     const TAG: u64 = 24;
+// }
+
+// impl<T> AsCborValue for Tag24<T>
+// where
+//     Tag24<T>: for<'a> Deserialize<'a> + Serialize,
+// {
+//     fn from_cbor_value(value: Value) -> coset::Result<Self> {
+//         ciborium::from_reader(Cursor::new(&value.to_vec()?))
+//             .map_err(|e| CoseError::DecodeFailed(Error::Semantic(None, e.to_string())))
+//     }
+
+//     fn to_cbor_value(self) -> coset::Result<Value> {
+//         Value::serialized(&self)
+//             .map_err(|e| CoseError::DecodeFailed(Error::Semantic(None, e.to_string())))
+//     }
+// }
+
+// ----------------------------------------------------------------------------
+/// # 8.2 Device engagement
+// ----------------------------------------------------------------------------
+
+/// Information to perform device engagement.
+///
+/// ```cddl
+/// DeviceEngagement = {
+///     0: tstr, ; Version
+///     1: Security,
+///     ? 2: DeviceRetrievalMethods, ; Is absent if NFC is used for device engagement
+///     ? 3: ServerRetrievalMethods,
+///     ? 4: ProtocolInfo,
+///     * int => any
+/// }
+/// ```
+pub type DeviceEngagement = BTreeMap<i64, Value>;
+
+/// ```cddl
+/// Security = [
+///     int, ; Cipher suite identifier
+///     EDeviceKeyBytes
+/// ]
+/// ```
+pub type Security = Vec<Value>;
+
+/// ```cddl
+/// DeviceRetrievalMethods = [
+///     + DeviceRetrievalMethod
+/// ]
+/// ```
+pub type DeviceRetrievalMethods = Vec<DeviceRetrievalMethod>;
+
+/// ProtocolInfo
+pub type ProtocolInfo = Value;
+
+/// ```cddl
+/// DeviceRetrievalMethod = [
+///     uint, ; Type
+///     uint, ; Version
+///     RetrievalOptions ; Specific option(s) to the type of retrieval method
+/// ]
+/// ```
+pub type DeviceRetrievalMethod = Vec<Value>;
+
 // ----------------------------------------------------------------------------
 /// # 8.3.1 Data model
 // ----------------------------------------------------------------------------
@@ -416,15 +487,13 @@ impl Default for DigestIdGenerator {
 
 /// Device authentication used to authenticate the mdoc response.
 ///
-/// ```rust,ignore
-/// use ciborium::Value;
-///
-/// let device_authentication = vec![
-///     Value::String("DeviceAuthentication"),
-///     Value::Object(SessionTranscript),
-///     Value::Object(DocType),
-///     Value::Bytes(DeviceNameSpacesBytes),
-/// ];
+/// ```cddl
+/// DeviceAuthentication = [
+///     "DeviceAuthentication",
+///     SessionTranscript,
+///     DocType,
+///     DeviceNameSpacesBytes,
+/// ]
 /// ```
 pub type DeviceAuthentication = Vec<Value>;
 
@@ -478,3 +547,72 @@ impl<'de> Deserialize<'de> for DeviceMac {
         CoseMac0::from_cbor_value(value).map_err(de::Error::custom).map(Self)
     }
 }
+
+// ----------------------------------------------------------------------------
+/// # 9.1.1 Session encryption
+// ----------------------------------------------------------------------------
+
+/// Containing EDeviceKey.Pub
+pub type EReaderKey = CoseKey;
+
+// ----------------------------------------------------------------------------
+/// # 9.1.5 Session transcript and cipher suite
+// ----------------------------------------------------------------------------
+
+/// CBOR serialized, tagged `SessionTranscript`.
+pub type SessionTranscriptBytes = Tag24<SessionTranscript>;
+
+/// Used in multiple security mechanisms for device retrieval.
+///
+/// ```cddl
+/// SessionTranscript = [
+///     DeviceEngagementBytes,
+///     EReaderKeyBytes,
+///     Handover
+/// ]
+/// ```
+pub type SessionTranscript = Vec<Value>;
+
+/// CBOR serialized, tagged `DeviceEngagement`.
+pub type DeviceEngagementBytes = Tag24<DeviceEngagement>;
+
+///
+/// ```cddl
+/// OpenID4VPDCAPIHandover = [
+///   "OpenID4VPDCAPIHandover", ; A fixed identifier for this handover type
+///   OpenID4VPDCAPIHandoverInfoHash ; A cryptographic hash of OpenID4VPDCAPIHandoverInfo
+/// ]
+/// ```
+pub type OpenID4VPDCAPIHandover = Vec<Value>;
+
+/// CBOR serialized, tagged `OpenID4VPDCAPIHandoverInfo`.
+pub type OpenID4VPDCAPIHandoverInfoBytes = Tag24<OpenID4VPDCAPIHandoverInfo>;
+
+/// Array containing handover parameters
+/// ```cddl
+// OpenID4VPDCAPIHandoverInfo = [
+///   origin,
+///   nonce,
+///   jwk_thumbprint
+/// ]
+/// ```
+pub type OpenID4VPDCAPIHandoverInfo = Vec<Value>;
+
+/// Represents the Origin of the request as described in Appendix A.2. It MUST
+/// NOT be prefixed with `origin:`.
+pub type Origin = String;
+
+/// The `nonce` parameter from the Authorization Request Object.
+pub type Nonce = String;
+
+/// JWK SHA-256 Thumbprint as defined in [RFC7638], encoded as a CBOR Byte
+/// String, of the Verifier's public key used to encrypt the response.
+///
+/// If the Response Mode is `dc_api`, the third element MUST be null.
+///
+/// For unsigned requests, including the JWK Thumbprint in the
+/// `SessionTranscript` allows the Verifier to detect whether the response was
+/// re-encrypted by a third party, potentially leading to the leakage of
+/// sensitive information. While this does not prevent such an attack, it makes
+/// it detectable and helps preserve the confidentiality of the response.
+pub type JwkThumbprint = Tag24<String>;

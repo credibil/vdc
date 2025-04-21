@@ -101,6 +101,9 @@ async fn verify(provider: &impl Provider, request: &AuthorzationResponse) -> Res
                         Error::InvalidRequest(format!("failed to verify presentation: {e}"))
                     })?
                 }
+                RequestedFormat::MsoMdoc => {
+                    continue;
+                }
                 _ => {
                     return Err(Error::InvalidRequest(format!(
                         "unsupported format: {}",

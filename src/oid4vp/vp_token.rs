@@ -38,16 +38,17 @@ pub async fn generate(
                 }
             }
             RequestedFormat::MsoMdoc => {
-                for matched in &result.matches {
-                    let vp = DeviceResponseBuilder::new()
-                        .client_id(request_object.client_id.to_string())
-                        .nonce(request_object.nonce.clone())
-                        .matched(matched)
-                        .signer(signer)
-                        .build()
-                        .await?;
-                    presentations.push(vp);
-                }
+                continue;
+                // for matched in &result.matches {
+                //     let vp = DeviceResponseBuilder::new()
+                //         .client_id(request_object.client_id.to_string())
+                //         .nonce(request_object.nonce.clone())
+                //         .matched(matched)
+                //         .signer(signer)
+                //         .build()
+                //         .await?;
+                //     presentations.push(vp);
+                // }
             }
             RequestedFormat::JwtVcJson | RequestedFormat::JwtVcJsonLd | RequestedFormat::LdpVc => {
                 todo!()
