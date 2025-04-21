@@ -557,7 +557,6 @@ dependencies = [
 [[package]]
 name = "credibil-infosec"
 version = "0.1.2"
-source = "git+https://github.com/credibil/infosec.git#bd3a345452b6286c4889cff95e14ff4c251ea203"
 dependencies = [
  "aes-gcm",
  "aes-kw",

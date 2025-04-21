@@ -119,7 +119,7 @@ impl<S: SignerExt> MsoMdocBuilder<HasClaims, HasSigner<'_, S>> {
                 });
 
                 // digest of `IssuerSignedItem` for MSO
-                let digest = Sha256::digest(&item.to_vec()?).to_vec();
+                let digest = Sha256::digest(&item.to_cbor()?).to_vec();
                 mso.value_digests
                     .entry(name_space.clone())
                     .or_default()
@@ -141,7 +141,7 @@ impl<S: SignerExt> MsoMdocBuilder<HasClaims, HasSigner<'_, S>> {
         };
 
         // sign
-        let mso_bytes = Tag24(mso).to_vec()?;
+        let mso_bytes = Tag24(mso).to_cbor()?;
         let signature = signer.sign(&mso_bytes).await;
 
         // build COSE_Sign1
