@@ -15,10 +15,11 @@ mod store;
 
 use std::collections::{BTreeMap, HashSet};
 
+use anyhow::Result;
 use chrono::{Duration, SecondsFormat, Utc};
-use ciborium::Value;
+use ciborium::{Value, cbor};
 use coset::{AsCborValue, CoseMac0, CoseSign1};
-use credibil_infosec::cose::{CoseKey, Tag24, cbor};
+use credibil_infosec::cose::{CoseKey, Tag24};
 use rand::Rng;
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de, ser};
 
@@ -26,34 +27,8 @@ pub use self::issue::MsoMdocBuilder;
 pub use self::present::DeviceResponseBuilder;
 pub use self::store::to_queryable;
 
-// /// Wrap types that require tagging with tag 24.
-// #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
-// pub struct Tag24<T>(pub T);
-
-// impl<T> TaggedCborSerializable for Tag24<T>
-// where
-//     Tag24<T>: for<'a> Deserialize<'a> + Serialize,
-// {
-//     const TAG: u64 = 24;
-// }
-
-// impl<T> AsCborValue for Tag24<T>
-// where
-//     Tag24<T>: for<'a> Deserialize<'a> + Serialize,
-// {
-//     fn from_cbor_value(value: Value) -> coset::Result<Self> {
-//         ciborium::from_reader(Cursor::new(&value.to_vec()?))
-//             .map_err(|e| CoseError::DecodeFailed(Error::Semantic(None, e.to_string())))
-//     }
-
-//     fn to_cbor_value(self) -> coset::Result<Value> {
-//         Value::serialized(&self)
-//             .map_err(|e| CoseError::DecodeFailed(Error::Semantic(None, e.to_string())))
-//     }
-// }
-
 // ----------------------------------------------------------------------------
-/// # 8.2 Device engagement
+/// # 8.2 Device engagement (pg 24)
 // ----------------------------------------------------------------------------
 
 /// Information to perform device engagement.
@@ -68,16 +43,118 @@ pub use self::store::to_queryable;
 ///     * int => any
 /// }
 /// ```
-pub type DeviceEngagement = BTreeMap<i64, Value>;
+/// Represents a device engagement.
+#[derive(Clone, Debug)]
+pub struct DeviceEngagement {
+    /// Version.
+    pub version: String,
 
+    /// Security information containing the device public key and cipher suite.
+    pub security: Security,
+
+    /// Usedwhen performing device engagement using the QR code. Absent when
+    /// using NFC.
+    pub device_retrieval_methods: Option<DeviceRetrievalMethods>,
+
+    /// The optional server retrieval methods for the device engagement.
+    pub server_retrieval_methods: Option<ServerRetrievalMethods>,
+
+    /// The optional protocol information for the device engagement.
+    pub protocol_info: Option<ProtocolInfo>,
+}
+
+impl Serialize for DeviceEngagement {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = BTreeMap::<i64, Value>::new();
+        map.insert(0, self.version.clone().into());
+        map.insert(1, cbor!(self.security).map_err(|e| ser::Error::custom(e))?);
+        if let Some(ref methods) = self.device_retrieval_methods {
+            map.insert(2, cbor!(methods).map_err(|e| ser::Error::custom(e))?);
+        }
+        if let Some(ref methods) = self.server_retrieval_methods {
+            map.insert(3, cbor!(methods).map_err(|e| ser::Error::custom(e))?);
+        }
+        if let Some(ref info) = self.protocol_info {
+            map.insert(4, info.clone());
+        }
+        map.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for DeviceEngagement {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let map = BTreeMap::<i64, Value>::deserialize(deserializer)?;
+
+        // required fields
+        let Some(version) = map.get(&0) else {
+            return Err(de::Error::custom("missing version"));
+        };
+        let Some(security) = map.get(&1) else {
+            return Err(de::Error::custom("missing security"));
+        };
+
+        let mut de = Self {
+            version: version.deserialized().map_err(de::Error::custom)?,
+            security: security.deserialized().map_err(de::Error::custom)?,
+            device_retrieval_methods: None,
+            server_retrieval_methods: None,
+            protocol_info: None,
+        };
+
+        // optional fields
+        if let Some(methods) = map.get(&2) {
+            de.device_retrieval_methods = methods.deserialized().map_err(de::Error::custom)?;
+        };
+        if let Some(methods) = map.get(&3) {
+            de.server_retrieval_methods = methods.deserialized().map_err(de::Error::custom)?;
+        };
+        if let Some(protocol_info) = map.get(&4) {
+            de.protocol_info = protocol_info.deserialized().map_err(de::Error::custom)?;
+        };
+
+        Ok(de)
+    }
+}
+
+/// Device security information in the form of a cipher suite identifier and
+/// public key.
+///
 /// ```cddl
 /// Security = [
 ///     int, ; Cipher suite identifier
 ///     EDeviceKeyBytes
 /// ]
 /// ```
-pub type Security = Vec<Value>;
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Security(pub CipherSuite, pub EDeviceKeyBytes);
 
+/// Supported device retrieval security mechanisms cipher suites.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(into = "i64", try_from = "i64")]
+pub enum CipherSuite {
+    /// Cipher suite 1
+    Suite1 = 1,
+}
+
+impl From<CipherSuite> for i64 {
+    fn from(value: CipherSuite) -> Self {
+        value as i64
+    }
+}
+
+impl TryFrom<i64> for CipherSuite {
+    type Error = anyhow::Error;
+
+    fn try_from(value: i64) -> Result<Self, Self::Error> {
+        match value {
+            1 => Ok(CipherSuite::Suite1),
+            _ => Err(anyhow::anyhow!("unsupported cipher suite")),
+        }
+    }
+}
+
+/// A list of the device retrieval methods supported by the mdoc.
+///
 /// ```cddl
 /// DeviceRetrievalMethods = [
 ///     + DeviceRetrievalMethod
@@ -85,9 +162,8 @@ pub type Security = Vec<Value>;
 /// ```
 pub type DeviceRetrievalMethods = Vec<DeviceRetrievalMethod>;
 
-/// ProtocolInfo
-pub type ProtocolInfo = Value;
-
+/// Device retrieval method.
+///
 /// ```cddl
 /// DeviceRetrievalMethod = [
 ///     uint, ; Type
@@ -95,7 +171,105 @@ pub type ProtocolInfo = Value;
 ///     RetrievalOptions ; Specific option(s) to the type of retrieval method
 /// ]
 /// ```
-pub type DeviceRetrievalMethod = Vec<Value>;
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct DeviceRetrievalMethod(
+    // The type of transfer method.
+    pub u64,
+    // The version of the transfer method.
+    pub u64,
+    /// Additional options for each connection.
+    pub Vec<RetrievalOption>,
+);
+
+/// Supported device retrieval options.
+///
+/// See 8.2.2.3 Device engagement using QR code, pg 28.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum RetrievalOption {
+    /// WiFi options.
+    WifiOptions,
+
+    /// Bluetooth low energy options.
+    BleOptions,
+
+    /// NFC options.
+    NfcOptions,
+}
+
+/// ```cddl
+/// WifiOptions = {
+///     ? 0: tstr,  ; Pass-phrase Info Pass-phrase
+///     ? 1: uint,  ; Channel Info Operating Class
+///     ? 2: uint,  ; Channel Info Channel Number
+///     ? 3: bstr   ; Band Info Supported Bands
+/// }
+/// ```
+#[derive(Clone, Debug)]
+pub struct WifiOptions {
+    /// Pass-phrase information.
+    pub passphrase: Option<String>,
+
+    /// Operating class.
+    pub operating_class: Option<u64>,
+
+    /// Channel info channel number.
+    pub channel_number: Option<u64>,
+
+    /// Band Info supported bands.
+    pub supported_bands: Option<Vec<u8>>,
+}
+
+/// BleOptions = {
+///     0 : bool,       ; Indicates support for mdoc peripheral server mode
+///     1 : bool,       ; Indicates support for mdoc central client mode
+///     ? 10 : bstr,    ; UUID for mdoc peripheral server mode
+///     ? 11 : bstr     ; UUID for mdoc client central mode
+///     ? 20 : bstr     ; mdoc BLE Device Address for mdoc peripheral server mode
+/// }
+
+/// NfcOptions = {
+///     0 : uint,   ; Maximum length of command data field
+///     1 : uint    ; Maximum length of response data field
+// }
+
+/// Supported server retrieval methods.
+///
+/// See 8.2.1.2 Server retrieval information, pg 25.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ServerRetrievalMethods {
+    /// Server retrieval using web API.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub web_api: Option<RetrievalInformation>,
+
+    /// Server retrieval using OIDC.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub oidc: Option<RetrievalInformation>,
+}
+
+/// Server retrival using OIDC or web API.
+///
+/// ```cddl
+/// Oidc = [
+///     uint, ; Version
+///     tstr, ; Issuer URL
+///     tstr ; Server retrieval token
+/// ]
+/// ```
+///
+/// See 8.2.1.2 Server retrieval information, pg 26.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct RetrievalInformation(
+    // The version of the transfer methods.
+    pub u64,
+    // The issuer URL.
+    pub String,
+    /// The server retrieval token as provided by the mdoc reader.
+    pub String,
+);
+
+/// ProtocolInfo
+pub type ProtocolInfo = Value;
 
 // ----------------------------------------------------------------------------
 /// # 8.3.1 Data model
@@ -189,14 +363,6 @@ impl IssuerSigned {
             issuer_auth: IssuerAuth::default(),
         }
     }
-
-    /// Serialize the `IssuerSigned` object to a CBOR byte vector.
-    ///
-    /// # Errors
-    /// TODO: document errors
-    pub fn to_vec(&self) -> anyhow::Result<Vec<u8>> {
-        cbor::to_vec(self)
-    }
 }
 
 impl Default for IssuerSigned {
@@ -226,6 +392,12 @@ pub struct IssuerSignedItem {
 
     /// Data element value. For example, "`Smith`"
     pub element_value: DataElementValue,
+}
+
+impl IssuerSignedItem {
+    fn to_bytes(self) -> IssuerSignedItemBytes {
+        Tag24(self)
+    }
 }
 
 /// Used by the mdoc device to sign the data elements in the `Document`.
@@ -283,18 +455,22 @@ pub type ErrorCode = i64;
 #[derive(Clone, Debug, Default)]
 pub struct IssuerAuth(pub CoseSign1);
 
+// Use custom serialization/deserialization because `CoseSign1` does not
+// implement `Serialize` and `Deserialize` traits.
 impl Serialize for IssuerAuth {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.0.clone().to_cbor_value().map_err(ser::Error::custom)?.serialize(serializer)
     }
 }
-
 impl<'de> Deserialize<'de> for IssuerAuth {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let value = Value::deserialize(deserializer)?;
         CoseSign1::from_cbor_value(value).map_err(de::Error::custom).map(Self)
     }
 }
+
+/// CBOR serialized, tagged `MobileSecurityObject`.
+pub type MobileSecurityObjectBytes = Tag24<MobileSecurityObject>;
 
 /// An mdoc digital signature is generated over the mobile security object
 /// (MSO).
@@ -347,6 +523,10 @@ impl MobileSecurityObject {
                 expected_update: None,
             },
         }
+    }
+
+    fn to_bytes(self) -> MobileSecurityObjectBytes {
+        Tag24(self)
     }
 }
 
@@ -495,7 +675,19 @@ impl Default for DigestIdGenerator {
 ///     DeviceNameSpacesBytes,
 /// ]
 /// ```
-pub type DeviceAuthentication = Vec<Value>;
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceAuthentication(
+    #[serde(skip_deserializing, default = "DeviceAuthentication::identifier")] &'static str,
+    pub SessionTranscript,
+    pub DocType,
+    pub DeviceNameSpacesBytes,
+);
+
+impl DeviceAuthentication {
+    const fn identifier() -> &'static str {
+        "DeviceAuthentication"
+    }
+}
 
 /// CBOR serialized, tagged `DeviceAuthentication`.
 pub type DeviceAuthenticationBytes = Tag24<DeviceAuthentication>;
@@ -521,7 +713,6 @@ impl Serialize for DeviceSignature {
         self.0.clone().to_cbor_value().map_err(ser::Error::custom)?.serialize(serializer)
     }
 }
-
 impl<'de> Deserialize<'de> for DeviceSignature {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let value = Value::deserialize(deserializer)?;
@@ -540,7 +731,6 @@ impl Serialize for DeviceMac {
         self.0.clone().to_cbor_value().map_err(ser::Error::custom)?.serialize(serializer)
     }
 }
-
 impl<'de> Deserialize<'de> for DeviceMac {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let value = Value::deserialize(deserializer)?;
@@ -553,7 +743,16 @@ impl<'de> Deserialize<'de> for DeviceMac {
 // ----------------------------------------------------------------------------
 
 /// Containing EDeviceKey.Pub
+pub type EDeviceKey = CoseKey;
+
+/// Containing EReaderKey.Pub
 pub type EReaderKey = CoseKey;
+
+/// CBOR serialized, tagged `EDeviceKey`.
+pub type EDeviceKeyBytes = Tag24<CoseKey>;
+
+/// CBOR serialized, tagged `EReaderKey`.
+pub type EReaderKeyBytes = Tag24<CoseKey>;
 
 // ----------------------------------------------------------------------------
 /// # 9.1.5 Session transcript and cipher suite
@@ -571,7 +770,15 @@ pub type SessionTranscriptBytes = Tag24<SessionTranscript>;
 ///     Handover
 /// ]
 /// ```
-pub type SessionTranscript = Vec<Value>;
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionTranscript(
+    /// CBOR serialized, tagged `DeviceEngagement`.
+    pub DeviceEngagementBytes,
+    /// CBOR serialized, tagged `EReaderKey`.
+    pub EReaderKeyBytes,
+    /// Handover information.
+    pub OpenID4VPDCAPIHandover,
+);
 
 /// CBOR serialized, tagged `DeviceEngagement`.
 pub type DeviceEngagementBytes = Tag24<DeviceEngagement>;
@@ -583,20 +790,34 @@ pub type DeviceEngagementBytes = Tag24<DeviceEngagement>;
 ///   OpenID4VPDCAPIHandoverInfoHash ; A cryptographic hash of OpenID4VPDCAPIHandoverInfo
 /// ]
 /// ```
-pub type OpenID4VPDCAPIHandover = Vec<Value>;
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OpenID4VPDCAPIHandover(
+    #[serde(skip_deserializing, default = "OpenID4VPDCAPIHandover::identifier")] &'static str,
+    pub OpenID4VPDCAPIHandoverInfoHash,
+);
+
+impl OpenID4VPDCAPIHandover {
+    const fn identifier() -> &'static str {
+        "OpenID4VPDCAPIHandover"
+    }
+}
+
+/// A sha-256 hash of OpenID4VPDCAPIHandoverInfoBytes
+pub type OpenID4VPDCAPIHandoverInfoHash = Vec<u8>;
 
 /// CBOR serialized, tagged `OpenID4VPDCAPIHandoverInfo`.
 pub type OpenID4VPDCAPIHandoverInfoBytes = Tag24<OpenID4VPDCAPIHandoverInfo>;
 
 /// Array containing handover parameters
 /// ```cddl
-// OpenID4VPDCAPIHandoverInfo = [
+/// OpenID4VPDCAPIHandoverInfo = [
 ///   origin,
 ///   nonce,
 ///   jwk_thumbprint
 /// ]
 /// ```
-pub type OpenID4VPDCAPIHandoverInfo = Vec<Value>;
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OpenID4VPDCAPIHandoverInfo(pub Origin, pub Nonce, pub JwkThumbprint);
 
 /// Represents the Origin of the request as described in Appendix A.2. It MUST
 /// NOT be prefixed with `origin:`.
@@ -615,4 +836,39 @@ pub type Nonce = String;
 /// re-encrypted by a third party, potentially leading to the leakage of
 /// sensitive information. While this does not prevent such an attack, it makes
 /// it detectable and helps preserve the confidentiality of the response.
-pub type JwkThumbprint = Tag24<String>;
+pub type JwkThumbprint = Vec<u8>;
+
+#[cfg(test)]
+mod tests {
+    use credibil_infosec::cose::serde_cbor;
+    use credibil_infosec::{Curve, KeyType};
+
+    use super::*;
+
+    #[test]
+    fn test_device_engagement() {
+        let de = DeviceEngagement {
+            version: "1.0".to_string(),
+            security: Security(
+                CipherSuite::Suite1,
+                Tag24(CoseKey {
+                    kty: KeyType::Okp,
+                    crv: Curve::Ed25519,
+                    x: vec![1, 2, 3],
+                    y: None,
+                }),
+            ),
+            device_retrieval_methods: None,
+            server_retrieval_methods: None,
+            protocol_info: None,
+        };
+
+        
+
+        let serialized = serde_cbor::to_vec(&de).unwrap();
+        let deserialized: DeviceEngagement = serde_cbor::from_slice(&serialized).unwrap();
+
+        assert_eq!(de.version, deserialized.version);
+        assert_eq!(de.security.0, deserialized.security.0);
+    }
+}

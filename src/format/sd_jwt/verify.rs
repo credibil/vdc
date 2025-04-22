@@ -5,14 +5,9 @@ use credibil_did::DidResolver;
 use credibil_infosec::jose::jws;
 use credibil_infosec::jose::jwt::Jwt;
 
-
 use crate::core::did_jwk;
 use crate::format::sd_jwt::{Disclosure, KbJwtClaims, KeyBinding, SdJwtClaims};
 use crate::oid4vp::types::{Claim, RequestObject};
-
-
-
-
 
 /// Verifies an SD-JWT presentation (KB-JWT, and associated disclosures).
 ///

@@ -118,6 +118,10 @@ impl<S: Signer> DeviceResponseBuilder<HasMatched<'_>, HasClientIdentifier, HasSi
     /// TODO: Document errors
     pub async fn build(self) -> Result<String> {
         let matched = self.matched.0;
+        println!("matched: {matched:?}");
+
+        let client_id = self.client_id.0;
+        println!("client_id: {client_id:?}");
 
         // build presentation
 

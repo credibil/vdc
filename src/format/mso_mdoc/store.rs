@@ -2,7 +2,7 @@
 
 use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
-use credibil_infosec::cose::cbor;
+use credibil_infosec::cose::{Tag24, serde_cbor};
 
 use crate::core::Kind;
 use crate::format::FormatProfile;
@@ -16,7 +16,7 @@ use crate::oid4vp::types::{Claim, Queryable};
 /// Returns an error if the decoding fails.
 pub fn to_queryable(issued: &str) -> Result<Queryable> {
     let mdoc_bytes = Base64UrlUnpadded::decode_vec(issued)?;
-    let mdoc: IssuerSigned = cbor::from_slice(&mdoc_bytes)?;
+    let mdoc: IssuerSigned = serde_cbor::from_slice(&mdoc_bytes)?;
 
     let mut claims = vec![];
     for (name_space, tags) in &mdoc.name_spaces {
@@ -31,11 +31,11 @@ pub fn to_queryable(issued: &str) -> Result<Queryable> {
     let Some(mso_bytes) = mdoc.issuer_auth.0.payload else {
         return Err(anyhow!("missing MSO payload"));
     };
-    let mso: MobileSecurityObject = cbor::from_slice(&mso_bytes)?;
+    let mso: Tag24<MobileSecurityObject> = serde_cbor::from_slice(&mso_bytes)?;
 
     Ok(Queryable {
         meta: FormatProfile::MsoMdoc {
-            doctype: mso.doc_type,
+            doctype: mso.0.doc_type,
         },
         claims,
         credential: Kind::String(issued.to_string()),
