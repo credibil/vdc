@@ -16,7 +16,8 @@ mod store;
 use std::collections::{BTreeMap, HashSet};
 
 use anyhow::Result;
-use chrono::{Duration, SecondsFormat, Utc};
+// use chrono::serde::ts_seconds;
+use chrono::{DateTime, Duration, Utc};
 use ciborium::{Value, cbor};
 use coset::{AsCborValue, CoseMac0, CoseSign1};
 use credibil_infosec::cose::{CoseKey, Tag24};
@@ -507,9 +508,6 @@ impl MobileSecurityObject {
     /// Create a new `MobileSecurityObject` with default values.
     #[must_use]
     pub fn new() -> Self {
-        // TODO: get valid_xxx dates from issuer
-        let until = Utc::now() + Duration::days(365);
-
         Self {
             version: "1.0".to_string(),
             digest_algorithm: DigestAlgorithm::Sha256,
@@ -517,9 +515,9 @@ impl MobileSecurityObject {
             device_key_info: DeviceKeyInfo::default(),
             doc_type: "org.iso.18013.5.1.mDL".to_string(),
             validity_info: ValidityInfo {
-                signed: Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true),
-                valid_from: Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true),
-                valid_until: until.to_rfc3339_opts(SecondsFormat::Secs, true),
+                signed: Utc::now(),
+                valid_from: Utc::now(),
+                valid_until: Utc::now() + Duration::days(365),
                 expected_update: None,
             },
         }
@@ -613,22 +611,27 @@ pub struct KeyAuthorizations {
 /// See 9.1.2.4 Signing method and structure for MSO, pg 50.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+#[serde(default)]
 pub struct ValidityInfo {
     /// Time the MSO was signed
-    pub signed: String,
+    pub signed: DateTime<Utc>,
 
     /// The timestamp before which the MSO is not yet valid. Should be equal
     /// or later than the `signed` element
-    pub valid_from: String,
+    #[serde(with = "chrono::serde::ts_seconds")]
+    pub valid_from: DateTime<Utc>,
 
     /// The timestamp after which the MSO is no longer valid.
     ///
     /// The value must be later than the `valid_from` element.
-    pub valid_until: String,
+    #[serde(with = "chrono::serde::ts_seconds")]
+    pub valid_until: DateTime<Utc>,
 
     /// The time at which the issuing authority expects to re-sign the MSO
     /// (and potentially update data elements).
-    pub expected_update: Option<String>,
+    #[serde(with = "chrono::serde::ts_seconds_option")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expected_update: Option<DateTime<Utc>>,
 }
 
 /// Generates unique `DigestId` values.
@@ -817,26 +820,24 @@ pub type OpenID4VPDCAPIHandoverInfoBytes = Tag24<OpenID4VPDCAPIHandoverInfo>;
 /// ]
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OpenID4VPDCAPIHandoverInfo(pub Origin, pub Nonce, pub JwkThumbprint);
-
-/// Represents the Origin of the request as described in Appendix A.2. It MUST
-/// NOT be prefixed with `origin:`.
-pub type Origin = String;
-
-/// The `nonce` parameter from the Authorization Request Object.
-pub type Nonce = String;
-
-/// JWK SHA-256 Thumbprint as defined in [RFC7638], encoded as a CBOR Byte
-/// String, of the Verifier's public key used to encrypt the response.
-///
-/// If the Response Mode is `dc_api`, the third element MUST be null.
-///
-/// For unsigned requests, including the JWK Thumbprint in the
-/// `SessionTranscript` allows the Verifier to detect whether the response was
-/// re-encrypted by a third party, potentially leading to the leakage of
-/// sensitive information. While this does not prevent such an attack, it makes
-/// it detectable and helps preserve the confidentiality of the response.
-pub type JwkThumbprint = Vec<u8>;
+pub struct OpenID4VPDCAPIHandoverInfo(
+    /// Represents the Origin of the request as described in Appendix A.2. It MUST
+    /// NOT be prefixed with `origin:`.
+    pub String,
+    /// The `nonce` parameter from the Authorization Request Object.
+    pub String,
+    /// JWK SHA-256 Thumbprint as defined in [RFC7638], encoded as a CBOR Byte
+    /// String, of the Verifier's public key used to encrypt the response.
+    ///
+    /// If the Response Mode is `dc_api`, the third element MUST be null.
+    ///
+    /// For unsigned requests, including the JWK Thumbprint in the
+    /// `SessionTranscript` allows the Verifier to detect whether the response was
+    /// re-encrypted by a third party, potentially leading to the leakage of
+    /// sensitive information. While this does not prevent such an attack, it makes
+    /// it detectable and helps preserve the confidentiality of the response.
+    pub Vec<u8>,
+);
 
 #[cfg(test)]
 mod tests {
@@ -846,7 +847,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_device_engagement() {
+    fn device_engagement() {
         let de = DeviceEngagement {
             version: "1.0".to_string(),
             security: Security(
@@ -863,12 +864,12 @@ mod tests {
             protocol_info: None,
         };
 
-        
-
         let serialized = serde_cbor::to_vec(&de).unwrap();
         let deserialized: DeviceEngagement = serde_cbor::from_slice(&serialized).unwrap();
 
         assert_eq!(de.version, deserialized.version);
         assert_eq!(de.security.0, deserialized.security.0);
     }
+
+
 }
