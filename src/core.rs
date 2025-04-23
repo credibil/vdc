@@ -7,6 +7,7 @@
 pub mod generate;
 pub mod http;
 pub mod pkce;
+pub mod serde_cbor;
 pub mod strings;
 pub mod urlencode;
 

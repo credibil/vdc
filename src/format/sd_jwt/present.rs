@@ -130,8 +130,7 @@ impl<S: SignerExt> SdJwtVpBuilder<HasMatched<'_>, HasClientIdentifier, HasSigner
         let mut split = credential.split('~');
         split.next().ok_or_else(|| anyhow!("missing issuer-signed JWT"))?;
 
-        let disclosures =
-            split.map(|encoded| Disclosure::from(encoded)).collect::<Result<Vec<_>>>()?;
+        let disclosures = split.map(Disclosure::from).collect::<Result<Vec<_>>>()?;
 
         // select disclosures to include in the presentation
         let mut selected = vec![];

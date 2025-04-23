@@ -557,15 +557,14 @@ dependencies = [
 [[package]]
 name = "credibil-infosec"
 version = "0.1.2"
+source = "git+https://github.com/credibil/infosec.git#7b2c9ea880ee1797c8d031bc150c63b25163ec6c"
 dependencies = [
  "aes-gcm",
  "aes-kw",
  "anyhow",
  "base64ct",
  "chacha20poly1305",
- "chrono",
  "ciborium",
- "coset",
  "ecdsa",
  "ecies",
  "ed25519-dalek",
@@ -574,6 +573,7 @@ dependencies = [
  "rand 0.8.5",
  "serde",
  "serde_json",
+ "serde_repr",
  "tracing",
  "x25519-dalek",
  "zeroize",
@@ -600,6 +600,7 @@ dependencies = [
  "flate2",
  "form_urlencoded",
  "futures",
+ "hex",
  "http",
  "http-body",
  "http-body-util",
@@ -613,6 +614,7 @@ dependencies = [
  "rand_core 0.6.4",
  "serde",
  "serde_json",
+ "serde_repr",
  "sha2",
  "thiserror 2.0.12",
  "tokio",
@@ -1199,6 +1201,12 @@ checksum = "54b4a22553d4242c49fddb9ba998a99962b5cc6f22cb5a3482bec22522403ce4"
 dependencies = [
  "http",
 ]
+
+[[package]]
+name = "hex"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "hkdf"
@@ -2570,6 +2578,17 @@ checksum = "59fab13f937fa393d08645bf3a84bdfe86e296747b506ada67bb15f10f218b2a"
 dependencies = [
  "itoa",
  "serde",
+]
+
+[[package]]
+name = "serde_repr"
+version = "0.1.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "175ee3e80ae9982737ca543e96133087cbd9a485eecc3bc4de9c1a37b47ea59c"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

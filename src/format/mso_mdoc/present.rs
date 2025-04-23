@@ -116,6 +116,7 @@ impl<S: Signer> DeviceResponseBuilder<HasMatched<'_>, HasClientIdentifier, HasSi
     ///
     /// # Errors
     /// TODO: Document errors
+    #[allow(clippy::unused_async)]
     pub async fn build(self) -> Result<String> {
         let matched = self.matched.0;
         println!("matched: {matched:?}");

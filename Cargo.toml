@@ -48,6 +48,7 @@ qrcode = { version = "0.14.1", default-features = false, features = ["image"] }
 rand = "0.9.1"
 serde.workspace = true
 serde_json.workspace = true
+serde_repr = "0.1"
 sha2 = "0.10.8"
 thiserror = "2.0.12"
 tracing = "0.1.41"
@@ -58,6 +59,7 @@ axum = { version = "0.8.3", features = ["macros"] }
 axum-extra = { version = "0.10.1", features = ["typed-header"] }
 ed25519-dalek.workspace = true
 futures.workspace = true
+hex = "0.4.3"
 insta = { version = "1.42.2", features = ["redactions", "yaml"] }
 oauth2 = { version = "5.0.0" }
 provider = { path = "crates/provider" }
@@ -120,10 +122,10 @@ serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140", features = ["alloc"] }
 
 [patch.crates-io]
-# credibil-did = { path = "../did" }
-credibil-infosec = { path = "../infosec" }
 credibil-did = { git = "https://github.com/credibil/did.git" }
-# credibil-infosec = { git = "https://github.com/credibil/infosec.git" }
+credibil-infosec = { git = "https://github.com/credibil/infosec.git" }
+# credibil-did = { path = "../did" }
+# credibil-infosec = { path = "../infosec" }
 
 [profile.release]
 # optimize for small code size

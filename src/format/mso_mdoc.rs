@@ -9,27 +9,31 @@
 //! authenticate the mobile device data. The MSO MDOC is returned in the
 //! `DeviceResponse` structure.
 
+pub mod cose;
 mod issue;
 mod present;
 mod store;
 
 use std::collections::{BTreeMap, HashSet};
+use std::ops::Deref;
 
 use anyhow::Result;
-// use chrono::serde::ts_seconds;
 use chrono::{DateTime, Duration, Utc};
 use ciborium::{Value, cbor};
 use coset::{AsCborValue, CoseMac0, CoseSign1};
-use credibil_infosec::cose::{CoseKey, Tag24};
 use rand::Rng;
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de, ser};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 
+pub use self::cose::{CoseKey, Curve, KeyType};
 pub use self::issue::MsoMdocBuilder;
 pub use self::present::DeviceResponseBuilder;
 pub use self::store::to_queryable;
+use crate::core::serde_cbor;
 
 // ----------------------------------------------------------------------------
-/// # 8.2 Device engagement (pg 24)
+// # 8.2 Device engagement (pg 24)
 // ----------------------------------------------------------------------------
 
 /// Information to perform device engagement.
@@ -68,12 +72,12 @@ impl Serialize for DeviceEngagement {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = BTreeMap::<i64, Value>::new();
         map.insert(0, self.version.clone().into());
-        map.insert(1, cbor!(self.security).map_err(|e| ser::Error::custom(e))?);
+        map.insert(1, cbor!(self.security).map_err(ser::Error::custom)?);
         if let Some(ref methods) = self.device_retrieval_methods {
-            map.insert(2, cbor!(methods).map_err(|e| ser::Error::custom(e))?);
+            map.insert(2, cbor!(methods).map_err(ser::Error::custom)?);
         }
         if let Some(ref methods) = self.server_retrieval_methods {
-            map.insert(3, cbor!(methods).map_err(|e| ser::Error::custom(e))?);
+            map.insert(3, cbor!(methods).map_err(ser::Error::custom)?);
         }
         if let Some(ref info) = self.protocol_info {
             map.insert(4, info.clone());
@@ -87,12 +91,8 @@ impl<'de> Deserialize<'de> for DeviceEngagement {
         let map = BTreeMap::<i64, Value>::deserialize(deserializer)?;
 
         // required fields
-        let Some(version) = map.get(&0) else {
-            return Err(de::Error::custom("missing version"));
-        };
-        let Some(security) = map.get(&1) else {
-            return Err(de::Error::custom("missing security"));
-        };
+        let version = map.get(&0).ok_or_else(|| de::Error::missing_field("version"))?;
+        let security = map.get(&1).ok_or_else(|| de::Error::missing_field("security"))?;
 
         let mut de = Self {
             version: version.deserialized().map_err(de::Error::custom)?,
@@ -105,13 +105,13 @@ impl<'de> Deserialize<'de> for DeviceEngagement {
         // optional fields
         if let Some(methods) = map.get(&2) {
             de.device_retrieval_methods = methods.deserialized().map_err(de::Error::custom)?;
-        };
+        }
         if let Some(methods) = map.get(&3) {
             de.server_retrieval_methods = methods.deserialized().map_err(de::Error::custom)?;
-        };
+        }
         if let Some(protocol_info) = map.get(&4) {
             de.protocol_info = protocol_info.deserialized().map_err(de::Error::custom)?;
-        };
+        }
 
         Ok(de)
     }
@@ -130,28 +130,11 @@ impl<'de> Deserialize<'de> for DeviceEngagement {
 pub struct Security(pub CipherSuite, pub EDeviceKeyBytes);
 
 /// Supported device retrieval security mechanisms cipher suites.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(into = "i64", try_from = "i64")]
+#[derive(Debug, Clone, Serialize_repr, Deserialize_repr, PartialEq, Eq)]
+#[repr(u64)]
 pub enum CipherSuite {
     /// Cipher suite 1
     Suite1 = 1,
-}
-
-impl From<CipherSuite> for i64 {
-    fn from(value: CipherSuite) -> Self {
-        value as i64
-    }
-}
-
-impl TryFrom<i64> for CipherSuite {
-    type Error = anyhow::Error;
-
-    fn try_from(value: i64) -> Result<Self, Self::Error> {
-        match value {
-            1 => Ok(CipherSuite::Suite1),
-            _ => Err(anyhow::anyhow!("unsupported cipher suite")),
-        }
-    }
 }
 
 /// A list of the device retrieval methods supported by the mdoc.
@@ -175,26 +158,41 @@ pub type DeviceRetrievalMethods = Vec<DeviceRetrievalMethod>;
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct DeviceRetrievalMethod(
     // The type of transfer method.
-    pub u64,
+    pub RetrievalMethod,
     // The version of the transfer method.
     pub u64,
     /// Additional options for each connection.
-    pub Vec<RetrievalOption>,
+    pub RetrievalOptions,
 );
+
+/// Supported device retrieval methods.
+#[derive(Clone, Debug, Deserialize_repr, Serialize_repr)]
+#[repr(u64)]
+pub enum RetrievalMethod {
+    /// NFC
+    Nfc = 1,
+
+    /// Bluetooth low energy
+    Ble = 2,
+
+    /// Wifi
+    Wifi = 3,
+}
 
 /// Supported device retrieval options.
 ///
 /// See 8.2.2.3 Device engagement using QR code, pg 28.
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub enum RetrievalOption {
-    /// WiFi options.
-    WifiOptions,
-
-    /// Bluetooth low energy options.
-    BleOptions,
-
+#[serde(untagged)]
+pub enum RetrievalOptions {
     /// NFC options.
     NfcOptions,
+
+    /// Bluetooth low energy options.
+    BleOptions(BleOptions),
+
+    /// Wifi options.
+    WifiOptions,
 }
 
 /// ```cddl
@@ -220,6 +218,9 @@ pub struct WifiOptions {
     pub supported_bands: Option<Vec<u8>>,
 }
 
+/// Bluetooth low energy options.
+///
+/// ```cddl
 /// BleOptions = {
 ///     0 : bool,       ; Indicates support for mdoc peripheral server mode
 ///     1 : bool,       ; Indicates support for mdoc central client mode
@@ -227,10 +228,83 @@ pub struct WifiOptions {
 ///     ? 11 : bstr     ; UUID for mdoc client central mode
 ///     ? 20 : bstr     ; mdoc BLE Device Address for mdoc peripheral server mode
 /// }
+/// ```
+#[derive(Clone, Debug)]
+pub struct BleOptions {
+    /// Indicates support for mdoc peripheral server mode.
+    pub server_mode: bool,
 
-/// NfcOptions = {
-///     0 : uint,   ; Maximum length of command data field
-///     1 : uint    ; Maximum length of response data field
+    /// Indicates support for mdoc central client mode.
+    pub client_mode: bool,
+
+    /// UUID for mdoc peripheral server mode.
+    pub server_mode_uuid: Option<Vec<u8>>,
+
+    /// UUID for mdoc client central mode.
+    pub client_mode_uuid: Option<Vec<u8>>,
+
+    /// mdoc BLE Device Address for mdoc peripheral server mode.
+    pub device_address: Option<Vec<u8>>,
+}
+
+impl Serialize for BleOptions {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = BTreeMap::<i64, Value>::new();
+        map.insert(0, self.server_mode.into());
+        map.insert(1, self.client_mode.into());
+        if let Some(ref uuid) = self.server_mode_uuid {
+            map.insert(10, Value::Bytes(uuid.clone()));
+        }
+        if let Some(ref uuid) = self.client_mode_uuid {
+            map.insert(11, Value::Bytes(uuid.clone()));
+        }
+        if let Some(ref address) = self.device_address {
+            map.insert(20, Value::Bytes(address.clone()));
+        }
+        map.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for BleOptions {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let map = BTreeMap::<i64, Value>::deserialize(deserializer)?;
+
+        // required fields
+        let server_mode = map.get(&0).ok_or_else(|| de::Error::missing_field("server_mode"))?;
+        let client_mode = map.get(&1).ok_or_else(|| de::Error::missing_field("client_mode"))?;
+
+        let mut ble = Self {
+            server_mode: server_mode.deserialized().map_err(de::Error::custom)?,
+            client_mode: client_mode.deserialized().map_err(de::Error::custom)?,
+            server_mode_uuid: None,
+            client_mode_uuid: None,
+            device_address: None,
+        };
+
+        // optional fields
+        if let Some(uuid) = map.get(&10) {
+            ble.server_mode_uuid = Some(
+                uuid.as_bytes().cloned().ok_or_else(|| de::Error::custom("uuid is not bytes"))?,
+            );
+        }
+        if let Some(uuid) = map.get(&11) {
+            ble.client_mode_uuid = Some(
+                uuid.as_bytes().cloned().ok_or_else(|| de::Error::custom("uuid is not bytes"))?,
+            );
+        }
+        if let Some(addr) = map.get(&20) {
+            ble.device_address = Some(
+                addr.as_bytes().cloned().ok_or_else(|| de::Error::custom("uuid is not bytes"))?,
+            );
+        }
+
+        Ok(ble)
+    }
+}
+
+// NfcOptions = {
+//     0 : uint,   ; Maximum length of command data field
+//     1 : uint    ; Maximum length of response data field
 // }
 
 /// Supported server retrieval methods.
@@ -269,11 +343,11 @@ pub struct RetrievalInformation(
     pub String,
 );
 
-/// ProtocolInfo
+/// `ProtocolInfo`
 pub type ProtocolInfo = Value;
 
 // ----------------------------------------------------------------------------
-/// # 8.3.1 Data model
+// # 8.3.1 Data model
 // ----------------------------------------------------------------------------
 /// Document type
 ///
@@ -296,7 +370,7 @@ pub type DataElementIdentifier = String;
 pub type DataElementValue = Value;
 
 // ----------------------------------------------------------------------------
-/// # 8.3.2.1.2.2 Device retrieval mdoc response (pg 30)
+// # 8.3.2.1.2.2 Device retrieval mdoc response (pg 30)
 // ----------------------------------------------------------------------------
 
 /// Device retrieval mdoc response.
@@ -309,7 +383,7 @@ pub type DataElementValue = Value;
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DeviceResponse {
-    /// Version of the DeviceResponse structure.
+    /// Version of the `DeviceResponse` structure.
     pub version: String,
 
     /// Returned documents.
@@ -396,7 +470,7 @@ pub struct IssuerSignedItem {
 }
 
 impl IssuerSignedItem {
-    fn to_bytes(self) -> IssuerSignedItemBytes {
+    const fn into_bytes(self) -> IssuerSignedItemBytes {
         Tag24(self)
     }
 }
@@ -428,7 +502,7 @@ pub type DeviceSignedItems = BTreeMap<String, ciborium::Value>;
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DeviceAuth {
-    /// EdDSA signature
+    /// `EdDSA` signature
     device_signature: DeviceSignature,
 
     /// ECDH-agreed MAC
@@ -445,7 +519,7 @@ pub type ErrorItems = BTreeMap<DataElementIdentifier, ErrorCode>;
 pub type ErrorCode = i64;
 
 // ----------------------------------------------------------------------------
-/// # 9.1.2.4 Signing method and structure for MSO (pg 50)
+// # 9.1.2.4 Signing method and structure for MSO (pg 50)
 // ----------------------------------------------------------------------------
 
 /// `IssuerAuth` is comprised of an MSO encapsulated and signed by an untagged
@@ -523,7 +597,7 @@ impl MobileSecurityObject {
         }
     }
 
-    fn to_bytes(self) -> MobileSecurityObjectBytes {
+    const fn into_bytes(self) -> MobileSecurityObjectBytes {
         Tag24(self)
     }
 }
@@ -665,7 +739,7 @@ impl Default for DigestIdGenerator {
 }
 
 // ----------------------------------------------------------------------------
-/// # 9.1.3.4 mdoc authentication (pg 54)
+// # 9.1.3.4 mdoc authentication (pg 54)
 // ----------------------------------------------------------------------------
 
 /// Device authentication used to authenticate the mdoc response.
@@ -680,9 +754,14 @@ impl Default for DigestIdGenerator {
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceAuthentication(
-    #[serde(skip_deserializing, default = "DeviceAuthentication::identifier")] &'static str,
+    /// The device authentication identifier.
+    #[serde(skip_deserializing, default = "DeviceAuthentication::identifier")]
+    &'static str,
+    /// Used in multiple security mechanisms for device retrieval.
     pub SessionTranscript,
+    /// The document type of the document being signed.
     pub DocType,
+    /// Returned data elements for each namespace
     pub DeviceNameSpacesBytes,
 );
 
@@ -707,7 +786,7 @@ pub type DeviceAuthenticationBytes = Tag24<DeviceAuthentication>;
 /// Used by `DeviceAuth` to authenticate the mdoc using an ECDSA/EdDSA
 /// signature.
 ///
-/// See 9.1.3.6 mdoc ECDSA / EdDSA Authentication, pg 54
+/// See 9.1.3.6 mdoc ECDSA/EdDSA Authentication, pg 54
 #[derive(Clone, Debug, Default)]
 pub struct DeviceSignature(pub CoseSign1);
 
@@ -742,7 +821,7 @@ impl<'de> Deserialize<'de> for DeviceMac {
 }
 
 // ----------------------------------------------------------------------------
-/// # 9.1.1 Session encryption
+// # 9.1.1 Session encryption
 // ----------------------------------------------------------------------------
 
 /// Containing EDeviceKey.Pub
@@ -758,7 +837,7 @@ pub type EDeviceKeyBytes = Tag24<CoseKey>;
 pub type EReaderKeyBytes = Tag24<CoseKey>;
 
 // ----------------------------------------------------------------------------
-/// # 9.1.5 Session transcript and cipher suite
+// # 9.1.5 Session transcript and cipher suite
 // ----------------------------------------------------------------------------
 
 /// CBOR serialized, tagged `SessionTranscript`.
@@ -795,7 +874,10 @@ pub type DeviceEngagementBytes = Tag24<DeviceEngagement>;
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OpenID4VPDCAPIHandover(
-    #[serde(skip_deserializing, default = "OpenID4VPDCAPIHandover::identifier")] &'static str,
+    ///The handover type identifier.
+    #[serde(skip_deserializing, default = "OpenID4VPDCAPIHandover::identifier")]
+    &'static str,
+    /// A sha-256 hash of `OpenID4VPDCAPIHandoverInfoBytes`.
     pub OpenID4VPDCAPIHandoverInfoHash,
 );
 
@@ -805,7 +887,7 @@ impl OpenID4VPDCAPIHandover {
     }
 }
 
-/// A sha-256 hash of OpenID4VPDCAPIHandoverInfoBytes
+/// A sha-256 hash of `OpenID4VPDCAPIHandoverInfoBytes`
 pub type OpenID4VPDCAPIHandoverInfoHash = Vec<u8>;
 
 /// CBOR serialized, tagged `OpenID4VPDCAPIHandoverInfo`.
@@ -839,37 +921,106 @@ pub struct OpenID4VPDCAPIHandoverInfo(
     pub Vec<u8>,
 );
 
+/// Wrap types that require tagging with tag 24.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Tag24<T>(pub T);
+
+impl<T> Deref for Tag24<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T: Serialize> Serialize for Tag24<T> {
+    fn serialize<S: Serializer>(&self, s: S) -> anyhow::Result<S::Ok, S::Error> {
+        let inner = serde_cbor::to_vec(&self.0)
+            .map_err(|e| ser::Error::custom(format!("issue serializing Tag24: {e}")))?;
+        Value::Tag(24, Box::new(Value::Bytes(inner))).serialize(s)
+    }
+}
+
+impl<'de, T> Deserialize<'de> for Tag24<T>
+where
+    T: DeserializeOwned,
+{
+    fn deserialize<D>(deserializer: D) -> anyhow::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let Value::Tag(24, value) = Value::deserialize(deserializer)? else {
+            return Err(de::Error::custom("not a Tag24"));
+        };
+        let Value::Bytes(bytes) = value.as_ref() else {
+            return Err(de::Error::custom(format!("invalid tag: {value:?}")));
+        };
+        let inner = serde_cbor::from_slice(bytes)
+            .map_err(|e| de::Error::custom(format!("issue deserializing Tag24: {e}")))?;
+        Ok(Self(inner))
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use credibil_infosec::cose::serde_cbor;
-    use credibil_infosec::{Curve, KeyType};
-
+    // use hex::FromHex;
     use super::*;
+    use crate::core::serde_cbor;
 
     #[test]
     fn device_engagement() {
-        let de = DeviceEngagement {
+        const SPEC_HEX: &str = "a30063312e30018201d818584ba4010220012158205a88d182bce5f42efa59943f33359d2e8a968ff289d93e5fa444b624343167fe225820b16e8cf858ddc7690407ba61d4c338237a8cfcf3de6aa672fc60a557aa32fc670281830201a300f401f50b5045efef742b2c4837a9a3b0e1d05a6917";
+        let bytes = hex::decode(SPEC_HEX).unwrap();
+        let spec: DeviceEngagement = serde_cbor::from_slice(&bytes).unwrap();
+        let spec_bytes = serde_cbor::to_vec(&spec).unwrap();
+
+        let custom = DeviceEngagement {
             version: "1.0".to_string(),
             security: Security(
                 CipherSuite::Suite1,
                 Tag24(CoseKey {
-                    kty: KeyType::Okp,
-                    crv: Curve::Ed25519,
-                    x: vec![1, 2, 3],
-                    y: None,
+                    kty: KeyType::Ec,
+                    crv: Curve::P256,
+                    x: vec![
+                        90, 136, 209, 130, 188, 229, 244, 46, 250, 89, 148, 63, 51, 53, 157, 46,
+                        138, 150, 143, 242, 137, 217, 62, 95, 164, 68, 182, 36, 52, 49, 103, 254,
+                    ],
+                    y: Some(vec![
+                        177, 110, 140, 248, 88, 221, 199, 105, 4, 7, 186, 97, 212, 195, 56, 35,
+                        122, 140, 252, 243, 222, 106, 166, 114, 252, 96, 165, 87, 170, 50, 252,
+                        103,
+                    ]),
                 }),
             ),
-            device_retrieval_methods: None,
+            device_retrieval_methods: Some(vec![DeviceRetrievalMethod(
+                RetrievalMethod::Ble,
+                1,
+                RetrievalOptions::BleOptions(BleOptions {
+                    server_mode: false,
+                    client_mode: true,
+                    server_mode_uuid: None,
+                    client_mode_uuid: Some(vec![
+                        69, 239, 239, 116, 43, 44, 72, 55, 169, 163, 176, 225, 208, 90, 105, 23,
+                    ]),
+                    device_address: None,
+                }),
+            )]),
             server_retrieval_methods: None,
             protocol_info: None,
         };
+        let custom_bytes = serde_cbor::to_vec(&custom).unwrap();
 
-        let serialized = serde_cbor::to_vec(&de).unwrap();
-        let deserialized: DeviceEngagement = serde_cbor::from_slice(&serialized).unwrap();
-
-        assert_eq!(de.version, deserialized.version);
-        assert_eq!(de.security.0, deserialized.security.0);
+        assert_eq!(hex::encode(spec_bytes), hex::encode(custom_bytes));
+        assert_eq!(spec.security.0, custom.security.0);
     }
 
-
+    #[test]
+    #[should_panic]
+    // A Tag24 cannot be serialized directly into a non-cbor format as it will lose the tag.
+    fn non_cbor_roundtrip() {
+        let original = Tag24(String::from("some data"));
+        let json = serde_json::to_vec(&original).unwrap();
+        let roundtripped = serde_json::from_slice(&json).unwrap();
+        assert_eq!(original, roundtripped)
+    }
 }
