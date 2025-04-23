@@ -158,9 +158,9 @@ pub type DeviceRetrievalMethods = Vec<DeviceRetrievalMethod>;
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct DeviceRetrievalMethod(
     /// The type of transfer method.
-    pub RetrievalMethod,
+    pub RetrievalType,
     /// The version of the transfer method.
-    pub u64,
+    pub Version,
     /// Additional options for each connection.
     pub RetrievalOptions,
 );
@@ -168,7 +168,15 @@ pub struct DeviceRetrievalMethod(
 /// Supported device retrieval methods.
 #[derive(Clone, Debug, Deserialize_repr, Serialize_repr)]
 #[repr(u64)]
-pub enum RetrievalMethod {
+pub enum Version {
+    /// Version 1.0
+    One = 1,
+}
+
+/// Supported device retrieval methods.
+#[derive(Clone, Debug, Deserialize_repr, Serialize_repr)]
+#[repr(u64)]
+pub enum RetrievalType {
     /// NFC
     Nfc = 1,
 
@@ -427,7 +435,7 @@ pub struct ServerRetrievalMethods {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct RetrievalInformation(
     // The version of the transfer methods.
-    pub u64,
+    pub Version,
     // The issuer URL.
     pub String,
     /// The server retrieval token as provided by the mdoc reader.
@@ -650,7 +658,7 @@ pub type MobileSecurityObjectBytes = Tag24<MobileSecurityObject>;
 #[serde(rename_all = "camelCase")]
 pub struct MobileSecurityObject {
     /// Version of the `MobileSecurityObject`. Must be 1.0.
-    version: String,
+    pub version: String,
 
     /// Message digest algorithm used.
     pub digest_algorithm: DigestAlgorithm,
@@ -1084,8 +1092,8 @@ mod tests {
                 }),
             ),
             device_retrieval_methods: Some(vec![DeviceRetrievalMethod(
-                RetrievalMethod::Ble,
-                1,
+                RetrievalType::Ble,
+                Version::One,
                 RetrievalOptions::BleOptions(BleOptions {
                     server_mode: false,
                     client_mode: true,
