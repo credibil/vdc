@@ -158,3 +158,12 @@ impl<S: Signer> DeviceResponseBuilder<HasMatched<'_>, HasClientIdentifier, HasSi
         todo!()
     }
 }
+
+// let signature = signer.sign(&device_authentication_bytes).await;
+//
+// let cose_sign_1 = CoseSign1Builder::new()
+//     .protected(protected)
+//     .unprotected(unprotected)
+//     .payload(null) // <- !! use a null value for the payload
+//     .signature(signature)
+//     .build();

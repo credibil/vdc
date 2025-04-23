@@ -917,19 +917,10 @@ impl DeviceAuthentication {
 /// CBOR serialized, tagged `DeviceAuthentication`.
 pub type DeviceAuthenticationBytes = DataItem<DeviceAuthentication>;
 
-// let signature = signer.sign(&device_authentication_bytes).await;
-//
-// let cose_sign_1 = CoseSign1Builder::new()
-//     .protected(protected)
-//     .unprotected(unprotected)
-//     .payload(null) // <- !! use a null value for the payload
-//     .signature(signature)
-//     .build();
-
 /// Used by `DeviceAuth` to authenticate the mdoc using an ECDSA/EdDSA
 /// signature.
 ///
-/// See 9.1.3.6 mdoc ECDSA/EdDSA Authentication, pg 54
+/// See 9.1.3.6 mdoc ECDSA/EdDSA Authentication, pg 54.
 #[derive(Clone, Debug, Default)]
 pub struct DeviceSignature(pub CoseSign1);
 
