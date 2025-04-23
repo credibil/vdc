@@ -15,6 +15,7 @@ mod present;
 mod store;
 
 use std::collections::{BTreeMap, HashSet};
+use std::fmt::Display;
 use std::ops::Deref;
 
 use anyhow::Result;
@@ -31,6 +32,31 @@ pub use self::issue::MsoMdocBuilder;
 pub use self::present::DeviceResponseBuilder;
 pub use self::store::to_queryable;
 use crate::core::serde_cbor;
+
+/// Supported device retrieval methods.
+#[derive(Clone, Debug, Deserialize_repr, Serialize_repr)]
+#[repr(u64)]
+pub enum VersionNumber {
+    /// Version 1
+    One = 1,
+}
+
+/// Supported device retrieval methods.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[repr(u64)]
+pub enum VersionString {
+    /// Version 1.0
+    #[serde(rename = "1.0")]
+    One,
+}
+
+impl Display for VersionString {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::One => write!(f, "1.0"),
+        }
+    }
+}
 
 // ----------------------------------------------------------------------------
 // # 8.2 Device engagement (pg 24)
@@ -52,7 +78,7 @@ use crate::core::serde_cbor;
 #[derive(Clone, Debug)]
 pub struct DeviceEngagement {
     /// Version.
-    pub version: String,
+    pub version: VersionString,
 
     /// Security information containing the device public key and cipher suite.
     pub security: Security,
@@ -71,7 +97,7 @@ pub struct DeviceEngagement {
 impl Serialize for DeviceEngagement {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = BTreeMap::<i64, Value>::new();
-        map.insert(0, self.version.clone().into());
+        map.insert(0, self.version.to_string().into());
         map.insert(1, cbor!(self.security).map_err(ser::Error::custom)?);
         if let Some(ref methods) = self.device_retrieval_methods {
             map.insert(2, cbor!(methods).map_err(ser::Error::custom)?);
@@ -160,18 +186,10 @@ pub struct DeviceRetrievalMethod(
     /// The type of transfer method.
     pub RetrievalType,
     /// The version of the transfer method.
-    pub Version,
+    pub VersionNumber,
     /// Additional options for each connection.
     pub RetrievalOptions,
 );
-
-/// Supported device retrieval methods.
-#[derive(Clone, Debug, Deserialize_repr, Serialize_repr)]
-#[repr(u64)]
-pub enum Version {
-    /// Version 1.0
-    One = 1,
-}
 
 /// Supported device retrieval methods.
 #[derive(Clone, Debug, Deserialize_repr, Serialize_repr)]
@@ -194,13 +212,13 @@ pub enum RetrievalType {
 #[serde(untagged)]
 pub enum RetrievalOptions {
     /// NFC options.
-    NfcOptions,
+    NfcOptions(NfcOptions),
 
     /// Bluetooth low energy options.
     BleOptions(BleOptions),
 
     /// Wifi options.
-    WifiOptions,
+    WifiOptions(WifiOptions),
 }
 
 /// Wifi options.
@@ -218,9 +236,11 @@ pub struct WifiOptions {
     /// Pass-phrase information.
     pub passphrase: Option<String>,
 
+    // TODO: Use enum for operating class
     /// Channel info operating class.
     pub operating_class: Option<u64>,
 
+    // TODO: Use enum for channel number
     /// Channel info channel number.
     pub channel_number: Option<u64>,
 
@@ -435,7 +455,7 @@ pub struct ServerRetrievalMethods {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct RetrievalInformation(
     // The version of the transfer methods.
-    pub Version,
+    pub VersionNumber,
     // The issuer URL.
     pub String,
     /// The server retrieval token as provided by the mdoc reader.
@@ -483,7 +503,7 @@ pub type DataElementValue = Value;
 #[serde(rename_all = "camelCase")]
 pub struct DeviceResponse {
     /// Version of the `DeviceResponse` structure.
-    pub version: String,
+    pub version: VersionString,
 
     /// Returned documents.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -494,7 +514,7 @@ pub struct DeviceResponse {
     pub document_errors: Option<BTreeMap<DocType, ErrorCode>>,
 
     /// Status code.
-    pub status: u64,
+    pub status: ResponseStatus,
 }
 
 /// Document to return in the device response.
@@ -600,12 +620,14 @@ pub type DeviceSignedItems = BTreeMap<String, ciborium::Value>;
 /// signature and MAC.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DeviceAuth {
+pub enum DeviceAuth {
     /// `EdDSA` signature
-    device_signature: DeviceSignature,
+    #[serde(rename = "device_signature")]
+    Signature(DeviceSignature),
 
     /// ECDH-agreed MAC
-    device_mac: DeviceMac,
+    #[serde(rename = "device_mac")]
+    Mac(DeviceMac),
 }
 
 /// Error codes for each namespace.
@@ -616,6 +638,24 @@ pub type ErrorItems = BTreeMap<DataElementIdentifier, ErrorCode>;
 
 /// Error code.
 pub type ErrorCode = i64;
+
+/// Device retrieval mdoc response status codes.
+#[derive(Clone, Debug, Default, Deserialize_repr, Serialize_repr)]
+#[repr(u64)]
+pub enum ResponseStatus {
+    /// Normal processing. Returned when no other status is returned.
+    #[default]
+    Ok = 0,
+
+    /// The mdoc returns an error without any given reason.
+    Error = 10,
+
+    /// The mdoc indicates an error during CBOR decoding
+    DecodingError = 11,
+
+    /// The mdoc indicates an error during CBOR validation.
+    ValidationError = 12,
+}
 
 // ----------------------------------------------------------------------------
 // # 9.1.2.4 Signing method and structure for MSO (pg 50)
@@ -658,7 +698,7 @@ pub type MobileSecurityObjectBytes = Tag24<MobileSecurityObject>;
 #[serde(rename_all = "camelCase")]
 pub struct MobileSecurityObject {
     /// Version of the `MobileSecurityObject`. Must be 1.0.
-    pub version: String,
+    pub version: VersionString,
 
     /// Message digest algorithm used.
     pub digest_algorithm: DigestAlgorithm,
@@ -682,7 +722,7 @@ impl MobileSecurityObject {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            version: "1.0".to_string(),
+            version: VersionString::One,
             digest_algorithm: DigestAlgorithm::Sha256,
             value_digests: BTreeMap::new(),
             device_key_info: DeviceKeyInfo::default(),
@@ -751,7 +791,7 @@ pub struct DeviceKeyInfo {
 
     /// Key info
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub key_info: Option<BTreeMap<i64, Value>>,
+    pub key_info: Option<KeyInfo>,
 }
 
 /// Name spaces authorized for the MSO
@@ -778,6 +818,9 @@ pub struct KeyAuthorizations {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data_elements: Option<AuthorizedDataElements>,
 }
+
+/// Positive integers are RFU, negative integers may be used for proprietary use.
+pub type KeyInfo = BTreeMap<i64, Value>;
 
 /// Contains information related to the validity of the MSO and its signature.
 ///
@@ -1074,7 +1117,7 @@ mod tests {
         let spec_bytes = serde_cbor::to_vec(&spec).unwrap();
 
         let custom = DeviceEngagement {
-            version: "1.0".to_string(),
+            version: VersionString::One,
             security: Security(
                 CipherSuite::Suite1,
                 Tag24(CoseKey {
@@ -1093,7 +1136,7 @@ mod tests {
             ),
             device_retrieval_methods: Some(vec![DeviceRetrievalMethod(
                 RetrievalType::Ble,
-                Version::One,
+                VersionNumber::One,
                 RetrievalOptions::BleOptions(BleOptions {
                     server_mode: false,
                     client_mode: true,

@@ -1,13 +1,15 @@
 use anyhow::Result;
-// use base64ct::{Base64UrlUnpadded, Encoding};
-// use chrono::Utc;
+use base64ct::{Base64Unpadded, Encoding};
 use credibil_infosec::Signer;
 
-// use sha2::{Digest, Sha256};
-
-// use crate::format::sd_jwt::{Disclosure, JwtType, KbJwtClaims};
+use crate::Kind;
+use crate::core::serde_cbor;
+use crate::format::mso_mdoc::IssuerSigned;
+// use crate::format::mso_mdoc::{
+//     DeviceAuth, DeviceMac, DeviceNameSpaces, DeviceResponse, DeviceSignature, DeviceSigned,
+//     Document, IssuerSigned, ResponseStatus, Tag24, VersionString,
+// };
 use crate::oid4vp::types::Matched;
-// use crate::server;
 
 /// Generate an IETF `dc+sd-jwt` format credential.
 #[derive(Debug)]
@@ -124,7 +126,31 @@ impl<S: Signer> DeviceResponseBuilder<HasMatched<'_>, HasClientIdentifier, HasSi
         let client_id = self.client_id.0;
         println!("client_id: {client_id:?}");
 
+        let Kind::String(issued) = &self.matched.0.issued else {
+            return Err(anyhow::anyhow!("mso_mdoc credential is not a string"));
+        };
+
+        let decoded = Base64Unpadded::decode_vec(&issued)?;
+        let issuer_signed: IssuerSigned = serde_cbor::from_slice(&decoded)?;
+        println!("issuer_signed: {issuer_signed:?}");
+
         // build presentation
+        // let doc = Document {
+        //     doc_type: "org.iso.18013.5.1.mDL".to_string(),
+        //     issuer_signed,
+        //     device_signed: DeviceSigned {
+        //         name_spaces: Tag24(DeviceNameSpaces::new()),
+        //         device_auth: DeviceAuth::Signature(DeviceSignature(CoseSign1)),
+        //     },
+        //     errors: None,
+        // };
+
+        // let x = DeviceResponse {
+        //     version: VersionString::One,
+        //     documents: None,
+        //     document_errors: None,
+        //     status: ResponseStatus::Ok,
+        // };
 
         // encrypt Authorization Response Object using the Verifier Metadata
         // from the Authorization Request Object
