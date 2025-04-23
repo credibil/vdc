@@ -6,9 +6,10 @@ use std::sync::{Arc, LazyLock, Mutex};
 use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_did::document::{CreateOptions, Document};
-use credibil_did::key::{self, DidKey};
-use credibil_did::web::DidWeb;
-use credibil_did::{DidOperator, DidResolver, KeyPurpose, SignerExt};
+use credibil_did::{
+    DidResolver, DocumentBuilder, KeyPurpose, PublicKeyFormat, SignerExt,
+    VerificationMethodBuilder, VmKeyId,
+};
 use credibil_infosec::jose::jws::Key;
 use credibil_infosec::{Algorithm, Curve, KeyType, PublicKeyJwk, Signer};
 use credibil_vc::core::generate;
@@ -43,9 +44,15 @@ impl Keyring {
         };
 
         // generate did:web document
-        let mut options = CreateOptions::default();
-        options.enable_encryption_key_derivation = true;
-        let document = DidWeb::create(&url, &keyring, options).expect("should create");
+        let did = credibil_did::web::default_did(&url).expect("should construct DID");
+        let key_bytes = verifying_key.as_bytes().to_vec();
+        let vk = PublicKeyJwk::from_bytes(&key_bytes).expect("should convert verifying key to JWK");
+        let document = DocumentBuilder::new(&did)
+            .add_verifying_key(&vk, true)
+            .expect("should add verifying key")
+            .build();
+
+        println!("DID document: {:#?}", document);
 
         keyring.did = document.id.clone();
         DID_STORE.lock().expect("should lock").insert(url, document);
@@ -85,19 +92,19 @@ impl SignerExt for Keyring {
     }
 }
 
-impl DidOperator for Keyring {
-    fn verification(&self, purpose: KeyPurpose) -> Option<PublicKeyJwk> {
-        match purpose {
-            KeyPurpose::VerificationMethod => Some(PublicKeyJwk {
-                kty: KeyType::Okp,
-                crv: Curve::Ed25519,
-                x: Base64UrlUnpadded::encode_string(self.verifying_key.as_bytes()),
-                ..PublicKeyJwk::default()
-            }),
-            _ => panic!("unsupported purpose"),
-        }
-    }
-}
+// impl DidOperator for Keyring {
+//     fn verification(&self, purpose: KeyPurpose) -> Option<PublicKeyJwk> {
+//         match purpose {
+//             KeyPurpose::VerificationMethod => Some(PublicKeyJwk {
+//                 kty: KeyType::Okp,
+//                 crv: Curve::Ed25519,
+//                 x: Base64UrlUnpadded::encode_string(self.verifying_key.as_bytes()),
+//                 ..PublicKeyJwk::default()
+//             }),
+//             _ => panic!("unsupported purpose"),
+//         }
+//     }
+// }
 
 impl DidResolver for Keyring {
     async fn resolve(&self, url: &str) -> anyhow::Result<Document> {

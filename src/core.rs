@@ -133,10 +133,10 @@ impl<T: Clone + Default + PartialEq> OneMany<T> {
 ///
 /// TODO: Document errors
 pub async fn did_jwk(did_url: &str, resolver: &impl DidResolver) -> Result<PublicKeyJwk> {
-    let deref = credibil_did::dereference(did_url, None, resolver.clone())
+    let deref = credibil_did::dereference(did_url, resolver)
         .await
-        .map_err(|e| anyhow!("issue dereferencing DID URL: {e}"))?;
-    let Some(Resource::VerificationMethod(vm)) = deref.content_stream else {
+        .map_err(|e| anyhow!("issue dereferencing DID URL {did_url}: {e}"))?;
+    let Resource::VerificationMethod(vm) = deref else {
         return Err(anyhow!("Verification method not found"));
     };
     vm.key.jwk().map_err(|e| anyhow!("JWK not found: {e}"))
