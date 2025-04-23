@@ -14,7 +14,7 @@ mod present;
 mod store;
 mod verify;
 
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use chrono::serde::{ts_seconds, ts_seconds_option};
 use chrono::{DateTime, Utc};
@@ -27,7 +27,7 @@ use sha2::{Digest, Sha256};
 pub use self::issue::SdJwtVcBuilder;
 pub use self::present::SdJwtVpBuilder;
 pub use self::store::to_queryable;
-pub use self::verify::verify;
+pub use self::verify::verify_vp;
 
 /// Claims that can be included in the payload of SD-JWT VCs.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -79,9 +79,9 @@ pub struct SdJwtClaims {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sub: Option<String>,
 
-    /// Contains a public key associated with the key binding (provided by the
-    /// Wallet via proof-of-possession of key material) in order to provide
-    /// confirmation of cryptographic Key Binding.
+    /// The confirmation claim holds the Wallet's public key provided via
+    /// proof-of-possession of key material. It is used to provide confirmation
+    /// of cryptographic Key Binding for presentations.
     ///
     /// The Key Binding JWT in the SD-JWT presentation must be secured by the
     /// key identified in this claim.
@@ -104,8 +104,8 @@ pub struct KbJwtClaims {
     /// The value of nonce from the Authorization Request.
     pub nonce: String,
 
-    /// The Client Identifier, except for requests over the DC API where it
-    /// MUST be the Origin prefixed with origin.
+    /// The Verifier's Client Identifier, except for requests over the DC API
+    /// where it MUST be the Origin prefixed with origin.
     pub aud: String,
 
     /// The time of issuance of the Key Binding JWT.
@@ -117,15 +117,28 @@ pub struct KbJwtClaims {
     pub sd_hash: String,
 }
 
-/// The type of binding between the SD-JWT and the public key.
+/// The type of Proof-of-Possession public key to use in SD-JWT key binding.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum KeyBinding {
-    /// The public key is bound to the SD-JWT using a JWK.
+    /// A public key JWK.
     Jwk(PublicKeyJwk),
+
+    /// A public key Key ID.
+    Kid(String),
+
+    /// A URL to a JWK Set and Key ID referencing a public key within the set.
+    Jku {
+        /// The URL of the JWK Set.
+        jku: String,
+
+        /// The Key ID of a public key.
+        kid: String,
+    },
 }
 
 /// A claim disclosure.
+#[derive(Debug)]
 pub struct Disclosure {
     /// The claim name.
     pub name: String,
@@ -146,13 +159,39 @@ impl Disclosure {
         }
     }
 
+    /// Unpack a base64url-encoded disclosure.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the decoding fails or if the disclosure is not a
+    /// JSON array of length 3.
+    pub fn from(encoded: &str) -> Result<Self> {
+        let decoded = Base64UrlUnpadded::decode_vec(encoded)?;
+        let disclosure: Vec<Value> = serde_json::from_slice(&decoded)?;
+        if disclosure.len() != 3 {
+            return Err(anyhow!("disclosure must be a JSON array of length 3"));
+        }
+        let Some(salt) = disclosure[0].as_str() else {
+            return Err(anyhow!("disclosure salt is invalid"));
+        };
+        let Some(name) = disclosure[1].as_str() else {
+            return Err(anyhow!("disclosure name is invalid"));
+        };
+
+        Ok(Self {
+            salt: salt.to_string(),
+            name: name.to_string(),
+            value: disclosure[2].clone(),
+        })
+    }
+
     /// `Base64Url` encode the disclosure as JSON array of the form:
     /// `["<b64 Salt>","<Claim Name>","<Claim Value>"]`.
     ///
     /// # Errors
     ///
     /// Returns an error if the encoding fails.
-    pub fn encoded(&self) -> Result<String> {
+    pub fn encode(&self) -> Result<String> {
         let sd_json = serde_json::to_vec(&json!([self.salt, self.name, self.value]))?;
         Ok(Base64UrlUnpadded::encode_string(&sd_json))
     }
@@ -163,8 +202,8 @@ impl Disclosure {
     /// # Errors
     ///
     /// Returns an error if the encoding fails.
-    pub fn hashed(&self) -> Result<String> {
-        Ok(Base64UrlUnpadded::encode_string(Sha256::digest(&self.encoded()?).as_slice()))
+    pub fn hash(&self) -> Result<String> {
+        Ok(sd_hash(&self.encode()?))
     }
 }
 
@@ -194,4 +233,8 @@ impl From<&JwtType> for String {
             JwtType::KbJwt => "kb+jwt".to_string(),
         }
     }
+}
+
+fn sd_hash(value: &str) -> String {
+    Base64UrlUnpadded::encode_string(Sha256::digest(value).as_slice())
 }

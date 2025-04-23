@@ -410,7 +410,7 @@ async fn reduce_claims() {
     // --------------------------------------------------
     let nonce =
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
-    
+
     // proof of possession of key material
     let bob_key = BOB.verification_method().await.expect("should have key");
     let jws = JwsBuilder::new()

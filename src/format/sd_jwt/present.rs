@@ -1,9 +1,9 @@
+//! # SD-JWT Presentation
+
 use anyhow::{Result, anyhow};
-use base64ct::{Base64UrlUnpadded, Encoding};
 use chrono::Utc;
 use credibil_did::SignerExt;
 use credibil_infosec::Jws;
-use sha2::{Digest, Sha256};
 
 use crate::format::sd_jwt::{Disclosure, JwtType, KbJwtClaims};
 use crate::oid4vp::types::Matched;
@@ -11,9 +11,9 @@ use crate::server;
 
 /// Generate an IETF `dc+sd-jwt` format credential.
 #[derive(Debug)]
-pub struct SdJwtVpBuilder<C, V, S> {
-    matched: C,
-    client_id: V,
+pub struct SdJwtVpBuilder<M, C, S> {
+    matched: M,
+    client_id: C,
     nonce: Option<String>,
     signer: S,
 }
@@ -59,10 +59,10 @@ impl SdJwtVpBuilder<NoMatched, NoClientIdentifier, NoSigner> {
 }
 
 // Credentials to include in the presentation
-impl<'a, V, S> SdJwtVpBuilder<NoMatched, V, S> {
+impl<'a, C, S> SdJwtVpBuilder<NoMatched, C, S> {
     /// Set the claims for the ISO mDL credential.
     #[must_use]
-    pub fn matched(self, matched: &'a Matched) -> SdJwtVpBuilder<HasMatched<'a>, V, S> {
+    pub fn matched(self, matched: &'a Matched) -> SdJwtVpBuilder<HasMatched<'a>, C, S> {
         SdJwtVpBuilder {
             matched: HasMatched(matched),
             client_id: self.client_id,
@@ -73,12 +73,12 @@ impl<'a, V, S> SdJwtVpBuilder<NoMatched, V, S> {
 }
 
 // Credentials to include in the presentation
-impl<C, S> SdJwtVpBuilder<C, NoClientIdentifier, S> {
+impl<M, S> SdJwtVpBuilder<M, NoClientIdentifier, S> {
     /// Set the claims for the ISO mDL credential.
     #[must_use]
     pub fn client_id(
         self, client_id: impl Into<String>,
-    ) -> SdJwtVpBuilder<C, HasClientIdentifier, S> {
+    ) -> SdJwtVpBuilder<M, HasClientIdentifier, S> {
         SdJwtVpBuilder {
             matched: self.matched,
             client_id: HasClientIdentifier(client_id.into()),
@@ -89,7 +89,7 @@ impl<C, S> SdJwtVpBuilder<C, NoClientIdentifier, S> {
 }
 
 // Optional fields
-impl<C, V, S> SdJwtVpBuilder<C, V, S> {
+impl<M, C, S> SdJwtVpBuilder<M, C, S> {
     /// Set the credential Holder.
     #[must_use]
     pub fn nonce(mut self, nonce: impl Into<String>) -> Self {
@@ -99,10 +99,10 @@ impl<C, V, S> SdJwtVpBuilder<C, V, S> {
 }
 
 // SignerExt
-impl<C, V> SdJwtVpBuilder<C, V, NoSigner> {
+impl<M, C> SdJwtVpBuilder<M, C, NoSigner> {
     /// Set the credential `SignerExt`.
     #[must_use]
-    pub fn signer<S: SignerExt>(self, signer: &'_ S) -> SdJwtVpBuilder<C, V, HasSigner<'_, S>> {
+    pub fn signer<S: SignerExt>(self, signer: &'_ S) -> SdJwtVpBuilder<M, C, HasSigner<'_, S>> {
         SdJwtVpBuilder {
             matched: self.matched,
             client_id: self.client_id,
@@ -121,28 +121,35 @@ impl<S: SignerExt> SdJwtVpBuilder<HasMatched<'_>, HasClientIdentifier, HasSigner
     pub async fn build(self) -> Result<String> {
         let matched = self.matched.0;
 
-        // 1. issued SD-JWT
+        // issued SD-JWT (including disclosures)
         let Some(credential) = matched.issued.as_str() else {
             return Err(anyhow!("Invalid issued claim type"));
         };
 
-        // 2. disclosures
-        let mut disclosures = vec![];
+        // unpack disclosures
+        let mut split = credential.split('~');
+        split.next().ok_or_else(|| anyhow!("missing issuer-signed JWT"))?;
+
+        let disclosures = split.map(Disclosure::from).collect::<Result<Vec<_>>>()?;
+
+        // select disclosures to include in the presentation
+        let mut selected = vec![];
         for claim in &matched.claims {
-            let disclosure =
-                Disclosure::new(&claim.path[claim.path.len() - 1], claim.value.clone());
-            disclosures.push(disclosure.encoded()?);
+            let Some(disclosure) =
+                disclosures.iter().find(|d| d.name == claim.path[claim.path.len() - 1])
+            else {
+                return Err(anyhow!("disclosure not found"));
+            };
+            selected.push(disclosure.encode()?);
         }
 
-        // 3. key binding JWT
-        let sd = format!("{credential}~{}", disclosures.join("~"));
-        let sd_hash = Sha256::digest(&sd);
-
+        // key binding JWT
+        let sd = format!("{credential}~{}", selected.join("~"));
         let claims = KbJwtClaims {
             nonce: self.nonce.unwrap_or_default(),
             aud: self.client_id.0,
             iat: Utc::now(),
-            sd_hash: Base64UrlUnpadded::encode_string(sd_hash.as_slice()),
+            sd_hash: super::sd_hash(&sd),
         };
 
         let kb_jwt = Jws::builder()
@@ -155,8 +162,7 @@ impl<S: SignerExt> SdJwtVpBuilder<HasMatched<'_>, HasClientIdentifier, HasSigner
             .map_err(|e| server!("issue signing KB-JWT: {e}"))?
             .to_string();
 
-        // assemble
-        let presentation = format!("{sd}~{kb_jwt}");
-        Ok(presentation)
+        // assemble presentation
+        Ok(format!("{sd}~{kb_jwt}"))
     }
 }

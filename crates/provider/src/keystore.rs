@@ -11,86 +11,110 @@ use credibil_did::{
     VerificationMethodBuilder, VmKeyId,
 };
 use credibil_infosec::jose::jws::Key;
-use credibil_infosec::{Algorithm, Curve, KeyType, PublicKeyJwk, Signer};
-use credibil_vc::core::generate;
-use ed25519_dalek::{Signer as _, SigningKey};
+use credibil_infosec::{Algorithm, PublicKeyJwk};
+use ed25519_dalek::Signer as _;
 use rand_core::OsRng;
 
-use crate::blockstore::Mockstore;
-
-static DID_STORE: LazyLock<Arc<Mutex<HashMap<String, Document>>>> =
-    LazyLock::new(|| Arc::new(Mutex::new(HashMap::new())));
-
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Keyring {
-    url: String,
-    did: String,
-    signing_key: SigningKey,
-    verifying_key: ed25519_dalek::VerifyingKey,
+    keys: HashMap<String, KeyUse>,
 }
 
 impl Keyring {
     pub fn new() -> Self {
-        // generate key pair
-        let signing_key = SigningKey::generate(&mut OsRng);
-        let verifying_key = signing_key.verifying_key();
-        let url = format!("https://credibil.io/{}", generate::uri_token());
+        Self { keys: HashMap::new() }
 
-        let mut keyring = Self {
-            url: url.clone(),
-            did: String::new(),
-            signing_key,
-            verifying_key,
-        };
+        // generate key pair
+        //let signing_key = SigningKey::generate(&mut OsRng);
+        //let verifying_key = signing_key.verifying_key();
+        //let url = format!("https://credibil.io/{}", generate::uri_token());
+
+        //let mut keyring = Self {
+        //    url: url.clone(),
+        //    did: String::new(),
+        //    signing_key,
+        //    verifying_key,
+        //};
 
         // generate did:web document
-        let did = credibil_did::web::default_did(&url).expect("should construct DID");
-        let key_bytes = verifying_key.as_bytes().to_vec();
-        let vk = PublicKeyJwk::from_bytes(&key_bytes).expect("should convert verifying key to JWK");
-        let document = DocumentBuilder::new(&did)
-            .add_verifying_key(&vk, true)
-            .expect("should add verifying key")
-            .build();
+        //let did = credibil_did::web::default_did(&url).expect("should construct DID");
+        //let key_bytes = verifying_key.as_bytes().to_vec();
+        //let vk = PublicKeyJwk::from_bytes(&key_bytes).expect("should convert verifying key to JWK");
+        //let document = DocumentBuilder::new(&did)
+        //    .add_verifying_key(&vk, true)
+        //    .expect("should add verifying key")
+        //    .build();
 
-        println!("DID document: {:#?}", document);
+        //println!("DID document: {:#?}", document);
 
-        keyring.did = document.id.clone();
-        DID_STORE.lock().expect("should lock").insert(url, document);
+        //keyring.did = document.id.clone();
+        //DID_STORE.lock().expect("should lock").insert(url, document);
 
-        keyring
+        //keyring
     }
 
-    pub fn did(&self) -> String {
-        self.did.clone()
+    pub fn add(&mut self, key_id: impl Into<String>, key: impl Into<KeyUse>) {
+        self.keys.insert(key_id.into(), key.into());
     }
 
-    pub fn public_key(&self) -> x25519_dalek::PublicKey {
-        x25519_dalek::PublicKey::from(self.verifying_key.to_montgomery().to_bytes())
+    pub fn get(&self, key_id: &str) -> &KeyUse {
+        self.keys.get(key_id).expect("should get key")
     }
 }
 
-impl Signer for Keyring {
-    async fn try_sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
-        Ok(self.signing_key.sign(msg).to_bytes().to_vec())
+#[derive(Clone)]
+pub enum KeyUse {
+    Signing(SigningKey),
+    Encryption(EncryptionKey),
+}
+
+#[derive(Clone)]
+pub struct SigningKey {
+    inner: ed25519_dalek::SigningKey,
+}
+
+impl SigningKey {
+    pub fn new() -> Self {
+        Self {
+            inner: ed25519_dalek::SigningKey::generate(&mut OsRng),
+        }
     }
 
-    async fn verifying_key(&self) -> Result<Vec<u8>> {
-        Ok(self.signing_key.verifying_key().as_bytes().to_vec())
+    pub fn sign(&self, msg: &[u8]) -> Vec<u8> {
+        self.inner.sign(msg).to_bytes().to_vec()
     }
 
-    fn algorithm(&self) -> Algorithm {
+    pub fn verifying_key(&self) -> Vec<u8> {
+        self.inner.verifying_key().as_bytes().to_vec()
+    }
+
+    pub fn algorithm(&self) -> Algorithm {
         Algorithm::EdDSA
     }
+
+    // pub fn public_key(&self) -> x25519_dalek::PublicKey {
+    //     let verifying_key = self.signing_key.verifying_key();
+    //     x25519_dalek::PublicKey::from(verifying_key.to_montgomery().to_bytes())
+    // }
 }
 
-impl SignerExt for Keyring {
-    async fn verification_method(&self) -> Result<Key> {
-        let store = DID_STORE.lock().expect("should lock");
-        let doc = store.get(&self.url).unwrap();
-        let vm = &doc.verification_method.as_ref().unwrap()[0];
-        Ok(Key::KeyId(vm.id.clone()))
+impl From<SigningKey> for KeyUse {
+    fn from(key: SigningKey) -> Self {
+        KeyUse::Signing(key)
     }
 }
+
+#[derive(Clone)]
+pub struct EncryptionKey {
+    inner: x25519_dalek::StaticSecret,
+}
+
+impl EncryptionKey {
+    pub fn new() -> Self {
+        Self {
+            inner: x25519_dalek::StaticSecret::random_from_rng(&mut OsRng),
+        }
+    }
 
 // impl DidOperator for Keyring {
 //     fn verification(&self, purpose: KeyPurpose) -> Option<PublicKeyJwk> {
@@ -106,10 +130,7 @@ impl SignerExt for Keyring {
 //     }
 // }
 
-impl DidResolver for Keyring {
-    async fn resolve(&self, url: &str) -> anyhow::Result<Document> {
-        let key = url.strip_suffix("/did.json").unwrap();
-        let store = DID_STORE.lock().expect("should lock");
-        store.get(key).cloned().ok_or_else(|| anyhow!("document not found"))
+    pub fn public_key(&self) -> x25519_dalek::PublicKey {
+        x25519_dalek::PublicKey::from(self.inner.to_bytes())
     }
 }

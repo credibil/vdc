@@ -27,8 +27,12 @@ static ISSUER: LazyLock<Issuer> = LazyLock::new(Issuer::new);
 // Should request a Credential with the claims `vehicle_holder` and `first_name`.
 #[tokio::test]
 async fn multiple_claims() {
-    let all_vcs = WALLET.fetch();
+    BlockStore::put(&*VERIFIER, "owner", "VERIFIER", VERIFIER_ID, data::VERIFIER).await.unwrap();
 
+    // --------------------------------------------------
+    // Verifier creates an Authorization Request to request presentation of
+    // credentials and sends to Wallet
+    // --------------------------------------------------
     let query_json = json!({
         "credentials": [{
             "id": "my_credential",
@@ -42,10 +46,49 @@ async fn multiple_claims() {
             ]
         }]
     });
-
     let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
-    let results = query.execute(all_vcs).expect("should execute");
-    assert_eq!(results.len(), 1);
+
+    let request = GenerateRequest {
+        query,
+        client_id: VERIFIER_ID.to_string(),
+        device_flow: DeviceFlow::SameDevice,
+    };
+    let response =
+        endpoint::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
+
+    // extract request object and send to Wallet
+    let GenerateResponse::Object(request_object) = response.body else {
+        panic!("should be object");
+    };
+
+    // --------------------------------------------------
+    // Wallet processes the Authorization Request and returns an Authorization
+    // Response with the requested presentations in the VP token.
+    // --------------------------------------------------
+    let stored_vcs = WALLET.fetch();
+    let results = request_object.dcql_query.execute(stored_vcs).expect("should execute");
+    // assert_eq!(results.len(), 2);
+
+    let vp_token =
+        vp_token::generate(&request_object, &results, &*WALLET).await.expect("should get token");
+    // assert_eq!(vp_token.len(), 1);
+
+    let request = AuthorzationResponse {
+        vp_token,
+        state: request_object.state,
+    };
+
+    // --------------------------------------------------
+    // Verifier processes the Wallets's Authorization Response.
+    // --------------------------------------------------
+    let response =
+        endpoint::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
+
+    // --------------------------------------------------
+    // Wallet follows Verifier's redirect.
+    // --------------------------------------------------
+    assert_eq!(response.status, 200);
+    assert_eq!(response.body.redirect_uri.unwrap(), "http://localhost:3000/cb");
 }
 
 // Should return multiple Credentials.
@@ -108,22 +151,26 @@ async fn multiple_credentials() {
     let results = request_object.dcql_query.execute(stored_vcs).expect("should execute");
     assert_eq!(results.len(), 2);
 
-    let vp_token = vp_token::generate(&request_object.client_id, &results, &*WALLET)
-        .await
-        .expect("should get token");
+    let vp_token =
+        vp_token::generate(&request_object, &results, &*WALLET).await.expect("should get token");
     assert_eq!(vp_token.len(), 1);
 
     let request = AuthorzationResponse {
         vp_token,
         state: request_object.state,
     };
+
+    // --------------------------------------------------
+    // Verifier processes the Wallets's Authorization Response.
+    // --------------------------------------------------
     let response =
         endpoint::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
 
     // --------------------------------------------------
     // Wallet follows Verifier's redirect.
     // --------------------------------------------------
-    println!("{response:?}");
+    assert_eq!(response.status, 200);
+    assert_eq!(response.body.redirect_uri.unwrap(), "http://localhost:3000/cb");
 }
 
 // Should return one of a `pid`, OR the `other_pid`, OR both
@@ -132,8 +179,14 @@ async fn multiple_credentials() {
 // Should also optionally return the `nice_to_have` credential.
 #[tokio::test]
 async fn complex_query() {
+    BlockStore::put(&*VERIFIER, "owner", "VERIFIER", VERIFIER_ID, data::VERIFIER).await.unwrap();
+
     let all_vcs = WALLET.fetch();
 
+    // --------------------------------------------------
+    // Verifier creates an Authorization Request to request presentation of
+    // credentials and sends to Wallet
+    // --------------------------------------------------
     let query_json = json!({
         "credentials": [
             {
@@ -221,8 +274,14 @@ async fn complex_query() {
 // Should return an ID and address from any credential.
 #[tokio::test]
 async fn any_credential() {
+    BlockStore::put(&*VERIFIER, "owner", "VERIFIER", VERIFIER_ID, data::VERIFIER).await.unwrap();
+
     let all_vcs = WALLET.fetch();
 
+    // --------------------------------------------------
+    // Verifier creates an Authorization Request to request presentation of
+    // credentials and sends to Wallet
+    // --------------------------------------------------
     let query_json = json!({
         "credentials": [
             {
@@ -420,7 +479,7 @@ async fn populate() -> Wallet {
         "birthdate": "2000-01-01"
     });
     let jwt = sd_jwt(vct, claims, &holder_jwk).await;
-    let q = sd_jwt::to_queryable(&jwt).expect("should be SD-JWT");
+    let q = sd_jwt::to_queryable(&jwt, &*ISSUER).await.expect("should be SD-JWT");
     wallet.add(q);
 
     let vct = "https://othercredentials.example/pid";
@@ -437,7 +496,7 @@ async fn populate() -> Wallet {
         "birthdate": "2000-01-01"
     });
     let jwt = sd_jwt(vct, claims, &holder_jwk).await;
-    let q = sd_jwt::to_queryable(&jwt).expect("should be SD-JWT");
+    let q = sd_jwt::to_queryable(&jwt, &*ISSUER).await.expect("should be SD-JWT");
     wallet.add(q);
 
     let vct = "https://cred.example/residence_credential";
@@ -449,7 +508,7 @@ async fn populate() -> Wallet {
         },
     });
     let jwt = sd_jwt(vct, claims, &holder_jwk).await;
-    let q = sd_jwt::to_queryable(&jwt).expect("should be SD-JWT");
+    let q = sd_jwt::to_queryable(&jwt, &*ISSUER).await.expect("should be SD-JWT");
     wallet.add(q);
 
     let vct = "https://company.example/company_rewards";
@@ -457,7 +516,7 @@ async fn populate() -> Wallet {
         "rewards_number": "1234567890",
     });
     let jwt = sd_jwt(vct, claims, &holder_jwk).await;
-    let q = sd_jwt::to_queryable(&jwt).expect("should be SD-JWT");
+    let q = sd_jwt::to_queryable(&jwt, &*ISSUER).await.expect("should be SD-JWT");
     wallet.add(q);
 
     let doctype = "org.iso.18013.5.1.mDL";

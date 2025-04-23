@@ -2,11 +2,10 @@
 
 use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
-use credibil_infosec::cose::cbor;
 
 use crate::core::Kind;
 use crate::format::FormatProfile;
-use crate::format::mso_mdoc::{IssuerSigned, MobileSecurityObject};
+use crate::format::mso_mdoc::{DataItem, IssuerSigned, MobileSecurityObject, serde_cbor};
 use crate::oid4vp::types::{Claim, Queryable};
 
 /// Convert a `mso_mdoc` encoded credential to a `Queryable` object.
@@ -16,7 +15,7 @@ use crate::oid4vp::types::{Claim, Queryable};
 /// Returns an error if the decoding fails.
 pub fn to_queryable(issued: &str) -> Result<Queryable> {
     let mdoc_bytes = Base64UrlUnpadded::decode_vec(issued)?;
-    let mdoc: IssuerSigned = cbor::from_slice(&mdoc_bytes)?;
+    let mdoc: IssuerSigned = serde_cbor::from_slice(&mdoc_bytes)?;
 
     let mut claims = vec![];
     for (name_space, tags) in &mdoc.name_spaces {
@@ -31,11 +30,11 @@ pub fn to_queryable(issued: &str) -> Result<Queryable> {
     let Some(mso_bytes) = mdoc.issuer_auth.0.payload else {
         return Err(anyhow!("missing MSO payload"));
     };
-    let mso: MobileSecurityObject = cbor::from_slice(&mso_bytes)?;
+    let mso: DataItem<MobileSecurityObject> = serde_cbor::from_slice(&mso_bytes)?;
 
     Ok(Queryable {
         meta: FormatProfile::MsoMdoc {
-            doctype: mso.doc_type,
+            doctype: mso.0.doc_type,
         },
         claims,
         credential: Kind::String(issued.to_string()),
@@ -44,17 +43,12 @@ pub fn to_queryable(issued: &str) -> Result<Queryable> {
 
 fn unpack_claims(path: Vec<String>, value: &ciborium::Value) -> Vec<Claim> {
     match value {
-        ciborium::Value::Map(map) => {
-            let mut claims = vec![];
-
-            for (key, value) in map {
-                let mut new_path = path.clone();
-                new_path.push(key.as_text().unwrap().to_string());
-                claims.extend(unpack_claims(new_path, value));
-            }
-
-            claims
-        }
+        ciborium::Value::Map(map) => map.iter().fold(vec![], |mut acc, (key, value)| {
+            let mut new_path = path.clone();
+            new_path.push(key.as_text().unwrap_or_default().to_string());
+            acc.extend(unpack_claims(new_path, value));
+            acc
+        }),
         ciborium::Value::Text(txt) => {
             vec![Claim {
                 path,

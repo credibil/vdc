@@ -7,15 +7,16 @@ use base64ct::{Base64UrlUnpadded, Encoding};
 use ciborium::cbor;
 use coset::{CoseSign1Builder, HeaderBuilder, iana};
 use credibil_did::SignerExt;
-use credibil_infosec::cose::{CoseKey, Tag24};
+use credibil_infosec::Algorithm;
 use credibil_infosec::jose::jws::Key;
-use credibil_infosec::{Algorithm, Curve, KeyType};
 use rand::{Rng, rng};
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 
+use crate::core::serde_cbor;
 pub use crate::format::mso_mdoc::{
-    DigestIdGenerator, IssuerAuth, IssuerSigned, IssuerSignedItem, MobileSecurityObject,
+    CoseKey, Curve, DigestIdGenerator, IssuerAuth, IssuerSigned, IssuerSignedItem, KeyType,
+    MobileSecurityObject,
 };
 
 /// Generate an ISO mDL `mso_mdoc` format credential.
@@ -111,15 +112,16 @@ impl<S: SignerExt> MsoMdocBuilder<HasClaims, HasSigner<'_, S>> {
 
             // assemble `IssuerSignedItem`s for name space
             for (k, v) in claims {
-                let item = Tag24(IssuerSignedItem {
+                let item = IssuerSignedItem {
                     digest_id: id_gen.generate(),
                     random: rng().random::<[u8; 16]>().into(),
                     element_identifier: k.clone(),
                     element_value: cbor!(v)?,
-                });
+                }
+                .into_bytes();
 
                 // digest of `IssuerSignedItem` for MSO
-                let digest = Sha256::digest(&item.to_vec()?).to_vec();
+                let digest = Sha256::digest(&serde_cbor::to_vec(&item)?).to_vec();
                 mso.value_digests
                     .entry(name_space.clone())
                     .or_default()
@@ -141,7 +143,7 @@ impl<S: SignerExt> MsoMdocBuilder<HasClaims, HasSigner<'_, S>> {
         };
 
         // sign
-        let mso_bytes = Tag24(mso).to_vec()?;
+        let mso_bytes = serde_cbor::to_vec(&mso.into_bytes())?;
         let signature = signer.sign(&mso_bytes).await;
 
         // build COSE_Sign1
@@ -167,19 +169,17 @@ impl<S: SignerExt> MsoMdocBuilder<HasClaims, HasSigner<'_, S>> {
         mdoc.issuer_auth = IssuerAuth(cose_sign_1);
 
         // encode CBOR -> Base64Url -> return
-        Ok(Base64UrlUnpadded::encode_string(&mdoc.to_vec()?))
+        Ok(Base64UrlUnpadded::encode_string(&serde_cbor::to_vec(&mdoc)?))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use credibil_infosec::KeyType;
-    use credibil_infosec::cose::cbor;
     use provider::issuer::Issuer;
     use serde_json::json;
 
     use super::*;
-    use crate::format::mso_mdoc::DigestAlgorithm;
+    use crate::format::mso_mdoc::{DataItem, DigestAlgorithm, serde_cbor};
 
     #[tokio::test]
     async fn roundtrip() {
@@ -202,10 +202,11 @@ mod tests {
 
         // check credential deserializes back into original mdoc/mso structures
         let mdoc_bytes = Base64UrlUnpadded::decode_vec(&mdl).expect("should decode");
-        let mdoc: IssuerSigned = cbor::from_slice(&mdoc_bytes).expect("should deserialize");
+        let mdoc: IssuerSigned = serde_cbor::from_slice(&mdoc_bytes).expect("should deserialize");
 
         let mso_bytes = mdoc.issuer_auth.0.payload.expect("should have payload");
-        let mso: MobileSecurityObject = cbor::from_slice(&mso_bytes).expect("should deserialize");
+        let mso: DataItem<MobileSecurityObject> =
+            serde_cbor::from_slice(&mso_bytes).expect("should deserialize");
 
         assert_eq!(mso.digest_algorithm, DigestAlgorithm::Sha256);
         assert_eq!(mso.device_key_info.device_key.kty, KeyType::Okp);

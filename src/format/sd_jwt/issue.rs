@@ -194,8 +194,8 @@ impl<S: SignerExt> SdJwtVcBuilder<Vct, HasIssuer, HasKeyBinding, HasClaims, HasS
         // create disclosures
         for (name, value) in self.claims.0 {
             let disclosure = Disclosure::new(name, value);
-            disclosures.push(disclosure.encoded()?);
-            sd_hashes.push(disclosure.hashed()?);
+            disclosures.push(disclosure.encode()?);
+            sd_hashes.push(disclosure.hash()?);
         }
 
         // create JWT (and sign)

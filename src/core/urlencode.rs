@@ -45,7 +45,7 @@ use serde::Deserialize;
 /// // TODO: Add errors
 pub fn from_str<T>(s: &str) -> Result<T>
 where
-    T: for<'a> Deserialize<'a>,
+    T: for<'de> Deserialize<'de>,
 {
     // HACK: deserializing with `serde_json` makes decoding trivial and takes ~60µs
     let decoded = percent_decode_str(s).decode_utf8_lossy();
