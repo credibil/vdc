@@ -119,9 +119,9 @@ serde_json = { version = "1.0.140", features = ["alloc"] }
 
 [patch.crates-io]
 # credibil-did = { path = "../did" }
-# credibil-infosec = { path = "../infosec" }
+credibil-infosec = { path = "../infosec" }
 credibil-did = { git = "https://github.com/credibil/did.git" }
-credibil-infosec = { git = "https://github.com/credibil/infosec.git" }
+# credibil-infosec = { git = "https://github.com/credibil/infosec.git" }
 
 [profile.release]
 # optimize for small code size
