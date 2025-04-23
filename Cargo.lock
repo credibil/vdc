@@ -533,6 +533,7 @@ dependencies = [
 [[package]]
 name = "credibil-did"
 version = "0.1.2"
+source = "git+https://github.com/credibil/did.git#8930da6081ed45ecc8f263eb8602cb05cbcccffa"
 dependencies = [
  "anyhow",
  "base64ct",
