@@ -7,7 +7,7 @@ use crate::core::serde_cbor;
 use crate::format::mso_mdoc::IssuerSigned;
 // use crate::format::mso_mdoc::{
 //     DeviceAuth, DeviceMac, DeviceNameSpaces, DeviceResponse, DeviceSignature, DeviceSigned,
-//     Document, IssuerSigned, ResponseStatus, Tag24, VersionString,
+//     Document, IssuerSigned, ResponseStatus, DataItem, VersionString,
 // };
 use crate::oid4vp::types::Matched;
 
@@ -139,7 +139,7 @@ impl<S: Signer> DeviceResponseBuilder<HasMatched<'_>, HasClientIdentifier, HasSi
         //     doc_type: "org.iso.18013.5.1.mDL".to_string(),
         //     issuer_signed,
         //     device_signed: DeviceSigned {
-        //         name_spaces: Tag24(DeviceNameSpaces::new()),
+        //         name_spaces: DataItem(DeviceNameSpaces::new()),
         //         device_auth: DeviceAuth::Signature(DeviceSignature(CoseSign1)),
         //     },
         //     errors: None,

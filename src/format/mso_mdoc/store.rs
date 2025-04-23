@@ -5,7 +5,7 @@ use base64ct::{Base64UrlUnpadded, Encoding};
 
 use crate::core::Kind;
 use crate::format::FormatProfile;
-use crate::format::mso_mdoc::{IssuerSigned, MobileSecurityObject, Tag24, serde_cbor};
+use crate::format::mso_mdoc::{DataItem, IssuerSigned, MobileSecurityObject, serde_cbor};
 use crate::oid4vp::types::{Claim, Queryable};
 
 /// Convert a `mso_mdoc` encoded credential to a `Queryable` object.
@@ -30,7 +30,7 @@ pub fn to_queryable(issued: &str) -> Result<Queryable> {
     let Some(mso_bytes) = mdoc.issuer_auth.0.payload else {
         return Err(anyhow!("missing MSO payload"));
     };
-    let mso: Tag24<MobileSecurityObject> = serde_cbor::from_slice(&mso_bytes)?;
+    let mso: DataItem<MobileSecurityObject> = serde_cbor::from_slice(&mso_bytes)?;
 
     Ok(Queryable {
         meta: FormatProfile::MsoMdoc {

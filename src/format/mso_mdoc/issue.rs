@@ -179,7 +179,7 @@ mod tests {
     use serde_json::json;
 
     use super::*;
-    use crate::format::mso_mdoc::{DigestAlgorithm, Tag24, serde_cbor};
+    use crate::format::mso_mdoc::{DataItem, DigestAlgorithm, serde_cbor};
 
     #[tokio::test]
     async fn roundtrip() {
@@ -205,7 +205,7 @@ mod tests {
         let mdoc: IssuerSigned = serde_cbor::from_slice(&mdoc_bytes).expect("should deserialize");
 
         let mso_bytes = mdoc.issuer_auth.0.payload.expect("should have payload");
-        let mso: Tag24<MobileSecurityObject> =
+        let mso: DataItem<MobileSecurityObject> =
             serde_cbor::from_slice(&mso_bytes).expect("should deserialize");
 
         assert_eq!(mso.digest_algorithm, DigestAlgorithm::Sha256);
