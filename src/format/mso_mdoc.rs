@@ -157,9 +157,9 @@ pub type DeviceRetrievalMethods = Vec<DeviceRetrievalMethod>;
 /// ```
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct DeviceRetrievalMethod(
-    // The type of transfer method.
+    /// The type of transfer method.
     pub RetrievalMethod,
-    // The version of the transfer method.
+    /// The version of the transfer method.
     pub u64,
     /// Additional options for each connection.
     pub RetrievalOptions,
@@ -195,6 +195,8 @@ pub enum RetrievalOptions {
     WifiOptions,
 }
 
+/// Wifi options.
+///
 /// ```cddl
 /// WifiOptions = {
 ///     ? 0: tstr,  ; Pass-phrase Info Pass-phrase
@@ -208,7 +210,7 @@ pub struct WifiOptions {
     /// Pass-phrase information.
     pub passphrase: Option<String>,
 
-    /// Operating class.
+    /// Channel info operating class.
     pub operating_class: Option<u64>,
 
     /// Channel info channel number.
@@ -216,6 +218,59 @@ pub struct WifiOptions {
 
     /// Band Info supported bands.
     pub supported_bands: Option<Vec<u8>>,
+}
+
+impl Serialize for WifiOptions {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = BTreeMap::<i64, Value>::new();
+
+        if let Some(ref passphrase) = self.passphrase {
+            map.insert(0, passphrase.clone().into());
+        }
+        if let Some(class) = self.operating_class {
+            map.insert(1, class.into());
+        }
+        if let Some(number) = self.channel_number {
+            map.insert(2, number.into());
+        }
+        if let Some(ref bands) = self.supported_bands {
+            map.insert(3, bands.clone().into());
+        }
+        map.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for WifiOptions {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let map = BTreeMap::<i64, Value>::deserialize(deserializer)?;
+
+        let mut wifi = Self {
+            passphrase: None,
+            operating_class: None,
+            channel_number: None,
+            supported_bands: None,
+        };
+
+        if let Some(passphrase) = map.get(&0) {
+            wifi.passphrase = Some(passphrase.deserialized().map_err(de::Error::custom)?);
+        }
+        if let Some(class) = map.get(&1) {
+            wifi.operating_class = Some(class.deserialized().map_err(de::Error::custom)?);
+        }
+        if let Some(number) = map.get(&2) {
+            wifi.channel_number = Some(number.deserialized().map_err(de::Error::custom)?);
+        }
+        if let Some(bands) = map.get(&3) {
+            wifi.supported_bands = Some(
+                bands
+                    .as_bytes()
+                    .cloned()
+                    .ok_or_else(|| de::Error::custom("`supported_bands` is not bytes"))?,
+            );
+        }
+
+        Ok(wifi)
+    }
 }
 
 /// Bluetooth low energy options.
@@ -253,13 +308,13 @@ impl Serialize for BleOptions {
         map.insert(0, self.server_mode.into());
         map.insert(1, self.client_mode.into());
         if let Some(ref uuid) = self.server_mode_uuid {
-            map.insert(10, Value::Bytes(uuid.clone()));
+            map.insert(10, uuid.clone().into());
         }
         if let Some(ref uuid) = self.client_mode_uuid {
-            map.insert(11, Value::Bytes(uuid.clone()));
+            map.insert(11, uuid.clone().into());
         }
         if let Some(ref address) = self.device_address {
-            map.insert(20, Value::Bytes(address.clone()));
+            map.insert(20, address.clone().into());
         }
         map.serialize(serializer)
     }
@@ -302,10 +357,46 @@ impl<'de> Deserialize<'de> for BleOptions {
     }
 }
 
+/// NFC options.
+///
+/// ```cddl
 // NfcOptions = {
 //     0 : uint,   ; Maximum length of command data field
 //     1 : uint    ; Maximum length of response data field
 // }
+/// ```
+#[derive(Clone, Debug)]
+pub struct NfcOptions {
+    /// Maximum length of command data field.
+    pub max_command_len: u64,
+
+    /// Maximum length of response data field.
+    pub max_response_len: u64,
+}
+
+impl Serialize for NfcOptions {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = BTreeMap::<i64, Value>::new();
+        map.insert(0, self.max_command_len.into());
+        map.insert(1, self.max_response_len.into());
+        map.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for NfcOptions {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let map = BTreeMap::<i64, Value>::deserialize(deserializer)?;
+        let max_command_len =
+            map.get(&0).ok_or_else(|| de::Error::missing_field("max_command_len"))?;
+        let max_response_len =
+            map.get(&1).ok_or_else(|| de::Error::missing_field("max_response_len"))?;
+
+        Ok(Self {
+            max_command_len: max_command_len.deserialized().map_err(de::Error::custom)?,
+            max_response_len: max_response_len.deserialized().map_err(de::Error::custom)?,
+        })
+    }
+}
 
 /// Supported server retrieval methods.
 ///
@@ -937,7 +1028,7 @@ impl<T: Serialize> Serialize for Tag24<T> {
     fn serialize<S: Serializer>(&self, s: S) -> anyhow::Result<S::Ok, S::Error> {
         let inner = serde_cbor::to_vec(&self.0)
             .map_err(|e| ser::Error::custom(format!("issue serializing Tag24: {e}")))?;
-        Value::Tag(24, Box::new(Value::Bytes(inner))).serialize(s)
+        Value::Tag(24, Box::new(inner.into())).serialize(s)
     }
 }
 

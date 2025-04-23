@@ -70,9 +70,9 @@ impl Serialize for CoseKey {
         let mut map = BTreeMap::<i64, Value>::new();
         map.insert(KTY, cbor!(self.kty).map_err(ser::Error::custom)?);
         map.insert(CRV, cbor!(self.crv).map_err(ser::Error::custom)?);
-        map.insert(X, Value::Bytes(self.clone().x));
+        map.insert(X, self.clone().x.into());
         if let Some(y) = self.clone().y {
-            map.insert(Y, Value::Bytes(y));
+            map.insert(Y, y.into());
         }
         map.serialize(serializer)
     }
@@ -93,7 +93,7 @@ impl<'de> Deserialize<'de> for CoseKey {
             kty: kty.deserialized().map_err(de::Error::custom)?,
             crv: crv.deserialized().map_err(de::Error::custom)?,
             x: x.as_bytes().cloned().ok_or_else(|| de::Error::custom("x is not bytes"))?,
-            // x: x.deserialized().map_err(de::Error::custom)?,
+            // x: x.deserialized().map_err(de::Error::custom)?.try_into()?,
             y: None,
         };
 
