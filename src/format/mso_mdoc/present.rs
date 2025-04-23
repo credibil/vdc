@@ -130,7 +130,7 @@ impl<S: Signer> DeviceResponseBuilder<HasMatched<'_>, HasClientIdentifier, HasSi
             return Err(anyhow::anyhow!("mso_mdoc credential is not a string"));
         };
 
-        let decoded = Base64Unpadded::decode_vec(&issued)?;
+        let decoded = Base64Unpadded::decode_vec(issued)?;
         let issuer_signed: IssuerSigned = serde_cbor::from_slice(&decoded)?;
         println!("issuer_signed: {issuer_signed:?}");
 
