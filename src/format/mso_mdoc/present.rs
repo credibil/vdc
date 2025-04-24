@@ -3,7 +3,7 @@
 //! This module supports presentation of ISO `mso_mdoc` credentials.
 
 use anyhow::{Result, anyhow};
-use base64ct::{Base64Unpadded, Encoding};
+use base64ct::{Base64UrlUnpadded, Encoding};
 use coset::{CoseSign1Builder, HeaderBuilder, iana};
 use credibil_did::SignerExt;
 use credibil_infosec::Algorithm;
@@ -132,25 +132,22 @@ impl<S: SignerExt> DeviceResponseBuilder<HasMatched<'_>, HasClientIdentifier, Ha
     /// TODO: Document errors
     #[allow(clippy::unused_async)]
     pub async fn build(self) -> Result<String> {
-        let matched = self.matched.0;
-        println!("matched: {matched:?}");
-
         let Kind::String(issued) = &self.matched.0.issued else {
-            return Err(anyhow::anyhow!("mso_mdoc credential is not a string"));
+            return Err(anyhow::anyhow!("`mso_mdoc` credential is not a string"));
         };
 
-        let decoded = Base64Unpadded::decode_vec(issued)?;
+        let decoded = Base64UrlUnpadded::decode_vec(issued)?;
         let issuer_signed: IssuerSigned = serde_cbor::from_slice(&decoded)?;
 
         // signature
         let signer = self.signer.0;
 
-        //     self.client_id.0.clone(),
         let client_id_hash =
-            Sha256::digest(&serde_cbor::to_vec(&[self.client_id.0, "nonce".to_string()])?).to_vec();
+            Sha256::digest(&serde_cbor::to_vec(&[self.client_id.0, "mdoc_nonce".to_string()])?)
+                .to_vec();
         let response_uri_hash = Sha256::digest(&serde_cbor::to_vec(&[
             "response_uri".to_string(),
-            "nonce".to_string(),
+            "mdoc_nonce".to_string(),
         ])?)
         .to_vec();
 
@@ -203,12 +200,12 @@ impl<S: SignerExt> DeviceResponseBuilder<HasMatched<'_>, HasClientIdentifier, Ha
             status: ResponseStatus::Ok,
         };
 
-        println!("device_response: {response:?}");
 
         // FIXME: encrypt Authorization Response Object using the Verifier
         //        Metadata from the Authorization Request Object
-
-        todo!()
+        
+        // encode CBOR -> Base64Url -> return
+        Ok(Base64UrlUnpadded::encode_string(&serde_cbor::to_vec(&response)?))
     }
 }
 
@@ -222,27 +219,33 @@ impl<S: SignerExt> DeviceResponseBuilder<HasMatched<'_>, HasClientIdentifier, Ha
 
 #[cfg(test)]
 mod tests {
-    use base64ct::{Base64UrlUnpadded, Encoding};
     use provider::issuer::Issuer;
+    use serde_json::{Value, json};
 
-    // use serde_json::json;
     use super::*;
-    // use crate::format::mso_mdoc::serde_cbor;
+    use crate::format::mso_mdoc::MsoMdocBuilder;
+    use crate::oid4vp::types::Claim;
 
     #[tokio::test]
-    async fn build_response() {
-        // let claims_json = json!({
-        //     "org.iso.18013.5.1": {
-        //         "given_name": "Normal",
-        //         "family_name": "Person",
-        //         "portrait": "https://example.com/portrait.jpg",
-        //     },
-        // });
-        // let claims = claims_json.as_object().unwrap();
+    async fn build_vp() {
+        let issued = build_vc().await;
+
+        let given_name = &Claim {
+            path: vec!["org.iso.18013.5.1".to_string(), "given_name".to_string()],
+            value: Value::String("Normal".to_string()),
+        };
+        let family_name = &Claim {
+            path: vec!["org.iso.18013.5.1".to_string(), "family_name".to_string()],
+            value: Value::String("Person".to_string()),
+        };
+        let portrait = &Claim {
+            path: vec!["org.iso.18013.5.1".to_string(), "portrait".to_string()],
+            value: Value::String("https://example.com/portrait.jpg".to_string()),
+        };
 
         let matched = Matched {
-            claims: vec![],
-            issued: &Kind::String("".to_string()),
+            claims: vec![given_name, family_name, portrait],
+            issued: &Kind::String(issued),
         };
 
         let mdl = DeviceResponseBuilder::new()
@@ -254,15 +257,44 @@ mod tests {
             .await
             .expect("should build");
 
-        // check credential deserializes back into original mdoc/mso structures
-        let mdoc_bytes = Base64UrlUnpadded::decode_vec(&mdl).expect("should decode");
-        let mdoc: IssuerSigned = serde_cbor::from_slice(&mdoc_bytes).expect("should deserialize");
+        dbg!(mdl);
 
-        let _mso_bytes = mdoc.issuer_auth.0.payload.expect("should have payload");
+        // check credential deserializes back into original mdoc/mso structures
+        // let mdoc_bytes = Base64UrlUnpadded::decode_vec(&mdl).expect("should decode");
+        // let mdoc: IssuerSigned = serde_cbor::from_slice(&mdoc_bytes).expect("should deserialize");
+
+        // let _mso_bytes = mdoc.issuer_auth.0.payload.expect("should have payload");
         // let mso: DataItem<MobileSecurityObject> =
         //     serde_cbor::from_slice(&mso_bytes).expect("should deserialize");
 
         // assert_eq!(mso.digest_algorithm, DigestAlgorithm::Sha256);
         // assert_eq!(mso.device_key_info.device_key.kty, KeyType::Okp);
+    }
+
+    async fn build_vc() -> String {
+        let claims_json = json!({
+            "org.iso.18013.5.1": {
+                "given_name": "Normal",
+                "family_name": "Person",
+                "portrait": "https://example.com/portrait.jpg",
+            },
+        });
+        let claims = claims_json.as_object().unwrap();
+
+        MsoMdocBuilder::new()
+            .doctype("org.iso.18013.5.1.mDL")
+            .claims(claims.clone())
+            .signer(&Issuer::new())
+            .build()
+            .await
+            .expect("should build")
+
+        // check credential deserializes back into original mdoc/mso structures
+        // let mdoc_bytes = Base64UrlUnpadded::decode_vec(&mdl).expect("should decode");
+        // let mdoc: IssuerSigned = serde_cbor::from_slice(&mdoc_bytes).expect("should deserialize");
+
+        // let mso_bytes = mdoc.issuer_auth.0.payload.expect("should have payload");
+        // let mso: DataItem<MobileSecurityObject> =
+        //     serde_cbor::from_slice(&mso_bytes).expect("should deserialize");
     }
 }

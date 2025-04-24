@@ -182,7 +182,7 @@ mod tests {
     use crate::format::mso_mdoc::{DataItem, DigestAlgorithm, serde_cbor};
 
     #[tokio::test]
-    async fn roundtrip() {
+    async fn build_vc() {
         let claims_json = json!({
             "org.iso.18013.5.1": {
                 "given_name": "Normal",
