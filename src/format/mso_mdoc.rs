@@ -1021,10 +1021,11 @@ pub struct SessionTranscript(
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Handover {
-    /// OID4VPHandover
+    /// Handover element when the presentation request is invoked normally.
     Oid4Vp(OID4VPHandover),
 
-    /// OpenID4VPDCAPIHandover
+    /// Handover element when the presentation request is invoked using the
+    /// Digital Credentials API.
     Oid4VpDcApi(OpenID4VPDCAPIHandover),
 }
 
