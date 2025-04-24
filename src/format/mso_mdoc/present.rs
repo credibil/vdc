@@ -13,9 +13,8 @@ use sha2::{Digest, Sha256};
 use crate::Kind;
 use crate::core::serde_cbor;
 use crate::format::mso_mdoc::{
-    CipherSuite, CoseKey, Curve, DataItem, DeviceAuth, DeviceAuthentication, DeviceEngagement,
-    DeviceNameSpaces, DeviceResponse, DeviceSignature, DeviceSigned, Document, IssuerSigned,
-    KeyType, OpenID4VPDCAPIHandover, OpenID4VPDCAPIHandoverInfo, ResponseStatus, Security,
+    DataItem, DeviceAuth, DeviceAuthentication, DeviceNameSpaces, DeviceResponse, DeviceSignature,
+    DeviceSigned, Document, Handover, IssuerSigned, OID4VPHandover, ResponseStatus,
     SessionTranscript, VersionString,
 };
 use crate::oid4vp::types::Matched;
@@ -87,10 +86,12 @@ impl<'a, C, S> DeviceResponseBuilder<NoMatched, C, S> {
 impl<M, S> DeviceResponseBuilder<M, NoClientIdentifier, S> {
     /// Set the claims for the ISO mDL credential.
     #[must_use]
-    pub fn client_id(self, client_id: String) -> DeviceResponseBuilder<M, HasClientIdentifier, S> {
+    pub fn client_id(
+        self, client_id: impl Into<String>,
+    ) -> DeviceResponseBuilder<M, HasClientIdentifier, S> {
         DeviceResponseBuilder {
             matched: self.matched,
-            client_id: HasClientIdentifier(client_id),
+            client_id: HasClientIdentifier(client_id.into()),
             nonce: self.nonce,
             signer: self.signer,
         }
@@ -134,9 +135,6 @@ impl<S: SignerExt> DeviceResponseBuilder<HasMatched<'_>, HasClientIdentifier, Ha
         let matched = self.matched.0;
         println!("matched: {matched:?}");
 
-        let client_id = self.client_id.0;
-        println!("client_id: {client_id:?}");
-
         let Kind::String(issued) = &self.matched.0.issued else {
             return Err(anyhow::anyhow!("mso_mdoc credential is not a string"));
         };
@@ -147,39 +145,21 @@ impl<S: SignerExt> DeviceResponseBuilder<HasMatched<'_>, HasClientIdentifier, Ha
         // signature
         let signer = self.signer.0;
 
-        let device_key = CoseKey {
-            kty: KeyType::Okp,
-            crv: Curve::Ed25519,
-            x: signer.verifying_key().await?,
-            y: None,
-        };
-
-        let de = DeviceEngagement {
-            version: VersionString::One,
-            security: Security(CipherSuite::Suite1, device_key.into_bytes()),
-            device_retrieval_methods: None,
-            server_retrieval_methods: None,
-            protocol_info: None,
-        };
-
-        let reader_key = CoseKey {
-            kty: KeyType::Okp,
-            crv: Curve::Ed25519,
-            x: signer.verifying_key().await?,
-            y: None,
-        };
-
-        let info = OpenID4VPDCAPIHandoverInfo(
-            "Origin".to_string(),
+        //     self.client_id.0.clone(),
+        let client_id_hash =
+            Sha256::digest(&serde_cbor::to_vec(&[self.client_id.0, "nonce".to_string()])?).to_vec();
+        let response_uri_hash = Sha256::digest(&serde_cbor::to_vec(&[
+            "response_uri".to_string(),
             "nonce".to_string(),
-            vec![1, 2, 3, 4, 5, 6, 7, 8],
-        );
-        let info_hash = Sha256::digest(&serde_cbor::to_vec(&info.into_bytes())?).to_vec();
-        let handover = OpenID4VPDCAPIHandover("OpenID4VPDCAPIHandover".to_string(), info_hash);
+        ])?)
+        .to_vec();
+
+        let handover =
+            OID4VPHandover(client_id_hash, response_uri_hash, self.nonce.unwrap_or_default());
 
         let device_authn = DeviceAuthentication(
             "DeviceAuthentication",
-            SessionTranscript(de.into_bytes(), reader_key.into_bytes(), handover),
+            SessionTranscript(None, None, Handover::Oid4Vp(handover)),
             "DocType".to_string(),
             DataItem(DeviceNameSpaces::new()),
         );
@@ -229,5 +209,60 @@ impl<S: SignerExt> DeviceResponseBuilder<HasMatched<'_>, HasClientIdentifier, Ha
         //        Metadata from the Authorization Request Object
 
         todo!()
+    }
+}
+
+// let info = OpenID4VPDCAPIHandoverInfo(
+//     self.client_id.0.clone(),
+//     self.nonce.unwrap_or_default(),
+//     vec![1, 2, 3, 4, 5, 6, 7, 8],
+// );
+// let info_hash = Sha256::digest(&serde_cbor::to_vec(&info.into_bytes())?).to_vec();
+// let handover = OpenID4VPDCAPIHandover("OpenID4VPDCAPIHandover".to_string(), info_hash);
+
+#[cfg(test)]
+mod tests {
+    use base64ct::{Base64UrlUnpadded, Encoding};
+    use provider::issuer::Issuer;
+
+    // use serde_json::json;
+    use super::*;
+    // use crate::format::mso_mdoc::serde_cbor;
+
+    #[tokio::test]
+    async fn build_response() {
+        // let claims_json = json!({
+        //     "org.iso.18013.5.1": {
+        //         "given_name": "Normal",
+        //         "family_name": "Person",
+        //         "portrait": "https://example.com/portrait.jpg",
+        //     },
+        // });
+        // let claims = claims_json.as_object().unwrap();
+
+        let matched = Matched {
+            claims: vec![],
+            issued: &Kind::String("".to_string()),
+        };
+
+        let mdl = DeviceResponseBuilder::new()
+            .matched(&matched)
+            .client_id("client_id")
+            .nonce("nonce")
+            .signer(&Issuer::new())
+            .build()
+            .await
+            .expect("should build");
+
+        // check credential deserializes back into original mdoc/mso structures
+        let mdoc_bytes = Base64UrlUnpadded::decode_vec(&mdl).expect("should decode");
+        let mdoc: IssuerSigned = serde_cbor::from_slice(&mdoc_bytes).expect("should deserialize");
+
+        let _mso_bytes = mdoc.issuer_auth.0.payload.expect("should have payload");
+        // let mso: DataItem<MobileSecurityObject> =
+        //     serde_cbor::from_slice(&mso_bytes).expect("should deserialize");
+
+        // assert_eq!(mso.digest_algorithm, DigestAlgorithm::Sha256);
+        // assert_eq!(mso.device_key_info.device_key.kty, KeyType::Okp);
     }
 }
