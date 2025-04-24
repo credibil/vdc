@@ -2,7 +2,7 @@
 
 use anyhow::{Result, anyhow};
 use chrono::Utc;
-use credibil_did::SignerExt;
+use credibil_identity::SignerExt;
 use credibil_infosec::Jws;
 
 use crate::format::sd_jwt::{Disclosure, JwtType, KbJwtClaims};
@@ -152,10 +152,12 @@ impl<S: SignerExt> SdJwtVpBuilder<HasMatched<'_>, HasClientIdentifier, HasSigner
             sd_hash: super::sd_hash(&sd),
         };
 
+        let key = self.signer.0.verification_method().await?;
+        let key_ref = key.try_into()?;
         let kb_jwt = Jws::builder()
             .typ(JwtType::KbJwt)
             .payload(claims)
-            .key_ref(&self.signer.0.verification_method().await?)
+            .key_ref(&key_ref)
             .add_signer(self.signer.0)
             .build()
             .await

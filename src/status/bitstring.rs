@@ -10,7 +10,7 @@ use base64ct::{Base64UrlUnpadded, Encoding};
 use bitvec::bits;
 use bitvec::order::Lsb0;
 use bitvec::view::BitView;
-use credibil_did::SignerExt;
+use credibil_identity::SignerExt;
 use credibil_infosec::jose::jws;
 use flate2::write::GzEncoder;
 use serde_json::{Map, Value};
@@ -150,8 +150,9 @@ pub async fn credential(
         .verification_method()
         .await
         .map_err(|e| anyhow!("issue getting signing key: {e}"))?;
+    let key_ref = key.try_into()?;
 
-    jws::encode(&W3cVcClaims::from(vc), &key, signer)
+    jws::encode(&W3cVcClaims::from(vc), &key_ref, signer)
         .await
         .map_err(|e| anyhow!("issue generating `jwt_vc_json` credential: {e}"))
 }

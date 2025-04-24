@@ -33,7 +33,7 @@ bytes = "1.10.1"
 chrono = { version = "0.4.40", features = ["serde"] }
 ciborium.workspace = true
 coset = "0.3.8"
-credibil-did.workspace = true
+credibil-identity.workspace = true
 credibil-infosec.workspace = true
 derive_builder = "0.20.2"
 fastrand = "2.3.0"
@@ -112,7 +112,8 @@ nursery = "warn"
 anyhow = "1.0.98"
 base64ct = { version = "1.7.3", features = ["std"] }
 ciborium = "0.2.2"
-credibil-did = "0.1.2"
+#credibil-did = "0.1.2"
+credibil-identity = { path = "../identity" }
 credibil-infosec = "0.1.2"
 credibil-vc = { path = "." }
 ed25519-dalek = "2.1.1"
@@ -122,7 +123,7 @@ serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140", features = ["alloc"] }
 
 [patch.crates-io]
-credibil-did = { git = "https://github.com/credibil/did.git" }
+# credibil-did = { git = "https://github.com/credibil/did.git" }
 credibil-infosec = { git = "https://github.com/credibil/infosec.git" }
 # credibil-did = { path = "../did" }
 # credibil-infosec = { path = "../infosec" }

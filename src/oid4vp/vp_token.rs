@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use credibil_did::SignerExt;
+use credibil_identity::SignerExt;
 
 // use crate::format::mso_mdoc::DeviceResponseBuilder;
 use crate::format::sd_jwt::SdJwtVpBuilder;

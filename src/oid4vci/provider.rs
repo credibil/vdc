@@ -13,7 +13,7 @@ use std::future::Future;
 
 use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
-use credibil_did::{DidResolver, SignerExt};
+use credibil_identity::{IdentityResolver, SignerExt};
 use serde::{Deserialize, Serialize};
 
 use crate::BlockStore;
@@ -22,14 +22,14 @@ use crate::status::issuer::Status;
 
 /// Issuer Provider trait.
 pub trait Provider:
-    Metadata + Subject + StateStore + SignerExt + DidResolver + Status + Clone
+    Metadata + Subject + StateStore + SignerExt + IdentityResolver + Status + Clone
 {
 }
 
 /// A blanket implementation for `Provider` trait so that any type implementing
 /// the required super traits is considered a `Provider`.
 impl<T> Provider for T where
-    T: Metadata + Subject + StateStore + SignerExt + DidResolver + Status + Clone
+    T: Metadata + Subject + StateStore + SignerExt + IdentityResolver + Status + Clone
 {
 }
 

@@ -11,7 +11,7 @@
 
 use anyhow::Result;
 use chrono::Utc;
-use credibil_did::SignerExt;
+use credibil_identity::SignerExt;
 use credibil_infosec::{Jws, PublicKeyJwk};
 use serde_json::{Map, Value};
 
@@ -212,10 +212,12 @@ impl<S: SignerExt> SdJwtVcBuilder<Vct, HasIssuer, HasKeyBinding, HasClaims, HasS
             ..SdJwtClaims::default()
         };
 
+        let key = self.signer.0.verification_method().await?;
+        let key_ref = key.try_into()?;
         let jws = Jws::builder()
             .typ(JwtType::SdJwt)
             .payload(claims)
-            .key_ref(&self.signer.0.verification_method().await?)
+            .key_ref(&key_ref)
             .add_signer(self.signer.0)
             .build()
             .await

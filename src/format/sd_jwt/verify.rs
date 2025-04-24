@@ -1,7 +1,7 @@
 //! # sd-jwt Verification
 
 use anyhow::{Result, anyhow};
-use credibil_did::DidResolver;
+use credibil_identity::IdentityResolver;
 use credibil_infosec::jose::jws;
 use credibil_infosec::jose::jwt::Jwt;
 
@@ -16,7 +16,7 @@ use crate::oid4vp::types::{Claim, RequestObject};
 /// Returns an error if the SD-JWT presentation is invalid or if verification
 /// fails.
 pub async fn verify_vp(
-    vp: &str, request_object: &RequestObject, resolver: &impl DidResolver,
+    vp: &str, request_object: &RequestObject, resolver: &impl IdentityResolver,
 ) -> Result<Vec<Claim>> {
     // extract components of the sd-jwt presentation
     let split = vp.split('~').collect::<Vec<_>>();

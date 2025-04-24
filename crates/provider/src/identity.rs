@@ -5,8 +5,7 @@ use std::sync::{Arc, LazyLock, Mutex};
 
 use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
-use credibil_did::document::{CreateOptions, Document};
-use credibil_did::{
+use credibil_identity::did::{
     DidResolver, DocumentBuilder, KeyPurpose, PublicKeyFormat, SignerExt,
     VerificationMethodBuilder, VmKeyId,
 };
@@ -34,10 +33,6 @@ impl Identity {
 
         // generate a did:web document
         let url = format!("https://credibil.io/{}", generate::uri_token());
-        let mut options = CreateOptions::default();
-        options.enable_encryption_key_derivation = true;
-        // let document = DidWeb::create(&url, &keyring, options).expect("should create");
-
         let did = credibil_did::web::default_did(&url).expect("should construct DID");
 
         let vk = PublicKeyJwk::from_bytes(&signing_key.verifying_key())

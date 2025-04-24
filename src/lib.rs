@@ -23,7 +23,7 @@ pub mod status;
 
 /// Re-export DID resolution
 pub mod did {
-    pub use credibil_did::*;
+    pub use credibil_identity::*;
 }
 
 /// Re-export cryptographic types and functions

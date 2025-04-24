@@ -56,15 +56,19 @@ pub async fn request_uri(
 
     req_obj.wallet_nonce = request.wallet_nonce;
 
-    let kid = &provider
+    let kid = provider
         .verification_method()
         .await
         .map_err(|e| Error::ServerError(format!("issue getting verification method: {e}")))?;
 
+    let key_ref = kid
+        .try_into()
+        .map_err(|e| Error::ServerError(format!("issue converting key_ref: {e}")))?;
+
     let jws = JwsBuilder::new()
         .typ(Type::OauthAuthzReqJwt)
         .payload(req_obj)
-        .key_ref(kid)
+        .key_ref(&key_ref)
         .add_signer(provider)
         .build()
         .await
