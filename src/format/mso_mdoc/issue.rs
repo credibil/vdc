@@ -1,6 +1,6 @@
-//! # ISO mDL-based Credential Format
+//! # ISO `mso_mdoc` Credential Issuance
 //!
-//! This module provides the implementation of ISO mDL credentials.
+//! This module supports issuance of ISO `mso_mdoc` credentials.
 
 use anyhow::anyhow;
 use base64ct::{Base64UrlUnpadded, Encoding};
@@ -112,7 +112,7 @@ impl<S: SignerExt> MsoMdocBuilder<HasClaims, HasSigner<'_, S>> {
 
             // assemble `IssuerSignedItem`s for name space
             for (k, v) in claims {
-                let item = IssuerSignedItem {
+                let item_bytes = IssuerSignedItem {
                     digest_id: id_gen.generate(),
                     random: rng().random::<[u8; 16]>().into(),
                     element_identifier: k.clone(),
@@ -121,14 +121,14 @@ impl<S: SignerExt> MsoMdocBuilder<HasClaims, HasSigner<'_, S>> {
                 .into_bytes();
 
                 // digest of `IssuerSignedItem` for MSO
-                let digest = Sha256::digest(&serde_cbor::to_vec(&item)?).to_vec();
+                let digest = Sha256::digest(&serde_cbor::to_vec(&item_bytes)?).to_vec();
                 mso.value_digests
                     .entry(name_space.clone())
                     .or_default()
-                    .insert(item.digest_id, digest);
+                    .insert(item_bytes.digest_id, digest);
 
                 // add item to IssuerSigned object
-                mdoc.name_spaces.entry(name_space.clone()).or_default().push(item);
+                mdoc.name_spaces.entry(name_space.clone()).or_default().push(item_bytes);
             }
         }
 

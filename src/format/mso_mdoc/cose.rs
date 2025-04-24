@@ -9,6 +9,8 @@ use ciborium::{Value, cbor};
 use serde::{Deserialize, Serialize, de, ser};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
+use crate::format::mso_mdoc::DataItem;
+
 const KTY: i64 = 1;
 const CRV: i64 = -1;
 const X: i64 = -2;
@@ -60,6 +62,15 @@ pub struct CoseKey {
 
     /// Public key Y
     pub y: Option<Vec<u8>>,
+}
+
+impl CoseKey {
+    /// Wraps the `CoseKey` in a [`DataItem`] for serialization to CBOR data
+    /// item (tag 24).
+    #[must_use]
+    pub const fn into_bytes(self) -> DataItem<Self> {
+        DataItem(self)
+    }
 }
 
 impl Serialize for CoseKey {

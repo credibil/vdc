@@ -1,14 +1,23 @@
-use anyhow::Result;
+//! # ISO `mso_mdoc` Credential Presentation
+//!
+//! This module supports presentation of ISO `mso_mdoc` credentials.
+
+use anyhow::{Result, anyhow};
 use base64ct::{Base64Unpadded, Encoding};
-use credibil_infosec::Signer;
+use coset::{CoseSign1Builder, HeaderBuilder, iana};
+use credibil_did::SignerExt;
+use credibil_infosec::Algorithm;
+use credibil_infosec::jose::jws::Key;
+use sha2::{Digest, Sha256};
 
 use crate::Kind;
 use crate::core::serde_cbor;
-use crate::format::mso_mdoc::IssuerSigned;
-// use crate::format::mso_mdoc::{
-//     DeviceAuth, DeviceMac, DeviceNameSpaces, DeviceResponse, DeviceSignature, DeviceSigned,
-//     Document, IssuerSigned, ResponseStatus, DataItem, VersionString,
-// };
+use crate::format::mso_mdoc::{
+    CipherSuite, CoseKey, Curve, DataItem, DeviceAuth, DeviceAuthentication, DeviceEngagement,
+    DeviceNameSpaces, DeviceResponse, DeviceSignature, DeviceSigned, Document, IssuerSigned,
+    KeyType, OpenID4VPDCAPIHandover, OpenID4VPDCAPIHandoverInfo, ResponseStatus, Security,
+    SessionTranscript, VersionString,
+};
 use crate::oid4vp::types::Matched;
 
 /// Generate an IETF `dc+sd-jwt` format credential.
@@ -39,7 +48,7 @@ pub struct HasClientIdentifier(String);
 pub struct NoSigner;
 /// Builder state has a signer.
 #[doc(hidden)]
-pub struct HasSigner<'a, S: Signer>(pub &'a S);
+pub struct HasSigner<'a, S: SignerExt>(pub &'a S);
 
 impl Default for DeviceResponseBuilder<NoMatched, NoClientIdentifier, NoSigner> {
     fn default() -> Self {
@@ -102,7 +111,9 @@ impl<M, C, S> DeviceResponseBuilder<M, C, S> {
 impl<M, C> DeviceResponseBuilder<M, C, NoSigner> {
     /// Set the credential Signer.
     #[must_use]
-    pub fn signer<S: Signer>(self, signer: &'_ S) -> DeviceResponseBuilder<M, C, HasSigner<'_, S>> {
+    pub fn signer<S: SignerExt>(
+        self, signer: &'_ S,
+    ) -> DeviceResponseBuilder<M, C, HasSigner<'_, S>> {
         DeviceResponseBuilder {
             matched: self.matched,
             client_id: self.client_id,
@@ -112,7 +123,7 @@ impl<M, C> DeviceResponseBuilder<M, C, NoSigner> {
     }
 }
 
-impl<S: Signer> DeviceResponseBuilder<HasMatched<'_>, HasClientIdentifier, HasSigner<'_, S>> {
+impl<S: SignerExt> DeviceResponseBuilder<HasMatched<'_>, HasClientIdentifier, HasSigner<'_, S>> {
     /// Build the SD-JWT credential, returning a base64url-encoded, JSON SD-JWT
     /// with the format: `<Issuer-signed JWT>~<Disclosure 1>~<Disclosure 2>~...~<KB-JWT>`.
     ///
@@ -132,38 +143,91 @@ impl<S: Signer> DeviceResponseBuilder<HasMatched<'_>, HasClientIdentifier, HasSi
 
         let decoded = Base64Unpadded::decode_vec(issued)?;
         let issuer_signed: IssuerSigned = serde_cbor::from_slice(&decoded)?;
-        println!("issuer_signed: {issuer_signed:?}");
+
+        // signature
+        let signer = self.signer.0;
+
+        let device_key = CoseKey {
+            kty: KeyType::Okp,
+            crv: Curve::Ed25519,
+            x: signer.verifying_key().await?,
+            y: None,
+        };
+
+        let de = DeviceEngagement {
+            version: VersionString::One,
+            security: Security(CipherSuite::Suite1, device_key.into_bytes()),
+            device_retrieval_methods: None,
+            server_retrieval_methods: None,
+            protocol_info: None,
+        };
+
+        let reader_key = CoseKey {
+            kty: KeyType::Okp,
+            crv: Curve::Ed25519,
+            x: signer.verifying_key().await?,
+            y: None,
+        };
+
+        let info = OpenID4VPDCAPIHandoverInfo(
+            "Origin".to_string(),
+            "nonce".to_string(),
+            vec![1, 2, 3, 4, 5, 6, 7, 8],
+        );
+        let info_hash = Sha256::digest(&serde_cbor::to_vec(&info.into_bytes())?).to_vec();
+        let handover = OpenID4VPDCAPIHandover("OpenID4VPDCAPIHandover".to_string(), info_hash);
+
+        let device_authn = DeviceAuthentication(
+            "DeviceAuthentication",
+            SessionTranscript(de.into_bytes(), reader_key.into_bytes(), handover),
+            "DocType".to_string(),
+            DataItem(DeviceNameSpaces::new()),
+        );
+
+        let device_authentication_bytes = serde_cbor::to_vec(&device_authn.into_bytes())?;
+        let signature = signer.sign(&device_authentication_bytes).await;
+
+        // build COSE_Sign1
+        let algorithm = match signer.algorithm() {
+            Algorithm::EdDSA => iana::Algorithm::EdDSA,
+            Algorithm::ES256K => return Err(anyhow!("unsupported algorithm")),
+        };
+
+        let Key::KeyId(key_id) = signer.verification_method().await? else {
+            return Err(anyhow!("invalid verification method"));
+        };
+
+        let protected = HeaderBuilder::new().algorithm(algorithm).build();
+        let unprotected = HeaderBuilder::new().key_id(key_id.into_bytes()).build();
+        let cose_sign_1 = CoseSign1Builder::new()
+            .protected(protected)
+            .unprotected(unprotected)
+            .signature(signature)
+            .build();
 
         // build presentation
-        // let doc = Document {
-        //     doc_type: "org.iso.18013.5.1.mDL".to_string(),
-        //     issuer_signed,
-        //     device_signed: DeviceSigned {
-        //         name_spaces: DataItem(DeviceNameSpaces::new()),
-        //         device_auth: DeviceAuth::Signature(DeviceSignature(CoseSign1)),
-        //     },
-        //     errors: None,
-        // };
+        let doc = Document {
+            doc_type: "org.iso.18013.5.1.mDL".to_string(),
+            issuer_signed,
+            device_signed: DeviceSigned {
+                name_spaces: DataItem(DeviceNameSpaces::new()),
+                device_auth: DeviceAuth::Signature(DeviceSignature(cose_sign_1)),
+            },
+            errors: None,
+        };
 
-        // let x = DeviceResponse {
-        //     version: VersionString::One,
-        //     documents: None,
-        //     document_errors: None,
-        //     status: ResponseStatus::Ok,
-        // };
+        let response = DeviceResponse {
+            version: VersionString::One,
+            documents: Some(vec![doc]),
+            document_errors: None,
+            status: ResponseStatus::Ok,
+        };
 
-        // encrypt Authorization Response Object using the Verifier Metadata
-        // from the Authorization Request Object
+        println!("device_response: {response:?}");
+
+        // FIXME: encrypt Authorization Response Object using the Verifier
+        //        Metadata from the Authorization Request Object
 
         todo!()
     }
 }
-
-// let signature = signer.sign(&device_authentication_bytes).await;
-//
-// let cose_sign_1 = CoseSign1Builder::new()
-//     .protected(protected)
-//     .unprotected(unprotected)
-//     .payload(null) // <- !! use a null value for the payload
-//     .signature(signature)
-//     .build();
