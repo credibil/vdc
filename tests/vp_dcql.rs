@@ -7,7 +7,7 @@ use credibil_infosec::PublicKeyJwk;
 use credibil_infosec::jose::jws::Key;
 use credibil_vc::BlockStore;
 use credibil_vc::core::did_jwk;
-use credibil_vc::format::mso_mdoc::MsoMdocBuilder;
+use credibil_vc::format::mso_mdoc::MdocBuilder;
 use credibil_vc::format::sd_jwt::SdJwtVcBuilder;
 use credibil_vc::format::{mso_mdoc, sd_jwt};
 use credibil_vc::oid4vp::types::DcqlQuery;
@@ -562,7 +562,7 @@ async fn sd_jwt(vct: &str, claims: Value, holder_jwk: &PublicKeyJwk) -> String {
 }
 
 async fn mso_mdoc(doctype: &str, claims: Value) -> String {
-    MsoMdocBuilder::new()
+    MdocBuilder::new()
         .doctype(doctype)
         .claims(claims.as_object().unwrap().clone())
         .signer(&*ISSUER)

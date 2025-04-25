@@ -14,8 +14,8 @@ use crate::Kind;
 use crate::core::{generate, serde_cbor};
 use crate::format::mso_mdoc::{
     DataItem, DeviceAuth, DeviceAuthentication, DeviceNameSpaces, DeviceResponse, DeviceSignature,
-    DeviceSigned, DeviceSignedItems, Document, Handover, IssuerSigned, MobileSecurityObject,
-    OID4VPHandover, ResponseStatus, SessionTranscript, VersionString,
+    DeviceSigned, Document, Handover, IssuerSigned, MobileSecurityObject, OID4VPHandover,
+    ResponseStatus, SessionTranscript, VersionString,
 };
 use crate::oid4vp::types::Matched;
 
@@ -179,23 +179,38 @@ impl<S: SignerExt>
         let Kind::String(issued) = &self.matched.0.issued else {
             return Err(anyhow::anyhow!("`mso_mdoc` credential is not a string"));
         };
-        let mdoc_bytes = Base64UrlUnpadded::decode_vec(issued)?;
-        let issuer_signed: IssuerSigned = serde_cbor::from_slice(&mdoc_bytes)?;
+        let mdoc_cbor = Base64UrlUnpadded::decode_vec(issued)?;
+        let issuer_signed: IssuerSigned = serde_cbor::from_slice(&mdoc_cbor)?;
 
-        let Some(mso_bytes) = &issuer_signed.issuer_auth.0.payload else {
+        let Some(mso_cbor) = &issuer_signed.issuer_auth.0.payload else {
             return Err(anyhow!("`mso` does not contain a payload"));
         };
-        let mso: DataItem<MobileSecurityObject> = serde_cbor::from_slice(mso_bytes)?;
+        let mso: DataItem<MobileSecurityObject> = serde_cbor::from_slice(mso_cbor)?;
 
-        // select claims from the issued credential and convert to device signed items
+        // FIXME: select claims from the issued credential and convert to device signed items
+        let matched = self.matched.0;
+
         let mut device_name_spaces = DeviceNameSpaces::new();
-        for (name_space, issuer_items) in &issuer_signed.name_spaces {
-            let mut device_signed_items = DeviceSignedItems::new();
-            for item in issuer_items {
-                device_signed_items
-                    .insert(item.element_identifier.clone(), item.element_value.clone());
-            }
-            device_name_spaces.entry(name_space.clone()).or_default().push(device_signed_items);
+
+        for claim in &matched.claims {
+            // name space
+            let name_space = &claim.path[0];
+            let issuer_items = issuer_signed
+                .name_spaces
+                .get(name_space)
+                .ok_or_else(|| anyhow!("namespace not found"))?;
+
+            // issuer signed item
+            let name = &claim.path[claim.path.len() - 1];
+            let Some(item) = issuer_items.iter().find(|isi| isi.element_identifier == *name) else {
+                return Err(anyhow!("disclosure not found"));
+            };
+
+            // add to device signed items
+            device_name_spaces
+                .entry(name_space.clone())
+                .or_default()
+                .insert(item.element_identifier.clone(), item.element_value.clone());
         }
 
         // device signature
@@ -269,7 +284,7 @@ mod tests {
     use serde_json::{Value, json};
 
     use super::*;
-    use crate::format::mso_mdoc::MsoMdocBuilder;
+    use crate::format::mso_mdoc::MdocBuilder;
     use crate::oid4vp::types::Claim;
 
     #[tokio::test]
@@ -284,13 +299,13 @@ mod tests {
             path: vec!["org.iso.18013.5.1".to_string(), "family_name".to_string()],
             value: Value::String("Person".to_string()),
         };
-        let portrait = &Claim {
-            path: vec!["org.iso.18013.5.1".to_string(), "portrait".to_string()],
-            value: Value::String("https://example.com/portrait.jpg".to_string()),
-        };
+        // let portrait = &Claim {
+        //     path: vec!["org.iso.18013.5.1".to_string(), "portrait".to_string()],
+        //     value: Value::String("https://example.com/portrait.jpg".to_string()),
+        // };
 
         let matched = Matched {
-            claims: vec![given_name, family_name, portrait],
+            claims: vec![given_name, family_name],
             issued: &Kind::String(issued),
         };
 
@@ -307,6 +322,8 @@ mod tests {
         // check credential deserializes back into original mdoc/mso structures
         let cbor = Base64UrlUnpadded::decode_vec(&response).expect("should decode");
         let mdoc = serde_cbor::from_slice::<DeviceResponse>(&cbor).unwrap();
+
+        println!("MDOC: {:?}", mdoc);
 
         let documents = mdoc.documents.expect("should have documents");
         assert_eq!(documents[0].doc_type, "org.iso.18013.5.1.mDL");
@@ -330,7 +347,7 @@ mod tests {
         });
         let claims = claims_json.as_object().unwrap();
 
-        MsoMdocBuilder::new()
+        MdocBuilder::new()
             .doctype("org.iso.18013.5.1.mDL")
             .claims(claims.clone())
             .signer(&Issuer::new())

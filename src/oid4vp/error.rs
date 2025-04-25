@@ -34,7 +34,7 @@ pub enum Error {
     ServerError(String),
 
     /// The Wallet does not support any of the formats requested by the
-    /// Verifier, such as those included in the `vp_formats` registration
+    /// Verifier, such as those included in the `vp_format_supported` registration
     /// parameter.
     #[error(r#"{{"error": "vp_formats_not_supported", "error_description": "{0}"}}"#)]
     VpFormatsNotSupported(String),

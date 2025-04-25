@@ -8,7 +8,7 @@
         "vp_token",
         "id_token vp_token"
     ],
-    "vp_formats": {
+    "vp_format_supported": {
         "jwt_vc_json": {
             "alg_values_supported": [
                 "ES256K",

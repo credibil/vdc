@@ -21,7 +21,7 @@ pub use crate::format::mso_mdoc::{
 
 /// Generate an ISO mDL `mso_mdoc` format credential.
 #[derive(Debug)]
-pub struct MsoMdocBuilder<D, C, S> {
+pub struct MdocBuilder<D, C, S> {
     doctype: D,
     claims: C,
     signer: S,
@@ -48,7 +48,7 @@ pub struct NoSigner;
 #[doc(hidden)]
 pub struct HasSigner<'a, S: SignerExt>(pub &'a S);
 
-impl MsoMdocBuilder<NoDocType, NoClaims, NoSigner> {
+impl MdocBuilder<NoDocType, NoClaims, NoSigner> {
     /// Create a new ISO mDL credential builder.
     #[must_use]
     pub const fn new() -> Self {
@@ -60,16 +60,16 @@ impl MsoMdocBuilder<NoDocType, NoClaims, NoSigner> {
     }
 }
 
-impl Default for MsoMdocBuilder<NoDocType, NoClaims, NoSigner> {
+impl Default for MdocBuilder<NoDocType, NoClaims, NoSigner> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<C, S> MsoMdocBuilder<NoDocType, C, S> {
+impl<C, S> MdocBuilder<NoDocType, C, S> {
     /// Set the claims for the ISO mDL credential.
-    pub fn doctype(self, doctype: impl Into<String>) -> MsoMdocBuilder<HasDocType, C, S> {
-        MsoMdocBuilder {
+    pub fn doctype(self, doctype: impl Into<String>) -> MdocBuilder<HasDocType, C, S> {
+        MdocBuilder {
             doctype: HasDocType(doctype.into()),
             claims: self.claims,
             signer: self.signer,
@@ -77,10 +77,10 @@ impl<C, S> MsoMdocBuilder<NoDocType, C, S> {
     }
 }
 
-impl<D, S> MsoMdocBuilder<D, NoClaims, S> {
+impl<D, S> MdocBuilder<D, NoClaims, S> {
     /// Set the claims for the ISO mDL credential.
-    pub fn claims(self, claims: Map<String, Value>) -> MsoMdocBuilder<D, HasClaims, S> {
-        MsoMdocBuilder {
+    pub fn claims(self, claims: Map<String, Value>) -> MdocBuilder<D, HasClaims, S> {
+        MdocBuilder {
             doctype: self.doctype,
             claims: HasClaims(claims),
             signer: self.signer,
@@ -88,10 +88,10 @@ impl<D, S> MsoMdocBuilder<D, NoClaims, S> {
     }
 }
 
-impl<D, C> MsoMdocBuilder<D, C, NoSigner> {
+impl<D, C> MdocBuilder<D, C, NoSigner> {
     /// Set the credential `SignerExt`.
-    pub fn signer<S: SignerExt>(self, signer: &'_ S) -> MsoMdocBuilder<D, C, HasSigner<'_, S>> {
-        MsoMdocBuilder {
+    pub fn signer<S: SignerExt>(self, signer: &'_ S) -> MdocBuilder<D, C, HasSigner<'_, S>> {
+        MdocBuilder {
             doctype: self.doctype,
             claims: self.claims,
             signer: HasSigner(signer),
@@ -99,7 +99,7 @@ impl<D, C> MsoMdocBuilder<D, C, NoSigner> {
     }
 }
 
-impl<S: SignerExt> MsoMdocBuilder<HasDocType, HasClaims, HasSigner<'_, S>> {
+impl<S: SignerExt> MdocBuilder<HasDocType, HasClaims, HasSigner<'_, S>> {
     /// Build the ISO mDL credential, returning a base64url-encoded,
     /// CBOR-encoded, ISO mDL.
     ///
@@ -201,7 +201,7 @@ mod tests {
         });
         let claims = claims_json.as_object().unwrap();
 
-        let mdoc = MsoMdocBuilder::new()
+        let mdoc = MdocBuilder::new()
             .doctype("org.iso.18013.5.1.mDL")
             .claims(claims.clone())
             .signer(&Issuer::new())
