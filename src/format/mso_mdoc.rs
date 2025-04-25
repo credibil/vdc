@@ -741,7 +741,7 @@ impl MobileSecurityObject {
             digest_algorithm: DigestAlgorithm::Sha256,
             value_digests: BTreeMap::new(),
             device_key_info: DeviceKeyInfo::default(),
-            doc_type: "org.iso.18013.5.1.mDL".to_string(),
+            doc_type: String::new(),
             validity_info: ValidityInfo {
                 signed: Utc::now(),
                 valid_from: Utc::now(),
@@ -899,7 +899,7 @@ impl Default for DigestIdGenerator {
 }
 
 // ----------------------------------------------------------------------------
-// # 9.1.3.4 mdoc authentication (pg 54)
+// # 9.1.3.4 mdoc authentication (pg 53)
 // ----------------------------------------------------------------------------
 
 /// CBOR serialized, tagged `DeviceAuthentication`.
@@ -918,12 +918,16 @@ pub type DeviceAuthenticationBytes = DataItem<DeviceAuthentication>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceAuthentication(
     /// The device authentication identifier.
-    &'static str,
+    pub &'static str,
     /// Used in multiple security mechanisms for device retrieval.
     pub SessionTranscript,
-    /// The document type of the document being signed.
+    /// The same data used the `document` element of the mdoc response.
+    ///
+    /// See [`Document`].
     pub DocType,
-    /// Returned data elements for each namespace
+    /// The same data used the `document` element of the mdoc response.
+    ///
+    /// See [`Document`] and [`DeviceSigned`].
     pub DeviceNameSpacesBytes,
 );
 

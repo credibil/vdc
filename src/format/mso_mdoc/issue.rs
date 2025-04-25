@@ -21,18 +21,18 @@ pub use crate::format::mso_mdoc::{
 
 /// Generate an ISO mDL `mso_mdoc` format credential.
 #[derive(Debug)]
-pub struct MsoMdocBuilder<C, S> {
-    doctype: String,
+pub struct MsoMdocBuilder<D, C, S> {
+    doctype: D,
     claims: C,
     signer: S,
 }
 
-/// Builder has no signer.
+/// Builder has no `doc_type`.
 #[doc(hidden)]
-pub struct NoSigner;
-/// Builder state has a signer.
+pub struct NoDocType;
+/// Builder has `doc_type`.
 #[doc(hidden)]
-pub struct HasSigner<'a, S: SignerExt>(pub &'a S);
+pub struct HasDocType(String);
 
 /// Builder has no claims.
 #[doc(hidden)]
@@ -41,47 +41,45 @@ pub struct NoClaims;
 #[doc(hidden)]
 pub struct HasClaims(Map<String, Value>);
 
-impl MsoMdocBuilder<NoClaims, NoSigner> {
+/// Builder has no signer.
+#[doc(hidden)]
+pub struct NoSigner;
+/// Builder state has a signer.
+#[doc(hidden)]
+pub struct HasSigner<'a, S: SignerExt>(pub &'a S);
+
+impl MsoMdocBuilder<NoDocType, NoClaims, NoSigner> {
     /// Create a new ISO mDL credential builder.
     #[must_use]
     pub fn new() -> Self {
         Self {
-            doctype: "org.iso.18013.5.1.mDL".to_string(),
+            doctype: NoDocType,
             claims: NoClaims,
             signer: NoSigner,
         }
     }
 }
 
-impl Default for MsoMdocBuilder<NoClaims, NoSigner> {
+impl Default for MsoMdocBuilder<NoDocType, NoClaims, NoSigner> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<C, S> MsoMdocBuilder<C, S> {
+impl<C, S> MsoMdocBuilder<NoDocType, C, S> {
     /// Set the claims for the ISO mDL credential.
-    #[must_use]
-    pub fn doctype(mut self, doctype: impl Into<String>) -> Self {
-        self.doctype = doctype.into();
-        self
-    }
-}
-
-impl<C> MsoMdocBuilder<C, NoSigner> {
-    /// Set the credential `SignerExt`.
-    pub fn signer<S: SignerExt>(self, signer: &'_ S) -> MsoMdocBuilder<C, HasSigner<'_, S>> {
+    pub fn doctype(self, doctype: impl Into<String>) -> MsoMdocBuilder<HasDocType, C, S> {
         MsoMdocBuilder {
-            doctype: self.doctype,
+            doctype: HasDocType(doctype.into()),
             claims: self.claims,
-            signer: HasSigner(signer),
+            signer: self.signer,
         }
     }
 }
 
-impl<S> MsoMdocBuilder<NoClaims, S> {
+impl<D, S> MsoMdocBuilder<D, NoClaims, S> {
     /// Set the claims for the ISO mDL credential.
-    pub fn claims(self, claims: Map<String, Value>) -> MsoMdocBuilder<HasClaims, S> {
+    pub fn claims(self, claims: Map<String, Value>) -> MsoMdocBuilder<D, HasClaims, S> {
         MsoMdocBuilder {
             doctype: self.doctype,
             claims: HasClaims(claims),
@@ -90,7 +88,18 @@ impl<S> MsoMdocBuilder<NoClaims, S> {
     }
 }
 
-impl<S: SignerExt> MsoMdocBuilder<HasClaims, HasSigner<'_, S>> {
+impl<D, C> MsoMdocBuilder<D, C, NoSigner> {
+    /// Set the credential `SignerExt`.
+    pub fn signer<S: SignerExt>(self, signer: &'_ S) -> MsoMdocBuilder<D, C, HasSigner<'_, S>> {
+        MsoMdocBuilder {
+            doctype: self.doctype,
+            claims: self.claims,
+            signer: HasSigner(signer),
+        }
+    }
+}
+
+impl<S: SignerExt> MsoMdocBuilder<HasDocType, HasClaims, HasSigner<'_, S>> {
     /// Build the ISO mDL credential, returning a base64url-encoded,
     /// CBOR-encoded, ISO mDL.
     ///
@@ -100,7 +109,7 @@ impl<S: SignerExt> MsoMdocBuilder<HasClaims, HasSigner<'_, S>> {
         // populate mdoc and accompanying MSO
         let mut mdoc = IssuerSigned::new();
         let mut mso = MobileSecurityObject::new();
-        mso.doc_type = self.doctype;
+        mso.doc_type = self.doctype.0;
 
         for (name_space, value) in self.claims.0 {
             // namespace is a root-level claim
@@ -112,13 +121,13 @@ impl<S: SignerExt> MsoMdocBuilder<HasClaims, HasSigner<'_, S>> {
 
             // assemble `IssuerSignedItem`s for name space
             for (k, v) in claims {
-                let item_bytes = IssuerSignedItem {
+                let item = IssuerSignedItem {
                     digest_id: id_gen.generate(),
                     random: rng().random::<[u8; 16]>().into(),
                     element_identifier: k.clone(),
                     element_value: cbor!(v)?,
-                }
-                .into_bytes();
+                };
+                let item_bytes = item.into_bytes();
 
                 // digest of `IssuerSignedItem` for MSO
                 let digest = Sha256::digest(&serde_cbor::to_vec(&item_bytes)?).to_vec();
@@ -192,7 +201,7 @@ mod tests {
         });
         let claims = claims_json.as_object().unwrap();
 
-        let mdl = MsoMdocBuilder::new()
+        let mdoc = MsoMdocBuilder::new()
             .doctype("org.iso.18013.5.1.mDL")
             .claims(claims.clone())
             .signer(&Issuer::new())
@@ -201,7 +210,7 @@ mod tests {
             .expect("should build");
 
         // check credential deserializes back into original mdoc/mso structures
-        let mdoc_bytes = Base64UrlUnpadded::decode_vec(&mdl).expect("should decode");
+        let mdoc_bytes = Base64UrlUnpadded::decode_vec(&mdoc).expect("should decode");
         let mdoc: IssuerSigned = serde_cbor::from_slice(&mdoc_bytes).expect("should deserialize");
 
         let mso_bytes = mdoc.issuer_auth.0.payload.expect("should have payload");

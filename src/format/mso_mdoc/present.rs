@@ -11,20 +11,21 @@ use credibil_infosec::jose::jws::Key;
 use sha2::{Digest, Sha256};
 
 use crate::Kind;
-use crate::core::serde_cbor;
+use crate::core::{generate, serde_cbor};
 use crate::format::mso_mdoc::{
     DataItem, DeviceAuth, DeviceAuthentication, DeviceNameSpaces, DeviceResponse, DeviceSignature,
-    DeviceSigned, Document, Handover, IssuerSigned, OID4VPHandover, ResponseStatus,
-    SessionTranscript, VersionString,
+    DeviceSigned, DeviceSignedItems, Document, Handover, IssuerSigned, MobileSecurityObject,
+    OID4VPHandover, ResponseStatus, SessionTranscript, VersionString,
 };
 use crate::oid4vp::types::Matched;
 
 /// Generate an IETF `dc+sd-jwt` format credential.
 #[derive(Debug)]
-pub struct DeviceResponseBuilder<M, C, S> {
+pub struct DeviceResponseBuilder<M, C, N, U, S> {
     matched: M,
     client_id: C,
-    nonce: Option<String>,
+    nonce: N,
+    response_uri: U,
     signer: S,
 }
 
@@ -35,12 +36,26 @@ pub struct NoMatched;
 #[doc(hidden)]
 pub struct HasMatched<'a>(&'a Matched<'a>);
 
-/// Builder has no issuer.
+/// Builder has no client identifier.
 #[doc(hidden)]
-pub struct NoClientIdentifier;
-/// Builder has issuer.
+pub struct NoClientId;
+/// Builder has client_id.
 #[doc(hidden)]
-pub struct HasClientIdentifier(String);
+pub struct HasClientId(String);
+
+/// Builder has no nonce.
+#[doc(hidden)]
+pub struct NoNonce;
+/// Builder has nonce.
+#[doc(hidden)]
+pub struct HasNonce(String);
+
+/// Builder has no response_uri.
+#[doc(hidden)]
+pub struct NoResponseUri;
+/// Builder has response_uri.
+#[doc(hidden)]
+pub struct HasResponseUri(String);
 
 /// Builder has no signer.
 #[doc(hidden)]
@@ -49,82 +64,110 @@ pub struct NoSigner;
 #[doc(hidden)]
 pub struct HasSigner<'a, S: SignerExt>(pub &'a S);
 
-impl Default for DeviceResponseBuilder<NoMatched, NoClientIdentifier, NoSigner> {
+impl Default for DeviceResponseBuilder<NoMatched, NoClientId, NoNonce, NoResponseUri, NoSigner> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl DeviceResponseBuilder<NoMatched, NoClientIdentifier, NoSigner> {
+impl DeviceResponseBuilder<NoMatched, NoClientId, NoNonce, NoResponseUri, NoSigner> {
     /// Create a new builder.
     #[must_use]
     pub const fn new() -> Self {
         Self {
             matched: NoMatched,
-            client_id: NoClientIdentifier,
-            nonce: None,
+            client_id: NoClientId,
+            nonce: NoNonce,
+            response_uri: NoResponseUri,
             signer: NoSigner,
         }
     }
 }
 
 // Credentials to include in the presentation
-impl<'a, C, S> DeviceResponseBuilder<NoMatched, C, S> {
+impl<'a, C, N, U, S> DeviceResponseBuilder<NoMatched, C, N, U, S> {
     /// Set the claims for the ISO mDL credential.
     #[must_use]
-    pub fn matched(self, matched: &'a Matched) -> DeviceResponseBuilder<HasMatched<'a>, C, S> {
+    pub fn matched(
+        self, matched: &'a Matched,
+    ) -> DeviceResponseBuilder<HasMatched<'a>, C, N, U, S> {
         DeviceResponseBuilder {
             matched: HasMatched(matched),
             client_id: self.client_id,
             nonce: self.nonce,
+            response_uri: self.response_uri,
             signer: self.signer,
         }
     }
 }
 
 // Credentials to include in the presentation
-impl<M, S> DeviceResponseBuilder<M, NoClientIdentifier, S> {
+impl<M, N, U, S> DeviceResponseBuilder<M, NoClientId, N, U, S> {
     /// Set the claims for the ISO mDL credential.
     #[must_use]
     pub fn client_id(
         self, client_id: impl Into<String>,
-    ) -> DeviceResponseBuilder<M, HasClientIdentifier, S> {
+    ) -> DeviceResponseBuilder<M, HasClientId, N, U, S> {
         DeviceResponseBuilder {
             matched: self.matched,
-            client_id: HasClientIdentifier(client_id.into()),
+            client_id: HasClientId(client_id.into()),
             nonce: self.nonce,
+            response_uri: self.response_uri,
             signer: self.signer,
         }
     }
 }
 
-// Optional fields
-impl<M, C, S> DeviceResponseBuilder<M, C, S> {
-    /// Set the credential Holder.
+impl<M, C, U, S> DeviceResponseBuilder<M, C, NoNonce, U, S> {
+    /// Set the `nonce` provided in the Authorization Request Object.
     #[must_use]
-    pub fn nonce(mut self, nonce: impl Into<String>) -> Self {
-        self.nonce = Some(nonce.into());
-        self
+    pub fn nonce(self, nonce: impl Into<String>) -> DeviceResponseBuilder<M, C, HasNonce, U, S> {
+        DeviceResponseBuilder {
+            matched: self.matched,
+            client_id: self.client_id,
+            nonce: HasNonce(nonce.into()),
+            response_uri: self.response_uri,
+            signer: self.signer,
+        }
     }
 }
 
-// Signer
-impl<M, C> DeviceResponseBuilder<M, C, NoSigner> {
-    /// Set the credential Signer.
+impl<M, C, N, S> DeviceResponseBuilder<M, C, N, NoResponseUri, S> {
+    /// Set the `nonce` provided in the Authorization Request Object.
     #[must_use]
-    pub fn signer<S: SignerExt>(
-        self, signer: &'_ S,
-    ) -> DeviceResponseBuilder<M, C, HasSigner<'_, S>> {
+    pub fn response_uri(
+        self, nonce: impl Into<String>,
+    ) -> DeviceResponseBuilder<M, C, N, HasResponseUri, S> {
         DeviceResponseBuilder {
             matched: self.matched,
             client_id: self.client_id,
             nonce: self.nonce,
+            response_uri: HasResponseUri(nonce.into()),
+            signer: self.signer,
+        }
+    }
+}
+
+// Signer
+impl<M, C, N, U> DeviceResponseBuilder<M, C, N, U, NoSigner> {
+    /// Set the credential Signer.
+    #[must_use]
+    pub fn signer<S: SignerExt>(
+        self, signer: &'_ S,
+    ) -> DeviceResponseBuilder<M, C, N, U, HasSigner<'_, S>> {
+        DeviceResponseBuilder {
+            matched: self.matched,
+            client_id: self.client_id,
+            nonce: self.nonce,
+            response_uri: self.response_uri,
             signer: HasSigner(signer),
         }
     }
 }
 
-impl<S: SignerExt> DeviceResponseBuilder<HasMatched<'_>, HasClientIdentifier, HasSigner<'_, S>> {
+impl<S: SignerExt>
+    DeviceResponseBuilder<HasMatched<'_>, HasClientId, HasNonce, HasResponseUri, HasSigner<'_, S>>
+{
     /// Build the SD-JWT credential, returning a base64url-encoded, JSON SD-JWT
     /// with the format: `<Issuer-signed JWT>~<Disclosure 1>~<Disclosure 2>~...~<KB-JWT>`.
     ///
@@ -132,39 +175,53 @@ impl<S: SignerExt> DeviceResponseBuilder<HasMatched<'_>, HasClientIdentifier, Ha
     /// TODO: Document errors
     #[allow(clippy::unused_async)]
     pub async fn build(self) -> Result<String> {
+        // extract mdoc and mso from the issued credential
         let Kind::String(issued) = &self.matched.0.issued else {
             return Err(anyhow::anyhow!("`mso_mdoc` credential is not a string"));
         };
+        let mdoc_bytes = Base64UrlUnpadded::decode_vec(issued)?;
+        let issuer_signed: IssuerSigned = serde_cbor::from_slice(&mdoc_bytes)?;
 
-        let decoded = Base64UrlUnpadded::decode_vec(issued)?;
-        let issuer_signed: IssuerSigned = serde_cbor::from_slice(&decoded)?;
+        let Some(mso_bytes) = &issuer_signed.issuer_auth.0.payload else {
+            return Err(anyhow!("`mso` does not contain a payload"));
+        };
+        let mso: DataItem<MobileSecurityObject> = serde_cbor::from_slice(mso_bytes)?;
 
-        // signature
-        let signer = self.signer.0;
+        // select claims from the issued credential and convert to device signed items
+        let mut device_name_spaces = DeviceNameSpaces::new();
+        for (name_space, issuer_items) in &issuer_signed.name_spaces {
+            println!("namespace: {name_space}",);
 
+            let mut device_signed_items = DeviceSignedItems::new();
+            for item in issuer_items {
+                device_signed_items
+                    .insert(item.element_identifier.clone(), item.element_value.clone());
+            }
+            device_name_spaces.entry(name_space.clone()).or_default().push(device_signed_items);
+        }
+
+        // device signature
+        // ..handover
+        let mdoc_nonce = generate::nonce();
         let client_id_hash =
-            Sha256::digest(&serde_cbor::to_vec(&[self.client_id.0, "mdoc_nonce".to_string()])?)
-                .to_vec();
-        let response_uri_hash = Sha256::digest(&serde_cbor::to_vec(&[
-            "response_uri".to_string(),
-            "mdoc_nonce".to_string(),
-        ])?)
-        .to_vec();
+            Sha256::digest(&serde_cbor::to_vec(&[self.client_id.0, mdoc_nonce.clone()])?).to_vec();
+        let response_uri_hash =
+            Sha256::digest(&serde_cbor::to_vec(&[self.response_uri.0, mdoc_nonce])?).to_vec();
+        let handover = OID4VPHandover(client_id_hash, response_uri_hash, self.nonce.0);
 
-        let handover =
-            OID4VPHandover(client_id_hash, response_uri_hash, self.nonce.unwrap_or_default());
-
+        // ..device auth
         let device_authn = DeviceAuthentication(
             "DeviceAuthentication",
             SessionTranscript(None, None, Handover::Oid4Vp(handover)),
-            "DocType".to_string(),
-            DataItem(DeviceNameSpaces::new()),
+            mso.doc_type.clone(),
+            DataItem(device_name_spaces),
         );
 
-        let device_authentication_bytes = serde_cbor::to_vec(&device_authn.into_bytes())?;
-        let signature = signer.sign(&device_authentication_bytes).await;
+        // ..COSE_Sign1
+        let signer = self.signer.0;
+        let device_authn_bytes = serde_cbor::to_vec(&device_authn.into_bytes())?;
+        let signature = signer.sign(&device_authn_bytes).await;
 
-        // build COSE_Sign1
         let algorithm = match signer.algorithm() {
             Algorithm::EdDSA => iana::Algorithm::EdDSA,
             Algorithm::ES256K => return Err(anyhow!("unsupported algorithm")),
@@ -182,9 +239,9 @@ impl<S: SignerExt> DeviceResponseBuilder<HasMatched<'_>, HasClientIdentifier, Ha
             .signature(signature)
             .build();
 
-        // build presentation
+        // presentation
         let doc = Document {
-            doc_type: "org.iso.18013.5.1.mDL".to_string(),
+            doc_type: mso.doc_type.clone(),
             issuer_signed,
             device_signed: DeviceSigned {
                 name_spaces: DataItem(DeviceNameSpaces::new()),
@@ -200,10 +257,9 @@ impl<S: SignerExt> DeviceResponseBuilder<HasMatched<'_>, HasClientIdentifier, Ha
             status: ResponseStatus::Ok,
         };
 
-
         // FIXME: encrypt Authorization Response Object using the Verifier
         //        Metadata from the Authorization Request Object
-        
+
         // encode CBOR -> Base64Url -> return
         Ok(Base64UrlUnpadded::encode_string(&serde_cbor::to_vec(&response)?))
     }
@@ -252,6 +308,7 @@ mod tests {
             .matched(&matched)
             .client_id("client_id")
             .nonce("nonce")
+            .response_uri("https://example.com/response")
             .signer(&Issuer::new())
             .build()
             .await
