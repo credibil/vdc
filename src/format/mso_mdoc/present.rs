@@ -317,8 +317,6 @@ mod tests {
         let cbor = Base64UrlUnpadded::decode_vec(&response).expect("should decode");
         let mdoc = serde_cbor::from_slice::<DeviceResponse>(&cbor).unwrap();
 
-        // println!("MDOC: {:?}", mdoc);
-
         let documents = mdoc.documents.expect("should have documents");
         assert_eq!(documents[0].doc_type, "org.iso.18013.5.1.mDL");
         assert!(&documents[0].device_signed.name_spaces.get("org.iso.18013.5.1").is_some());
