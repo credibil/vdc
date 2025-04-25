@@ -187,28 +187,25 @@ impl<S: SignerExt>
         };
         let mso: DataItem<MobileSecurityObject> = serde_cbor::from_slice(mso_cbor)?;
 
-        // FIXME: select claims from the issued credential and convert to device signed items
+        // convert matched claims to device signed items
         let matched = self.matched.0;
-
         let mut device_name_spaces = DeviceNameSpaces::new();
 
         for claim in &matched.claims {
-            // name space
-            let name_space = &claim.path[0];
-            let issuer_items = issuer_signed
-                .name_spaces
-                .get(name_space)
-                .ok_or_else(|| anyhow!("namespace not found"))?;
+            // find issuer signed item matching the claim
+            let name_space = claim.path[0].clone();
+            let id = &claim.path[claim.path.len() - 1];
 
-            // issuer signed item
-            let name = &claim.path[claim.path.len() - 1];
-            let Some(item) = issuer_items.iter().find(|isi| isi.element_identifier == *name) else {
-                return Err(anyhow!("disclosure not found"));
+            let Some(issuer_items) = issuer_signed.name_spaces.get(&name_space) else {
+                return Err(anyhow!("namespace not found"));
+            };
+            let Some(item) = issuer_items.iter().find(|isi| isi.element_identifier == *id) else {
+                return Err(anyhow!("issuer signed item not found"));
             };
 
             // add to device signed items
             device_name_spaces
-                .entry(name_space.clone())
+                .entry(name_space)
                 .or_default()
                 .insert(item.element_identifier.clone(), item.element_value.clone());
         }
@@ -272,9 +269,6 @@ impl<S: SignerExt>
 
         // encode CBOR -> Base64Url -> return
         Ok(Base64UrlUnpadded::encode_string(&serde_cbor::to_vec(&response)?))
-
-        // FIXME: encrypt Authorization Response Object using the Verifier
-        //        Metadata from the Authorization Request Object
     }
 }
 
@@ -323,7 +317,7 @@ mod tests {
         let cbor = Base64UrlUnpadded::decode_vec(&response).expect("should decode");
         let mdoc = serde_cbor::from_slice::<DeviceResponse>(&cbor).unwrap();
 
-        println!("MDOC: {:?}", mdoc);
+        // println!("MDOC: {:?}", mdoc);
 
         let documents = mdoc.documents.expect("should have documents");
         assert_eq!(documents[0].doc_type, "org.iso.18013.5.1.mDL");
