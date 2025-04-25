@@ -51,7 +51,7 @@ pub struct HasSigner<'a, S: SignerExt>(pub &'a S);
 impl MsoMdocBuilder<NoDocType, NoClaims, NoSigner> {
     /// Create a new ISO mDL credential builder.
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             doctype: NoDocType,
             claims: NoClaims,
