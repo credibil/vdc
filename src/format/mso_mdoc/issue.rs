@@ -213,9 +213,9 @@ mod tests {
         let mdoc_bytes = Base64UrlUnpadded::decode_vec(&mdoc).expect("should decode");
         let mdoc: IssuerSigned = serde_cbor::from_slice(&mdoc_bytes).expect("should deserialize");
 
-        let mso_bytes = mdoc.issuer_auth.0.payload.expect("should have payload");
+        let cbor = mdoc.issuer_auth.0.payload.expect("should have payload");
         let mso: DataItem<MobileSecurityObject> =
-            serde_cbor::from_slice(&mso_bytes).expect("should deserialize");
+            serde_cbor::from_slice(&cbor).expect("should deserialize");
 
         assert_eq!(mso.digest_algorithm, DigestAlgorithm::Sha256);
         assert_eq!(mso.device_key_info.device_key.kty, KeyType::Okp);
