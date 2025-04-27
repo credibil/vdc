@@ -5,8 +5,7 @@
 use std::sync::LazyLock;
 
 use base64ct::{Base64UrlUnpadded, Encoding};
-use credibil_did::SignerExt;
-use credibil_infosec::jose::jws::Key;
+use credibil_identity::{Key, SignerExt};
 use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
 use credibil_vc::core::did_jwk;
 use credibil_vc::format::sd_jwt::SdJwtClaims;
@@ -65,10 +64,12 @@ async fn two_proofs() {
 
     // proof of possession of key material
     let bob_key = BOB.verification_method().await.expect("should have key");
+    let bob_key_ref = bob_key.try_into().expect("should map key to key-ref");
+
     let jws_1 = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .key_ref(&bob_key)
+        .key_ref(&bob_key_ref)
         .add_signer(&*BOB)
         .build()
         .await
@@ -76,10 +77,12 @@ async fn two_proofs() {
 
     let dan = Wallet::new();
     let dan_key = dan.verification_method().await.expect("should have key");
+    let dan_key_ref = dan_key.try_into().expect("should map key to key-ref");
+
     let jws_2 = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .key_ref(&dan_key)
+        .key_ref(&dan_key_ref)
         .add_signer(&dan)
         .build()
         .await
@@ -185,10 +188,12 @@ async fn sd_jwt() {
 
     // proof of possession of key material
     let bob_key = BOB.verification_method().await.expect("should have key");
+    let bob_key_ref = bob_key.try_into().expect("should map key to key-ref");
+
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .key_ref(&bob_key)
+        .key_ref(&bob_key_ref)
         .add_signer(&*BOB)
         .build()
         .await

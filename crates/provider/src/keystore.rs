@@ -5,12 +5,10 @@ use std::sync::{Arc, LazyLock, Mutex};
 
 use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
-use credibil_did::document::{CreateOptions, Document};
-use credibil_did::{
-    DidResolver, DocumentBuilder, KeyPurpose, PublicKeyFormat, SignerExt,
-    VerificationMethodBuilder, VmKeyId,
+use credibil_identity::did::{
+    Document, DocumentBuilder, KeyPurpose, PublicKeyFormat, VerificationMethodBuilder, VmKeyId,
 };
-use credibil_infosec::jose::jws::Key;
+use credibil_identity::{IdentityResolver, Key, SignerExt};
 use credibil_infosec::{Algorithm, PublicKeyJwk};
 use ed25519_dalek::Signer as _;
 use rand_core::OsRng;
@@ -116,19 +114,19 @@ impl EncryptionKey {
         }
     }
 
-// impl DidOperator for Keyring {
-//     fn verification(&self, purpose: KeyPurpose) -> Option<PublicKeyJwk> {
-//         match purpose {
-//             KeyPurpose::VerificationMethod => Some(PublicKeyJwk {
-//                 kty: KeyType::Okp,
-//                 crv: Curve::Ed25519,
-//                 x: Base64UrlUnpadded::encode_string(self.verifying_key.as_bytes()),
-//                 ..PublicKeyJwk::default()
-//             }),
-//             _ => panic!("unsupported purpose"),
-//         }
-//     }
-// }
+    // impl DidOperator for Keyring {
+    //     fn verification(&self, purpose: KeyPurpose) -> Option<PublicKeyJwk> {
+    //         match purpose {
+    //             KeyPurpose::VerificationMethod => Some(PublicKeyJwk {
+    //                 kty: KeyType::Okp,
+    //                 crv: Curve::Ed25519,
+    //                 x: Base64UrlUnpadded::encode_string(self.verifying_key.as_bytes()),
+    //                 ..PublicKeyJwk::default()
+    //             }),
+    //             _ => panic!("unsupported purpose"),
+    //         }
+    //     }
+    // }
 
     pub fn public_key(&self) -> x25519_dalek::PublicKey {
         x25519_dalek::PublicKey::from(self.inner.to_bytes())

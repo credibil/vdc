@@ -3,8 +3,7 @@
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
-use credibil_did::SignerExt;
-use credibil_infosec::jose::jws::Key;
+use credibil_identity::{Key, SignerExt};
 use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
 use credibil_vc::core::did_jwk;
 use credibil_vc::oid4vci::types::{
@@ -63,11 +62,12 @@ async fn deferred() {
 
     // proof of possession of key material
     let key = CAROL.verification_method().await.expect("should have did");
+    let key_ref = key.try_into().expect("should have key");
 
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .key_ref(&key)
+        .key_ref(&key_ref)
         .add_signer(&*CAROL)
         .build()
         .await

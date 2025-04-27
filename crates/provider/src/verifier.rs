@@ -1,13 +1,12 @@
 #![allow(dead_code)]
 
 use anyhow::Result;
-use credibil_did::{DidResolver, Document, SignerExt};
-use credibil_infosec::jose::jws::Key;
+use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
 use credibil_infosec::{self, Algorithm, PublicKey, Receiver, SharedSecret, Signer};
 use credibil_vc::BlockStore;
 
 use crate::blockstore::Mockstore;
-use crate::identity::Identity;
+use crate::identity::DidIdentity;
 
 pub const VERIFIER_ID: &str = "http://localhost:8080";
 
@@ -17,7 +16,7 @@ pub mod data {
 
 #[derive(Clone)]
 pub struct Verifier {
-    identity: Identity,
+    identity: DidIdentity,
     blockstore: Mockstore,
 }
 
@@ -25,14 +24,14 @@ impl Verifier {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            identity: Identity::new(),
+            identity: DidIdentity::new(),
             blockstore: Mockstore::new(),
         }
     }
 }
 
-impl DidResolver for Verifier {
-    async fn resolve(&self, url: &str) -> anyhow::Result<Document> {
+impl IdentityResolver for Verifier {
+    async fn resolve(&self, url: &str) -> anyhow::Result<Identity> {
         self.identity.resolve(url).await
     }
 }
