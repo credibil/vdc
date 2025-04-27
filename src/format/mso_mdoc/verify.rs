@@ -2,7 +2,7 @@
 
 use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
-use credibil_did::DidResolver;
+use credibil_identity::IdentityResolver;
 
 use crate::core::{did_jwk, serde_cbor};
 use crate::format::mso_mdoc::{CoseKey, DeviceAuth, DeviceResponse};
@@ -14,7 +14,7 @@ use crate::oid4vp::types::{Claim, RequestObject};
 ///
 /// Returns an error if the presentation is invalid or if verification fails.
 pub async fn verify_vp(
-    vp: &str, _request_object: &RequestObject, resolver: &impl DidResolver,
+    vp: &str, _request_object: &RequestObject, resolver: &impl IdentityResolver,
 ) -> Result<Vec<Claim>> {
     // extract components of the mdoc presentation
     let cbor = Base64UrlUnpadded::decode_vec(vp)?;

@@ -189,7 +189,8 @@ mod tests {
     async fn build_vc() {
         let wallet = Wallet::new();
         let key = wallet.verification_method().await.expect("should have key id");
-        let Key::KeyId(kid) = key else {
+        let key_ref = key.try_into().expect("should map key to key ref");
+        let Key::KeyId(kid) = key_ref else {
             panic!("should have key id");
         };
         let device_jwk = did_jwk(&kid, &wallet).await.expect("should fetch JWK");

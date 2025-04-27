@@ -35,7 +35,7 @@ impl DidIdentity {
 
         let verifying_key = PublicKeyJwk::from_bytes(&signing_key.verifying_key())
             .expect("should convert verifying key to JWK");
-        keyring.add("signer", signing_key);
+        keyring.add("signer", signing_key.clone());
 
         // generate a did:web document
         let url = format!("https://credibil.io/{}", generate::uri_token());
