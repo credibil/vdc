@@ -27,6 +27,7 @@ pub fn to_queryable(issued: &str) -> Result<Queryable> {
         }
     }
 
+    // FIXME: verify MSO
     let Some(mso_bytes) = mdoc.issuer_auth.0.payload else {
         return Err(anyhow!("missing MSO payload"));
     };

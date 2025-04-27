@@ -53,11 +53,11 @@ pub async fn verify_vp(
     }
     // verify `nonce` claim
     if kb_jwt.claims.nonce != request_object.nonce {
-        return Err(anyhow!("kb-jwt `sd_hash` claim is invalid"));
+        return Err(anyhow!("kb-jwt `nonce` claim is invalid"));
     }
     // verify `aud` claim
     if kb_jwt.claims.aud != request_object.client_id.to_string() {
-        return Err(anyhow!("kb-jwt `sd_hash` claim is invalid"));
+        return Err(anyhow!("kb-jwt `aud` claim is invalid"));
     }
 
     // FIXME: verify disclosures `_sd_alg`

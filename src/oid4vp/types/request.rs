@@ -33,6 +33,10 @@ pub struct GenerateRequest {
     /// The Verifier can specify whether Authorization Requests and Responses
     /// are to be passed between endpoints on the same device or across devices
     pub device_flow: DeviceFlow,
+
+    /// Inform the Wallet of the mechanism to use when returning an
+    /// Authorization Response.
+    pub response_mode: ResponseMode,
 }
 
 /// Used to specify whether Authorization Requests and Responses are to be

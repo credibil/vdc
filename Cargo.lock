@@ -596,6 +596,7 @@ dependencies = [
  "credibil-did",
  "credibil-infosec",
  "derive_builder",
+ "ecdsa",
  "ed25519-dalek",
  "fastrand",
  "flate2",
@@ -607,6 +608,7 @@ dependencies = [
  "http-body-util",
  "image",
  "insta",
+ "k256",
  "oauth2",
  "percent-encoding",
  "provider",
@@ -2178,7 +2180,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

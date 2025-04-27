@@ -260,8 +260,13 @@ impl Context {
                 }
 
                 FormatProfile::MsoMdoc { doctype } => {
+                    let jwk = did_jwk(kid, provider).await.map_err(|e| {
+                        server!("issue retrieving JWK for `dc+sd-jwt` credential: {e}")
+                    })?;
+
                     let mdl = MdocBuilder::new()
                         .doctype(doctype)
+                        .device_key(jwk)
                         .claims(dataset.claims.clone())
                         .signer(provider)
                         .build()

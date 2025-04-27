@@ -5,7 +5,9 @@
 use anyhow::anyhow;
 use base64ct::{Base64UrlUnpadded, Encoding};
 use ciborium::cbor;
-use coset::{CoseSign1Builder, HeaderBuilder, iana};
+use coset::{
+    CoseSign1Builder, HeaderBuilder, ProtectedHeader, SignatureContext, iana, sig_structure_data,
+};
 use credibil_did::SignerExt;
 use credibil_infosec::Algorithm;
 use credibil_infosec::jose::jws::Key;
@@ -15,14 +17,14 @@ use sha2::{Digest, Sha256};
 
 use crate::core::serde_cbor;
 pub use crate::format::mso_mdoc::{
-    CoseKey, Curve, DigestIdGenerator, IssuerAuth, IssuerSigned, IssuerSignedItem, KeyType,
-    MobileSecurityObject,
+    CoseKey, DigestIdGenerator, IssuerAuth, IssuerSigned, IssuerSignedItem, MobileSecurityObject,
 };
 
 /// Generate an ISO mDL `mso_mdoc` format credential.
 #[derive(Debug)]
-pub struct MdocBuilder<D, C, S> {
+pub struct MdocBuilder<D, K, C, S> {
     doctype: D,
+    device_key: K,
     claims: C,
     signer: S,
 }
@@ -33,6 +35,13 @@ pub struct NoDocType;
 /// Builder has `doc_type`.
 #[doc(hidden)]
 pub struct HasDocType(String);
+
+/// Builder has no `doc_type`.
+#[doc(hidden)]
+pub struct NoDeviceKey;
+/// Builder has `doc_type`.
+#[doc(hidden)]
+pub struct HasDeviceKey(CoseKey);
 
 /// Builder has no claims.
 #[doc(hidden)]
@@ -48,58 +57,74 @@ pub struct NoSigner;
 #[doc(hidden)]
 pub struct HasSigner<'a, S: SignerExt>(pub &'a S);
 
-impl MdocBuilder<NoDocType, NoClaims, NoSigner> {
+impl MdocBuilder<NoDocType, NoDeviceKey, NoClaims, NoSigner> {
     /// Create a new ISO mDL credential builder.
     #[must_use]
     pub const fn new() -> Self {
         Self {
             doctype: NoDocType,
+            device_key: NoDeviceKey,
             claims: NoClaims,
             signer: NoSigner,
         }
     }
 }
 
-impl Default for MdocBuilder<NoDocType, NoClaims, NoSigner> {
+impl Default for MdocBuilder<NoDocType, NoDeviceKey, NoClaims, NoSigner> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<C, S> MdocBuilder<NoDocType, C, S> {
+impl<K, C, S> MdocBuilder<NoDocType, K, C, S> {
     /// Set the claims for the ISO mDL credential.
-    pub fn doctype(self, doctype: impl Into<String>) -> MdocBuilder<HasDocType, C, S> {
+    pub fn doctype(self, doctype: impl Into<String>) -> MdocBuilder<HasDocType, K, C, S> {
         MdocBuilder {
             doctype: HasDocType(doctype.into()),
+            device_key: self.device_key,
             claims: self.claims,
             signer: self.signer,
         }
     }
 }
 
-impl<D, S> MdocBuilder<D, NoClaims, S> {
+impl<D, C, S> MdocBuilder<D, NoDeviceKey, C, S> {
     /// Set the claims for the ISO mDL credential.
-    pub fn claims(self, claims: Map<String, Value>) -> MdocBuilder<D, HasClaims, S> {
+    pub fn device_key(self, device_key: impl Into<CoseKey>) -> MdocBuilder<D, HasDeviceKey, C, S> {
         MdocBuilder {
             doctype: self.doctype,
+            device_key: HasDeviceKey(device_key.into()),
+            claims: self.claims,
+            signer: self.signer,
+        }
+    }
+}
+
+impl<D, K, S> MdocBuilder<D, K, NoClaims, S> {
+    /// Set the claims for the ISO mDL credential.
+    pub fn claims(self, claims: Map<String, Value>) -> MdocBuilder<D, K, HasClaims, S> {
+        MdocBuilder {
+            doctype: self.doctype,
+            device_key: self.device_key,
             claims: HasClaims(claims),
             signer: self.signer,
         }
     }
 }
 
-impl<D, C> MdocBuilder<D, C, NoSigner> {
+impl<D, K, C> MdocBuilder<D, K, C, NoSigner> {
     /// Set the credential `SignerExt`.
-    pub fn signer<S: SignerExt>(self, signer: &'_ S) -> MdocBuilder<D, C, HasSigner<'_, S>> {
+    pub fn signer<S: SignerExt>(self, signer: &'_ S) -> MdocBuilder<D, K, C, HasSigner<'_, S>> {
         MdocBuilder {
             doctype: self.doctype,
+            device_key: self.device_key,
             claims: self.claims,
             signer: HasSigner(signer),
         }
     }
 }
 
-impl<S: SignerExt> MdocBuilder<HasDocType, HasClaims, HasSigner<'_, S>> {
+impl<S: SignerExt> MdocBuilder<HasDocType, HasDeviceKey, HasClaims, HasSigner<'_, S>> {
     /// Build the ISO mDL credential, returning a base64url-encoded,
     /// CBOR-encoded, ISO mDL.
     ///
@@ -110,6 +135,7 @@ impl<S: SignerExt> MdocBuilder<HasDocType, HasClaims, HasSigner<'_, S>> {
         let mut mdoc = IssuerSigned::new();
         let mut mso = MobileSecurityObject::new();
         mso.doc_type = self.doctype.0;
+        mso.device_key_info.device_key = self.device_key.0;
 
         for (name_space, value) in self.claims.0 {
             // namespace is a root-level claim
@@ -143,39 +169,39 @@ impl<S: SignerExt> MdocBuilder<HasDocType, HasClaims, HasSigner<'_, S>> {
 
         let signer = self.signer.0;
 
-        // add public key to MSO
-        mso.device_key_info.device_key = CoseKey {
-            kty: KeyType::Okp,
-            crv: Curve::Ed25519,
-            x: signer.verifying_key().await?,
-            y: None,
-        };
-
-        // sign
-        let mso_bytes = serde_cbor::to_vec(&mso.into_bytes())?;
-        let signature = signer.sign(&mso_bytes).await;
-
-        // build COSE_Sign1
+        // sign MSO and attach as `IssuerAuth`
+        // ..header
         let algorithm = match signer.algorithm() {
             Algorithm::EdDSA => iana::Algorithm::EdDSA,
             Algorithm::ES256K => return Err(anyhow!("unsupported algorithm")),
         };
-
         let Key::KeyId(key_id) = signer.verification_method().await? else {
             return Err(anyhow!("invalid verification method"));
         };
+        let protected =
+            HeaderBuilder::new().algorithm(algorithm).key_id(key_id.into_bytes()).build();
 
-        let protected = HeaderBuilder::new().algorithm(algorithm).build();
-        let unprotected = HeaderBuilder::new().key_id(key_id.into_bytes()).build();
-        let cose_sign_1 = CoseSign1Builder::new()
-            .protected(protected)
-            .unprotected(unprotected)
-            .payload(mso_bytes)
-            .signature(signature)
-            .build();
-
-        // add COSE_Sign1 to IssuerSigned object
-        mdoc.issuer_auth = IssuerAuth(cose_sign_1);
+        // ..payload
+        let mso_bytes = serde_cbor::to_vec(&mso.into_bytes())?;
+        
+        // ..`ToBeSigned` data structure
+        let sig_data = sig_structure_data(
+            SignatureContext::CoseSign1,
+            ProtectedHeader {
+                original_data: None,
+                header: protected.clone(),
+            },
+            None,
+            &[],
+            &mso_bytes,
+        );
+        mdoc.issuer_auth = IssuerAuth(
+            CoseSign1Builder::new()
+                .protected(protected)
+                .payload(mso_bytes)
+                .signature(signer.sign(&sig_data).await)
+                .build(),
+        );
 
         // encode CBOR -> Base64Url -> return
         Ok(Base64UrlUnpadded::encode_string(&serde_cbor::to_vec(&mdoc)?))
@@ -185,13 +211,22 @@ impl<S: SignerExt> MdocBuilder<HasDocType, HasClaims, HasSigner<'_, S>> {
 #[cfg(test)]
 mod tests {
     use provider::issuer::Issuer;
+    use provider::wallet::Wallet;
     use serde_json::json;
 
     use super::*;
-    use crate::format::mso_mdoc::{DataItem, DigestAlgorithm, serde_cbor};
+    use crate::core::did_jwk;
+    use crate::format::mso_mdoc::{DataItem, DigestAlgorithm, KeyType, serde_cbor};
 
     #[tokio::test]
     async fn build_vc() {
+        let wallet = Wallet::new();
+        let key = wallet.verification_method().await.expect("should have key id");
+        let Key::KeyId(kid) = key else {
+            panic!("should have key id");
+        };
+        let device_jwk = did_jwk(&kid, &wallet).await.expect("should fetch JWK");
+
         let claims_json = json!({
             "org.iso.18013.5.1": {
                 "given_name": "Normal",
@@ -203,6 +238,7 @@ mod tests {
 
         let mdoc = MdocBuilder::new()
             .doctype("org.iso.18013.5.1.mDL")
+            .device_key(device_jwk)
             .claims(claims.clone())
             .signer(&Issuer::new())
             .build()

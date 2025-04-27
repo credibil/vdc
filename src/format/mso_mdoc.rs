@@ -13,6 +13,7 @@ pub mod cose;
 mod issue;
 mod present;
 mod store;
+mod verify;
 
 use std::collections::{BTreeMap, HashSet};
 use std::fmt::Display;
@@ -31,6 +32,7 @@ pub use self::cose::{CoseKey, Curve, KeyType};
 pub use self::issue::MdocBuilder;
 pub use self::present::DeviceResponseBuilder;
 pub use self::store::to_queryable;
+pub use self::verify::verify_vp;
 use crate::core::serde_cbor;
 
 /// Supported device retrieval methods.
@@ -683,6 +685,14 @@ pub enum ResponseStatus {
 /// `Sig_structure.external_aad` set to a zero-length bytestring.
 #[derive(Clone, Debug, Default)]
 pub struct IssuerAuth(pub CoseSign1);
+
+impl Deref for IssuerAuth {
+    type Target = CoseSign1;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 // Use custom serialization/deserialization because `CoseSign1` does not
 // implement `Serialize` and `Deserialize` traits.

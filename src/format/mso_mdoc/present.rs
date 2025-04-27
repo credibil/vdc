@@ -4,7 +4,9 @@
 
 use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
-use coset::{CoseSign1Builder, HeaderBuilder, iana};
+use coset::{
+    CoseSign1Builder, HeaderBuilder, ProtectedHeader, SignatureContext, iana, sig_structure_data,
+};
 use credibil_did::SignerExt;
 use credibil_infosec::Algorithm;
 use credibil_infosec::jose::jws::Key;
@@ -182,10 +184,10 @@ impl<S: SignerExt>
         let mdoc_cbor = Base64UrlUnpadded::decode_vec(issued)?;
         let issuer_signed: IssuerSigned = serde_cbor::from_slice(&mdoc_cbor)?;
 
-        let Some(mso_cbor) = &issuer_signed.issuer_auth.0.payload else {
+        let Some(mso_bytes) = &issuer_signed.issuer_auth.0.payload else {
             return Err(anyhow!("`mso` does not contain a payload"));
         };
-        let mso: DataItem<MobileSecurityObject> = serde_cbor::from_slice(mso_cbor)?;
+        let mso: DataItem<MobileSecurityObject> = serde_cbor::from_slice(mso_bytes)?;
 
         // convert matched claims to device signed items
         let matched = self.matched.0;
@@ -227,27 +229,41 @@ impl<S: SignerExt>
             DataItem(device_name_spaces.clone()),
         );
 
-        // ..COSE_Sign1
         let signer = self.signer.0;
-        let device_authn_bytes = serde_cbor::to_vec(&device_authn.into_bytes())?;
-        let signature = signer.sign(&device_authn_bytes).await;
 
+        // sign `DeviceAuthentication` and attach as `DeviceAuth::Signature`
+        // ..header
         let algorithm = match signer.algorithm() {
             Algorithm::EdDSA => iana::Algorithm::EdDSA,
             Algorithm::ES256K => return Err(anyhow!("unsupported algorithm")),
         };
-
         let Key::KeyId(key_id) = signer.verification_method().await? else {
             return Err(anyhow!("invalid verification method"));
         };
+        let protected =
+            HeaderBuilder::new().algorithm(algorithm).key_id(key_id.into_bytes()).build();
 
-        let protected = HeaderBuilder::new().algorithm(algorithm).build();
-        let unprotected = HeaderBuilder::new().key_id(key_id.into_bytes()).build();
-        let cose_sign_1 = CoseSign1Builder::new()
-            .protected(protected)
-            .unprotected(unprotected)
-            .signature(signature)
-            .build();
+        // ..payload
+        let device_authn_bytes = serde_cbor::to_vec(&device_authn.into_bytes())?;
+
+        // ..`ToBeSigned` data structure
+        let sig_data = sig_structure_data(
+            SignatureContext::CoseSign1,
+            ProtectedHeader {
+                original_data: None,
+                header: protected.clone(),
+            },
+            None,
+            &[],
+            &device_authn_bytes,
+        );
+
+        let signature = DeviceSignature(
+            CoseSign1Builder::new()
+                .protected(protected)
+                .signature(signer.sign(&sig_data).await)
+                .build(),
+        );
 
         // presentation
         let doc = Document {
@@ -255,7 +271,7 @@ impl<S: SignerExt>
             issuer_signed,
             device_signed: DeviceSigned {
                 name_spaces: DataItem(device_name_spaces),
-                device_auth: DeviceAuth::Signature(DeviceSignature(cose_sign_1)),
+                device_auth: DeviceAuth::Signature(signature),
             },
             errors: None,
         };
@@ -275,9 +291,11 @@ impl<S: SignerExt>
 #[cfg(test)]
 mod tests {
     use provider::issuer::Issuer;
+    use provider::wallet::Wallet;
     use serde_json::{Value, json};
 
     use super::*;
+    use crate::core::did_jwk;
     use crate::format::mso_mdoc::MdocBuilder;
     use crate::oid4vp::types::Claim;
 
@@ -293,11 +311,8 @@ mod tests {
             path: vec!["org.iso.18013.5.1".to_string(), "family_name".to_string()],
             value: Value::String("Person".to_string()),
         };
-        // let portrait = &Claim {
-        //     path: vec!["org.iso.18013.5.1".to_string(), "portrait".to_string()],
-        //     value: Value::String("https://example.com/portrait.jpg".to_string()),
-        // };
 
+        // skip `portrait` claim
         let matched = Matched {
             claims: vec![given_name, family_name],
             issued: &Kind::String(issued),
@@ -330,6 +345,13 @@ mod tests {
     }
 
     async fn build_vc() -> String {
+        let wallet = Wallet::new();
+        let key = wallet.verification_method().await.expect("should have key id");
+        let Key::KeyId(kid) = key else {
+            panic!("should have key id");
+        };
+        let device_jwk = did_jwk(&kid, &wallet).await.expect("should fetch JWK");
+
         let claims_json = json!({
             "org.iso.18013.5.1": {
                 "given_name": "Normal",
@@ -341,6 +363,7 @@ mod tests {
 
         MdocBuilder::new()
             .doctype("org.iso.18013.5.1.mDL")
+            .device_key(device_jwk)
             .claims(claims.clone())
             .signer(&Issuer::new())
             .build()

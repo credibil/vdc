@@ -21,7 +21,7 @@
 //! If the Response Type value is "code" (Authorization Code Grant Type), the VP
 //! Token is provided in the Token Response.
 
-use crate::format::sd_jwt;
+use crate::format::{mso_mdoc, sd_jwt};
 use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
@@ -102,7 +102,9 @@ async fn verify(provider: &impl Provider, request: &AuthorzationResponse) -> Res
                     })?
                 }
                 RequestedFormat::MsoMdoc => {
-                    continue;
+                    mso_mdoc::verify_vp(vp, request_object, provider).await.map_err(|e| {
+                        Error::InvalidRequest(format!("failed to verify presentation: {e}"))
+                    })?
                 }
                 _ => {
                     return Err(Error::InvalidRequest(format!(
@@ -112,7 +114,7 @@ async fn verify(provider: &impl Provider, request: &AuthorzationResponse) -> Res
                 }
             };
 
-            println!("claims: {claims:?}");
+            println!("claims: {claims:?}\n");
         }
     }
 
