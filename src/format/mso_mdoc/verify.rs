@@ -43,7 +43,7 @@ pub async fn verify_vp(
 
     let issuer_signed = &doc.issuer_signed;
 
-    // FIXME: verify DeviceSignedItems match IssuerSignedItems
+    // return presented claims
     let mut claims = vec![];
     for (name_space, items) in doc.device_signed.name_spaces.iter() {
         let Some(issuer_items) = issuer_signed.name_spaces.get(name_space) else {
