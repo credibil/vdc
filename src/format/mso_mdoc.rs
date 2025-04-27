@@ -632,19 +632,48 @@ pub type DeviceNameSpaces = BTreeMap<NameSpace, DeviceSignedItems>;
 /// Returned data elements (identifier and value) for each namespace.
 pub type DeviceSignedItems = BTreeMap<String, ciborium::Value>;
 
-/// Device authentication used to authenticate the mdoc response.
-///
-/// N.B. a single mdoc authentication key cannot be used to produce both
-/// signature and MAC.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+/// Used by devices to authenticate the mdoc response.
+#[derive(Clone, Debug)]
 pub enum DeviceAuth {
-    /// `EdDSA` signature
-    #[serde(rename = "deviceSignature")]
-    Signature(DeviceSignature),
+    /// Authenticate the mdoc using an ECDSA/EdDSA signature.
+    ///
+    /// See 9.1.3.6 mdoc ECDSA/EdDSA Authentication, pg 54.
+    Signature(CoseSign1),
 
-    /// ECDH-agreed MAC
-    #[serde(rename = "deviceMac")]
-    Mac(DeviceMac),
+    /// Authenticate the mdoc using an ECKA-DH derived MAC.
+    ///
+    /// See 9.1.3.5 mdoc MAC Authentication, pg 54
+    Mac(CoseMac0),
+}
+
+impl Serialize for DeviceAuth {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = BTreeMap::<String, Value>::new();
+        match self.clone() {
+            Self::Signature(cose_sign1) => {
+                let value = cose_sign1.to_cbor_value().map_err(ser::Error::custom)?;
+                map.insert("deviceSignature".to_string(), value);
+            }
+            Self::Mac(cose_mac0) => {
+                let value = cose_mac0.to_cbor_value().map_err(ser::Error::custom)?;
+                map.insert("deviceSignature".to_string(), value);
+            }
+        }
+        map.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for DeviceAuth {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let map = BTreeMap::<String, Value>::deserialize(deserializer)?;
+        if let Some(v) = map.get("deviceSignature").cloned() {
+            return CoseSign1::from_cbor_value(v).map_err(de::Error::custom).map(Self::Signature);
+        }
+        if let Some(v) = map.get("deviceMac").cloned() {
+            return CoseMac0::from_cbor_value(v).map_err(de::Error::custom).map(Self::Mac);
+        }
+        Err(de::Error::custom("unknown device authentication type"))
+    }
 }
 
 /// Error codes for each namespace.
@@ -947,43 +976,6 @@ impl DeviceAuthentication {
     #[must_use]
     pub const fn into_bytes(self) -> DataItem<Self> {
         DataItem(self)
-    }
-}
-
-/// Used by `DeviceAuth` to authenticate the mdoc using an ECDSA/EdDSA
-/// signature.
-///
-/// See 9.1.3.6 mdoc ECDSA/EdDSA Authentication, pg 54.
-#[derive(Clone, Debug, Default)]
-pub struct DeviceSignature(pub CoseSign1);
-
-impl Serialize for DeviceSignature {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.0.clone().to_cbor_value().map_err(ser::Error::custom)?.serialize(serializer)
-    }
-}
-impl<'de> Deserialize<'de> for DeviceSignature {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = Value::deserialize(deserializer)?;
-        CoseSign1::from_cbor_value(value).map_err(de::Error::custom).map(Self)
-    }
-}
-
-/// Used by `DeviceAuth` to authenticate the mdoc using an ECKA-DH derived MAC.
-///
-/// See 9.1.3.5 mdoc MAC Authentication, pg 54
-#[derive(Clone, Debug, Default)]
-pub struct DeviceMac(pub CoseMac0);
-
-impl Serialize for DeviceMac {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.0.clone().to_cbor_value().map_err(ser::Error::custom)?.serialize(serializer)
-    }
-}
-impl<'de> Deserialize<'de> for DeviceMac {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = Value::deserialize(deserializer)?;
-        CoseMac0::from_cbor_value(value).map_err(de::Error::custom).map(Self)
     }
 }
 

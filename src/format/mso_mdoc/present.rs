@@ -15,9 +15,9 @@ use sha2::{Digest, Sha256};
 use crate::Kind;
 use crate::core::{generate, serde_cbor};
 use crate::format::mso_mdoc::{
-    DataItem, DeviceAuth, DeviceAuthentication, DeviceNameSpaces, DeviceResponse, DeviceSignature,
-    DeviceSigned, Document, Handover, IssuerSigned, MobileSecurityObject, OID4VPHandover,
-    ResponseStatus, SessionTranscript, VersionString,
+    DataItem, DeviceAuth, DeviceAuthentication, DeviceNameSpaces, DeviceResponse, DeviceSigned,
+    Document, Handover, IssuerSigned, MobileSecurityObject, OID4VPHandover, ResponseStatus,
+    SessionTranscript, VersionString,
 };
 use crate::oid4vp::types::Matched;
 
@@ -257,13 +257,11 @@ impl<S: SignerExt>
             &[],
             &device_authn_bytes,
         );
-
-        let signature = DeviceSignature(
-            CoseSign1Builder::new()
-                .protected(protected)
-                .signature(signer.sign(&sig_data).await)
-                .build(),
-        );
+        let signature = CoseSign1Builder::new()
+            .protected(protected)
+            .payload(device_authn_bytes)
+            .signature(signer.sign(&sig_data).await)
+            .build();
 
         // presentation
         let doc = Document {
