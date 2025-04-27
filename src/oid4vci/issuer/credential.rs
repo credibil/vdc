@@ -16,7 +16,7 @@ use credibil_infosec::jose::jws::{self, Key};
 
 use crate::core::{did_jwk, generate};
 use crate::format::FormatProfile;
-use crate::format::mso_mdoc::MsoMdocBuilder;
+use crate::format::mso_mdoc::MdocBuilder;
 use crate::format::sd_jwt::SdJwtVcBuilder;
 use crate::format::w3c::W3cVcBuilder;
 use crate::oid4vci::endpoint::{Body, Handler, Request, Response};
@@ -260,8 +260,13 @@ impl Context {
                 }
 
                 FormatProfile::MsoMdoc { doctype } => {
-                    let mdl = MsoMdocBuilder::new()
+                    let jwk = did_jwk(kid, provider).await.map_err(|e| {
+                        server!("issue retrieving JWK for `dc+sd-jwt` credential: {e}")
+                    })?;
+
+                    let mdl = MdocBuilder::new()
                         .doctype(doctype)
+                        .device_key(jwk)
                         .claims(dataset.claims.clone())
                         .signer(provider)
                         .build()

@@ -211,11 +211,9 @@ impl ClaimQuery {
     fn execute<'a>(&self, credential: &'a Queryable) -> Option<Vec<&'a Claim>> {
         let matches =
             credential.claims.iter().filter(|c| self.is_match(c)).collect::<Vec<&Claim>>();
-
         if matches.is_empty() {
             return None;
         }
-
         Some(matches)
     }
 

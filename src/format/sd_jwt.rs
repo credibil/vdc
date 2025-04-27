@@ -137,6 +137,22 @@ pub enum KeyBinding {
     },
 }
 
+impl From<PublicKeyJwk> for KeyBinding {
+    fn from(jwk: PublicKeyJwk) -> Self {
+        Self::Jwk(jwk)
+    }
+}
+impl From<String> for KeyBinding {
+    fn from(kid: String) -> Self {
+        Self::Kid(kid)
+    }
+}
+impl From<(String, String)> for KeyBinding {
+    fn from((jku, kid): (String, String)) -> Self {
+        Self::Jku { jku, kid }
+    }
+}
+
 /// A claim disclosure.
 #[derive(Debug)]
 pub struct Disclosure {

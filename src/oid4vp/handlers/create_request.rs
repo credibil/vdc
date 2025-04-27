@@ -11,8 +11,7 @@ use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vp::provider::{Metadata, Provider, StateStore};
 use crate::oid4vp::state::{Expire, State};
 use crate::oid4vp::types::{
-    ClientIdentifier, DeviceFlow, GenerateRequest, GenerateResponse, RequestObject, ResponseMode,
-    ResponseType,
+    ClientIdentifier, DeviceFlow, GenerateRequest, GenerateResponse, RequestObject, ResponseType,
 };
 use crate::oid4vp::{Error, Result};
 
@@ -31,21 +30,20 @@ async fn create_request(
         return Err(Error::InvalidRequest("invalid client_id".to_string()));
     };
 
+    // TODO: Response Mode "direct_post" is RECOMMENDED for cross-device flows.
+
     let mut req_obj = RequestObject {
         response_type: ResponseType::VpToken,
         state: Some(uri_token.clone()),
         nonce: generate::nonce(),
         dcql_query: request.query,
         client_metadata: Some(metadata.client_metadata),
-        ..Default::default()
+        response_mode: request.response_mode,
+        ..RequestObject::default()
     };
 
-    // Response Mode "direct_post" is RECOMMENDED for cross-device flows.
     // FIXME: replace hard-coded endpoints with Provider-set values
     let response = if request.device_flow == DeviceFlow::CrossDevice {
-        req_obj.response_mode = ResponseMode::DirectPost {
-            response_uri: format!("{verifier}/post"),
-        };
         req_obj.client_id = ClientIdentifier::RedirectUri(format!("{verifier}/post"));
         GenerateResponse::Uri(format!("{verifier}/request/{uri_token}"))
     } else {
