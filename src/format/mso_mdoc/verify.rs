@@ -41,15 +41,25 @@ pub async fn verify_vp(
     let verifying_key: CoseKey = did_jwk(&kid, resolver).await?.into();
     issuer_sig.verify_signature(&[], |sig, tbs| verifying_key.verify(sig, tbs))?;
 
-    // let Some(mso_bytes) = &doc.issuer_signed.issuer_auth.0.payload else {
-    //     return Err(anyhow!("missing MSO payload"));
-    // };
-    // let mso: DataItem<MobileSecurityObject> = serde_cbor::from_slice(mso_bytes)?;
+    let issuer_signed = &doc.issuer_signed;
 
     // FIXME: verify DeviceSignedItems match IssuerSignedItems
     let mut claims = vec![];
     for (name_space, items) in doc.device_signed.name_spaces.iter() {
+        let Some(issuer_items) = issuer_signed.name_spaces.get(name_space) else {
+            return Err(anyhow!("issuer namespace not found"));
+        };
+
         for (identifier, value) in items {
+            // verify presented item exists in issuer signed items
+            let Some(item) = issuer_items.iter().find(|isi| isi.element_identifier == *identifier)
+            else {
+                return Err(anyhow!("issuer signed item not found"));
+            };
+            if item.element_value != *value {
+                return Err(anyhow!("issuer signed item value mismatch"));
+            }
+
             let claim = Claim {
                 path: vec![name_space.to_string(), identifier.to_string()],
                 value: serde_json::to_value(value)?,

@@ -41,8 +41,7 @@ pub async fn sign(payload: Vec<u8>, signer: &impl SignerExt) -> Result<CoseSign1
         return Err(anyhow!("invalid verification method"));
     };
     let protected = HeaderBuilder::new().algorithm(algorithm).key_id(key_id.into_bytes()).build();
-
-    // `ToBeSigned` data structure
+    
     let sig_data = sig_structure_data(
         SignatureContext::CoseSign1,
         ProtectedHeader {

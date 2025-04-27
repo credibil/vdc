@@ -191,12 +191,13 @@ impl<S: SignerExt>
         for claim in &matched.claims {
             // find issuer signed item matching the claim
             let name_space = claim.path[0].clone();
-            let id = &claim.path[claim.path.len() - 1];
+            let identifier = &claim.path[claim.path.len() - 1];
 
             let Some(issuer_items) = issuer_signed.name_spaces.get(&name_space) else {
                 return Err(anyhow!("namespace not found"));
             };
-            let Some(item) = issuer_items.iter().find(|isi| isi.element_identifier == *id) else {
+            let Some(item) = issuer_items.iter().find(|isi| isi.element_identifier == *identifier)
+            else {
                 return Err(anyhow!("issuer signed item not found"));
             };
 
