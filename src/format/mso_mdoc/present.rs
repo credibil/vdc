@@ -4,12 +4,7 @@
 
 use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
-use coset::{
-    CoseSign1Builder, HeaderBuilder, ProtectedHeader, SignatureContext, iana, sig_structure_data,
-};
 use credibil_did::SignerExt;
-use credibil_infosec::Algorithm;
-use credibil_infosec::jose::jws::Key;
 use sha2::{Digest, Sha256};
 
 use crate::Kind;
@@ -17,7 +12,7 @@ use crate::core::{generate, serde_cbor};
 use crate::format::mso_mdoc::{
     DataItem, DeviceAuth, DeviceAuthentication, DeviceNameSpaces, DeviceResponse, DeviceSigned,
     Document, Handover, IssuerSigned, MobileSecurityObject, OID4VPHandover, ResponseStatus,
-    SessionTranscript, VersionString,
+    SessionTranscript, VersionString, cose,
 };
 use crate::oid4vp::types::Matched;
 
@@ -229,39 +224,8 @@ impl<S: SignerExt>
             DataItem(device_name_spaces.clone()),
         );
 
-        let signer = self.signer.0;
-
-        // sign `DeviceAuthentication` and attach as `DeviceAuth::Signature`
-        // ..header
-        let algorithm = match signer.algorithm() {
-            Algorithm::EdDSA => iana::Algorithm::EdDSA,
-            Algorithm::ES256K => return Err(anyhow!("unsupported algorithm")),
-        };
-        let Key::KeyId(key_id) = signer.verification_method().await? else {
-            return Err(anyhow!("invalid verification method"));
-        };
-        let protected =
-            HeaderBuilder::new().algorithm(algorithm).key_id(key_id.into_bytes()).build();
-
-        // ..payload
         let device_authn_bytes = serde_cbor::to_vec(&device_authn.into_bytes())?;
-
-        // ..`ToBeSigned` data structure
-        let sig_data = sig_structure_data(
-            SignatureContext::CoseSign1,
-            ProtectedHeader {
-                original_data: None,
-                header: protected.clone(),
-            },
-            None,
-            &[],
-            &device_authn_bytes,
-        );
-        let signature = CoseSign1Builder::new()
-            .protected(protected)
-            .payload(device_authn_bytes)
-            .signature(signer.sign(&sig_data).await)
-            .build();
+        let signature = cose::sign(device_authn_bytes, self.signer.0).await?;
 
         // presentation
         let doc = Document {
@@ -288,6 +252,7 @@ impl<S: SignerExt>
 
 #[cfg(test)]
 mod tests {
+    use credibil_infosec::jose::jws::Key;
     use provider::issuer::Issuer;
     use provider::wallet::Wallet;
     use serde_json::{Value, json};

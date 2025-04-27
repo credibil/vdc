@@ -8,7 +8,13 @@ use std::collections::BTreeMap;
 use anyhow::{Result, anyhow, bail};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use ciborium::{Value, cbor};
-use credibil_infosec::PublicKeyJwk;
+use coset::{
+    CoseSign1, CoseSign1Builder, HeaderBuilder, ProtectedHeader, SignatureContext, iana,
+    sig_structure_data,
+};
+use credibil_did::SignerExt;
+use credibil_infosec::jose::jws::Key;
+use credibil_infosec::{Algorithm, PublicKeyJwk};
 use ecdsa::signature::Verifier as _;
 use serde::{Deserialize, Serialize, de, ser};
 use serde_repr::{Deserialize_repr, Serialize_repr};
@@ -19,6 +25,37 @@ const KTY: i64 = 1;
 const CRV: i64 = -1;
 const X: i64 = -2;
 const Y: i64 = -3;
+
+/// Signs the provided payload using the provided signer.
+pub async fn sign(payload: Vec<u8>, signer: &impl SignerExt) -> Result<CoseSign1> {
+    // header
+    let algorithm = match signer.algorithm() {
+        Algorithm::EdDSA => iana::Algorithm::EdDSA,
+        Algorithm::ES256K => return Err(anyhow!("unsupported algorithm")),
+    };
+    let Key::KeyId(key_id) = signer.verification_method().await? else {
+        return Err(anyhow!("invalid verification method"));
+    };
+    let protected = HeaderBuilder::new().algorithm(algorithm).key_id(key_id.into_bytes()).build();
+
+    // `ToBeSigned` data structure
+    let sig_data = sig_structure_data(
+        SignatureContext::CoseSign1,
+        ProtectedHeader {
+            original_data: None,
+            header: protected.clone(),
+        },
+        None,
+        &[],
+        &payload,
+    );
+
+    Ok(CoseSign1Builder::new()
+        .protected(protected)
+        .payload(payload)
+        .signature(signer.sign(&sig_data).await)
+        .build())
+}
 
 /// Implements [`COSE_Key`] as defined in [RFC9052].
 ///

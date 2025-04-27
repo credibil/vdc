@@ -5,17 +5,13 @@
 use anyhow::anyhow;
 use base64ct::{Base64UrlUnpadded, Encoding};
 use ciborium::cbor;
-use coset::{
-    CoseSign1Builder, HeaderBuilder, ProtectedHeader, SignatureContext, iana, sig_structure_data,
-};
 use credibil_did::SignerExt;
-use credibil_infosec::Algorithm;
-use credibil_infosec::jose::jws::Key;
 use rand::{Rng, rng};
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 
 use crate::core::serde_cbor;
+use crate::format::mso_mdoc::cose;
 pub use crate::format::mso_mdoc::{
     CoseKey, DigestIdGenerator, IssuerAuth, IssuerSigned, IssuerSignedItem, MobileSecurityObject,
 };
@@ -167,41 +163,9 @@ impl<S: SignerExt> MdocBuilder<HasDocType, HasDeviceKey, HasClaims, HasSigner<'_
             }
         }
 
-        let signer = self.signer.0;
-
         // sign MSO and attach as `IssuerAuth`
-        // ..header
-        let algorithm = match signer.algorithm() {
-            Algorithm::EdDSA => iana::Algorithm::EdDSA,
-            Algorithm::ES256K => return Err(anyhow!("unsupported algorithm")),
-        };
-        let Key::KeyId(key_id) = signer.verification_method().await? else {
-            return Err(anyhow!("invalid verification method"));
-        };
-        let protected =
-            HeaderBuilder::new().algorithm(algorithm).key_id(key_id.into_bytes()).build();
-
-        // ..payload
         let mso_bytes = serde_cbor::to_vec(&mso.into_bytes())?;
-        
-        // ..`ToBeSigned` data structure
-        let sig_data = sig_structure_data(
-            SignatureContext::CoseSign1,
-            ProtectedHeader {
-                original_data: None,
-                header: protected.clone(),
-            },
-            None,
-            &[],
-            &mso_bytes,
-        );
-        mdoc.issuer_auth = IssuerAuth(
-            CoseSign1Builder::new()
-                .protected(protected)
-                .payload(mso_bytes)
-                .signature(signer.sign(&sig_data).await)
-                .build(),
-        );
+        mdoc.issuer_auth = IssuerAuth(cose::sign(mso_bytes, self.signer.0).await?);
 
         // encode CBOR -> Base64Url -> return
         Ok(Base64UrlUnpadded::encode_string(&serde_cbor::to_vec(&mdoc)?))
@@ -210,6 +174,7 @@ impl<S: SignerExt> MdocBuilder<HasDocType, HasDeviceKey, HasClaims, HasSigner<'_
 
 #[cfg(test)]
 mod tests {
+    use credibil_infosec::jose::jws::Key;
     use provider::issuer::Issuer;
     use provider::wallet::Wallet;
     use serde_json::json;
