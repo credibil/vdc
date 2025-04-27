@@ -21,34 +21,6 @@ pub struct Keyring {
 impl Keyring {
     pub fn new() -> Self {
         Self { keys: HashMap::new() }
-
-        // generate key pair
-        //let signing_key = SigningKey::generate(&mut OsRng);
-        //let verifying_key = signing_key.verifying_key();
-        //let url = format!("https://credibil.io/{}", generate::uri_token());
-
-        //let mut keyring = Self {
-        //    url: url.clone(),
-        //    did: String::new(),
-        //    signing_key,
-        //    verifying_key,
-        //};
-
-        // generate did:web document
-        //let did = credibil_did::web::default_did(&url).expect("should construct DID");
-        //let key_bytes = verifying_key.as_bytes().to_vec();
-        //let vk = PublicKeyJwk::from_bytes(&key_bytes).expect("should convert verifying key to JWK");
-        //let document = DocumentBuilder::new(&did)
-        //    .add_verifying_key(&vk, true)
-        //    .expect("should add verifying key")
-        //    .build();
-
-        //println!("DID document: {:#?}", document);
-
-        //keyring.did = document.id.clone();
-        //DID_STORE.lock().expect("should lock").insert(url, document);
-
-        //keyring
     }
 
     pub fn add(&mut self, key_id: impl Into<String>, key: impl Into<KeyUse>) {

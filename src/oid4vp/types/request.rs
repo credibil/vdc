@@ -6,6 +6,7 @@ use base64ct::{Base64, Encoding};
 pub use credibil_identity::SignerExt;
 use credibil_infosec::PublicKeyJwk;
 use credibil_infosec::jose::jws;
+use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
 use qrcode::QrCode;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -14,6 +15,9 @@ use crate::Kind;
 use crate::core::urlencode;
 use crate::format::w3c::Type;
 use crate::oid4vp::types::{DcqlQuery, VerifierMetadata, Wallet};
+
+const UNRESERVED: &AsciiSet =
+    &NON_ALPHANUMERIC.remove(b'&').remove(b'=').remove(b'.').remove(b'_').remove(b'-').remove(b'~');
 
 /// The Request Object Request is created by the Verifier to generate an
 /// Authorization Request Object.
@@ -29,6 +33,10 @@ pub struct GenerateRequest {
     /// The Verifier can specify whether Authorization Requests and Responses
     /// are to be passed between endpoints on the same device or across devices
     pub device_flow: DeviceFlow,
+
+    /// Inform the Wallet of the mechanism to use when returning an
+    /// Authorization Response.
+    pub response_mode: ResponseMode,
 }
 
 /// Used to specify whether Authorization Requests and Responses are to be
@@ -191,7 +199,7 @@ impl RequestObject {
     /// serialized.
     pub async fn to_qrcode(&self, endpoint: &str, signer: &impl SignerExt) -> Result<String> {
         // let qs = self.url_params().map_err(|e| anyhow!("Failed to generate querystring: {e}"))?;
-        let qs = self.url_value(signer).await?;
+        let qs = self.to_querystring(signer).await?;
 
         // generate qr code
         let qr_code = QrCode::new(format!("{endpoint}{qs}"))
@@ -228,7 +236,7 @@ impl RequestObject {
     ///
     /// Returns an `Error::ServerError` error if the Request Object cannot be
     /// serialized.
-    pub async fn url_value(&self, signer: &impl SignerExt) -> Result<String> {
+    pub async fn to_querystring(&self, signer: &impl SignerExt) -> Result<String> {
         let payload: RequestObjectClaims = self.clone().into();
 
         let key = signer.verification_method().await?;
@@ -242,13 +250,11 @@ impl RequestObject {
             .build()
             .await
             .map_err(|e| anyhow!("issue building jwt: {e}"))?;
-        let encoded = jws.encode().map_err(|e| anyhow!("issue encoding jwt: {e}"))?;
 
-        let client_id = urlencode::to_string(&self.client_id)?;
-        // let bytes = serde_json::to_vec(&req_obj)
-        //     .map_err(|e| anyhow!("issue serializing request object: {e}"))?;
-        // let encoded = Base64UrlUnpadded::encode_string(&bytes);
-        Ok(format!("?{client_id}&request={encoded}"))
+        let encoded = jws.encode().map_err(|e| anyhow!("issue encoding jws: {e}"))?;
+        let client_id = utf8_percent_encode(&self.client_id.to_string(), UNRESERVED).to_string();
+
+        Ok(format!("{client_id}&request={encoded}"))
     }
 }
 
@@ -570,13 +576,15 @@ impl From<RequestObject> for RequestObjectClaims {
 
 #[cfg(test)]
 mod tests {
+
+    use credibil_infosec::Jwt;
     use provider::verifier::Verifier;
 
     use super::*;
 
     #[test]
     #[ignore = "development only"]
-    fn serialize_request_object() {
+    fn request_object() {
         let request_object = RequestObject {
             response_type: ResponseType::VpToken,
             client_id: ClientIdentifier::Preregistered("client_id".to_string()),
@@ -595,15 +603,13 @@ mod tests {
         };
 
         let serialized = serde_json::to_string_pretty(&request_object).unwrap();
-        println!("{serialized}");
-
-        // let deserialized: RequestObject = serde_json::from_str(&serialized).unwrap();
-        // assert_eq!(request_object, deserialized);
+        let deserialized: RequestObject = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(request_object, deserialized);
     }
 
     #[tokio::test]
     #[ignore = "development only"]
-    async fn url_value() {
+    async fn querystring() {
         let request_object = RequestObject {
             response_type: ResponseType::VpToken,
             client_id: ClientIdentifier::RedirectUri("https://client.example.com".to_string()),
@@ -621,11 +627,16 @@ mod tests {
             wallet_nonce: None,
         };
 
-        let serialized = request_object.url_value(&Verifier::new()).await.unwrap();
-        // let serialized = request_object.url_params().unwrap();
-        println!("{serialized}");
+        let querystring = request_object.to_querystring(&Verifier::new()).await.unwrap();
 
-        // let deserialized: RequestObject = serde_json::from_str(&serialized).unwrap();
-        // assert_eq!(request_object, deserialized);
+        let request = querystring
+            .split('&')
+            .find(|s| s.starts_with("request="))
+            .unwrap()
+            .strip_prefix("request=")
+            .unwrap();
+
+        let jwt: Jwt<RequestObjectClaims> = request.parse().unwrap();
+        assert_eq!(jwt.claims.request_object, request_object);
     }
 }

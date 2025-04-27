@@ -17,6 +17,6 @@ async fn metadata_ok() {
     };
     let response = endpoint::handle("http://localhost:8080", request, &provider).await.expect("ok");
     assert_snapshot!("response", response, {
-        ".vp_formats" => insta::sorted_redaction()
+        ".vp_format_supported" => insta::sorted_redaction()
     });
 }

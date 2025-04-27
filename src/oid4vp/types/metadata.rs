@@ -61,7 +61,7 @@ pub struct VerifierMetadata {
     /// An object defining the formats and proof types of Verifiable
     /// Presentations and Verifiable Credentials that a Verifier supports.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub vp_formats: Option<HashMap<Format, VpFormat>>,
+    pub vp_format_supported: Option<HashMap<Format, VpFormat>>,
 
     /// The JWS `alg` algorithm for signing authorization responses.
     #[serde(skip_serializing_if = "Option::is_none")]

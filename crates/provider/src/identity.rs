@@ -12,6 +12,7 @@ use credibil_identity::did::{
 };
 use credibil_infosec::{Algorithm, Curve, KeyType, PublicKeyJwk};
 use credibil_vc::core::generate;
+use credibil_vc::format::w3c::verify;
 
 use crate::blockstore::Mockstore;
 use crate::keystore::{self, KeyUse, Keyring, SigningKey};
@@ -29,7 +30,12 @@ impl DidIdentity {
     // Generate a DID-based Identity.
     pub fn new() -> Self {
         // create a new keyring and add a signing key.
+        let mut keyring = Keyring::new();
         let signing_key = SigningKey::new();
+
+        let verifying_key = PublicKeyJwk::from_bytes(&signing_key.verifying_key())
+            .expect("should convert verifying key to JWK");
+        keyring.add("signer", signing_key);
 
         // generate a did:web document
         let url = format!("https://credibil.io/{}", generate::uri_token());
@@ -42,10 +48,9 @@ impl DidIdentity {
         keyring.add("signer", signing_key);
 
         let document = DocumentBuilder::new(&did)
-            .add_verifying_key(&vk, true)
+            .add_verifying_key(&verifying_key, true)
             .expect("should add verifying key")
             .build();
-
         DID_STORE.lock().expect("should lock").insert(url.clone(), document);
 
         Self {
@@ -87,21 +92,3 @@ impl DidIdentity {
         Ok(Identity::DidDocument(doc))
     }
 }
-
-// impl DidOperator for Keyring {
-//     fn verification(&self, purpose: KeyPurpose) -> Option<PublicKeyJwk> {
-//         let KeyUse::Signing(signer) = self.get("signer") else {
-//             panic!("signer not found");
-//         };
-
-//         match purpose {
-//             KeyPurpose::VerificationMethod => Some(PublicKeyJwk {
-//                 kty: KeyType::Okp,
-//                 crv: Curve::Ed25519,
-//                 x: Base64UrlUnpadded::encode_string(&signer.verifying_key()),
-//                 ..PublicKeyJwk::default()
-//             }),
-//             _ => panic!("unsupported purpose"),
-//         }
-//     }
-// }

@@ -6,10 +6,10 @@ use credibil_identity::{Key, SignerExt};
 use credibil_infosec::PublicKeyJwk;
 use credibil_vc::BlockStore;
 use credibil_vc::core::did_jwk;
-use credibil_vc::format::mso_mdoc::MsoMdocBuilder;
+use credibil_vc::format::mso_mdoc::MdocBuilder;
 use credibil_vc::format::sd_jwt::SdJwtVcBuilder;
 use credibil_vc::format::{mso_mdoc, sd_jwt};
-use credibil_vc::oid4vp::types::DcqlQuery;
+use credibil_vc::oid4vp::types::{DcqlQuery, ResponseMode};
 use credibil_vc::oid4vp::{
     AuthorzationResponse, DeviceFlow, GenerateRequest, GenerateResponse, endpoint, vp_token,
 };
@@ -51,6 +51,9 @@ async fn multiple_claims() {
         query,
         client_id: VERIFIER_ID.to_string(),
         device_flow: DeviceFlow::SameDevice,
+        response_mode: ResponseMode::DirectPost {
+            response_uri: "http://localhost:3000/cb".to_string(),
+        },
     };
     let response =
         endpoint::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
@@ -121,7 +124,7 @@ async fn multiple_credentials() {
                 },
                 "claims": [
                     {"path": ["org.iso.7367.1", "vehicle_holder"]},
-                    {"path": ["org.iso.18013.5.1", "first_name"]}
+                    {"path": ["org.iso.18013.5.1", "given_name"]}
                 ]
             }
         ]
@@ -131,8 +134,10 @@ async fn multiple_credentials() {
     let request = GenerateRequest {
         query,
         client_id: VERIFIER_ID.to_string(),
-        // device_flow: DeviceFlow::CrossDevice,
         device_flow: DeviceFlow::SameDevice,
+        response_mode: ResponseMode::DirectPost {
+            response_uri: "http://localhost:3000/cb".to_string(),
+        },
     };
     let response =
         endpoint::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
@@ -152,7 +157,7 @@ async fn multiple_credentials() {
 
     let vp_token =
         vp_token::generate(&request_object, &results, &*WALLET).await.expect("should get token");
-    assert_eq!(vp_token.len(), 1);
+    assert_eq!(vp_token.len(), 2);
 
     let request = AuthorzationResponse {
         vp_token,
@@ -526,7 +531,7 @@ async fn populate() -> Wallet {
             "portrait": "https://example.com/portrait.jpg",
         },
     });
-    let mdoc = mso_mdoc(doctype, claims).await;
+    let mdoc = mso_mdoc(doctype, claims, &holder_jwk).await;
     let q = mso_mdoc::to_queryable(&mdoc).expect("should be mdoc");
     wallet.add(q);
 
@@ -541,7 +546,7 @@ async fn populate() -> Wallet {
             "portrait": "https://example.com/portrait.jpg",
         },
     });
-    let mdoc = mso_mdoc(doctype, claims).await;
+    let mdoc = mso_mdoc(doctype, claims, &holder_jwk).await;
     let q = mso_mdoc::to_queryable(&mdoc).expect("should be mdoc");
     wallet.add(q);
 
@@ -560,9 +565,10 @@ async fn sd_jwt(vct: &str, claims: Value, holder_jwk: &PublicKeyJwk) -> String {
         .expect("should build")
 }
 
-async fn mso_mdoc(doctype: &str, claims: Value) -> String {
-    MsoMdocBuilder::new()
+async fn mso_mdoc(doctype: &str, claims: Value, holder_jwk: &PublicKeyJwk) -> String {
+    MdocBuilder::new()
         .doctype(doctype)
+        .device_key(holder_jwk.clone())
         .claims(claims.as_object().unwrap().clone())
         .signer(&*ISSUER)
         .build()

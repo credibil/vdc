@@ -18,15 +18,15 @@ pub fn to_queryable(issued: &str) -> Result<Queryable> {
     let mdoc: IssuerSigned = serde_cbor::from_slice(&mdoc_bytes)?;
 
     let mut claims = vec![];
-    for (name_space, tags) in &mdoc.name_spaces {
-        let mut path = vec![name_space.clone()];
-        for tag in tags {
-            path.push(tag.element_identifier.clone());
-            let nested = unpack_claims(path.clone(), &tag.element_value);
+    for (name_space, issued_items) in &mdoc.name_spaces {
+        for item in issued_items {
+            let path = vec![name_space.clone(), item.element_identifier.clone()];
+            let nested = unpack_claims(path.clone(), &item.element_value);
             claims.extend(nested);
         }
     }
 
+    // FIXME: verify MSO
     let Some(mso_bytes) = mdoc.issuer_auth.0.payload else {
         return Err(anyhow!("missing MSO payload"));
     };

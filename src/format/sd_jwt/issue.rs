@@ -49,7 +49,7 @@ pub struct HasIssuer(String);
 pub struct NoKeyBinding;
 /// Builder has key_binding.
 #[doc(hidden)]
-pub struct HasKeyBinding(PublicKeyJwk);
+pub struct HasKeyBinding(KeyBinding);
 
 /// Builder has no claims.
 #[doc(hidden)]
@@ -123,12 +123,12 @@ impl<V, I, C, S> SdJwtVcBuilder<V, I, NoKeyBinding, C, S> {
     /// Set the claims for the ISO mDL credential.
     #[must_use]
     pub fn key_binding(
-        self, key_binding: PublicKeyJwk,
+        self, key_binding: impl Into<KeyBinding>,
     ) -> SdJwtVcBuilder<V, I, HasKeyBinding, C, S> {
         SdJwtVcBuilder {
             vct: self.vct,
             issuer: self.issuer,
-            key_binding: HasKeyBinding(key_binding),
+            key_binding: HasKeyBinding(key_binding.into()),
             claims: self.claims,
             holder: self.holder,
             signer: self.signer,
@@ -206,7 +206,7 @@ impl<S: SignerExt> SdJwtVcBuilder<Vct, HasIssuer, HasKeyBinding, HasClaims, HasS
             // exp: Some(Utc::now()),
             vct: self.vct.0,
             sd_alg: Some("sha-256".to_string()),
-            cnf: Some(KeyBinding::Jwk(self.key_binding.0)),
+            cnf: Some(self.key_binding.0),
             // status: None,
             sub: self.holder,
             ..SdJwtClaims::default()
