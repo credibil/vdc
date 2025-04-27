@@ -12,7 +12,7 @@
 use anyhow::Result;
 use chrono::Utc;
 use credibil_identity::SignerExt;
-use credibil_infosec::{Jws, PublicKeyJwk};
+use credibil_infosec::Jws;
 use serde_json::{Map, Value};
 
 use crate::format::sd_jwt::{Disclosure, JwtType, KeyBinding, SdJwtClaims};

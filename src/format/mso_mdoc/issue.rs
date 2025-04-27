@@ -5,9 +5,7 @@
 use anyhow::anyhow;
 use base64ct::{Base64UrlUnpadded, Encoding};
 use ciborium::cbor;
-use coset::{CoseSign1Builder, HeaderBuilder, iana};
-use credibil_identity::{Key, SignerExt};
-use credibil_infosec::Algorithm;
+use credibil_identity::SignerExt;
 use rand::{Rng, rng};
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
