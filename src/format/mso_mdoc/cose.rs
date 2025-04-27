@@ -27,6 +27,10 @@ const X: i64 = -2;
 const Y: i64 = -3;
 
 /// Signs the provided payload using the provided signer.
+///
+/// # Errors
+///
+/// Returns an error if the signing fails or if the algorithm is unsupported.
 pub async fn sign(payload: Vec<u8>, signer: &impl SignerExt) -> Result<CoseSign1> {
     // header
     let algorithm = match signer.algorithm() {
