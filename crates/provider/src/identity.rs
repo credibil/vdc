@@ -40,10 +40,12 @@ impl DidIdentity {
         // generate a did:web document
         let url = format!("https://credibil.io/{}", generate::uri_token());
         let did = did::web::default_did(&url).expect("should construct DID");
+        let mut keyring
+        keyring.add("signer", signing_key);
 
-        let vk = PublicKeyJwk::from_bytes(&signing_key.verifying_key())
-            .expect("should convert verifying key to JWK");
-        
+        // generate a did:web document
+        let url = format!("https://credibil.io/{}", generate::uri_token());
+        let did = credibil_did::web::default_did(&url).expect("should construct DID");
         let mut keyring = Keyring::new();
         keyring.add("signer", signing_key);
 
