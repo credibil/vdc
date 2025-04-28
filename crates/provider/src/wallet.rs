@@ -5,7 +5,7 @@ use std::str::FromStr;
 use anyhow::Result;
 use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
-use credibil_infosec::{Algorithm, Jws, Signer};
+use credibil_jose::{Algorithm, Jws, Signer};
 use credibil_vc::core::serde_cbor;
 use credibil_vc::format::FormatProfile;
 use credibil_vc::format::mso_mdoc::{IssuerSigned, MobileSecurityObject};

@@ -13,7 +13,7 @@ use coset::{
     sig_structure_data,
 };
 use credibil_identity::{Key, SignerExt};
-use credibil_infosec::PublicKeyJwk;
+use credibil_jose::PublicKeyJwk;
 use ecdsa::signature::Verifier as _;
 use serde::{Deserialize, Serialize, de, ser};
 use serde_repr::{Deserialize_repr, Serialize_repr};
@@ -33,8 +33,8 @@ const Y: i64 = -3;
 pub async fn sign(payload: Vec<u8>, signer: &impl SignerExt) -> Result<CoseSign1> {
     // header
     let algorithm = match signer.algorithm() {
-        credibil_infosec::Algorithm::EdDSA => iana::Algorithm::EdDSA,
-        credibil_infosec::Algorithm::ES256K => return Err(anyhow!("unsupported algorithm")),
+        credibil_jose::Algorithm::EdDSA => iana::Algorithm::EdDSA,
+        credibil_jose::Algorithm::ES256K => return Err(anyhow!("unsupported algorithm")),
     };
     let Key::KeyId(key_id) = signer.verification_method().await? else {
         return Err(anyhow!("invalid verification method"));
@@ -138,13 +138,13 @@ impl CoseKey {
 impl From<PublicKeyJwk> for CoseKey {
     fn from(jwk: PublicKeyJwk) -> Self {
         let kty = match jwk.kty {
-            credibil_infosec::KeyType::Okp => KeyType::Okp,
-            credibil_infosec::KeyType::Ec => KeyType::Ec,
-            credibil_infosec::KeyType::Oct => todo!("add support for KeyType::Oct"),
+            credibil_jose::KeyType::Okp => KeyType::Okp,
+            credibil_jose::KeyType::Ec => KeyType::Ec,
+            credibil_jose::KeyType::Oct => todo!("add support for KeyType::Oct"),
         };
         let crv = match jwk.crv {
-            credibil_infosec::Curve::Ed25519 => Curve::Ed25519,
-            credibil_infosec::Curve::Es256K => Curve::Es256K,
+            credibil_jose::Curve::Ed25519 => Curve::Ed25519,
+            credibil_jose::Curve::Es256K => Curve::Es256K,
             _ => todo!("add support for other curves"),
         };
 

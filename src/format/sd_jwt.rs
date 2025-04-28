@@ -18,7 +18,7 @@ use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use chrono::serde::{ts_seconds, ts_seconds_option};
 use chrono::{DateTime, Utc};
-use credibil_infosec::PublicKeyJwk;
+use credibil_jose::PublicKeyJwk;
 use rand::{Rng, rng};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};

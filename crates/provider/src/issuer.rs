@@ -3,7 +3,7 @@
 use anyhow::Result;
 use credibil_identity::did::Document;
 use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
-use credibil_infosec::{Algorithm, Signer};
+use credibil_jose::{Algorithm, Signer};
 use credibil_vc::BlockStore;
 use credibil_vc::status::issuer::Status;
 

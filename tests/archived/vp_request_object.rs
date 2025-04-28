@@ -3,7 +3,6 @@
 mod utils;
 
 use chrono::Utc;
-use credibil_infosec::jose::jws;
 use credibil_vc::core::Kind;
 use credibil_vc::dif_exch::PresentationDefinition;
 use credibil_vc::oid4vp::endpoint;
@@ -59,7 +58,7 @@ async fn request_jwt() {
 
     let resolver = async |kid: String| did_jwk(&kid, &provider).await;
 
-    let jwt: jws::Jwt<RequestObject> = jws::decode(&jwt_enc, resolver).await.expect("jwt is valid");
+    let jwt: jws::Jwt<RequestObject> = decode_jws(&jwt_enc, resolver).await.expect("jwt is valid");
     assert_snapshot!("response", jwt);
 
     // request state should not exist

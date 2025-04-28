@@ -34,7 +34,7 @@ chrono = { version = "0.4.40", features = ["serde"] }
 ciborium.workspace = true
 coset = "0.3.8"
 credibil-identity.workspace = true
-credibil-infosec.workspace = true
+credibil-jose.workspace = true
 derive_builder = "0.20.2"
 fastrand = "2.3.0"
 flate2 = "1.1.1"
@@ -117,9 +117,10 @@ nursery = "warn"
 anyhow = "1.0.98"
 base64ct = { version = "1.7.3", features = ["std"] }
 ciborium = "0.2.2"
-#credibil-did = "0.1.2"
-credibil-identity = { git = "https://github.com/credibil/identity.git" }
-credibil-infosec = "0.1.2"
+# credibil-identity = { git = "https://github.com/credibil/identity.git" }
+credibil-identity = { path = "../identity" }
+# credibil-jose = { git = "https://github.com/credibil/jose.git" }
+credibil-jose = { path = "../jose" }
 credibil-vc = { path = "." }
 ed25519-dalek = "2.1.1"
 futures = "0.3.31"
@@ -128,9 +129,8 @@ serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140", features = ["alloc"] }
 
 [patch.crates-io]
-credibil-infosec = { git = "https://github.com/credibil/infosec.git" }
 # credibil-identity = { path = "../identity" }
-# credibil-infosec = { path = "../infosec" }
+# credibil-jose = { path = "../jose" }
 
 [profile.release]
 # optimize for small code size

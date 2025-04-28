@@ -12,7 +12,7 @@ use std::collections::HashSet;
 use std::fmt::Debug;
 
 use chrono::Utc;
-use credibil_infosec::jose::jws::{self, Key};
+use credibil_jose::{decode_jws, Jwt, Key};
 
 use crate::core::{did_jwk, generate};
 use crate::format::FormatProfile;
@@ -145,7 +145,7 @@ impl CredentialRequest {
                 // endpoint
                 // TODO: check proof is signed with supported algorithm (from proof_type)
 
-                let jwt: jws::Jwt<ProofClaims> = match jws::decode(proof, resolver).await {
+                let jwt: Jwt<ProofClaims> = match decode_jws(proof, resolver).await {
                     Ok(jwt) => jwt,
                     Err(e) => {
                         return Err(Error::InvalidProof(format!("issue decoding JWT: {e}")));

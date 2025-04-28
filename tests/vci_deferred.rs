@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use credibil_identity::{Key, SignerExt};
-use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
+use credibil_jose::{decode_jws, JwsBuilder, Jwt};
 use credibil_vc::core::did_jwk;
 use credibil_vc::oid4vci::types::{
     CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, CredentialResponse,
@@ -138,7 +138,7 @@ async fn deferred() {
     // verify the credential proof
     let token = credential.as_str().expect("should be a string");
     let resolver = async |kid: String| did_jwk(&kid, &provider).await;
-    let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
+    let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
     // verify the credential
     let Key::KeyId(carol_kid) = CAROL.verification_method().await.unwrap() else {

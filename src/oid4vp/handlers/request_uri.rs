@@ -14,7 +14,7 @@
 //! information (using `wallet_metadata`) can be used tailor the Request Object
 //! to match the Wallet's capabilities.
 
-use credibil_infosec::jose::JwsBuilder;
+use credibil_jose::JwsBuilder;
 
 use crate::format::w3c::Type;
 use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};

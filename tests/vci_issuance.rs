@@ -6,7 +6,7 @@ use std::sync::LazyLock;
 
 use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_identity::{Key, SignerExt};
-use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
+use credibil_jose::{decode_jws, JwsBuilder, Jwt};
 use credibil_vc::core::did_jwk;
 use credibil_vc::format::sd_jwt::SdJwtClaims;
 use credibil_vc::oid4vci::types::{
@@ -135,7 +135,7 @@ async fn two_proofs() {
 
         // verify the credential proof
         let token = credential.as_str().expect("should be a string");
-        let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
+        let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
         assert_eq!(jwt.claims.iss, ISSUER_ID);
         assert_eq!(jwt.claims.sub, dids[i]);
@@ -234,7 +234,7 @@ async fn sd_jwt() {
 
     let token = parts.0;
     let resolver = async |kid: String| did_jwk(&kid, &provider).await;
-    let jwt: Jwt<SdJwtClaims> = jws::decode(token, resolver).await.expect("should decode");
+    let jwt: Jwt<SdJwtClaims> = decode_jws(token, resolver).await.expect("should decode");
 
     // verify the credential
     let Key::KeyId(bob_kid) = BOB.verification_method().await.unwrap() else {

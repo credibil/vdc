@@ -7,7 +7,7 @@ use std::str::FromStr;
 
 use chrono::serde::ts_seconds_option;
 use chrono::{DateTime, Utc};
-use credibil_infosec::Algorithm;
+use credibil_jose::Algorithm;
 use serde::{Deserialize, Serialize};
 
 use crate::invalid;

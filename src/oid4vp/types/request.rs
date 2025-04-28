@@ -4,8 +4,7 @@ use std::io::Cursor;
 use anyhow::{Result, anyhow};
 use base64ct::{Base64, Encoding};
 pub use credibil_identity::SignerExt;
-use credibil_infosec::PublicKeyJwk;
-use credibil_infosec::jose::jws;
+use credibil_jose::{JwsBuilder, PublicKeyJwk};
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
 use qrcode::QrCode;
 use serde::{Deserialize, Serialize};
@@ -242,7 +241,7 @@ impl RequestObject {
         let key = signer.verification_method().await?;
         let key_ref = key.try_into()?;
 
-        let jws = jws::JwsBuilder::new()
+        let jws = JwsBuilder::new()
             .typ(Type::OauthAuthzReqJwt)
             .payload(payload)
             .key_ref(&key_ref)
@@ -577,7 +576,7 @@ impl From<RequestObject> for RequestObjectClaims {
 #[cfg(test)]
 mod tests {
 
-    use credibil_infosec::Jwt;
+    use credibil_jose::Jwt;
     use provider::verifier::Verifier;
 
     use super::*;

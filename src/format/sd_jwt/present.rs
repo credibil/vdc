@@ -3,7 +3,7 @@
 use anyhow::{Result, anyhow};
 use chrono::Utc;
 use credibil_identity::SignerExt;
-use credibil_infosec::Jws;
+use credibil_jose::Jws;
 
 use crate::format::sd_jwt::{Disclosure, JwtType, KbJwtClaims};
 use crate::oid4vp::types::Matched;
