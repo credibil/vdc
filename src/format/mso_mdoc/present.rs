@@ -4,7 +4,7 @@
 
 use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
-use credibil_did::SignerExt;
+use credibil_identity::SignerExt;
 use sha2::{Digest, Sha256};
 
 use crate::Kind;
@@ -311,7 +311,9 @@ mod tests {
     async fn build_vc() -> String {
         let wallet = Wallet::new();
         let key = wallet.verification_method().await.expect("should have key id");
-        let Key::KeyId(kid) = key else {
+        let key_ref = key.try_into().expect("should map key to key ref");
+
+        let Key::KeyId(kid) = key_ref else {
             panic!("should have key id");
         };
         let device_jwk = did_jwk(&kid, &wallet).await.expect("should fetch JWK");

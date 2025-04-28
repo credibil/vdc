@@ -12,7 +12,7 @@ pub mod strings;
 pub mod urlencode;
 
 use anyhow::{Result, anyhow};
-use credibil_did::{DidResolver, Resource};
+use credibil_identity::{IdentityResolver, did::Resource};
 use credibil_infosec::PublicKeyJwk;
 use serde::{Deserialize, Serialize};
 
@@ -133,8 +133,8 @@ impl<T: Clone + Default + PartialEq> OneMany<T> {
 /// # Errors
 ///
 /// TODO: Document errors
-pub async fn did_jwk(did_url: &str, resolver: &impl DidResolver) -> Result<PublicKeyJwk> {
-    let deref = credibil_did::dereference(did_url, resolver)
+pub async fn did_jwk(did_url: &str, resolver: &impl IdentityResolver) -> Result<PublicKeyJwk> {
+    let deref = credibil_identity::did::dereference(did_url, resolver)
         .await
         .map_err(|e| anyhow!("issue dereferencing DID URL {did_url}: {e}"))?;
     let Resource::VerificationMethod(vm) = deref else {

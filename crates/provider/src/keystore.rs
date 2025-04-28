@@ -5,12 +5,10 @@ use std::sync::{Arc, LazyLock, Mutex};
 
 use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
-use credibil_did::document::{CreateOptions, Document};
-use credibil_did::{
-    DidResolver, DocumentBuilder, KeyPurpose, PublicKeyFormat, SignerExt,
-    VerificationMethodBuilder, VmKeyId,
+use credibil_identity::did::{
+    Document, DocumentBuilder, KeyPurpose, PublicKeyFormat, VerificationMethodBuilder, VmKeyId,
 };
-use credibil_infosec::jose::jws::Key;
+use credibil_identity::{IdentityResolver, Key, SignerExt};
 use credibil_infosec::{Algorithm, PublicKeyJwk};
 use ed25519_dalek::Signer as _;
 use rand_core::OsRng;

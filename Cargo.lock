@@ -531,9 +531,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "credibil-did"
+name = "credibil-identity"
 version = "0.1.2"
-source = "git+https://github.com/credibil/did.git#ad825d876e8d98c711dbc7c7edfb25786ddf6b60"
+source = "git+https://github.com/credibil/identity.git#b5a2c39fa9e0dffd36c716f88b7df869e07475e8"
 dependencies = [
  "anyhow",
  "base64ct",
@@ -593,7 +593,7 @@ dependencies = [
  "chrono",
  "ciborium",
  "coset",
- "credibil-did",
+ "credibil-identity",
  "credibil-infosec",
  "derive_builder",
  "ecdsa",
@@ -2109,7 +2109,7 @@ dependencies = [
  "blockstore",
  "ciborium",
  "cid",
- "credibil-did",
+ "credibil-identity",
  "credibil-infosec",
  "credibil-vc",
  "ed25519-dalek",

@@ -1,14 +1,14 @@
 #![allow(unused)]
 
 use anyhow::Result;
-use credibil_did::{DidResolver, Document, SignerExt};
-use credibil_infosec::jose::jws::Key;
+use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
+use credibil_identity::did::Document;
 use credibil_infosec::{Algorithm, Signer};
 use credibil_vc::BlockStore;
 use credibil_vc::status::issuer::Status;
 
 use crate::blockstore::Mockstore;
-use crate::identity::Identity;
+use crate::identity::DidIdentity;
 
 pub const ISSUER_ID: &str = "http://credibil.io";
 pub const BOB_ID: &str = "bob";
@@ -24,7 +24,7 @@ pub mod data {
 
 #[derive(Clone)]
 pub struct Issuer {
-    identity: Identity,
+    identity: DidIdentity,
     blockstore: Mockstore,
 }
 
@@ -32,14 +32,14 @@ impl Issuer {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            identity: Identity::new(),
+            identity: DidIdentity::new(),
             blockstore: Mockstore::new(),
         }
     }
 }
 
-impl DidResolver for Issuer {
-    async fn resolve(&self, url: &str) -> anyhow::Result<Document> {
+impl IdentityResolver for Issuer {
+    async fn resolve(&self, url: &str) -> anyhow::Result<Identity> {
         self.identity.resolve(url).await
     }
 }

@@ -4,8 +4,7 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use base64ct::{Base64UrlUnpadded, Encoding};
-use credibil_did::{DidResolver, Document, SignerExt};
-use credibil_infosec::jose::jws::Key;
+use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
 use credibil_infosec::{Algorithm, Jws, Signer};
 use credibil_vc::core::serde_cbor;
 use credibil_vc::format::FormatProfile;
@@ -16,11 +15,11 @@ use credibil_vc::oid4vp::types::{Claim, Queryable};
 use serde_json::Value;
 
 use crate::blockstore::Mockstore;
-use crate::identity::Identity;
+use crate::identity::DidIdentity;
 
 #[derive(Clone)]
 pub struct Wallet {
-    identity: Identity,
+    identity: DidIdentity,
     // blockstore: Mockstore,
     store: Vec<Queryable>,
 }
@@ -28,7 +27,7 @@ pub struct Wallet {
 impl Wallet {
     pub fn new() -> Self {
         Self {
-            identity: Identity::new(),
+            identity: DidIdentity::new(),
             // blockstore: Mockstore::new(),
             store: Vec::new(),
         }
@@ -44,8 +43,8 @@ impl Wallet {
     }
 }
 
-impl DidResolver for Wallet {
-    async fn resolve(&self, url: &str) -> anyhow::Result<Document> {
+impl IdentityResolver for Wallet {
+    async fn resolve(&self, url: &str) -> anyhow::Result<Identity> {
         self.identity.resolve(url).await
     }
 }

@@ -1,7 +1,7 @@
 //! # Store
 
 use anyhow::{Result, anyhow};
-use credibil_did::DidResolver;
+use credibil_identity::IdentityResolver;
 use credibil_infosec::jose::jws;
 use credibil_infosec::jose::jwt::Jwt;
 use serde_json::Value;
@@ -16,7 +16,7 @@ use crate::oid4vp::types::{Claim, Queryable};
 /// # Errors
 ///
 /// Returns an error if the decoding fails.
-pub async fn to_queryable(issued: &str, resolver: &impl DidResolver) -> Result<Queryable> {
+pub async fn to_queryable(issued: &str, resolver: &impl IdentityResolver) -> Result<Queryable> {
     // decode and verify the sd-jwt
     let (sd_jwt, disclosures) = decode_vc(issued, resolver).await?;
 
@@ -41,7 +41,7 @@ pub async fn to_queryable(issued: &str, resolver: &impl DidResolver) -> Result<Q
 ///
 /// Returns an error if the SD-JWT credential is invalid.
 pub async fn decode_vc(
-    vc: &str, resolver: &impl DidResolver,
+    vc: &str, resolver: &impl IdentityResolver,
 ) -> Result<(Jwt<SdJwtClaims>, Vec<Disclosure>)> {
     // extract sd-jwt components
     let split = vc.split('~').collect::<Vec<_>>();

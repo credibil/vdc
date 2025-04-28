@@ -13,7 +13,7 @@ base64ct.workspace = true
 blockstore = "0.7.1"
 ciborium.workspace = true
 cid = { version = "0.11.1", features = ["alloc"] }
-credibil-did.workspace = true
+credibil-identity.workspace = true
 credibil-infosec.workspace = true
 credibil-vc.workspace = true
 ed25519-dalek.workspace = true

@@ -12,8 +12,7 @@ use coset::{
     CoseSign1, CoseSign1Builder, HeaderBuilder, ProtectedHeader, SignatureContext, iana,
     sig_structure_data,
 };
-use credibil_did::SignerExt;
-use credibil_infosec::jose::jws::Key;
+use credibil_identity::{Key, SignerExt};
 use credibil_infosec::{Algorithm, PublicKeyJwk};
 use ecdsa::signature::Verifier as _;
 use serde::{Deserialize, Serialize, de, ser};

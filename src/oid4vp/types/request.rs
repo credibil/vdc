@@ -3,7 +3,7 @@ use std::io::Cursor;
 
 use anyhow::{Result, anyhow};
 use base64ct::{Base64, Encoding};
-pub use credibil_did::SignerExt;
+pub use credibil_identity::SignerExt;
 use credibil_infosec::PublicKeyJwk;
 use credibil_infosec::jose::jws;
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
@@ -239,10 +239,13 @@ impl RequestObject {
     pub async fn to_querystring(&self, signer: &impl SignerExt) -> Result<String> {
         let payload: RequestObjectClaims = self.clone().into();
 
+        let key = signer.verification_method().await?;
+        let key_ref = key.try_into()?;
+
         let jws = jws::JwsBuilder::new()
             .typ(Type::OauthAuthzReqJwt)
             .payload(payload)
-            .key_ref(&signer.verification_method().await?)
+            .key_ref(&key_ref)
             .add_signer(signer)
             .build()
             .await

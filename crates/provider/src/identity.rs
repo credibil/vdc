@@ -3,14 +3,13 @@
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock, Mutex};
 
-use anyhow::{Result, anyhow};
+use anyhow::{Result, anyhow, bail};
 use base64ct::{Base64UrlUnpadded, Encoding};
-use credibil_did::document::Document;
-use credibil_did::{
-    DidResolver, DocumentBuilder, KeyPurpose, PublicKeyFormat, SignerExt,
+use credibil_identity::{Key, Identity, IdentityResolver, SignerExt};
+use credibil_identity::did::{
+    self, Document, DocumentBuilder, KeyPurpose, PublicKeyFormat,
     VerificationMethodBuilder, VmKeyId,
 };
-use credibil_infosec::jose::jws::Key;
 use credibil_infosec::{Algorithm, Curve, KeyType, PublicKeyJwk};
 use credibil_vc::core::generate;
 use credibil_vc::format::w3c::verify;
@@ -22,12 +21,12 @@ static DID_STORE: LazyLock<Arc<Mutex<HashMap<String, Document>>>> =
     LazyLock::new(|| Arc::new(Mutex::new(HashMap::new())));
 
 #[derive(Clone)]
-pub struct Identity {
+pub struct DidIdentity {
     pub url: String,
     keyring: Keyring,
 }
 
-impl Identity {
+impl DidIdentity {
     // Generate a DID-based Identity.
     pub fn new() -> Self {
         // create a new keyring and add a signing key.
@@ -36,11 +35,20 @@ impl Identity {
 
         let verifying_key = PublicKeyJwk::from_bytes(&signing_key.verifying_key())
             .expect("should convert verifying key to JWK");
+        keyring.add("signer", signing_key.clone());
+
+        // generate a did:web document
+        let url = format!("https://credibil.io/{}", generate::uri_token());
+        let did = did::web::default_did(&url).expect("should construct DID");
+        let mut keyring
         keyring.add("signer", signing_key);
 
         // generate a did:web document
         let url = format!("https://credibil.io/{}", generate::uri_token());
         let did = credibil_did::web::default_did(&url).expect("should construct DID");
+        let mut keyring = Keyring::new();
+        keyring.add("signer", signing_key);
+
         let document = DocumentBuilder::new(&did)
             .add_verifying_key(&verifying_key, true)
             .expect("should add verifying key")
@@ -72,14 +80,17 @@ impl Identity {
     }
 
     pub async fn verification_method(&self) -> Result<Key> {
-        let doc = self.resolve(&self.url).await?;
+        let Identity::DidDocument(doc) = self.resolve(&self.url).await?;
         let vm = &doc.verification_method.as_ref().unwrap()[0];
         Ok(Key::KeyId(vm.id.clone()))
     }
 
-    pub async fn resolve(&self, url: &str) -> Result<Document> {
+    pub async fn resolve(&self, url: &str) -> Result<Identity> {
         let key = url.trim_end_matches("/did.json");
         let store = DID_STORE.lock().expect("should lock");
-        store.get(key).cloned().ok_or_else(|| anyhow!("document not found"))
+        let Some(doc) = store.get(key).cloned() else {
+            bail!("document not found");
+        };
+        Ok(Identity::DidDocument(doc))
     }
 }
