@@ -533,7 +533,7 @@ dependencies = [
 [[package]]
 name = "credibil-identity"
 version = "0.1.2"
-source = "git+https://github.com/credibil/identity.git#43d45850eb1fb059bd1048a402455b146cd246cc"
+source = "git+https://github.com/credibil/identity.git?branch=key-binding#852c50eaf25c6080f2d4e3d9e9e7a49a6fb648bd"
 dependencies = [
  "anyhow",
  "base64ct",
@@ -558,7 +558,7 @@ dependencies = [
 [[package]]
 name = "credibil-jose"
 version = "0.1.2"
-source = "git+https://github.com/credibil/jose.git#ff3df0a71d8a5779e642882529d1c2707b11475b"
+source = "git+https://github.com/credibil/jose.git?branch=key-binding#3cf1a1d27daf7d857a79ffc26e924983d75d53e6"
 dependencies = [
  "aes-gcm",
  "aes-kw",

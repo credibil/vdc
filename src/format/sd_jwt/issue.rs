@@ -212,8 +212,7 @@ impl<S: SignerExt> SdJwtVcBuilder<Vct, HasIssuer, HasKeyBinding, HasClaims, HasS
             ..SdJwtClaims::default()
         };
 
-        let key = self.signer.0.verification_method().await?;
-        let key_ref = key.try_into()?;
+        let key_ref = self.signer.0.verification_method().await?.try_into()?;
         let jws = Jws::builder()
             .typ(JwtType::SdJwt)
             .payload(claims)

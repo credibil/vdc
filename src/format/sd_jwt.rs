@@ -18,7 +18,7 @@ use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use chrono::serde::{ts_seconds, ts_seconds_option};
 use chrono::{DateTime, Utc};
-use credibil_jose::PublicKeyJwk;
+use credibil_jose::KeyBinding;
 use rand::{Rng, rng};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -115,42 +115,6 @@ pub struct KbJwtClaims {
     /// The base64url-encoded hash value over the Issuer-signed JWT and the
     /// selected Disclosures.
     pub sd_hash: String,
-}
-
-/// The type of Proof-of-Possession public key to use in SD-JWT key binding.
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum KeyBinding {
-    /// A public key JWK.
-    Jwk(PublicKeyJwk),
-
-    /// A public key Key ID.
-    Kid(String),
-
-    /// A URL to a JWK Set and Key ID referencing a public key within the set.
-    Jku {
-        /// The URL of the JWK Set.
-        jku: String,
-
-        /// The Key ID of a public key.
-        kid: String,
-    },
-}
-
-impl From<PublicKeyJwk> for KeyBinding {
-    fn from(jwk: PublicKeyJwk) -> Self {
-        Self::Jwk(jwk)
-    }
-}
-impl From<String> for KeyBinding {
-    fn from(kid: String) -> Self {
-        Self::Kid(kid)
-    }
-}
-impl From<(String, String)> for KeyBinding {
-    fn from((jku, kid): (String, String)) -> Self {
-        Self::Jku { jku, kid }
-    }
 }
 
 /// A claim disclosure.
