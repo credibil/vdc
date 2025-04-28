@@ -2,10 +2,11 @@
 
 use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
+use credibil_identity::IdentityResolver;
 
 use crate::core::Kind;
 use crate::format::FormatProfile;
-use crate::format::mso_mdoc::{DataItem, IssuerSigned, MobileSecurityObject, serde_cbor};
+use crate::format::mso_mdoc::{DataItem, IssuerSigned, MobileSecurityObject, serde_cbor, verify};
 use crate::oid4vp::types::{Claim, Queryable};
 
 /// Convert a `mso_mdoc` encoded credential to a `Queryable` object.
@@ -13,12 +14,14 @@ use crate::oid4vp::types::{Claim, Queryable};
 /// # Errors
 ///
 /// Returns an error if the decoding fails.
-pub fn to_queryable(issued: &str) -> Result<Queryable> {
+pub async fn to_queryable(issued: &str, resolver: &impl IdentityResolver) -> Result<Queryable> {
     let mdoc_bytes = Base64UrlUnpadded::decode_vec(issued)?;
-    let mdoc: IssuerSigned = serde_cbor::from_slice(&mdoc_bytes)?;
+    let issuer_signed: IssuerSigned = serde_cbor::from_slice(&mdoc_bytes)?;
+
+    verify::verify_signature(&issuer_signed.issuer_auth, resolver).await?;
 
     let mut claims = vec![];
-    for (name_space, issued_items) in &mdoc.name_spaces {
+    for (name_space, issued_items) in &issuer_signed.name_spaces {
         for item in issued_items {
             let path = vec![name_space.clone(), item.element_identifier.clone()];
             let nested = unpack_claims(path.clone(), &item.element_value);
@@ -27,7 +30,7 @@ pub fn to_queryable(issued: &str) -> Result<Queryable> {
     }
 
     // FIXME: verify MSO
-    let Some(mso_bytes) = mdoc.issuer_auth.0.payload else {
+    let Some(mso_bytes) = issuer_signed.issuer_auth.0.payload else {
         return Err(anyhow!("missing MSO payload"));
     };
     let mso: DataItem<MobileSecurityObject> = serde_cbor::from_slice(&mso_bytes)?;

@@ -532,7 +532,7 @@ async fn populate() -> Wallet {
         },
     });
     let mdoc = mso_mdoc(doctype, claims, &holder_jwk).await;
-    let q = mso_mdoc::to_queryable(&mdoc).expect("should be mdoc");
+    let q = mso_mdoc::to_queryable(&mdoc, &wallet).await.expect("should be mdoc");
     wallet.add(q);
 
     let doctype = "org.iso.7367.1.mVRC";
@@ -547,7 +547,7 @@ async fn populate() -> Wallet {
         },
     });
     let mdoc = mso_mdoc(doctype, claims, &holder_jwk).await;
-    let q = mso_mdoc::to_queryable(&mdoc).expect("should be mdoc");
+    let q = mso_mdoc::to_queryable(&mdoc, &wallet).await.expect("should be mdoc");
     wallet.add(q);
 
     wallet
