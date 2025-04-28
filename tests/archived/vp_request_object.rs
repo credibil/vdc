@@ -10,7 +10,7 @@ use credibil_vc::oid4vp::endpoint;
 use credibil_vc::oid4vp::provider::StateStore;
 use credibil_vc::oid4vp::state::{Expire, State};
 use credibil_vc::oid4vp::types::{
-    ClientIdentifierPrefix, RequestObject, RequestObjectType, RequestUriRequest, ResponseType,
+    ClientIdPrefix, RequestObject, RequestObjectType, RequestUriRequest, ResponseType,
     Verifier,
 };
 use credibil_vc::verify_key;
@@ -33,7 +33,7 @@ async fn request_jwt() {
         response_mode: Some("direct_post".to_string()),
         response_uri: Some(format!("{VERIFIER_ID}/post")),
         presentation_definition: Kind::Object(PresentationDefinition::default()),
-        client_id_scheme: Some(ClientIdentifierPrefix::RedirectUri),
+        client_id_scheme: Some(ClientIdPrefix::RedirectUri),
         client_metadata: Verifier::default(),
 
         // TODO: populate missing RequestObject attributes

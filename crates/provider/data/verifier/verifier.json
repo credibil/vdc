@@ -15,10 +15,14 @@
                 "ES384"
             ]
         },
-        "jwt_vp_json": {
-            "alg_values_supported": [
-                "ES256K",
-                "EdDSA"
+        "mso_mdoc": {
+            "issuerauth_alg_values": [
+                -9,
+                -50
+            ],
+            "deviceauth_alg_values": [
+                -9,
+                -50
             ]
         },
         "dc+sd-jwt": {

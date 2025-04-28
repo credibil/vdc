@@ -13,7 +13,7 @@ use coset::{
     sig_structure_data,
 };
 use credibil_identity::{Key, SignerExt};
-use credibil_infosec::{Algorithm, PublicKeyJwk};
+use credibil_infosec::PublicKeyJwk;
 use ecdsa::signature::Verifier as _;
 use serde::{Deserialize, Serialize, de, ser};
 use serde_repr::{Deserialize_repr, Serialize_repr};
@@ -33,14 +33,14 @@ const Y: i64 = -3;
 pub async fn sign(payload: Vec<u8>, signer: &impl SignerExt) -> Result<CoseSign1> {
     // header
     let algorithm = match signer.algorithm() {
-        Algorithm::EdDSA => iana::Algorithm::EdDSA,
-        Algorithm::ES256K => return Err(anyhow!("unsupported algorithm")),
+        credibil_infosec::Algorithm::EdDSA => iana::Algorithm::EdDSA,
+        credibil_infosec::Algorithm::ES256K => return Err(anyhow!("unsupported algorithm")),
     };
     let Key::KeyId(key_id) = signer.verification_method().await? else {
         return Err(anyhow!("invalid verification method"));
     };
     let protected = HeaderBuilder::new().algorithm(algorithm).key_id(key_id.into_bytes()).build();
-    
+
     let sig_data = sig_structure_data(
         SignatureContext::CoseSign1,
         ProtectedHeader {
@@ -196,6 +196,39 @@ impl<'de> Deserialize<'de> for CoseKey {
 
         Ok(cose_key)
     }
+}
+
+/// Fully-Specified Algorithms
+#[derive(Clone, Debug, Default, Deserialize_repr, Serialize_repr, Eq, PartialEq)]
+#[repr(i64)]
+pub enum Algorithm {
+    /// ECDSA using P-256 curve and SHA-256
+    #[default]
+    Esp256 = -9,
+
+    /// ECDSA using P-384 curve and SHA-384
+    Esp384 = -48,
+
+    /// ECDSA using P-521 curve and SHA-512
+    Esp512 = -49,
+
+    /// ECDSA using `BrainpoolP256r1` curve and SHA-256
+    Esb256 = -265,
+
+    /// ECDSA using `BrainpoolP320r1` curve and SHA-384
+    Esb320 = -266,
+
+    /// ECDSA using `BrainpoolP384r1` curve and SHA-384
+    Esb384 = -267,
+
+    /// ECDSA using `BrainpoolP512r1` curve and SHA-512
+    Esb512 = -268,
+
+    /// EdDSA using Ed25519 curve
+    Ed25519 = -50,
+
+    /// EdDSA using Ed448 curve
+    Ed448 = -51,
 }
 
 /// Cryptographic key type.

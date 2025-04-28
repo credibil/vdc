@@ -27,10 +27,10 @@ pub struct HasMatched<'a>(&'a Matched<'a>);
 
 /// Builder has no issuer.
 #[doc(hidden)]
-pub struct NoClientIdentifier;
+pub struct NoClientId;
 /// Builder has issuer.
 #[doc(hidden)]
-pub struct HasClientIdentifier(String);
+pub struct HasClientId(String);
 
 /// Builder has no signer.
 #[doc(hidden)]
@@ -39,19 +39,19 @@ pub struct NoSigner;
 #[doc(hidden)]
 pub struct HasSigner<'a, S: SignerExt>(pub &'a S);
 
-impl Default for SdJwtVpBuilder<NoMatched, NoClientIdentifier, NoSigner> {
+impl Default for SdJwtVpBuilder<NoMatched, NoClientId, NoSigner> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl SdJwtVpBuilder<NoMatched, NoClientIdentifier, NoSigner> {
+impl SdJwtVpBuilder<NoMatched, NoClientId, NoSigner> {
     /// Create a new builder.
     #[must_use]
     pub const fn new() -> Self {
         Self {
             matched: NoMatched,
-            client_id: NoClientIdentifier,
+            client_id: NoClientId,
             nonce: None,
             signer: NoSigner,
         }
@@ -73,15 +73,13 @@ impl<'a, C, S> SdJwtVpBuilder<NoMatched, C, S> {
 }
 
 // Credentials to include in the presentation
-impl<M, S> SdJwtVpBuilder<M, NoClientIdentifier, S> {
+impl<M, S> SdJwtVpBuilder<M, NoClientId, S> {
     /// Set the claims for the ISO mDL credential.
     #[must_use]
-    pub fn client_id(
-        self, client_id: impl Into<String>,
-    ) -> SdJwtVpBuilder<M, HasClientIdentifier, S> {
+    pub fn client_id(self, client_id: impl Into<String>) -> SdJwtVpBuilder<M, HasClientId, S> {
         SdJwtVpBuilder {
             matched: self.matched,
-            client_id: HasClientIdentifier(client_id.into()),
+            client_id: HasClientId(client_id.into()),
             nonce: self.nonce,
             signer: self.signer,
         }
@@ -112,7 +110,7 @@ impl<M, C> SdJwtVpBuilder<M, C, NoSigner> {
     }
 }
 
-impl<S: SignerExt> SdJwtVpBuilder<HasMatched<'_>, HasClientIdentifier, HasSigner<'_, S>> {
+impl<S: SignerExt> SdJwtVpBuilder<HasMatched<'_>, HasClientId, HasSigner<'_, S>> {
     /// Build the SD-JWT credential, returning a base64url-encoded, JSON SD-JWT
     /// with the format: `<Issuer-signed JWT>~<Disclosure 1>~<Disclosure 2>~...~<KB-JWT>`.
     ///

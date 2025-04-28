@@ -11,7 +11,7 @@ use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vp::provider::{Metadata, Provider, StateStore};
 use crate::oid4vp::state::{Expire, State};
 use crate::oid4vp::types::{
-    ClientIdentifier, DeviceFlow, GenerateRequest, GenerateResponse, RequestObject, ResponseType,
+    ClientId, DeviceFlow, GenerateRequest, GenerateResponse, RequestObject, ResponseType,
 };
 use crate::oid4vp::{Error, Result};
 
@@ -44,10 +44,10 @@ async fn create_request(
 
     // FIXME: replace hard-coded endpoints with Provider-set values
     let response = if request.device_flow == DeviceFlow::CrossDevice {
-        req_obj.client_id = ClientIdentifier::RedirectUri(format!("{verifier}/post"));
+        req_obj.client_id = ClientId::RedirectUri(format!("{verifier}/post"));
         GenerateResponse::Uri(format!("{verifier}/request/{uri_token}"))
     } else {
-        req_obj.client_id = ClientIdentifier::RedirectUri(format!("{verifier}/callback"));
+        req_obj.client_id = ClientId::RedirectUri(format!("{verifier}/callback"));
         GenerateResponse::Object(req_obj.clone())
     };
 

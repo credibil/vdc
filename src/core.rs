@@ -12,7 +12,8 @@ pub mod strings;
 pub mod urlencode;
 
 use anyhow::{Result, anyhow};
-use credibil_identity::{IdentityResolver, did::Resource};
+use credibil_identity::IdentityResolver;
+use credibil_identity::did::Resource;
 use credibil_infosec::PublicKeyJwk;
 use serde::{Deserialize, Serialize};
 
