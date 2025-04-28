@@ -5,11 +5,11 @@ use std::sync::{Arc, LazyLock, Mutex};
 
 use anyhow::{Result, anyhow, bail};
 use base64ct::{Base64UrlUnpadded, Encoding};
-use credibil_identity::{Key, Identity, IdentityResolver, SignerExt};
 use credibil_identity::did::{
-    self, Document, DocumentBuilder, KeyPurpose, PublicKeyFormat,
-    VerificationMethodBuilder, VmKeyId,
+    self, Document, DocumentBuilder, KeyPurpose, PublicKeyFormat, VerificationMethodBuilder,
+    VmKeyId,
 };
+use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
 use credibil_infosec::{Algorithm, Curve, KeyType, PublicKeyJwk};
 use credibil_vc::core::generate;
 use credibil_vc::format::w3c::verify;

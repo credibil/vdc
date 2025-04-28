@@ -20,7 +20,7 @@ use crate::format::w3c::Type;
 use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
-use crate::oid4vp::types::{ClientIdentifier, RequestUriRequest, RequestUriResponse};
+use crate::oid4vp::types::{ClientId, RequestUriRequest, RequestUriResponse};
 use crate::oid4vp::{Error, Result};
 
 /// Endpoint for the Wallet to request the Verifier's Request Object when
@@ -40,7 +40,7 @@ pub async fn request_uri(
     let mut req_obj = state.request_object;
 
     // verify client_id (perhaps should use 'verify' method?)
-    if req_obj.client_id != ClientIdentifier::RedirectUri(format!("{verifier}/post")) {
+    if req_obj.client_id != ClientId::RedirectUri(format!("{verifier}/post")) {
         return Err(Error::InvalidRequest("client ID mismatch".to_string()));
     }
 
@@ -61,9 +61,8 @@ pub async fn request_uri(
         .await
         .map_err(|e| Error::ServerError(format!("issue getting verification method: {e}")))?;
 
-    let key_ref = kid
-        .try_into()
-        .map_err(|e| Error::ServerError(format!("issue converting key_ref: {e}")))?;
+    let key_ref =
+        kid.try_into().map_err(|e| Error::ServerError(format!("issue converting key_ref: {e}")))?;
 
     let jws = JwsBuilder::new()
         .typ(Type::OauthAuthzReqJwt)

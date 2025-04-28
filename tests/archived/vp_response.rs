@@ -11,7 +11,7 @@ use credibil_vc::oid4vp::endpoint;
 use credibil_vc::oid4vp::provider::StateStore;
 use credibil_vc::oid4vp::state::{Expire, State};
 use credibil_vc::oid4vp::types::{
-    AuthorzationResponse, ClientIdentifierPrefix, RequestObject, ResponseType, Verifier,
+    AuthorzationResponse, ClientIdPrefix, RequestObject, ResponseType, Verifier,
 };
 use serde_json::{Value, json};
 
@@ -37,7 +37,7 @@ async fn send_response() {
         response_mode: Some("direct_post.jwt".to_string()),
         response_uri: Some(format!("{CLIENT_ID}/direct_post.jwt")),
         presentation_definition: Kind::Object(pres_def.clone()),
-        client_id_scheme: Some(ClientIdentifierPrefix::Did),
+        client_id_scheme: Some(ClientIdPrefix::Did),
         client_metadata: Verifier::default(),
     };
 

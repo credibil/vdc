@@ -129,7 +129,7 @@ pub struct RequestObject {
     pub response_type: ResponseType,
 
     /// The Verifier's `client_id`.
-    pub client_id: ClientIdentifier,
+    pub client_id: ClientId,
 
     /// The nonce is used to securely bind the requested Verifiable
     /// Presentation(s) provided by the Wallet to the particular
@@ -265,7 +265,7 @@ impl RequestObject {
 /// When no `:` character is present, the Wallet MUST treat the Client
 /// Identifier as referencing a pre-registered client.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum ClientIdentifier {
+pub enum ClientId {
     /// The Verifier's redirect URI (or response URI when Response Mode is
     /// `direct_post`).
     ///
@@ -311,13 +311,13 @@ pub enum ClientIdentifier {
     Preregistered(String),
 }
 
-impl Default for ClientIdentifier {
+impl Default for ClientId {
     fn default() -> Self {
         Self::Preregistered(String::new())
     }
 }
 
-impl Display for ClientIdentifier {
+impl Display for ClientId {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::RedirectUri(uri) => write!(f, "redirect_uri:{uri}"),
@@ -332,7 +332,7 @@ impl Display for ClientIdentifier {
     }
 }
 
-impl From<String> for ClientIdentifier {
+impl From<String> for ClientId {
     fn from(value: String) -> Self {
         #[allow(clippy::option_if_let_else)]
         if let Some(uri) = value.strip_prefix("redirect_uri:") {
@@ -355,13 +355,13 @@ impl From<String> for ClientIdentifier {
     }
 }
 
-impl From<&str> for ClientIdentifier {
+impl From<&str> for ClientId {
     fn from(value: &str) -> Self {
         Self::from(value.to_string())
     }
 }
 
-impl Serialize for ClientIdentifier {
+impl Serialize for ClientId {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -371,7 +371,7 @@ impl Serialize for ClientIdentifier {
     }
 }
 
-impl<'a> Deserialize<'a> for ClientIdentifier {
+impl<'a> Deserialize<'a> for ClientId {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'a>,
@@ -587,7 +587,7 @@ mod tests {
     fn request_object() {
         let request_object = RequestObject {
             response_type: ResponseType::VpToken,
-            client_id: ClientIdentifier::Preregistered("client_id".to_string()),
+            client_id: ClientId::Preregistered("client_id".to_string()),
             nonce: "n-0S6_WzA2Mj".to_string(),
             dcql_query: DcqlQuery::default(),
             scope: None,
@@ -612,7 +612,7 @@ mod tests {
     async fn querystring() {
         let request_object = RequestObject {
             response_type: ResponseType::VpToken,
-            client_id: ClientIdentifier::RedirectUri("https://client.example.com".to_string()),
+            client_id: ClientId::RedirectUri("https://client.example.com".to_string()),
             nonce: "n-0S6_WzA2Mj".to_string(),
             dcql_query: DcqlQuery::default(),
             scope: None,
