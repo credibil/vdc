@@ -12,7 +12,7 @@ use std::collections::HashSet;
 use std::fmt::Debug;
 
 use chrono::Utc;
-use credibil_jose::{decode_jws, Jwt, Key};
+use credibil_jose::{Jwt, Key, decode_jws};
 
 use crate::core::{did_jwk, generate};
 use crate::format::FormatProfile;
@@ -233,7 +233,7 @@ impl Context {
                         return Err(Error::InvalidProof("Proof JWT DID is invalid".to_string()));
                     };
                     let mut builder = W3cVcBuilder::new()
-                        .type_(credential_definition.type_.to_vec())
+                        .type_(credential_definition.type_.clone())
                         .issuer(&self.issuer.credential_issuer)
                         .holder(did)
                         .claims(dataset.claims.clone())
