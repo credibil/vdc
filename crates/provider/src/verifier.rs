@@ -2,7 +2,8 @@
 
 use anyhow::Result;
 use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
-use credibil_infosec::{self, Algorithm, PublicKey, Receiver, SharedSecret, Signer};
+use credibil_jose::{Algorithm, Receiver, Signer};
+use credibil_jose::jwe::{PublicKey, SharedSecret};
 use credibil_vc::BlockStore;
 
 use crate::blockstore::Mockstore;

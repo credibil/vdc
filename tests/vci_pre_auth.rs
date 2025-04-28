@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use credibil_identity::{Key, SignerExt};
-use credibil_infosec::jose::{JwsBuilder, Jwt, jws};
+use credibil_jose::{decode_jws, JwsBuilder, Jwt};
 use credibil_vc::core::did_jwk;
 use credibil_vc::oid4vci::types::{
     AuthorizationDetail, CreateOfferRequest, Credential, CredentialHeaders, CredentialOfferRequest,
@@ -102,7 +102,7 @@ async fn offer_val() {
 
     let token = credential.as_str().expect("should be a string");
     let resolver = async |kid: String| did_jwk(&kid, &provider).await;
-    let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
+    let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
     let Key::KeyId(bob_kid) = BOB.verification_method().await.unwrap() else {
         panic!("should have did");
@@ -252,7 +252,7 @@ async fn two_datasets() {
         // verify the credential proof
         let token = credential.as_str().expect("should be a string");
         let resolver = async |kid: String| did_jwk(&kid, &provider).await;
-        let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
+        let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
         // validate the credential subject
         let OneMany::One(subject) = jwt.claims.vc.credential_subject else {
@@ -359,7 +359,7 @@ async fn reduce_credentials() {
     // verify the credential proof
     let token = credential.as_str().expect("should be a string");
     let resolver = async |kid: String| did_jwk(&kid, &provider).await;
-    let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
+    let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
     // validate the credential subject
     let OneMany::One(subject) = jwt.claims.vc.credential_subject else {
@@ -460,7 +460,7 @@ async fn reduce_claims() {
     // verify the credential proof
     let token = credential.as_str().expect("should be a string");
     let resolver = async |kid: String| did_jwk(&kid, &provider).await;
-    let jwt: Jwt<W3cVcClaims> = jws::decode(token, resolver).await.expect("should decode");
+    let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
     let Key::KeyId(bob_kid) = BOB.verification_method().await.unwrap() else {
         panic!("should have did");

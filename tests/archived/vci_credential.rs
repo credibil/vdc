@@ -4,7 +4,7 @@ mod utils;
 
 use assert_let_bind::assert_let;
 use chrono::Utc;
-use credibil_infosec::jose::jws::JwsBuilder;
+use credibil_jose::JwsBuilder;
 use credibil_vc::oid4vci::endpoint;
 use credibil_vc::oid4vci::provider::StateStore;
 use credibil_vc::oid4vci::state::{Expire, Stage, State, Token};

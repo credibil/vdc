@@ -10,7 +10,7 @@ use credibil_identity::did::{
     VmKeyId,
 };
 use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
-use credibil_infosec::{Algorithm, Curve, KeyType, PublicKeyJwk};
+use credibil_jose::{Algorithm, Curve, KeyType, PublicKeyJwk};
 use credibil_vc::core::generate;
 use credibil_vc::format::w3c::verify;
 

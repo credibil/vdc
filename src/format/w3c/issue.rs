@@ -9,7 +9,7 @@
 
 use anyhow::anyhow;
 use credibil_identity::SignerExt;
-use credibil_infosec::jose::jws;
+use credibil_jose::encode_jws;
 use serde_json::{Map, Value};
 
 use crate::core::{Kind, OneMany};
@@ -223,7 +223,7 @@ impl<S: SignerExt> W3cVcBuilder<HasConfig, HasIssuer, HasHolder, HasClaims, HasS
         // encode to JWT
         let key = self.signer.0.verification_method().await?;
         let jwk_key = key.try_into()?;
-        jws::encode(&W3cVcClaims::from(vc), &jwk_key, self.signer.0)
+        encode_jws(&W3cVcClaims::from(vc), &jwk_key, self.signer.0)
             .await
             .map_err(|e| anyhow!("issue generating `jwt_vc_json` credential: {e}"))
     }

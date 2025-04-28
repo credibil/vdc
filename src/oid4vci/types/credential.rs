@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use chrono::serde::ts_seconds;
 use chrono::{DateTime, Utc};
-use credibil_infosec::jose::jwk::PublicKeyJwk;
+use credibil_jose::PublicKeyJwk;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 

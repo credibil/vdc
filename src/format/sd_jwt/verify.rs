@@ -2,8 +2,7 @@
 
 use anyhow::{Result, anyhow};
 use credibil_identity::IdentityResolver;
-use credibil_infosec::jose::jws;
-use credibil_infosec::jose::jwt::Jwt;
+use credibil_jose::{decode_jws, Jwt};
 
 use crate::core::did_jwk;
 use crate::format::sd_jwt::{Disclosure, KbJwtClaims, KeyBinding, SdJwtClaims};
@@ -19,7 +18,7 @@ use crate::oid4vp::types::{Claim, RequestObject};
 /// Returns an error if the SD-JWT credential is invalid.
 pub async fn verify_vc(vc: &str, resolver: &impl IdentityResolver) -> Result<Jwt<SdJwtClaims>> {
     let jwk = async |kid: String| did_jwk(&kid, resolver).await;
-    let sd_jwt: Jwt<SdJwtClaims> = jws::decode(vc, jwk).await?;
+    let sd_jwt: Jwt<SdJwtClaims> = decode_jws(vc, jwk).await?;
 
     // FIXME: verify issuer ('iss' claim)
 
@@ -58,7 +57,7 @@ pub async fn verify_vp(
         return Err(anyhow!("sd-jwt `cnf` claim not found"));
     };
     let resolver = async |_| async { Ok(holder_jwk.clone()) }.await;
-    let kb_jwt: Jwt<KbJwtClaims> = jws::decode(key_binding, resolver).await?;
+    let kb_jwt: Jwt<KbJwtClaims> = decode_jws(key_binding, resolver).await?;
 
     // ..verify the `sd_hash` claim
     let sd_hash = super::sd_hash(&format!("{credential}~{}", disclosures.join("~")));

@@ -257,7 +257,7 @@ pub struct CredentialConfiguration {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cryptographic_binding_methods_supported: Option<Vec<BindingMethod>>,
 
-    // FIXME: use credibil_infosec::SigningAlgorithm
+    // FIXME: use credibil_jose::SigningAlgorithm
     /// Case sensitive strings that identify the cryptographic suites supported
     /// for the `cryptographic_binding_methods_supported`.
     ///

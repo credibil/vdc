@@ -28,7 +28,7 @@ pub mod did {
 
 /// Re-export cryptographic types and functions
 pub mod infosec {
-    pub use credibil_infosec::*;
+    pub use credibil_jose::*;
 }
 
 /// Re-export basic types

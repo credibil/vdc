@@ -12,7 +12,7 @@
 use anyhow::Result;
 use chrono::Utc;
 use credibil_identity::SignerExt;
-use credibil_infosec::Jws;
+use credibil_jose::Jws;
 use serde_json::{Map, Value};
 
 use crate::format::sd_jwt::{Disclosure, JwtType, KeyBinding, SdJwtClaims};
@@ -233,7 +233,7 @@ impl<S: SignerExt> SdJwtVcBuilder<Vct, HasIssuer, HasKeyBinding, HasClaims, HasS
 
 #[cfg(test)]
 mod tests {
-    use credibil_infosec::{Curve, KeyType, PublicKeyJwk};
+    use credibil_jose::{Curve, KeyType, PublicKeyJwk};
     use provider::issuer::Issuer;
     use serde_json::json;
 

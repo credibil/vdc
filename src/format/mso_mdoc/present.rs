@@ -253,7 +253,7 @@ impl<S: SignerExt>
 
 #[cfg(test)]
 mod tests {
-    use credibil_infosec::jose::jws::Key;
+    use credibil_jose::Key;
     use provider::issuer::Issuer;
     use provider::wallet::Wallet;
     use serde_json::{Value, json};

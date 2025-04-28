@@ -3,7 +3,7 @@
 use std::str::FromStr;
 
 use anyhow::Result;
-use credibil_infosec::Jws;
+use credibil_jose::Jws;
 use serde_json::Value;
 
 use crate::core::Kind;

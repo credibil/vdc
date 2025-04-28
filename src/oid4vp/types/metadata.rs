@@ -2,9 +2,8 @@
 
 use std::fmt::Debug;
 
-use credibil_infosec::Algorithm;
-use credibil_infosec::jose::EncAlgorithm;
-use credibil_infosec::jose::jwe::AlgAlgorithm;
+use credibil_jose::Algorithm;
+use credibil_jose::jwe::{AlgAlgorithm, EncAlgorithm};
 use serde::{Deserialize, Serialize};
 
 use crate::format::mso_mdoc::cose;

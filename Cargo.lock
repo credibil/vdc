@@ -533,12 +533,12 @@ dependencies = [
 [[package]]
 name = "credibil-identity"
 version = "0.1.2"
-source = "git+https://github.com/credibil/identity.git#b5a2c39fa9e0dffd36c716f88b7df869e07475e8"
+source = "git+https://github.com/credibil/identity.git#43d45850eb1fb059bd1048a402455b146cd246cc"
 dependencies = [
  "anyhow",
  "base64ct",
  "chrono",
- "credibil-infosec",
+ "credibil-jose",
  "curve25519-dalek",
  "ed25519-dalek",
  "multibase",
@@ -556,9 +556,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "credibil-infosec"
+name = "credibil-jose"
 version = "0.1.2"
-source = "git+https://github.com/credibil/infosec.git#7b2c9ea880ee1797c8d031bc150c63b25163ec6c"
+source = "git+https://github.com/credibil/jose.git#ff3df0a71d8a5779e642882529d1c2707b11475b"
 dependencies = [
  "aes-gcm",
  "aes-kw",
@@ -594,7 +594,7 @@ dependencies = [
  "ciborium",
  "coset",
  "credibil-identity",
- "credibil-infosec",
+ "credibil-jose",
  "derive_builder",
  "ecdsa",
  "ed25519-dalek",
@@ -2110,7 +2110,7 @@ dependencies = [
  "ciborium",
  "cid",
  "credibil-identity",
- "credibil-infosec",
+ "credibil-jose",
  "credibil-vc",
  "ed25519-dalek",
  "multihash-codetable",

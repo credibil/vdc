@@ -3,7 +3,7 @@
 
 use base64ct::{Base64UrlUnpadded, Encoding};
 use chrono::Utc;
-use credibil_infosec::jose::JwsBuilder;
+use credibil_jose::JwsBuilder;
 use credibil_vc::oid4vci::proof::{self, Payload, Type, Verify};
 use credibil_vc::oid4vci::types::{
     AuthorizationRequest, AuthorizationResponse, Credential, CredentialOfferRequest,
