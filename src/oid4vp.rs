@@ -173,7 +173,7 @@ mod handlers;
 mod state;
 
 // Re-export types
-pub use crate::format::w3c::VerifiablePresentation;
+pub use crate::format::w3c_vc::VerifiablePresentation;
 pub use crate::oid4vp::types::*;
 
 /// Re-export status traits and types.

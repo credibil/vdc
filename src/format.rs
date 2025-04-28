@@ -4,7 +4,7 @@
 
 pub mod mso_mdoc;
 pub mod sd_jwt;
-pub mod w3c;
+pub mod w3c_vc;
 
 use std::fmt;
 

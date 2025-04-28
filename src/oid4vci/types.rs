@@ -15,7 +15,7 @@ pub use metadata::*;
 use serde::{Deserialize, Serialize};
 pub use token::*;
 
-pub use crate::format::w3c::{VerifiableCredential, W3cVcClaims};
+pub use crate::format::w3c_vc::{VerifiableCredential, W3cVcClaims};
 pub use crate::oauth::GrantType;
 use crate::oid4vci::endpoint::{AuthorizationHeaders, LanguageHeaders};
 

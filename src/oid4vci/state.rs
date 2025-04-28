@@ -4,7 +4,7 @@
 use chrono::{DateTime, TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::format::w3c::VerifiableCredential;
+use crate::format::w3c_vc::VerifiableCredential;
 use crate::oauth::CodeChallengeMethod;
 use crate::oid4vci::types::{AuthorizedDetail, CredentialOffer, CredentialRequest, RequestObject};
 

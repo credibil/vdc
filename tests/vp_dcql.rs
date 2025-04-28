@@ -8,7 +8,8 @@ use credibil_vc::BlockStore;
 use credibil_vc::core::did_jwk;
 use credibil_vc::format::mso_mdoc::MdocBuilder;
 use credibil_vc::format::sd_jwt::SdJwtVcBuilder;
-use credibil_vc::format::{mso_mdoc, sd_jwt};
+use credibil_vc::format::w3c_vc::W3cVcBuilder;
+use credibil_vc::format::{mso_mdoc, sd_jwt, w3c_vc};
 use credibil_vc::oid4vp::types::{DcqlQuery, ResponseMode};
 use credibil_vc::oid4vp::{
     AuthorzationResponse, DeviceFlow, GenerateRequest, GenerateResponse, endpoint, vp_token,
@@ -126,6 +127,17 @@ async fn multiple_credentials() {
                     {"path": ["org.iso.7367.1", "vehicle_holder"]},
                     {"path": ["org.iso.18013.5.1", "given_name"]}
                 ]
+            },
+            {
+                "id": "w3c",
+                "format": "jwt_vc_json",
+                "meta": {
+                    "type_values": [["VerifiableCredential", "EmployeeIDCredential"]]
+                },
+                "claims": [
+                    {"path": ["credentialSubject", "family_name"]},
+                    {"path": ["credentialSubject", "given_name"]}
+                ]
             }
         ]
     });
@@ -153,7 +165,7 @@ async fn multiple_credentials() {
     // --------------------------------------------------
     let stored_vcs = WALLET.fetch();
     let results = request_object.dcql_query.execute(stored_vcs).expect("should execute");
-    assert_eq!(results.len(), 2);
+    assert_eq!(results.len(), 3);
 
     let vp_token =
         vp_token::generate(&request_object, &results, &*WALLET).await.expect("should get token");
@@ -550,6 +562,33 @@ async fn populate() -> Wallet {
     let q = mso_mdoc::to_queryable(&mdoc, &wallet).await.expect("should be mdoc");
     wallet.add(q);
 
+    let doctype = "org.iso.7367.1.mVRC";
+    let claims = json!({
+        "org.iso.7367.1": {
+            "vehicle_holder": "Alice Holder",
+        },
+        "org.iso.18013.5.1": {
+            "given_name": "Normal",
+            "family_name": "Person",
+            "portrait": "https://example.com/portrait.jpg",
+        },
+    });
+    let mdoc = mso_mdoc(doctype, claims, &holder_jwk).await;
+    let q = mso_mdoc::to_queryable(&mdoc, &wallet).await.expect("should be mdoc");
+    wallet.add(q);
+
+    let type_ = vec!["VerifiableCredential".to_string(), "EmployeeIDCredential".to_string()];
+    let claims = json!({
+        "credentialSubject": {
+            "given_name": "Jane",
+            "family_name": "Doe",
+        },
+    });
+    let did = did_url.split_once('#').unwrap().0;
+    let jwt = w3c_vc(type_, claims, did).await;
+    let q = w3c_vc::to_queryable(jwt, &wallet).await.expect("should be mdoc");
+    wallet.add(q);
+
     wallet
 }
 
@@ -570,6 +609,18 @@ async fn mso_mdoc(doctype: &str, claims: Value, holder_jwk: &PublicKeyJwk) -> St
         .doctype(doctype)
         .device_key(holder_jwk.clone())
         .claims(claims.as_object().unwrap().clone())
+        .signer(&*ISSUER)
+        .build()
+        .await
+        .expect("should build")
+}
+
+async fn w3c_vc(type_: Vec<String>, claims: Value, did: &str) -> String {
+    W3cVcBuilder::new()
+        .type_(type_)
+        .claims(claims.as_object().unwrap().clone())
+        .issuer(ISSUER_ID)
+        .holder(did)
         .signer(&*ISSUER)
         .build()
         .await
