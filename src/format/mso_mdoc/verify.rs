@@ -34,7 +34,7 @@ pub async fn verify_vp(
     verify_signature(device_sig, resolver).await?;
     verify_signature(&doc.issuer_signed.issuer_auth, resolver).await?;
 
-    // return presented claims
+    // verify and return presented claims
     let mut claims = vec![];
     for (name_space, items) in doc.device_signed.name_spaces.iter() {
         let Some(issuer_items) = doc.issuer_signed.name_spaces.get(name_space) else {
@@ -43,7 +43,7 @@ pub async fn verify_vp(
 
         for (identifier, value) in items {
             // verify presented item exists in issuer signed items
-            let Some(item) = issuer_items.iter().find(|isi| isi.element_identifier == *identifier)
+            let Some(item) = issuer_items.iter().find(|i| i.element_identifier == *identifier)
             else {
                 return Err(anyhow!("issuer signed item not found"));
             };
@@ -51,11 +51,10 @@ pub async fn verify_vp(
                 return Err(anyhow!("issuer signed item value mismatch"));
             }
 
-            let claim = Claim {
+            claims.push(Claim {
                 path: vec![name_space.to_string(), identifier.to_string()],
                 value: serde_json::to_value(value)?,
-            };
-            claims.push(claim);
+            });
         }
     }
 

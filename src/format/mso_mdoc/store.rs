@@ -13,27 +13,29 @@ use crate::oid4vp::types::{Claim, Queryable};
 ///
 /// # Errors
 ///
-/// Returns an error if the decoding fails.
+/// Returns an error if the decoding fails or if the `mdoc` signature
+/// verification fails.
 pub async fn to_queryable(issued: &str, resolver: &impl IdentityResolver) -> Result<Queryable> {
     let mdoc_bytes = Base64UrlUnpadded::decode_vec(issued)?;
     let issuer_signed: IssuerSigned = serde_cbor::from_slice(&mdoc_bytes)?;
 
+    // verify mso
     verify::verify_signature(&issuer_signed.issuer_auth, resolver).await?;
 
-    let mut claims = vec![];
-    for (name_space, issued_items) in &issuer_signed.name_spaces {
-        for item in issued_items {
-            let path = vec![name_space.clone(), item.element_identifier.clone()];
-            let nested = unpack_claims(path.clone(), &item.element_value);
-            claims.extend(nested);
-        }
-    }
-
-    // FIXME: verify MSO
+    // doctype
     let Some(mso_bytes) = issuer_signed.issuer_auth.0.payload else {
         return Err(anyhow!("missing MSO payload"));
     };
     let mso: DataItem<MobileSecurityObject> = serde_cbor::from_slice(&mso_bytes)?;
+
+    // claims
+    let mut claims = vec![];
+    for (name_space, issued_items) in &issuer_signed.name_spaces {
+        for item in issued_items {
+            let path = vec![name_space.clone(), item.element_identifier.clone()];
+            claims.extend(unpack_claims(path.clone(), &item.element_value));
+        }
+    }
 
     Ok(Queryable {
         meta: FormatProfile::MsoMdoc {
