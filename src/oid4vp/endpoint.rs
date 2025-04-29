@@ -86,7 +86,7 @@ impl<T> From<T> for Response<T> {
 ///
 /// The primary role of this trait is to provide a common interface for
 /// messages so they can be handled by [`handle`] method.
-pub trait Handler: Clone + Debug + Send + Sync {
+pub trait Handler {
     /// The inner reply type specific to the implementing message.
     type Response;
 
