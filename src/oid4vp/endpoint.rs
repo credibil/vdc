@@ -106,16 +106,6 @@ pub trait Handler: Clone + Debug + Send + Sync {
             // if !tenant.active(credential_issuer)? {
             //     return Err(Error::Unauthorized("tenant not active"));
             // }
-
-            // `credential_issuer` required
-            // if credential_issuer.is_empty() {
-            //     return Err(invalid!("no `credential_issuer` specified"));
-            // }
-
-            // // validate the message schema during development
-            // #[cfg(debug_assertions)]
-            // schema::validate(self)?;
-
             Ok(())
         }
     }
