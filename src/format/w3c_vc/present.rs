@@ -1,10 +1,10 @@
 //! # W3C-VC Presentation
 
 use anyhow::{Result, anyhow};
-// use chrono::Utc;
-use credibil_identity::SignerExt;
+use credibil_identity::{Key, SignerExt};
+use credibil_jose::encode_jws;
 
-// use credibil_jose::Jws;
+use crate::format::w3c_vc::{VerifiablePresentation, W3cVpClaims};
 use crate::oid4vp::types::Matched;
 
 /// Generate an IETF `dc+sd-jwt` format credential.
@@ -109,45 +109,32 @@ impl<M, C> W3cVpBuilder<M, C, NoSigner> {
 }
 
 impl<S: SignerExt> W3cVpBuilder<HasMatched<'_>, HasClientId, HasSigner<'_, S>> {
-    /// Build the W3C-VC presentation.
+    /// Build the presentation.
     ///
     /// # Errors
     /// TODO: Document errors
     pub async fn build(self) -> Result<String> {
         let matched = self.matched.0;
 
-        // issued W3C-VC (including disclosures)
-        let Some(credential) = matched.issued.as_str() else {
-            return Err(anyhow!("Invalid issued claim type"));
+        let Key::KeyId(kid) = self.signer.0.verification_method().await? else {
+            return Err(anyhow!("failed to get verification method"));
         };
+        let (holder_did, _) =
+            kid.split_once('#').ok_or_else(|| anyhow!("failed to parse key id"))?;
 
-        dbg!(&credential);
-        dbg!(self.client_id.0);
+        let vp = VerifiablePresentation::builder()
+            .holder(holder_did)
+            .add_credential(matched.issued.clone())
+            .build()
+            .map_err(|e| anyhow!("failed to build presentation: {e}"))?;
 
-        // unpack
+        let mut vp_claims: W3cVpClaims = vp.into();
+        vp_claims.aud = self.client_id.0;
+        vp_claims.nonce = self.nonce.unwrap_or_default();
 
-        // select disclosures to include in the presentation
-        // let mut selected = vec![];
-        // for claim in &matched.claims {
-
-        //     selected.push(disclosure.encode()?);
-        // }
-
-        // let key = self.signer.0.verification_method().await?;
-        // let key_ref = key.try_into()?;
-        // let kb_jwt = Jws::builder()
-        //     .typ(JwtType::KbJwt)
-        //     .payload(claims)
-        //     .key_ref(&key_ref)
-        //     .add_signer(self.signer.0)
-        //     .build()
-        //     .await
-        //     .map_err(|e| server!("issue signing KB-JWT: {e}"))?
-        //     .to_string();
-
-        // // assemble presentation
-        // Ok(format!("{sd}~{kb_jwt}"))
-
-        todo!()
+        let key = self.signer.0.verification_method().await?;
+        encode_jws(&vp_claims, &key.try_into()?, self.signer.0)
+            .await
+            .map_err(|e| anyhow!("issue generating `jwt_vc_json` credential: {e}"))
     }
 }

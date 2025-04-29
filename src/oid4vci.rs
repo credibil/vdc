@@ -134,10 +134,6 @@ pub enum JwtType {
     /// JWT `typ` for Wallet's Proof of possession of key material.
     #[serde(rename = "openid4vci-proof+jwt")]
     ProofJwt,
-
-    /// JWT `typ` for SD-JWT credentials.
-    #[serde(rename = "dc+sd-jwt")]
-    SdJwt,
 }
 
 impl From<JwtType> for String {
@@ -151,7 +147,6 @@ impl From<&JwtType> for String {
         match t {
             JwtType::Jwt => "jwt".to_string(),
             JwtType::ProofJwt => "openid4vci-proof+jwt".to_string(),
-            JwtType::SdJwt => "dc+sd-jwt".to_string(),
         }
     }
 }

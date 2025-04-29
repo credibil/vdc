@@ -169,7 +169,7 @@ async fn multiple_credentials() {
 
     let vp_token =
         vp_token::generate(&request_object, &results, &*WALLET).await.expect("should get token");
-    assert_eq!(vp_token.len(), 2);
+    assert_eq!(vp_token.len(), 3);
 
     let request = AuthorzationResponse {
         vp_token,

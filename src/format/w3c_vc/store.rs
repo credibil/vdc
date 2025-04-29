@@ -52,7 +52,6 @@ pub async fn to_queryable(
     };
 
     let mut claims = vec![];
-
     for subj in &vc.credential_subject.to_vec() {
         let value = Value::Object(subj.claims.clone());
         let nested = unpack_claims(vec!["credentialSubject".to_string()], &value);
