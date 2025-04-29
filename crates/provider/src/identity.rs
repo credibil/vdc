@@ -12,7 +12,6 @@ use credibil_identity::did::{
 use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
 use credibil_jose::{Algorithm, Curve, KeyType, PublicKeyJwk};
 use credibil_vc::core::generate;
-use credibil_vc::format::w3c::verify;
 
 use crate::blockstore::Mockstore;
 use crate::keystore::{self, KeyUse, Keyring, SigningKey};

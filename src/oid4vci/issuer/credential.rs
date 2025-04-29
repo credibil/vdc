@@ -18,7 +18,7 @@ use crate::core::{did_jwk, generate};
 use crate::format::FormatProfile;
 use crate::format::mso_mdoc::MdocBuilder;
 use crate::format::sd_jwt::SdJwtVcBuilder;
-use crate::format::w3c::W3cVcBuilder;
+use crate::format::w3c_vc::W3cVcBuilder;
 use crate::oid4vci::endpoint::{Body, Handler, Request, Response};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Deferrance, Expire, Stage, State};
@@ -225,13 +225,15 @@ impl Context {
         // create a credential for each proof
         for kid in &self.proof_kids {
             let credential = match &self.configuration.profile {
-                FormatProfile::JwtVcJson { .. } => {
+                FormatProfile::JwtVcJson {
+                    credential_definition,
+                } => {
                     // FIXME: do we need to resolve DID document?
                     let Some(did) = kid.split('#').next() else {
                         return Err(Error::InvalidProof("Proof JWT DID is invalid".to_string()));
                     };
                     let mut builder = W3cVcBuilder::new()
-                        .config(self.configuration.clone())
+                        .type_(credential_definition.type_.clone())
                         .issuer(&self.issuer.credential_issuer)
                         .holder(did)
                         .claims(dataset.claims.clone())

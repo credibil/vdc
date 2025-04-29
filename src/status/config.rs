@@ -4,7 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::format::w3c::{StatusMessage, StatusPurpose};
+use crate::format::w3c_vc::{StatusMessage, StatusPurpose};
 
 /// Configuration for a status list for a credential.
 #[derive(Clone, Debug, Deserialize, Serialize)]

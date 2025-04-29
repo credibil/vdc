@@ -15,7 +15,7 @@ use credibil_jose::encode_jws;
 use flate2::write::GzEncoder;
 use serde_json::{Map, Value};
 
-use crate::format::w3c::{CredentialSubject, StatusPurpose, VerifiableCredential, W3cVcClaims};
+use crate::format::w3c_vc::{CredentialSubject, StatusPurpose, VerifiableCredential, W3cVcClaims};
 use crate::status::config::ListConfig;
 use crate::status::log::StatusLogEntry;
 use crate::{Kind, OneMany};

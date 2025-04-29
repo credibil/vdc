@@ -3,12 +3,13 @@
 use std::str::FromStr;
 
 use anyhow::Result;
+use credibil_identity::IdentityResolver;
 use credibil_jose::Jws;
 use serde_json::Value;
 
 use crate::core::Kind;
 use crate::format::FormatProfile;
-use crate::format::w3c::{VerifiableCredential, W3cVcClaims};
+use crate::format::w3c_vc::{VerifiableCredential, W3cVcClaims};
 use crate::oid4vci::types::CredentialDefinition;
 use crate::oid4vp::types::{Claim, Queryable};
 
@@ -17,7 +18,13 @@ use crate::oid4vp::types::{Claim, Queryable};
 /// # Errors
 ///
 /// Returns an error if the decoding fails.
-pub fn to_queryable(issued: Kind<VerifiableCredential>) -> Result<Queryable> {
+pub async fn to_queryable(
+    issued: impl Into<Kind<VerifiableCredential>>, _resolver: &impl IdentityResolver,
+) -> Result<Queryable> {
+    let issued = issued.into();
+
+    // FIXME: verify signature
+
     let (vc, meta) = match &issued {
         Kind::String(encoded) => {
             let jws = Jws::from_str(encoded)?;
@@ -45,7 +52,6 @@ pub fn to_queryable(issued: Kind<VerifiableCredential>) -> Result<Queryable> {
     };
 
     let mut claims = vec![];
-
     for subj in &vc.credential_subject.to_vec() {
         let value = Value::Object(subj.claims.clone());
         let nested = unpack_claims(vec!["credentialSubject".to_string()], &value);

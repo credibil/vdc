@@ -8,24 +8,24 @@
 //! machine-verifiable.
 
 mod issue;
+mod present;
 mod store;
-pub mod verify;
+mod verify;
 
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Display;
 use std::ops::Deref;
-use std::str::FromStr;
 
-use anyhow::bail;
-use base64ct::{Base64UrlUnpadded, Encoding};
 use chrono::serde::{ts_seconds, ts_seconds_option};
 use chrono::{DateTime, TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use uuid::Uuid;
+pub use verify::verify_vp;
 
 pub use self::issue::W3cVcBuilder;
+pub use self::present::W3cVpBuilder;
 pub use self::store::to_queryable;
 use crate::core::{Kind, OneMany};
 
@@ -499,8 +499,6 @@ pub struct VerifiablePresentation {
     /// The type property is required and expresses the type of presentation,
     /// such as `VerifiablePresentation`. Consists of `VerifiablePresentation`
     /// and, optionally, a more specific verifiable presentation type.
-    /// e.g. `"type": ["VerifiablePresentation",
-    /// "CredentialManagerPresentation"]`
     #[serde(rename = "type")]
     pub type_: OneMany<String>,
 
@@ -526,8 +524,14 @@ impl VerifiablePresentation {
     ///
     /// Fails with `Error::ServerError` if any of the VP's mandatory fields
     /// are not set.
-    pub fn new() -> anyhow::Result<Self> {
-        Self::builder().try_into()
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            id: Some(format!("urn:uuid:{}", Uuid::new_v4())),
+            context: vec![Kind::String("https://www.w3.org/2018/credentials/v1".to_string())],
+            type_: OneMany::One("VerifiablePresentation".to_string()),
+            ..Self::default()
+        }
     }
 
     /// Returns a new [`VpBuilder`], which can be used to build a
@@ -542,7 +546,7 @@ impl VerifiablePresentation {
 /// use JWT Secured Authorization Response Mode for OAuth 2.0
 /// ([JARM](https://openid.net/specs/oauth-v2-jarm-final.html)).
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct VpClaims {
+pub struct W3cVpClaims {
     /// The `holder` property of the Presentation.
     /// For example, "did:example:123456789abcdefghi".
     pub iss: String,
@@ -577,30 +581,17 @@ pub struct VpClaims {
     pub vp: VerifiablePresentation,
 }
 
-impl From<VerifiablePresentation> for VpClaims {
+impl From<VerifiablePresentation> for W3cVpClaims {
     fn from(vp: VerifiablePresentation) -> Self {
         Self {
             iss: vp.holder.clone().unwrap_or_default(),
             jti: vp.id.clone().unwrap_or_default(),
             nbf: Utc::now(),
             iat: Utc::now(),
-
-            // TODO: configure `exp` time
-            exp: Utc::now()
-                .checked_add_signed(TimeDelta::try_hours(1).unwrap_or_default())
-                .unwrap_or_default(),
+            exp: Utc::now() + TimeDelta::days(365), // TODO: configure `exp` time
             vp,
-
             ..Self::default()
         }
-    }
-}
-
-impl TryFrom<VpBuilder> for VerifiablePresentation {
-    type Error = anyhow::Error;
-
-    fn try_from(builder: VpBuilder) -> anyhow::Result<Self, Self::Error> {
-        builder.build()
     }
 }
 
@@ -646,12 +637,8 @@ impl VpBuilder {
 
     /// Adds a `verifiable_credential`
     #[must_use]
-    pub fn add_credential(mut self, vc: Kind<VerifiableCredential>) -> Self {
-        if let Some(verifiable_credential) = self.vp.verifiable_credential.as_mut() {
-            verifiable_credential.push(vc);
-        } else {
-            self.vp.verifiable_credential = Some(vec![vc]);
-        }
+    pub fn add_credential(mut self, vc: impl Into<Kind<VerifiableCredential>>) -> Self {
+        self.vp.verifiable_credential.get_or_insert(vec![]).push(vc.into());
         self
     }
 
@@ -668,29 +655,14 @@ impl VpBuilder {
     ///
     /// Fails if any of the VP's mandatory fields are not set.
     pub fn build(self) -> anyhow::Result<VerifiablePresentation> {
-        if self.vp.context.len() < 2 {
-            bail!("context is required");
-        }
-        if let OneMany::One(_) = self.vp.type_ {
-            bail!("type is required");
-        }
+        // if self.vp.context.len() < 1 {
+        //     bail!("context is required");
+        // }
+        // if let OneMany::One(_) = self.vp.type_ {
+        //     bail!("type is required");
+        // }
 
         Ok(self.vp)
-    }
-}
-
-impl FromStr for VerifiablePresentation {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> anyhow::Result<Self, Self::Err> {
-        if &s[0..1] != "{" {
-            // base64 encoded string
-            let dec = Base64UrlUnpadded::decode_vec(s)?;
-            return Ok(serde_json::from_slice(dec.as_slice())?);
-        }
-
-        // stringified JSON
-        Ok(serde_json::from_str(s)?)
     }
 }
 
@@ -961,6 +933,19 @@ pub enum Direction {
     #[serde(rename = "rtl")]
     Rtl,
 }
+
+// /// JWT `typ` headers options.
+// #[derive(Clone, Debug, Default, Deserialize, Serialize)]
+// pub enum JwtType {
+//     /// JWT `typ` for SD-JWT credentials.
+//     #[serde(rename = "dc+sd-jwt")]
+//     #[default]
+//     VcJwt,
+
+//     /// JWT `typ` for Key Binding JWT.
+//     #[serde(rename = "kb+jwt")]
+//     VpJwt,
+// }
 
 #[cfg(test)]
 mod tests {

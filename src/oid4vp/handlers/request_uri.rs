@@ -16,7 +16,7 @@
 
 use credibil_jose::JwsBuilder;
 
-use crate::format::w3c::Type;
+use crate::format::w3c_vc::Type;
 use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;

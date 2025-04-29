@@ -12,7 +12,7 @@ use serde_json::Value;
 
 use crate::Kind;
 use crate::core::urlencode;
-use crate::format::w3c::Type;
+use crate::format::w3c_vc::Type;
 use crate::oid4vp::types::{DcqlQuery, VerifierMetadata, Wallet};
 
 const UNRESERVED: &AsciiSet =

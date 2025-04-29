@@ -7,6 +7,7 @@ use credibil_identity::SignerExt;
 
 use crate::format::mso_mdoc::DeviceResponseBuilder;
 use crate::format::sd_jwt::SdJwtVpBuilder;
+use crate::format::w3c_vc::W3cVpBuilder;
 use crate::oid4vp::ResponseMode;
 use crate::oid4vp::types::{QueryResult, RequestObject, RequestedFormat};
 
@@ -59,7 +60,19 @@ pub async fn generate(
                     presentations.push(vp);
                 }
             }
-            RequestedFormat::JwtVcJson | RequestedFormat::JwtVcJsonLd | RequestedFormat::LdpVc => {
+            RequestedFormat::JwtVcJson => {
+                for matched in &result.matches {
+                    let vp = W3cVpBuilder::new()
+                        .client_id(request_object.client_id.to_string())
+                        .nonce(request_object.nonce.clone())
+                        .matched(matched)
+                        .signer(signer)
+                        .build()
+                        .await?;
+                    presentations.push(vp);
+                }
+            }
+            RequestedFormat::JwtVcJsonLd | RequestedFormat::LdpVc => {
                 todo!()
             }
         }

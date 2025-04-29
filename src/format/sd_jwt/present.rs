@@ -121,7 +121,7 @@ impl<S: SignerExt> SdJwtVpBuilder<HasMatched<'_>, HasClientId, HasSigner<'_, S>>
 
         // issued SD-JWT (including disclosures)
         let Some(credential) = matched.issued.as_str() else {
-            return Err(anyhow!("Invalid issued claim type"));
+            return Err(anyhow!("issued credential is invalid"));
         };
 
         // unpack disclosures
