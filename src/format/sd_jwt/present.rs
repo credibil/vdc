@@ -120,14 +120,13 @@ impl<S: SignerExt> SdJwtVpBuilder<HasMatched<'_>, HasClientId, HasSigner<'_, S>>
         let matched = self.matched.0;
 
         // issued SD-JWT (including disclosures)
-        let Some(credential) = matched.issued.as_str() else {
+        let Some(sd_jwt) = matched.issued.as_str() else {
             return Err(anyhow!("issued credential is invalid"));
         };
 
         // unpack disclosures
-        let mut split = credential.split('~');
-        split.next().ok_or_else(|| anyhow!("missing issuer-signed JWT"))?;
-
+        let mut split = sd_jwt.split('~');
+        let credential = split.next().ok_or_else(|| anyhow!("missing issuer-signed JWT"))?;
         let disclosures = split.map(Disclosure::from).collect::<Result<Vec<_>>>()?;
 
         // select disclosures to include in the presentation
@@ -141,19 +140,18 @@ impl<S: SignerExt> SdJwtVpBuilder<HasMatched<'_>, HasClientId, HasSigner<'_, S>>
             selected.push(disclosure.encode()?);
         }
 
-        // key binding JWT
         let sd = format!("{credential}~{}", selected.join("~"));
-        let claims = KbJwtClaims {
-            nonce: self.nonce.unwrap_or_default(),
-            aud: self.client_id.0,
-            iat: Utc::now(),
-            sd_hash: super::sd_hash(&sd),
-        };
 
+        // key binding JWT
         let key_ref = self.signer.0.verification_method().await?.try_into()?;
         let kb_jwt = Jws::builder()
             .typ(JwtType::KbJwt)
-            .payload(claims)
+            .payload(KbJwtClaims {
+                nonce: self.nonce.unwrap_or_default(),
+                aud: self.client_id.0,
+                iat: Utc::now(),
+                sd_hash: super::sd_hash(&sd),
+            })
             .key_ref(&key_ref)
             .add_signer(self.signer.0)
             .build()

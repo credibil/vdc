@@ -97,16 +97,19 @@ async fn verify(provider: &impl Provider, request: &AuthorzationResponse) -> Res
         for vp in presentations {
             let claims = match query.format {
                 RequestedFormat::DcSdJwt => {
+                    println!("sd-jwt");
                     sd_jwt::verify_vp(vp, request_object, provider).await.map_err(|e| {
                         Error::InvalidRequest(format!("failed to verify presentation: {e}"))
                     })?
                 }
                 RequestedFormat::MsoMdoc => {
+                    println!("mso_mdoc");
                     mso_mdoc::verify_vp(vp, request_object, provider).await.map_err(|e| {
                         Error::InvalidRequest(format!("failed to verify presentation: {e}"))
                     })?
                 }
                 RequestedFormat::JwtVcJson => {
+                    println!("jwt_vc_json");
                     w3c_vc::verify_vp(vp, request_object, provider).await.map_err(|e| {
                         Error::InvalidRequest(format!("failed to verify presentation: {e}"))
                     })?

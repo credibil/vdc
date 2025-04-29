@@ -562,21 +562,6 @@ async fn populate() -> Wallet {
     let q = mso_mdoc::to_queryable(&mdoc, &wallet).await.expect("should be mdoc");
     wallet.add(q);
 
-    let doctype = "org.iso.7367.1.mVRC";
-    let claims = json!({
-        "org.iso.7367.1": {
-            "vehicle_holder": "Alice Holder",
-        },
-        "org.iso.18013.5.1": {
-            "given_name": "Normal",
-            "family_name": "Person",
-            "portrait": "https://example.com/portrait.jpg",
-        },
-    });
-    let mdoc = mso_mdoc(doctype, claims, &holder_jwk).await;
-    let q = mso_mdoc::to_queryable(&mdoc, &wallet).await.expect("should be mdoc");
-    wallet.add(q);
-
     let type_ = vec!["VerifiableCredential".to_string(), "EmployeeIDCredential".to_string()];
     let claims = json!({
         "credentialSubject": {
