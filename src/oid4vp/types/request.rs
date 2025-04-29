@@ -238,9 +238,7 @@ impl RequestObject {
     pub async fn to_querystring(&self, signer: &impl SignerExt) -> Result<String> {
         let payload: RequestObjectClaims = self.clone().into();
 
-        let key = signer.verification_method().await?;
-        let key_ref = key.try_into()?;
-
+        let key_ref = signer.verification_method().await?.try_into()?;
         let jws = JwsBuilder::new()
             .typ(Type::OauthAuthzReqJwt)
             .payload(payload)

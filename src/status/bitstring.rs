@@ -146,11 +146,11 @@ pub async fn credential(
         ..VerifiableCredential::default()
     };
 
-    let key = signer
+    let key_ref = signer
         .verification_method()
         .await
-        .map_err(|e| anyhow!("issue getting signing key: {e}"))?;
-    let key_ref = key.try_into()?;
+        .map_err(|e| anyhow!("issue getting signing key: {e}"))?
+        .try_into()?;
 
     encode_jws(&W3cVcClaims::from(vc), &key_ref, signer)
         .await
