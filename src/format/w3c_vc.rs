@@ -21,7 +21,6 @@ use chrono::serde::{ts_seconds, ts_seconds_option};
 use chrono::{DateTime, TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use uuid::Uuid;
 pub use verify::verify_vp;
 
 pub use self::issue::W3cVcBuilder;
@@ -58,7 +57,7 @@ pub struct VerifiableCredential {
     /// the type. Syntactic conveniences, such as JSON-LD, SHOULD be used to
     /// ease developer usage.
     #[serde(rename = "type")]
-    pub type_: OneMany<String>,
+    pub type_: Vec<String>,
 
     /// The name property expresses the name of the credential. If present, the
     /// value of the name property MUST be a string or a language value object.
@@ -517,31 +516,6 @@ pub struct VerifiablePresentation {
     pub proof: Option<OneMany<Proof>>,
 }
 
-impl VerifiablePresentation {
-    /// Returns a new [`VerifiablePresentation`] configured with defaults
-    ///
-    /// # Errors
-    ///
-    /// Fails with `Error::ServerError` if any of the VP's mandatory fields
-    /// are not set.
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            id: Some(format!("urn:uuid:{}", Uuid::new_v4())),
-            context: vec![Kind::String("https://www.w3.org/2018/credentials/v1".to_string())],
-            type_: OneMany::One("VerifiablePresentation".to_string()),
-            ..Self::default()
-        }
-    }
-
-    /// Returns a new [`VpBuilder`], which can be used to build a
-    /// [`VerifiablePresentation`]
-    #[must_use]
-    pub fn builder() -> VpBuilder {
-        VpBuilder::new()
-    }
-}
-
 /// To sign, or sign and encrypt the Authorization Response, implementations MAY
 /// use JWT Secured Authorization Response Mode for OAuth 2.0
 /// ([JARM](https://openid.net/specs/oauth-v2-jarm-final.html)).
@@ -592,77 +566,6 @@ impl From<VerifiablePresentation> for W3cVpClaims {
             vp,
             ..Self::default()
         }
-    }
-}
-
-/// [`VpBuilder`] is used to build a [`VerifiablePresentation`]
-#[derive(Clone, Default)]
-#[allow(clippy::module_name_repetitions)]
-pub struct VpBuilder {
-    vp: VerifiablePresentation,
-}
-
-impl VpBuilder {
-    /// Returns a new [`VpBuilder`]
-    #[must_use]
-    pub fn new() -> Self {
-        let mut builder = Self::default();
-
-        // sensibile defaults
-        builder.vp.id = Some(format!("urn:uuid:{}", Uuid::new_v4()));
-        builder.vp.context.push(Kind::String("https://www.w3.org/2018/credentials/v1".to_string()));
-        builder.vp.type_ = OneMany::One("VerifiablePresentation".to_string());
-        builder
-    }
-
-    /// Sets the `@context` property
-    #[must_use]
-    pub fn add_context(mut self, context: Kind<Value>) -> Self {
-        self.vp.context.push(context);
-        self
-    }
-
-    /// Adds a type to the `type` property
-    #[must_use]
-    pub fn add_type(mut self, type_: impl Into<String>) -> Self {
-        let mut vp_type = match self.vp.type_ {
-            OneMany::One(t) => vec![t],
-            OneMany::Many(t) => t,
-        };
-        vp_type.push(type_.into());
-
-        self.vp.type_ = OneMany::Many(vp_type);
-        self
-    }
-
-    /// Adds a `verifiable_credential`
-    #[must_use]
-    pub fn add_credential(mut self, vc: impl Into<Kind<VerifiableCredential>>) -> Self {
-        self.vp.verifiable_credential.get_or_insert(vec![]).push(vc.into());
-        self
-    }
-
-    /// Sets the `type_` property
-    #[must_use]
-    pub fn holder(mut self, holder: impl Into<String>) -> Self {
-        self.vp.holder = Some(holder.into());
-        self
-    }
-
-    /// Turns this builder into a [`VerifiablePresentation`]
-    ///
-    /// # Errors
-    ///
-    /// Fails if any of the VP's mandatory fields are not set.
-    pub fn build(self) -> anyhow::Result<VerifiablePresentation> {
-        // if self.vp.context.len() < 1 {
-        //     bail!("context is required");
-        // }
-        // if let OneMany::One(_) = self.vp.type_ {
-        //     bail!("type is required");
-        // }
-
-        Ok(self.vp)
     }
 }
 
@@ -776,35 +679,6 @@ pub enum Verify<'a> {
     /// A Verifiable Presentation proof either encoded as a JWT or with an
     /// embedded a Data Integrity Proof.
     Vp(&'a Kind<VerifiablePresentation>),
-}
-
-/// The JWS `typ` header parameter.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub enum Type {
-    /// General purpose JWT type.
-    #[default]
-    #[serde(rename = "jwt")]
-    Jwt,
-
-    /// JWT `typ` for Authorization Request Object.
-    #[serde(rename = "oauth-authz-req+jwt")]
-    OauthAuthzReqJwt,
-}
-
-impl From<Type> for String {
-    fn from(t: Type) -> Self {
-        match t {
-            Type::Jwt => "jwt".to_string(),
-            Type::OauthAuthzReqJwt => "oauth-authz-req+jwt".to_string(),
-        }
-    }
-}
-
-impl Display for Type {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s: String = self.clone().into();
-        write!(f, "{s}")
-    }
 }
 
 /// `LangString` is a string that has one or more language representations.
@@ -934,19 +808,6 @@ pub enum Direction {
     Rtl,
 }
 
-// /// JWT `typ` headers options.
-// #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-// pub enum JwtType {
-//     /// JWT `typ` for SD-JWT credentials.
-//     #[serde(rename = "dc+sd-jwt")]
-//     #[default]
-//     VcJwt,
-
-//     /// JWT `typ` for Key Binding JWT.
-//     #[serde(rename = "kb+jwt")]
-//     VpJwt,
-// }
-
 #[cfg(test)]
 mod tests {
     use chrono::TimeZone;
@@ -1074,10 +935,7 @@ mod tests {
                 Kind::String("https://www.w3.org/2018/credentials/v1".to_string()),
                 Kind::String("https://www.w3.org/2018/credentials/examples/v1".to_string()),
             ],
-            type_: OneMany::Many(vec![
-                "VerifiableCredential".to_string(),
-                "EmployeeIDCredential".to_string(),
-            ]),
+            type_: vec!["VerifiableCredential".to_string(), "EmployeeIDCredential".to_string()],
             issuer: Kind::String("https://example.com/issuers/14".to_string()),
             id: Some("https://example.com/credentials/3732".to_string()),
             valid_from: Some(Utc.with_ymd_and_hms(2023, 11, 20, 23, 21, 55).unwrap()),
@@ -1095,7 +953,7 @@ mod tests {
 
     #[test]
     fn test_vp_build() {
-        let vp = base_vp().expect("should build vp");
+        let vp = base_vp();
 
         // serialize
         let vp_json = serde_json::to_value(&vp).expect("should serialize");
@@ -1135,29 +993,28 @@ mod tests {
         assert_eq!(vp_de.verifiable_credential, vp.verifiable_credential);
     }
 
-    fn base_vp() -> anyhow::Result<VerifiablePresentation> {
+    fn base_vp() -> VerifiablePresentation {
         let mut subj = CredentialSubject::default();
         subj.id = Some("did:example:ebfeb1f712ebc6f1c276e12ec21".to_string());
         subj.claims = json!({"employeeID": "1234567890"}).as_object().unwrap().clone();
 
         let vc = VerifiableCredential {
             id: Some("https://example.com/credentials/3732".to_string()),
-            type_: OneMany::Many(vec![
-                "VerifiableCredential".to_string(),
-                "EmployeeIDCredential".to_string(),
-            ]),
+            type_: vec!["VerifiableCredential".to_string(), "EmployeeIDCredential".to_string()],
             issuer: Kind::String("https://example.com/issuers/14".to_string()),
             credential_subject: OneMany::One(subj),
             ..VerifiableCredential::default()
         };
 
-        VerifiablePresentation::builder()
-            .add_context(Kind::String(
-                "https://www.w3.org/2018/credentials/examples/v1".to_string(),
-            ))
-            .add_type("EmployeeIDCredential")
-            .add_credential(Kind::Object(vc))
-            .build()
+        VerifiablePresentation {
+            context: vec![Kind::String("https://www.w3.org/2018/credentials/v1".to_string())],
+            type_: OneMany::Many(vec![
+                "VerifiablePresentation".to_string(),
+                "EmployeeIDCredential".to_string(),
+            ]),
+            verifiable_credential: Some(vec![Kind::Object(vc)]),
+            ..Default::default()
+        }
     }
 
     #[derive(Deserialize, Serialize)]

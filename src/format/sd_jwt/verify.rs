@@ -2,7 +2,7 @@
 
 use anyhow::{Result, anyhow};
 use credibil_identity::IdentityResolver;
-use credibil_jose::{decode_jws, Jwt};
+use credibil_jose::{Jwt, decode_jws};
 
 use crate::core::did_jwk;
 use crate::format::sd_jwt::{Disclosure, KbJwtClaims, KeyBinding, SdJwtClaims};

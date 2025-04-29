@@ -12,7 +12,7 @@ use std::collections::HashSet;
 use std::fmt::Debug;
 
 use chrono::Utc;
-use credibil_jose::{decode_jws, Jwt, KeyBinding};
+use credibil_jose::{Jwt, KeyBinding, decode_jws};
 
 use crate::core::{did_jwk, generate};
 use crate::format::FormatProfile;

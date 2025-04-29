@@ -12,7 +12,7 @@ use serde_json::Value;
 
 use crate::Kind;
 use crate::core::urlencode;
-use crate::format::w3c_vc::Type;
+use crate::oid4vp::JwtType;
 use crate::oid4vp::types::{DcqlQuery, VerifierMetadata, Wallet};
 
 const UNRESERVED: &AsciiSet =
@@ -240,7 +240,7 @@ impl RequestObject {
 
         let key_ref = signer.verification_method().await?.try_into()?;
         let jws = JwsBuilder::new()
-            .typ(Type::OauthAuthzReqJwt)
+            .typ(JwtType::OauthAuthzReqJwt)
             .payload(payload)
             .key_ref(&key_ref)
             .add_signer(signer)
