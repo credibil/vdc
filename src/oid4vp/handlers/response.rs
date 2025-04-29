@@ -83,10 +83,10 @@ async fn verify(provider: &impl Provider, request: &AuthorzationResponse) -> Res
     let dcql_query = &request_object.dcql_query;
 
     // verify presentation matches query:
-    //  - verify request has been fulfilled for each credential requested:
-    //  - check VC format matches a requested format
-    //  - verify query constraints have been met
-    //  - verify VC is valid (hasn't expired, been revoked, etc)
+    //  FIXME: verify request has been fulfilled for each credential requested:
+    //  FIXME: check VC format matches a requested format
+    //  FIXME: verify query constraints have been met
+    //  FIXME: verify VC is valid (hasn't expired, been revoked, etc)
 
     // process each presentation
     for (query_id, presentations) in &request.vp_token {
