@@ -165,6 +165,14 @@ pub enum MetadataQuery {
     },
 }
 
+impl Default for MetadataQuery {
+    fn default() -> Self {
+        MetadataQuery::W3cVc {
+            type_values: vec![vec![]],
+        }
+    }
+}
+
 impl From<&MetadataQuery> for FormatProfile {
     fn from(value: &MetadataQuery) -> Self {
         FormatProfile::from(value.clone())
