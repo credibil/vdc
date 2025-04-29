@@ -253,7 +253,7 @@ impl<S: SignerExt>
 
 #[cfg(test)]
 mod tests {
-    use credibil_jose::Key;
+    use credibil_jose::KeyBinding;
     use provider::issuer::Issuer;
     use provider::wallet::Wallet;
     use serde_json::{Value, json};
@@ -310,10 +310,14 @@ mod tests {
 
     async fn build_vc() -> String {
         let wallet = Wallet::new();
-        let key = wallet.verification_method().await.expect("should have key id");
-        let key_ref = key.try_into().expect("should map key to key ref");
+        let key_ref = wallet
+            .verification_method()
+            .await
+            .expect("should have key id")
+            .try_into()
+            .expect("should map key binding to key ref");
 
-        let Key::KeyId(kid) = key_ref else {
+        let KeyBinding::Kid(kid) = key_ref else {
             panic!("should have key id");
         };
         let device_jwk = did_jwk(&kid, &wallet).await.expect("should fetch JWK");

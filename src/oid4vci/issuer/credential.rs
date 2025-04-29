@@ -12,7 +12,7 @@ use std::collections::HashSet;
 use std::fmt::Debug;
 
 use chrono::Utc;
-use credibil_jose::{Jwt, Key, decode_jws};
+use credibil_jose::{decode_jws, Jwt, KeyBinding};
 
 use crate::core::{did_jwk, generate};
 use crate::format::FormatProfile;
@@ -167,7 +167,7 @@ impl CredentialRequest {
                 nonces.insert(c_nonce.clone());
 
                 // extract Key ID for use when building credential
-                let Key::KeyId(kid) = &jwt.header.key else {
+                let KeyBinding::Kid(kid) = &jwt.header.key else {
                     return Err(Error::InvalidProof("Proof JWT 'kid' is missing".to_string()));
                 };
                 ctx.proof_kids.push(kid.to_string());

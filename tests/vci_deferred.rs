@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use credibil_identity::{Key, SignerExt};
-use credibil_jose::{decode_jws, JwsBuilder, Jwt};
+use credibil_jose::{JwsBuilder, Jwt, decode_jws};
 use credibil_vc::core::did_jwk;
 use credibil_vc::oid4vci::types::{
     CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, CredentialResponse,
@@ -61,13 +61,17 @@ async fn deferred() {
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
-    let key = CAROL.verification_method().await.expect("should have did");
-    let key_ref = key.try_into().expect("should have key");
+    let key = CAROL
+        .verification_method()
+        .await
+        .expect("should have did")
+        .try_into()
+        .expect("should map key to key binding");
 
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .key_ref(&key_ref)
+        .key_ref(&key)
         .add_signer(&*CAROL)
         .build()
         .await

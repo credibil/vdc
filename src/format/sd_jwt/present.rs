@@ -150,8 +150,7 @@ impl<S: SignerExt> SdJwtVpBuilder<HasMatched<'_>, HasClientId, HasSigner<'_, S>>
             sd_hash: super::sd_hash(&sd),
         };
 
-        let key = self.signer.0.verification_method().await?;
-        let key_ref = key.try_into()?;
+        let key_ref = self.signer.0.verification_method().await?.try_into()?;
         let kb_jwt = Jws::builder()
             .typ(JwtType::KbJwt)
             .payload(claims)

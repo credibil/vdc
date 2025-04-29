@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use credibil_identity::{Key, SignerExt};
-use credibil_jose::{decode_jws, JwsBuilder, Jwt};
+use credibil_jose::{JwsBuilder, Jwt, decode_jws};
 use credibil_vc::core::did_jwk;
 use credibil_vc::oid4vci::types::{
     AuthorizationDetail, CreateOfferRequest, Credential, CredentialHeaders, CredentialOfferRequest,
@@ -61,13 +61,17 @@ async fn offer_val() {
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
-    let bob_key = BOB.verification_method().await.expect("should have key");
-    let bob_key_ref = bob_key.try_into().expect("should map key to key ref");
+    let bob_key = BOB
+        .verification_method()
+        .await
+        .expect("should have key")
+        .try_into()
+        .expect("should map key to key binding");
 
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .key_ref(&bob_key_ref)
+        .key_ref(&bob_key)
         .add_signer(&*BOB)
         .build()
         .await
@@ -211,13 +215,17 @@ async fn two_datasets() {
             .expect("should return nonce");
 
         // proof of possession of key material
-        let bob_key = BOB.verification_method().await.expect("should have key");
-        let bob_key_ref = bob_key.try_into().expect("should map key to key ref");
+        let bob_key = BOB
+            .verification_method()
+            .await
+            .expect("should have key")
+            .try_into()
+            .expect("should map key to key binding");
 
         let jws = JwsBuilder::new()
             .typ(JwtType::ProofJwt)
             .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-            .key_ref(&bob_key_ref)
+            .key_ref(&bob_key)
             .add_signer(&*BOB)
             .build()
             .await
@@ -319,13 +327,17 @@ async fn reduce_credentials() {
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
-    let bob_key = BOB.verification_method().await.expect("should have key");
-    let bob_key_ref = bob_key.try_into().expect("should map key to key ref");
+    let bob_key = BOB
+        .verification_method()
+        .await
+        .expect("should have key")
+        .try_into()
+        .expect("should map key to key binding");
 
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .key_ref(&bob_key_ref)
+        .key_ref(&bob_key)
         .add_signer(&*BOB)
         .build()
         .await
@@ -417,13 +429,17 @@ async fn reduce_claims() {
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
-    let bob_key = BOB.verification_method().await.expect("should have key");
-    let bob_key_ref = bob_key.try_into().expect("should map key to key ref");
+    let bob_key = BOB
+        .verification_method()
+        .await
+        .expect("should have key")
+        .try_into()
+        .expect("should map key to key binding");
 
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .key_ref(&bob_key_ref)
+        .key_ref(&bob_key)
         .add_signer(&*BOB)
         .build()
         .await
@@ -519,13 +535,17 @@ async fn notify_accepted() {
         endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
-    let bob_key = BOB.verification_method().await.expect("should have key");
-    let bob_key_ref = bob_key.try_into().expect("should map key to key ref");
+    let bob_key = BOB
+        .verification_method()
+        .await
+        .expect("should have key")
+        .try_into()
+        .expect("should map key to key binding");
 
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
-        .key_ref(&bob_key_ref)
+        .key_ref(&bob_key)
         .add_signer(&*BOB)
         .build()
         .await
