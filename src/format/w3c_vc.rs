@@ -960,10 +960,7 @@ mod tests {
 
         assert_eq!(
             *vp_json.get("@context").expect("@context should be set"),
-            json!([
-                "https://www.w3.org/2018/credentials/v1",
-                "https://www.w3.org/2018/credentials/examples/v1"
-            ])
+            json!(["https://www.w3.org/2018/credentials/v1"])
         );
         assert_eq!(
             *vp_json.get("type").expect("type should be set"),

@@ -167,7 +167,7 @@ pub enum MetadataQuery {
 
 impl Default for MetadataQuery {
     fn default() -> Self {
-        MetadataQuery::W3cVc {
+        Self::W3cVc {
             type_values: vec![vec![]],
         }
     }
@@ -175,20 +175,20 @@ impl Default for MetadataQuery {
 
 impl From<&MetadataQuery> for FormatProfile {
     fn from(value: &MetadataQuery) -> Self {
-        FormatProfile::from(value.clone())
+        Self::from(value.clone())
     }
 }
 
 impl From<MetadataQuery> for FormatProfile {
     fn from(value: MetadataQuery) -> Self {
         match value {
-            MetadataQuery::MsoMdoc { doctype_value } => FormatProfile::MsoMdoc {
+            MetadataQuery::MsoMdoc { doctype_value } => Self::MsoMdoc {
                 doctype: doctype_value,
             },
-            MetadataQuery::SdJwt { vct_values } => FormatProfile::DcSdJwt {
+            MetadataQuery::SdJwt { vct_values } => Self::DcSdJwt {
                 vct: vct_values[0].clone(),
             },
-            MetadataQuery::W3cVc { type_values } => FormatProfile::JwtVcJson {
+            MetadataQuery::W3cVc { type_values } => Self::JwtVcJson {
                 credential_definition: CredentialDefinition {
                     context: None,
                     type_: type_values[0].clone(),

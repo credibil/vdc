@@ -129,8 +129,8 @@ async fn verify(provider: &impl Provider, request: &AuthorzationResponse) -> Res
             found.push(Queryable {
                 meta: meta.into(),
                 claims,
-                credential: Kind::String("".to_string()),
-            })
+                credential: Kind::String(String::new()),
+            });
         }
     }
 
