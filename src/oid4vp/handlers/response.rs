@@ -21,11 +21,12 @@
 //! If the Response Type value is "code" (Authorization Code Grant Type), the VP
 //! Token is provided in the Token Response.
 
+use crate::core::Kind;
 use crate::format::{mso_mdoc, sd_jwt, w3c_vc};
 use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
-use crate::oid4vp::types::{AuthorzationResponse, RedirectResponse, RequestedFormat};
+use crate::oid4vp::types::{AuthorzationResponse, Queryable, RedirectResponse, RequestedFormat};
 use crate::oid4vp::{Error, Result};
 
 /// Endpoint for the Wallet to respond Verifier's Authorization Request.
@@ -88,28 +89,31 @@ async fn verify(provider: &impl Provider, request: &AuthorzationResponse) -> Res
     //  FIXME: verify query constraints have been met
     //  FIXME: verify VC is valid (hasn't expired, been revoked, etc)
 
+    let mut found = vec![];
+
     // process each presentation
     for (query_id, presentations) in &request.vp_token {
         let Some(query) = dcql_query.credentials.iter().find(|q| q.id == *query_id) else {
             return Err(Error::InvalidRequest(format!("query not found: {query_id}")));
         };
 
+        let Some(meta) = &query.meta else {
+            return Err(Error::InvalidRequest(format!("meta not found: {query_id}")));
+        };
+
         for vp in presentations {
             let claims = match query.format {
                 RequestedFormat::DcSdJwt => {
-                    println!("sd-jwt");
                     sd_jwt::verify_vp(vp, request_object, provider).await.map_err(|e| {
                         Error::InvalidRequest(format!("failed to verify presentation: {e}"))
                     })?
                 }
                 RequestedFormat::MsoMdoc => {
-                    println!("mso_mdoc");
                     mso_mdoc::verify_vp(vp, request_object, provider).await.map_err(|e| {
                         Error::InvalidRequest(format!("failed to verify presentation: {e}"))
                     })?
                 }
                 RequestedFormat::JwtVcJson => {
-                    println!("jwt_vc_json");
                     w3c_vc::verify_vp(vp, request_object, provider).await.map_err(|e| {
                         Error::InvalidRequest(format!("failed to verify presentation: {e}"))
                     })?
@@ -122,8 +126,24 @@ async fn verify(provider: &impl Provider, request: &AuthorzationResponse) -> Res
                 }
             };
 
-            println!("claims: {claims:?}\n");
+            found.push(Queryable {
+                meta: meta.into(),
+                claims,
+                credential: Kind::String("".to_string()),
+            })
         }
+    }
+
+    // re-query presentations to confirm the query constraints have been met
+    let result = dcql_query
+        .execute(&found)
+        .map_err(|e| Error::InvalidRequest(format!("failed to execute query: {e}")))?;
+
+    if request.vp_token.len() != result.len() {
+        return Err(Error::InvalidRequest(format!(
+            "presentation does not match query: {}",
+            result.len()
+        )));
     }
 
     // FIXME: look up credential status using status.id

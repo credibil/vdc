@@ -8,6 +8,7 @@ use serde_json::Value;
 use crate::core::Kind;
 use crate::format::FormatProfile;
 use crate::format::w3c_vc::VerifiableCredential;
+use crate::oid4vci::types::CredentialDefinition;
 
 /// DCQL query for requesting Verifiable Presentations.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
@@ -162,6 +163,31 @@ pub enum MetadataQuery {
         /// ```
         type_values: Vec<Vec<String>>,
     },
+}
+
+impl From<&MetadataQuery> for FormatProfile {
+    fn from(value: &MetadataQuery) -> Self {
+        FormatProfile::from(value.clone())
+    }
+}
+
+impl From<MetadataQuery> for FormatProfile {
+    fn from(value: MetadataQuery) -> Self {
+        match value {
+            MetadataQuery::MsoMdoc { doctype_value } => FormatProfile::MsoMdoc {
+                doctype: doctype_value,
+            },
+            MetadataQuery::SdJwt { vct_values } => FormatProfile::DcSdJwt {
+                vct: vct_values[0].clone(),
+            },
+            MetadataQuery::W3cVc { type_values } => FormatProfile::JwtVcJson {
+                credential_definition: CredentialDefinition {
+                    context: None,
+                    type_: type_values[0].clone(),
+                },
+            },
+        }
+    }
 }
 
 /// The format of the requested credential.

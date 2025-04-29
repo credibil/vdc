@@ -161,12 +161,14 @@ async fn multiple_credentials() {
 
     // --------------------------------------------------
     // Wallet processes the Authorization Request and returns an Authorization
-    // Response with the requested presentations in the VP token.
+    // Response to the Verifier.
     // --------------------------------------------------
     let stored_vcs = WALLET.fetch();
     let results = request_object.dcql_query.execute(stored_vcs).expect("should execute");
     assert_eq!(results.len(), 3);
 
+    // return a single `vp_token` for the query
+    // each credential query will result in a separate presentation
     let vp_token =
         vp_token::generate(&request_object, &results, &*WALLET).await.expect("should get token");
     assert_eq!(vp_token.len(), 3);
@@ -175,10 +177,6 @@ async fn multiple_credentials() {
         vp_token,
         state: request_object.state,
     };
-
-    // --------------------------------------------------
-    // Verifier processes the Wallets's Authorization Response.
-    // --------------------------------------------------
     let response =
         endpoint::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
 
