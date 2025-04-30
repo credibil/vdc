@@ -9,12 +9,11 @@
 use chrono::{Duration, Utc};
 
 use crate::core::generate;
-use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request, Response};
+use crate::oid4vci::endpoint::{Body, Error, Handler, NoHeaders, Request, Response, Result};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore};
 use crate::oid4vci::server::authorize;
 use crate::oid4vci::state::{PushedAuthorization, Stage, State};
 use crate::oid4vci::types::{PushedAuthorizationRequest, PushedAuthorizationResponse};
-use crate::oid4vci::{Error, Result};
 use crate::server;
 
 /// Endpoint for the Wallet to push an Authorization Request when using Pushed
@@ -62,13 +61,15 @@ async fn par(
     })
 }
 
-impl Handler for Request<PushedAuthorizationRequest, NoHeaders> {
+impl<P: Provider> Handler<P> for Request<PushedAuthorizationRequest, NoHeaders> {
+    type Error = Error;
+    type Provider = P;
     type Response = PushedAuthorizationResponse;
 
-    fn handle(
-        self, issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
-        par(issuer, provider, self.body)
+    async fn handle(
+        self, issuer: &str, provider: &Self::Provider,
+    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        par(issuer, provider, self.body).await
     }
 }
 

@@ -9,10 +9,13 @@ use std::fmt::Debug;
 use tracing::instrument;
 
 pub(crate) use crate::endpoint::{Body, Headers};
-pub use crate::endpoint::{Handler, NoHeaders, Request, Response, Result};
-use crate::oid4vp::error::Error;
-// use crate::oid4vp::Result;
+pub use crate::endpoint::{Handler, NoHeaders, Request, Response};
+pub use crate::oid4vp::error::Error;
 use crate::oid4vp::provider::Provider;
+
+/// Result type for `OpenID` for Verifiable Credential Issuance and Verifiable
+/// Presentations.
+pub(crate) type Result<T, E = Error> = std::result::Result<T, E>;
 
 /// Handle incoming messages.
 ///
@@ -27,7 +30,7 @@ use crate::oid4vp::provider::Provider;
 #[instrument(level = "debug", skip(provider))]
 pub async fn handle<B, H, P, U>(
     verifier: &str, request: impl Into<Request<B, H>> + Debug, provider: &P,
-) -> Result<Response<U>, Error>
+) -> Result<Response<U>>
 where
     B: Body,
     H: Headers,

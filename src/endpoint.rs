@@ -5,9 +5,9 @@
 //! serialized to a JSON object.
 
 use std::fmt::Debug;
+use std::ops::Deref;
 
-pub use anyhow::Result;
-use http::HeaderMap;
+use http::{HeaderMap, StatusCode};
 
 /// Methods common to all messages.
 ///
@@ -69,7 +69,7 @@ impl<B: Body> From<B> for Request<B, NoHeaders> {
 #[derive(Clone, Debug)]
 pub struct Response<T> {
     /// Response HTTP status code.
-    pub status: u16,
+    pub status: StatusCode,
 
     /// Response HTTP headers, if any.
     pub headers: Option<HeaderMap>,
@@ -81,15 +81,23 @@ pub struct Response<T> {
 impl<T> From<T> for Response<T> {
     fn from(body: T) -> Self {
         Self {
-            status: 200,
+            status: StatusCode::OK,
             headers: None,
             body,
         }
     }
 }
 
-pub(crate) use seal::{Body, Headers};
-pub(crate) mod seal {
+impl<T> Deref for Response<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.body
+    }
+}
+
+pub use seal::{Body, Headers};
+pub mod seal {
     use std::fmt::Debug;
 
     /// The `Body` trait is used to restrict the types able to implement

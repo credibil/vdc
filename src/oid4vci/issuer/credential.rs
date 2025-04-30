@@ -19,7 +19,8 @@ use crate::format::FormatProfile;
 use crate::format::mso_mdoc::MdocBuilder;
 use crate::format::sd_jwt::SdJwtVcBuilder;
 use crate::format::w3c_vc::W3cVcBuilder;
-use crate::oid4vci::endpoint::{Body, Handler, Request, Response};
+use crate::oid4vci::JwtType;
+use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Deferrance, Expire, Stage, State};
 use crate::oid4vci::types::{
@@ -27,7 +28,6 @@ use crate::oid4vci::types::{
     CredentialResponse, Dataset, Issuer, MultipleProofs, Proof, ProofClaims, RequestBy,
     SingleProof,
 };
-use crate::oid4vci::{Error, JwtType, Result};
 use crate::server;
 use crate::status::issuer::Status;
 
@@ -76,13 +76,15 @@ pub async fn credential(
     ctx.issue(provider, dataset).await
 }
 
-impl Handler for Request<CredentialRequest, CredentialHeaders> {
+impl<P: Provider> Handler<P> for Request<CredentialRequest, CredentialHeaders> {
+    type Error = Error;
+    type Provider = P;
     type Response = CredentialResponse;
 
-    fn handle(
-        self, issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
-        credential(issuer, provider, self)
+    async fn handle(
+        self, issuer: &str, provider: &Self::Provider,
+    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        credential(issuer, provider, self).await
     }
 }
 

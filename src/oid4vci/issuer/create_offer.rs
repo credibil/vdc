@@ -12,7 +12,7 @@ use http::StatusCode;
 
 use crate::core::generate;
 use crate::oauth::GrantType;
-use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request, Response};
+use crate::oid4vci::endpoint::{Body,Error, Result, Handler, NoHeaders, Request, Response};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Expire, Offer, Stage, State};
 use crate::oid4vci::types::{
@@ -20,7 +20,6 @@ use crate::oid4vci::types::{
     AuthorizedDetail, CreateOfferRequest, CreateOfferResponse, CredentialOffer, Grants, Issuer,
     OfferType, PreAuthorizedCodeGrant, SendType, Server, TxCode,
 };
-use crate::oid4vci::{Error, Result};
 use crate::{invalid, server};
 
 #[derive(Debug, Default)]
@@ -114,13 +113,15 @@ async fn create_offer(
     })
 }
 
-impl Handler for Request<CreateOfferRequest, NoHeaders> {
+impl<P: Provider> Handler<P> for Request<CreateOfferRequest, NoHeaders> {
+    type Error = Error;
+    type Provider = P;
     type Response = CreateOfferResponse;
 
-    fn handle(
-        self, issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
-        create_offer(issuer, provider, self.body)
+    async fn handle(
+        self, issuer: &str, provider: &Self::Provider,
+    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        create_offer(issuer, provider, self.body).await
     }
 }
 

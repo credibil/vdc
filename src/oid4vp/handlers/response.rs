@@ -23,11 +23,10 @@
 
 use crate::core::Kind;
 use crate::format::{mso_mdoc, sd_jwt, w3c_vc};
-use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
+use crate::oid4vp::endpoint::{Body, Error, Handler, NoHeaders, Request, Response, Result};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
 use crate::oid4vp::types::{AuthorzationResponse, Queryable, RedirectResponse, RequestedFormat};
-use crate::oid4vp::{Error, Result};
 
 /// Endpoint for the Wallet to respond Verifier's Authorization Request.
 ///

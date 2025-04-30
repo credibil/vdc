@@ -4,7 +4,7 @@ use bytes::Bytes;
 use http::{Response, StatusCode, header};
 use serde::Serialize;
 
-use crate::oid4vci::{Result, endpoint};
+use crate::endpoint;
 
 /// Trait for converting a `Result` into an HTTP response.
 pub trait IntoHttp {
@@ -15,7 +15,11 @@ pub trait IntoHttp {
     fn into_http(self) -> Response<Self::Body>;
 }
 
-impl<T: Serialize> IntoHttp for Result<endpoint::Response<T>> {
+impl<T, E> IntoHttp for Result<endpoint::Response<T>, E>
+where
+    T: Serialize,
+    E: Serialize,
+{
     type Body = http_body_util::Full<Bytes>;
 
     /// Create a new reply with the given status code and body.

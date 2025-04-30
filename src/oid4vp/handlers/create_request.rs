@@ -7,13 +7,13 @@
 use chrono::Utc;
 
 use crate::core::generate;
-use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
+
+use crate::oid4vp::endpoint::{Body,Error, Handler, NoHeaders, Request, Response, Result};
 use crate::oid4vp::provider::{Metadata, Provider, StateStore};
 use crate::oid4vp::state::{Expire, State};
 use crate::oid4vp::types::{
     ClientId, DeviceFlow, GenerateRequest, GenerateResponse, RequestObject, ResponseType,
 };
-use crate::oid4vp::{Error, Result};
 
 /// Create an Authorization Request.
 ///

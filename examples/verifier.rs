@@ -6,20 +6,16 @@
 
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
+use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Form, Json, Router};
 use axum_extra::TypedHeader;
 use axum_extra::headers::Host;
 use credibil_vc::BlockStore;
-use credibil_vc::oid4vp::{
-    self, AuthorzationResponse, GenerateRequest, GenerateResponse, RedirectResponse,
-    RequestUriRequest, RequestUriResponse, endpoint,
-};
+use credibil_vc::core::http::IntoHttp;
+use credibil_vc::oid4vp::{AuthorzationResponse, GenerateRequest, RequestUriRequest, endpoint};
 use provider::verifier::data::VERIFIER;
 use provider::verifier::{VERIFIER_ID, Verifier};
-use serde::Serialize;
-use serde_json::json;
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
@@ -58,22 +54,22 @@ async fn main() {
 async fn create_request(
     State(provider): State<Verifier>, TypedHeader(host): TypedHeader<Host>,
     Json(request): Json<GenerateRequest>,
-) -> HttpResult<GenerateResponse> {
-    endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
+) -> impl IntoResponse {
+    endpoint::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }
 
 // Retrieve Authorization Request Object endpoint
 #[axum::debug_handler]
 async fn request_uri(
     State(provider): State<Verifier>, TypedHeader(host): TypedHeader<Host>, Path(id): Path<String>,
-) -> HttpResult<RequestUriResponse> {
+) -> impl IntoResponse {
     // TODO: add wallet_metadata and wallet_nonce
     let request = RequestUriRequest {
         id,
         wallet_metadata: None, // Some(wallet_metadata),
         wallet_nonce: None,    // Some(wallet_nonce)
     };
-    endpoint::handle(&format!("http://{host}"), request, &provider).await.into()
+    endpoint::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }
 
 // Wallet Authorization response endpoint
@@ -87,39 +83,5 @@ async fn response(
         return (StatusCode::BAD_REQUEST, "unable to turn request into AuthorzationResponse")
             .into_response();
     };
-    let response: HttpResult<RedirectResponse> =
-        match endpoint::handle(&format!("http://{host}"), req, &provider).await {
-            Ok(r) => Ok(r).into(),
-            Err(e) => {
-                tracing::error!("error getting response: {e}");
-                Err(e).into()
-            }
-        };
-    response.into_response()
-}
-
-// ----------------------------------------------------------------------------
-// Axum Response
-// ----------------------------------------------------------------------------
-
-/// Axum response wrapper
-pub struct HttpResult<T>(oid4vp::Result<endpoint::Response<T>>);
-
-impl<T> IntoResponse for HttpResult<T>
-where
-    T: Serialize,
-{
-    fn into_response(self) -> Response {
-        match self.0 {
-            Ok(v) => (StatusCode::OK, Json(json!(v.body))),
-            Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(e.to_json())),
-        }
-        .into_response()
-    }
-}
-
-impl<T> From<oid4vp::Result<endpoint::Response<T>>> for HttpResult<T> {
-    fn from(val: oid4vp::Result<endpoint::Response<T>>) -> Self {
-        Self(val)
-    }
+    endpoint::handle(&format!("http://{host}"), req, &provider).await.into_http().into_response()
 }

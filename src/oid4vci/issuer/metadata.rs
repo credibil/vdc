@@ -23,8 +23,7 @@
 //!     Accept-Language: fr-ch, fr;q=0.9, en;q=0.8, de;q=0.7, *;q=0.5
 //! ```
 
-use crate::oid4vci::Result;
-use crate::oid4vci::endpoint::{Body, Handler, Headers, Request, Response};
+use crate::oid4vci::endpoint::{Body, Error, Handler, Headers, Request, Response, Result};
 use crate::oid4vci::provider::{Metadata, Provider};
 use crate::oid4vci::types::{IssuerRequest, IssuerResponse, MetadataHeaders};
 use crate::server;
@@ -46,13 +45,15 @@ async fn metadata(
     Ok(IssuerResponse(credential_issuer))
 }
 
-impl Handler for Request<IssuerRequest, MetadataHeaders> {
+impl<P: Provider> Handler<P> for Request<IssuerRequest, MetadataHeaders> {
+    type Error = Error;
+    type Provider = P;
     type Response = IssuerResponse;
 
-    fn handle(
-        self, issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
-        metadata(issuer, provider, self)
+    async fn handle(
+        self, issuer: &str, provider: &Self::Provider,
+    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        metadata(issuer, provider, self).await
     }
 }
 

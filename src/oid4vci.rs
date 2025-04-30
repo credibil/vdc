@@ -106,7 +106,6 @@ pub mod pkce {
 /// Proofs
 pub mod proof {
     pub use crate::format::w3c_vc::{Payload, Verify, W3cVcClaims};
-    // pub use crate::oid4vp::JwtType;
 }
 
 /// Status
@@ -117,12 +116,9 @@ pub mod status {
 
 use std::fmt::Display;
 
-pub use error::Error;
 use serde::{Deserialize, Serialize};
 
-/// Result type for `OpenID` for Verifiable Credential Issuance and Verifiable
-/// Presentations.
-pub type Result<T, E = Error> = std::result::Result<T, E>;
+pub use self::error::Error;
 
 /// The JWT `typ` header parameter.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
