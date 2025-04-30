@@ -3,6 +3,13 @@
 //! Types and helpers for implementing a status list using a bitstring. Follows
 //! the specification [Bitstring Status List v1.0](https://www.w3.org/TR/vc-bitstring-status-list/).
 
+mod config;
+pub mod error;
+pub mod issuer;
+mod log;
+pub mod provider;
+pub mod verifier;
+
 use std::io::Write;
 
 use anyhow::anyhow;
@@ -15,9 +22,9 @@ use credibil_jose::encode_jws;
 use flate2::write::GzEncoder;
 use serde_json::{Map, Value};
 
+use self::config::ListConfig;
+use self::log::StatusLogEntry;
 use crate::format::w3c_vc::{CredentialSubject, StatusPurpose, VerifiableCredential, W3cVcClaims};
-use crate::status::config::ListConfig;
-use crate::status::log::StatusLogEntry;
 use crate::{Kind, OneMany};
 
 // TODO: Configurable.

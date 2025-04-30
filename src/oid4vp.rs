@@ -181,7 +181,7 @@ pub use crate::oid4vp::types::*;
 
 /// Re-export status traits and types.
 pub mod status {
-    pub use crate::status::verifier::*;
+    pub use crate::status::bitstring::verifier::*;
 }
 
 pub use error::Error;

@@ -29,7 +29,7 @@ use crate::oid4vci::types::{
     SingleProof,
 };
 use crate::server;
-use crate::status::issuer::Status;
+use crate::status::bitstring::issuer::Status;
 
 /// Credential request handler.
 ///

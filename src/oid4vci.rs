@@ -111,7 +111,7 @@ pub mod proof {
 /// Status
 pub mod status {
     pub use crate::status::bitstring::{DEFAULT_TTL, bitstring, credential};
-    pub use crate::status::issuer::*;
+    pub use crate::status::bitstring::issuer::*;
 }
 
 use std::fmt::Display;

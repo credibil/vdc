@@ -8,9 +8,4 @@
 //! [Status section of Verifiable Credentials Data Model v2.0](https://www.w3.org/TR/vc-data-model-2.0/#status)
 
 pub mod bitstring;
-mod config;
-pub mod error;
-pub mod issuer;
-mod log;
-pub mod provider;
-pub mod verifier;
+

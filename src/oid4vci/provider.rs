@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::BlockStore;
 use crate::oid4vci::types::{Client, Dataset, Issuer, Server};
-use crate::status::issuer::Status;
+use crate::status::bitstring::issuer::Status;
 
 /// Issuer Provider trait.
 pub trait Provider:
