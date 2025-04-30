@@ -108,3 +108,38 @@ pub enum BitsPerToken {
     /// 8 bits per token
     Eight = 8,
 }
+
+/// Used by credential (Referenced Token) issuers to specify how to retrieve
+/// status information about the Referenced Token.
+pub struct StatusClaim {
+    /// The reference to the credential's status in a Status List Token.
+    pub status_list: StatusListEntry,
+}
+
+/// An entry referencing a credential's (Referenced Token's) status in a
+/// Status List Token.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct StatusListEntry {
+    /// The index to check for status information in the Status List for the
+    /// credential.
+    pub idx: usize,
+
+    /// Identifies the Status List Token containing the status information for
+    /// the Referenced Token.
+    pub uri: String,
+}
+
+/// Valid credential status types.
+#[derive(Clone, Debug, Default, Deserialize_repr, Serialize_repr)]
+#[repr(i64)]
+pub enum StatusType {
+    /// The credential is valid.
+    #[default]
+    Valid = 0x00,
+
+    /// The credential is revoked.
+    Invalid = 0x01,
+
+    /// The credential is suspended.
+    Suspended = 0x02,
+}
