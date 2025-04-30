@@ -108,12 +108,6 @@ pub mod proof {
     pub use crate::format::w3c_vc::{Payload, Verify, W3cVcClaims};
 }
 
-/// Status
-pub mod status {
-    pub use crate::status::bitstring::issuer::*;
-    pub use crate::status::bitstring::{DEFAULT_TTL, bitstring, credential};
-}
-
 use serde::{Deserialize, Serialize};
 
 pub use self::endpoint::*;

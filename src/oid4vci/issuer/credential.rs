@@ -29,7 +29,6 @@ use crate::oid4vci::types::{
     SingleProof,
 };
 use crate::server;
-use crate::status::bitstring::issuer::Status;
 
 /// Credential request handler.
 ///
@@ -234,7 +233,7 @@ impl Context {
                     let Some(did) = kid.split('#').next() else {
                         return Err(Error::InvalidProof("Proof JWT DID is invalid".to_string()));
                     };
-                    let mut builder = W3cVcBuilder::new()
+                    let builder = W3cVcBuilder::new()
                         .type_(credential_definition.type_.clone())
                         .issuer(&self.issuer.credential_issuer)
                         .holder(did)
@@ -242,16 +241,16 @@ impl Context {
                         .signer(provider);
 
                     // credential's status lookup
-                    let Some(subject_id) = &self.state.subject_id else {
-                        return Err(Error::AccessDenied("invalid subject id".to_string()));
-                    };
-                    if let Some(status) =
-                        Status::status(provider, subject_id, "credential_identifier")
-                            .await
-                            .map_err(|e| server!("issue populating credential status: {e}"))?
-                    {
-                        builder = builder.status(status);
-                    }
+                    // let Some(subject_id) = &self.state.subject_id else {
+                    //     return Err(Error::AccessDenied("invalid subject id".to_string()));
+                    // };
+                    // if let Some(status) =
+                    //     Status::status(provider, subject_id, "credential_identifier")
+                    //         .await
+                    //         .map_err(|e| server!("issue populating credential status: {e}"))?
+                    // {
+                    //     builder = builder.status(status);
+                    // }
 
                     let jwt = builder
                         .build()

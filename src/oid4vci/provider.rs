@@ -18,18 +18,18 @@ use serde::{Deserialize, Serialize};
 
 use crate::BlockStore;
 use crate::oid4vci::types::{Client, Dataset, Issuer, Server};
-use crate::status::bitstring::issuer::Status;
+
 
 /// Issuer Provider trait.
 pub trait Provider:
-    Metadata + Subject + StateStore + SignerExt + IdentityResolver + Status + Clone
+    Metadata + Subject + StateStore + SignerExt + IdentityResolver  + Clone
 {
 }
 
 /// A blanket implementation for `Provider` trait so that any type implementing
 /// the required super traits is considered a `Provider`.
 impl<T> Provider for T where
-    T: Metadata + Subject + StateStore + SignerExt + IdentityResolver + Status + Clone
+    T: Metadata + Subject + StateStore + SignerExt + IdentityResolver  + Clone
 {
 }
 
@@ -83,6 +83,20 @@ pub trait Subject: Send + Sync {
     fn dataset(
         &self, subject_id: &str, credential_identifier: &str,
     ) -> impl Future<Output = Result<Dataset>> + Send;
+}
+
+/// `StatusTokenStore` is used to store and retrieve server state between requests.
+pub trait StatusTokenStore: Send + Sync {
+    /// Store state using the provided key. The expiry parameter indicates
+    /// when data can be expunged from the state store.
+    fn put(
+        &self, key: &str, token: &str, expiry: DateTime<Utc>,
+    ) -> impl Future<Output = Result<()>> + Send;
+
+    /// Retrieve data using the provided key.
+    fn get<T>(&self, key: &str) -> impl Future<Output = Result<T>> + Send
+    where
+        T: for<'de> Deserialize<'de>;
 }
 
 const ISSUER: &str = "ISSUER";

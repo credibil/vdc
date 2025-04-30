@@ -5,7 +5,6 @@ use credibil_identity::did::Document;
 use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
 use credibil_jose::{Algorithm, Signer};
 use credibil_vc::BlockStore;
-use credibil_vc::status::bitstring::issuer::Status;
 
 use crate::blockstore::Mockstore;
 use crate::identity::DidIdentity;
@@ -82,4 +81,3 @@ impl BlockStore for Issuer {
     }
 }
 
-impl Status for Issuer {}

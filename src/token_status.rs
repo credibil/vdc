@@ -1,6 +1,11 @@
 //! # Token Status List
 //!
 //! Support for IETF Token Status List.
+//! 
+//! The `status` module provides a trait for looking up the status of a
+//! credential. There are provider traits that need to be implemented by an
+//! issuer and/or verifier implementations, and helper functions for dealing
+//! with supported status endpoint formats.
 
 use std::fmt::Debug;
 
@@ -111,6 +116,7 @@ pub enum BitsPerToken {
 
 /// Used by credential (Referenced Token) issuers to specify how to retrieve
 /// status information about the Referenced Token.
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct StatusClaim {
     /// The reference to the credential's status in a Status List Token.
     pub status_list: StatusListEntry,
@@ -118,7 +124,7 @@ pub struct StatusClaim {
 
 /// An entry referencing a credential's (Referenced Token's) status in a
 /// Status List Token.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct StatusListEntry {
     /// The index to check for status information in the Status List for the
     /// credential.

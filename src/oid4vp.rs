@@ -180,11 +180,6 @@ pub use self::endpoint::*;
 pub use self::error::Error;
 pub use self::types::*;
 
-/// Re-export status traits and types.
-pub mod status {
-    pub use crate::status::bitstring::verifier::*;
-}
-
 /// The JWS `typ` header parameter.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub enum JwtType {

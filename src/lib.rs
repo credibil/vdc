@@ -20,7 +20,7 @@ pub mod core;
 mod endpoint;
 pub mod format;
 pub mod oauth;
-pub mod status;
+pub mod token_status;
 
 /// Re-export DID resolution
 pub mod did {
