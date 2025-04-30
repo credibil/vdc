@@ -58,13 +58,15 @@ async fn response(
     })
 }
 
-impl Handler for Request<AuthorzationResponse, NoHeaders> {
+impl<P: Provider> Handler<P> for Request<AuthorzationResponse, NoHeaders> {
+    type Error = Error;
+    type Provider = P;
     type Response = RedirectResponse;
 
-    fn handle(
-        self, verifier: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
-        response(verifier, provider, self.body)
+    async fn handle(
+        self, verifier: &str, provider: &Self::Provider,
+    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        response(verifier, provider, self.body).await
     }
 }
 

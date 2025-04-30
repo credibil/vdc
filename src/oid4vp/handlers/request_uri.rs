@@ -77,12 +77,14 @@ pub async fn request_uri(
     ))
 }
 
-impl Handler for Request<RequestUriRequest, NoHeaders> {
+impl<P: Provider> Handler<P> for Request<RequestUriRequest, NoHeaders> {
+    type Error = Error;
+    type Provider = P;
     type Response = RequestUriResponse;
 
     async fn handle(
-        self, verifier: &str, provider: &impl Provider,
-    ) -> Result<impl Into<Response<Self::Response>>> {
+        self, verifier: &str, provider: &Self::Provider,
+    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
         request_uri(verifier, provider, self.body).await
     }
 }

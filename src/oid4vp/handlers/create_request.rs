@@ -63,13 +63,15 @@ async fn create_request(
     Ok(response)
 }
 
-impl Handler for Request<GenerateRequest, NoHeaders> {
+impl<P: Provider> Handler<P> for Request<GenerateRequest, NoHeaders> {
+    type Error = Error;
+    type Provider = P;
     type Response = GenerateResponse;
 
-    fn handle(
-        self, verifier: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
-        create_request(verifier, provider, self.body)
+    async fn handle(
+        self, verifier: &str, provider: &Self::Provider,
+    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        create_request(verifier, provider, self.body).await
     }
 }
 

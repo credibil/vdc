@@ -17,6 +17,7 @@ pub mod oid4vci;
 pub mod oid4vp;
 
 pub mod core;
+mod endpoint;
 pub mod format;
 pub mod oauth;
 pub mod status;
