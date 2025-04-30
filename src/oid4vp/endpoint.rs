@@ -13,15 +13,14 @@ pub use crate::endpoint::{Handler, NoHeaders, Request, Response};
 pub use crate::oid4vp::error::Error;
 use crate::oid4vp::provider::Provider;
 
-/// Result type for `OpenID` for Verifiable Credential Issuance and Verifiable
-/// Presentations.
+/// Result type for `OpenID` for Verifiable Presentations.
 pub(crate) type Result<T, E = Error> = std::result::Result<T, E>;
 
 /// Handle incoming messages.
 ///
 /// # Errors
 ///
-/// This method can fail for a number of reasons related to the imcoming
+/// This method can fail for a number of reasons related to the incoming
 /// message's viability. Expected failues include invalid authorization,
 /// insufficient permissions, and invalid message content.
 ///
