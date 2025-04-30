@@ -134,10 +134,10 @@ pub async fn credential(
 
     let vc = VerifiableCredential {
         id: Some(id.clone()),
-        type_: OneMany::Many(vec![
+        type_: vec![
             "VerifiableCredential".to_string(),
             "BitstringStatusListCredential".to_string(),
-        ]),
+        ],
         issuer: Kind::String(credential_issuer.to_string()),
         credential_subject: OneMany::One(CredentialSubject {
             id: Some(format!("{id}#list")),

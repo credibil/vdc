@@ -13,7 +13,9 @@ use credibil_jose::encode_jws;
 use serde_json::{Map, Value};
 
 use crate::core::{Kind, OneMany};
-use crate::format::w3c_vc::{CredentialStatus, CredentialSubject, VerifiableCredential, W3cVcClaims};
+use crate::format::w3c_vc::{
+    CredentialStatus, CredentialSubject, VerifiableCredential, W3cVcClaims,
+};
 
 /// Generate a W3C `jwt_vc_json` format credential.
 #[derive(Debug)]
@@ -179,7 +181,7 @@ impl<S: SignerExt> W3cVcBuilder<HasType, HasIssuer, HasHolder, HasClaims, HasSig
     pub async fn build(self) -> anyhow::Result<String> {
         let vc = VerifiableCredential {
             id: Some(format!("{}/credentials/{}", self.issuer.0, uuid::Uuid::new_v4())),
-            type_: OneMany::Many(self.type_.0),
+            type_: self.type_.0,
             issuer: Kind::String(self.issuer.0),
             credential_subject: OneMany::One(CredentialSubject {
                 id: Some(self.holder.0),

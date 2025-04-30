@@ -16,12 +16,11 @@
 
 use credibil_jose::JwsBuilder;
 
-use crate::format::w3c_vc::Type;
-use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
+use crate::oid4vp::JwtType;
+use crate::oid4vp::endpoint::{Body, Error, Handler, NoHeaders, Request, Response, Result};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
 use crate::oid4vp::types::{ClientId, RequestUriRequest, RequestUriResponse};
-use crate::oid4vp::{Error, Result};
 
 /// Endpoint for the Wallet to request the Verifier's Request Object when
 /// engaged in a cross-device flow.
@@ -65,7 +64,7 @@ pub async fn request_uri(
         kid.try_into().map_err(|e| Error::ServerError(format!("issue converting key_ref: {e}")))?;
 
     let jws = JwsBuilder::new()
-        .typ(Type::OauthAuthzReqJwt)
+        .typ(JwtType::OauthAuthzReqJwt)
         .payload(req_obj)
         .key_ref(&key_ref)
         .add_signer(provider)
@@ -78,12 +77,14 @@ pub async fn request_uri(
     ))
 }
 
-impl Handler for Request<RequestUriRequest, NoHeaders> {
+impl<P: Provider> Handler<P> for Request<RequestUriRequest, NoHeaders> {
+    type Error = Error;
+    type Provider = P;
     type Response = RequestUriResponse;
 
     async fn handle(
-        self, verifier: &str, provider: &impl Provider,
-    ) -> Result<impl Into<Response<Self::Response>>> {
+        self, verifier: &str, provider: &Self::Provider,
+    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
         request_uri(verifier, provider, self.body).await
     }
 }

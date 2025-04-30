@@ -16,8 +16,7 @@
 //! this is added as a path component such as
 //! `/.well-known/oauth-authorization-server/issuer1`.
 
-use crate::oid4vci::Result;
-use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request, Response};
+use crate::oid4vci::endpoint::{Body, Error, Handler, NoHeaders, Request, Response, Result};
 use crate::oid4vci::provider::{Metadata, Provider};
 use crate::oid4vci::types::{ServerRequest, ServerResponse};
 use crate::server;
@@ -40,13 +39,15 @@ async fn metadata(
     })
 }
 
-impl Handler for Request<ServerRequest, NoHeaders> {
+impl<P: Provider> Handler<P> for Request<ServerRequest, NoHeaders> {
+    type Error = Error;
+    type Provider = P;
     type Response = ServerResponse;
 
-    fn handle(
-        self, issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
-        metadata(issuer, provider, self.body)
+    async fn handle(
+        self, issuer: &str, provider: &Self::Provider,
+    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        metadata(issuer, provider, self.body).await
     }
 }
 

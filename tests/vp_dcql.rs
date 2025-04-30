@@ -161,12 +161,14 @@ async fn multiple_credentials() {
 
     // --------------------------------------------------
     // Wallet processes the Authorization Request and returns an Authorization
-    // Response with the requested presentations in the VP token.
+    // Response to the Verifier.
     // --------------------------------------------------
     let stored_vcs = WALLET.fetch();
     let results = request_object.dcql_query.execute(stored_vcs).expect("should execute");
     assert_eq!(results.len(), 3);
 
+    // return a single `vp_token` for the query
+    // each credential query will result in a separate presentation
     let vp_token =
         vp_token::generate(&request_object, &results, &*WALLET).await.expect("should get token");
     assert_eq!(vp_token.len(), 3);
@@ -175,10 +177,6 @@ async fn multiple_credentials() {
         vp_token,
         state: request_object.state,
     };
-
-    // --------------------------------------------------
-    // Verifier processes the Wallets's Authorization Response.
-    // --------------------------------------------------
     let response =
         endpoint::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
 
@@ -537,21 +535,6 @@ async fn populate() -> Wallet {
 
     let doctype = "org.iso.18013.5.1.mDL";
     let claims = json!({
-        "org.iso.18013.5.1": {
-            "given_name": "Normal",
-            "family_name": "Person",
-            "portrait": "https://example.com/portrait.jpg",
-        },
-    });
-    let mdoc = mso_mdoc(doctype, claims, &holder_jwk).await;
-    let q = mso_mdoc::to_queryable(&mdoc, &wallet).await.expect("should be mdoc");
-    wallet.add(q);
-
-    let doctype = "org.iso.7367.1.mVRC";
-    let claims = json!({
-        "org.iso.7367.1": {
-            "vehicle_holder": "Alice Holder",
-        },
         "org.iso.18013.5.1": {
             "given_name": "Normal",
             "family_name": "Person",

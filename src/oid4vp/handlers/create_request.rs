@@ -7,13 +7,13 @@
 use chrono::Utc;
 
 use crate::core::generate;
-use crate::oid4vp::endpoint::{Body, Handler, NoHeaders, Request, Response};
+
+use crate::oid4vp::endpoint::{Body,Error, Handler, NoHeaders, Request, Response, Result};
 use crate::oid4vp::provider::{Metadata, Provider, StateStore};
 use crate::oid4vp::state::{Expire, State};
 use crate::oid4vp::types::{
     ClientId, DeviceFlow, GenerateRequest, GenerateResponse, RequestObject, ResponseType,
 };
-use crate::oid4vp::{Error, Result};
 
 /// Create an Authorization Request.
 ///
@@ -63,13 +63,15 @@ async fn create_request(
     Ok(response)
 }
 
-impl Handler for Request<GenerateRequest, NoHeaders> {
+impl<P: Provider> Handler<P> for Request<GenerateRequest, NoHeaders> {
+    type Error = Error;
+    type Provider = P;
     type Response = GenerateResponse;
 
-    fn handle(
-        self, verifier: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
-        create_request(verifier, provider, self.body)
+    async fn handle(
+        self, verifier: &str, provider: &Self::Provider,
+    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        create_request(verifier, provider, self.body).await
     }
 }
 

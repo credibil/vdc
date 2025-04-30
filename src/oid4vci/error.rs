@@ -183,7 +183,7 @@ impl Error {
     }
 }
 
-/// Construct an `Error::ServerError` error from a string or existing error
+/// Construct an `Error::InvalidRequest` error from a string or existing error
 /// value.
 #[macro_export]
 macro_rules! invalid {

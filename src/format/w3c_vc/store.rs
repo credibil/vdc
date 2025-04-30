@@ -34,7 +34,7 @@ pub async fn to_queryable(
             let meta = FormatProfile::JwtVcJson {
                 credential_definition: CredentialDefinition {
                     context: None,
-                    type_: vc.clone().type_.to_vec(),
+                    type_: vc.type_.clone(),
                 },
             };
 
@@ -44,7 +44,7 @@ pub async fn to_queryable(
             let meta = FormatProfile::LdpVc {
                 credential_definition: CredentialDefinition {
                     context: None,
-                    type_: vc.clone().type_.to_vec(),
+                    type_: vc.type_.clone(),
                 },
             };
             (vc.clone(), meta)

@@ -17,14 +17,13 @@ use std::fmt::Debug;
 
 use crate::core::{generate, pkce};
 use crate::oauth::GrantType;
-use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request, Response};
+use crate::oid4vci::endpoint::{Body, Error, Handler, NoHeaders, Request, Response, Result};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore};
 use crate::oid4vci::state::{Expire, Stage, State, Token};
 use crate::oid4vci::types::{
     AuthorizationCredential, AuthorizationDetail, AuthorizedDetail, Issuer, TokenGrantType,
     TokenRequest, TokenResponse, TokenType,
 };
-use crate::oid4vci::{Error, Result};
 use crate::{invalid, server};
 
 /// Token request handler.
@@ -102,13 +101,15 @@ async fn token(
     })
 }
 
-impl Handler for Request<TokenRequest, NoHeaders> {
+impl<P: Provider> Handler<P> for Request<TokenRequest, NoHeaders> {
+    type Error = Error;
+    type Provider = P;
     type Response = TokenResponse;
 
-    fn handle(
-        self, issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
-        token(issuer, provider, self.body)
+    async fn handle(
+        self, issuer: &str, provider: &Self::Provider,
+    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        token(issuer, provider, self.body).await
     }
 }
 

@@ -71,14 +71,13 @@ use chrono::Utc;
 
 use crate::core::generate;
 use crate::oauth::GrantType;
-use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request, Response};
+use crate::oid4vci::endpoint::{Body, Error, Handler, NoHeaders, Request, Response, Result};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Authorization, Expire, Stage, State};
 use crate::oid4vci::types::{
     AuthorizationCredential, AuthorizationDetail, AuthorizationDetailType, AuthorizationRequest,
     AuthorizationResponse, AuthorizedDetail, Issuer, RequestObject,
 };
-use crate::oid4vci::{Error, Result};
 use crate::{invalid, server};
 
 /// Authorization request handler.
@@ -179,13 +178,15 @@ async fn authorize(
     })
 }
 
-impl Handler for Request<AuthorizationRequest, NoHeaders> {
+impl<P: Provider> Handler<P> for Request<AuthorizationRequest, NoHeaders> {
+    type Error = Error;
+    type Provider = P;
     type Response = AuthorizationResponse;
 
-    fn handle(
-        self, issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
-        authorize(issuer, provider, self.body)
+    async fn handle(
+        self, issuer: &str, provider: &Self::Provider,
+    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        authorize(issuer, provider, self.body).await
     }
 }
 

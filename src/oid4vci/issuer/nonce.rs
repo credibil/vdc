@@ -10,8 +10,7 @@
 use chrono::Utc;
 
 use crate::core::generate;
-use crate::oid4vci::Result;
-use crate::oid4vci::endpoint::{Body, Handler, NoHeaders, Request, Response};
+use crate::oid4vci::endpoint::{Body, Error, Handler, NoHeaders, Request, Response, Result};
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::Expire;
 use crate::oid4vci::types::{NonceRequest, NonceResponse};
@@ -34,13 +33,15 @@ async fn nonce(_issuer: &str, provider: &impl Provider, _: NonceRequest) -> Resu
     Ok(NonceResponse { c_nonce })
 }
 
-impl Handler for Request<NonceRequest, NoHeaders> {
+impl<P: Provider> Handler<P> for Request<NonceRequest, NoHeaders> {
+    type Error = Error;
+    type Provider = P;
     type Response = NonceResponse;
 
-    fn handle(
-        self, issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
-        nonce(issuer, provider, self.body)
+    async fn handle(
+        self, issuer: &str, provider: &Self::Provider,
+    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        nonce(issuer, provider, self.body).await
     }
 }
 

@@ -172,7 +172,10 @@ mod error;
 mod handlers;
 mod state;
 
-// Re-export types
+use std::fmt::Display;
+
+use serde::{Deserialize, Serialize};
+
 pub use crate::format::w3c_vc::VerifiablePresentation;
 pub use crate::oid4vp::types::*;
 
@@ -183,6 +186,31 @@ pub mod status {
 
 pub use error::Error;
 
-/// Result type for `OpenID` for Verifiable Credential Issuance and Verifiable
-/// Presentations.
-pub type Result<T, E = Error> = std::result::Result<T, E>;
+/// The JWS `typ` header parameter.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+pub enum JwtType {
+    /// General purpose JWT type.
+    #[default]
+    #[serde(rename = "jwt")]
+    Jwt,
+
+    /// JWT `typ` for Authorization Request Object.
+    #[serde(rename = "oauth-authz-req+jwt")]
+    OauthAuthzReqJwt,
+}
+
+impl From<JwtType> for String {
+    fn from(t: JwtType) -> Self {
+        match t {
+            JwtType::Jwt => "jwt".to_string(),
+            JwtType::OauthAuthzReqJwt => "oauth-authz-req+jwt".to_string(),
+        }
+    }
+}
+
+impl Display for JwtType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s: String = self.clone().into();
+        write!(f, "{s}")
+    }
+}

@@ -8,7 +8,7 @@
 //! valid for the issuance of the Credential previously requested at the
 //! Credential Endpoint or the Batch Credential Endpoint.
 
-use crate::oid4vci::endpoint::{Body, Handler, Request, Response};
+use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::issuer::credential::credential;
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::{Stage, State};
@@ -16,7 +16,6 @@ use crate::oid4vci::types::{
     CredentialHeaders, CredentialResponse, DeferredCredentialRequest, DeferredCredentialResponse,
     DeferredHeaders,
 };
-use crate::oid4vci::{Error, Result};
 use crate::{invalid, server};
 
 /// Deferred credential request handler.
@@ -65,13 +64,15 @@ async fn deferred(
     Ok(response)
 }
 
-impl Handler for Request<DeferredCredentialRequest, DeferredHeaders> {
+impl<P: Provider> Handler<P> for Request<DeferredCredentialRequest, DeferredHeaders> {
+    type Error = Error;
+    type Provider = P;
     type Response = DeferredCredentialResponse;
 
-    fn handle(
-        self, issuer: &str, provider: &impl Provider,
-    ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>>> + Send {
-        deferred(issuer, provider, self)
+    async fn handle(
+        self, issuer: &str, provider: &Self::Provider,
+    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        deferred(issuer, provider, self).await
     }
 }
 
