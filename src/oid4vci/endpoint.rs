@@ -10,14 +10,13 @@ use http::HeaderMap;
 use http::header::ACCEPT_LANGUAGE;
 use tracing::instrument;
 
-// use crate::oid4vci::{Error, Result};
-pub(crate) use crate::endpoint::{Body, Headers};
-pub use crate::endpoint::{Handler, NoHeaders, Request, Response};
+pub use crate::endpoint::{Body, Handler, Headers, NoHeaders, Request, Response};
 use crate::invalid;
 pub use crate::oid4vci::error::Error;
 use crate::oid4vci::provider::Provider;
 
-pub(crate) type Result<T, E = Error> = std::result::Result<T, E>;
+/// Result type for `OpenID` for Verifiable Credential Issuance.
+pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 /// Handle incoming messages.
 ///

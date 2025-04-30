@@ -12,7 +12,7 @@ use http::StatusCode;
 
 use crate::core::generate;
 use crate::oauth::GrantType;
-use crate::oid4vci::endpoint::{Body,Error, Result, Handler, NoHeaders, Request, Response};
+use crate::oid4vci::endpoint::{Body, Error, Handler, NoHeaders, Request, Response, Result};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Expire, Offer, Stage, State};
 use crate::oid4vci::types::{

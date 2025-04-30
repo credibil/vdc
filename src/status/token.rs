@@ -1,21 +1,21 @@
-//! # Endpoint
+//! # Token Status List
 //!
-//! `Endpoint` provides the entry point for DWN messages. Messages are routed
-//! to the appropriate handler for processing, returning a reply that can be
-//! serialized to a JSON object.
+//! Support for IETF Token Status List.
 
 use std::fmt::Debug;
 
+pub use anyhow::Error;
+use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
-pub use crate::endpoint::{Body, Handler, Headers, NoHeaders, Request, Response};
-pub use crate::oid4vp::error::Error;
+pub(crate) use crate::endpoint::{Body, Headers};
+pub use crate::endpoint::{Handler, NoHeaders, Request, Response};
 use crate::oid4vp::provider::Provider;
 
-/// Result type for `OpenID` for Verifiable Presentations.
-pub type Result<T, E = Error> = std::result::Result<T, E>;
+/// Result type for .
+pub(crate) type Result<T, E = Error> = std::result::Result<T, E>;
 
-/// Handle incoming OpenID for Verifiable Presentations requests.
+/// Handle incoming messages.
 ///
 /// # Errors
 ///
@@ -38,4 +38,13 @@ where
     let request: Request<B, H> = request.into();
     request.validate(verifier, provider).await?;
     Ok(request.handle(verifier, provider).await?.into())
+}
+
+/// Request to retrieve the Verifier's client metadata.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct MetadataRequest {
+    /// The Verifier's Client Identifier for which the configuration is to be
+    /// returned.
+    #[serde(default)]
+    pub client_id: String,
 }

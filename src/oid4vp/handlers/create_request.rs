@@ -7,8 +7,7 @@
 use chrono::Utc;
 
 use crate::core::generate;
-
-use crate::oid4vp::endpoint::{Body,Error, Handler, NoHeaders, Request, Response, Result};
+use crate::oid4vp::endpoint::{Body, Error, Handler, NoHeaders, Request, Response, Result};
 use crate::oid4vp::provider::{Metadata, Provider, StateStore};
 use crate::oid4vp::state::{Expire, State};
 use crate::oid4vp::types::{

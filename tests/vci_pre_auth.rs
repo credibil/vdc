@@ -11,7 +11,7 @@ use credibil_vc::oid4vci::types::{
     CredentialRequest, CredentialResponse, NonceRequest, NotificationEvent, NotificationHeaders,
     NotificationRequest, ProofClaims, TokenGrantType, TokenRequest, W3cVcClaims,
 };
-use credibil_vc::oid4vci::{JwtType, endpoint};
+use credibil_vc::oid4vci::{self, JwtType};
 use credibil_vc::{BlockStore, OneMany};
 use provider::issuer::{BOB_ID, ISSUER_ID, Issuer, data};
 use provider::wallet::Wallet;
@@ -37,7 +37,7 @@ async fn offer_val() {
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
-        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
+        oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -52,13 +52,13 @@ async fn offer_val() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token = endpoint::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+    let token = oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a proof for a credential request
     // --------------------------------------------------
     let nonce =
-        endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
+        oid4vci::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
     let bob_key = BOB
@@ -87,14 +87,14 @@ async fn offer_val() {
         .with_proof(jwt)
         .build();
 
-    let request = endpoint::Request {
+    let request = oid4vci::Request {
         body: request,
         headers: CredentialHeaders {
             authorization: token.access_token.clone(),
         },
     };
     let response =
-        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
+        oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
 
     // --------------------------------------------------
     // Bob extracts and verifies the received credential
@@ -142,7 +142,7 @@ async fn offer_ref() {
         .by_ref(true)
         .build();
     let create_offer =
-        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
+        oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer URI and fetches the offer
@@ -154,7 +154,7 @@ async fn offer_ref() {
     };
     let request = CredentialOfferRequest { id: id.to_string() };
     let response =
-        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should fetch offer");
+        oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should fetch offer");
 
     // validate offer
     let offer = response.credential_offer.clone();
@@ -183,7 +183,7 @@ async fn two_datasets() {
         .with_credential("Developer_W3C_VC")
         .build();
     let response =
-        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
+        oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -198,7 +198,7 @@ async fn two_datasets() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token = endpoint::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+    let token = oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares 2 credential requests
@@ -210,9 +210,8 @@ async fn two_datasets() {
     ]);
 
     for identifier in &details[0].credential_identifiers {
-        let nonce = endpoint::handle(ISSUER_ID, NonceRequest, &provider)
-            .await
-            .expect("should return nonce");
+        let nonce =
+            oid4vci::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
         // proof of possession of key material
         let bob_key = BOB
@@ -238,16 +237,15 @@ async fn two_datasets() {
         let request =
             CredentialRequest::builder().credential_identifier(identifier).with_proof(jwt).build();
 
-        let request = endpoint::Request {
+        let request = oid4vci::Request {
             body: request,
             headers: CredentialHeaders {
                 authorization: token.access_token.clone(),
             },
         };
 
-        let response = endpoint::handle(ISSUER_ID, request, &provider)
-            .await
-            .expect("should return credential");
+        let response =
+            oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
 
         // --------------------------------------------------
         // Bob extracts and verifies the received credential
@@ -290,7 +288,7 @@ async fn reduce_credentials() {
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
-        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
+        oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
 
     let offer = response.offer_type.as_object().expect("should have offer");
     assert_eq!(offer.credential_configuration_ids.len(), 2);
@@ -313,7 +311,7 @@ async fn reduce_credentials() {
             AuthorizationDetail::builder().configuration_id("EmployeeID_W3C_VC").build(),
         )
         .build();
-    let token = endpoint::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+    let token = oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a credential request
@@ -324,7 +322,7 @@ async fn reduce_credentials() {
     let identifier = &details[0].credential_identifiers[0];
 
     let nonce =
-        endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
+        oid4vci::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
     let bob_key = BOB
@@ -350,7 +348,7 @@ async fn reduce_credentials() {
     let request =
         CredentialRequest::builder().credential_identifier(identifier).with_proof(jwt).build();
 
-    let request = endpoint::Request {
+    let request = oid4vci::Request {
         body: request,
         headers: CredentialHeaders {
             authorization: token.access_token.clone(),
@@ -358,7 +356,7 @@ async fn reduce_credentials() {
     };
 
     let response =
-        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
+        oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
 
     // --------------------------------------------------
     // Bob extracts and verifies the received credential
@@ -398,7 +396,7 @@ async fn reduce_claims() {
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
-        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
+        oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -420,13 +418,13 @@ async fn reduce_claims() {
                 .build(),
         )
         .build();
-    let token = endpoint::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+    let token = oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a proof for a credential request
     // --------------------------------------------------
     let nonce =
-        endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
+        oid4vci::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
     let bob_key = BOB
@@ -455,7 +453,7 @@ async fn reduce_claims() {
         .with_proof(jwt)
         .build();
 
-    let request = endpoint::Request {
+    let request = oid4vci::Request {
         body: request,
         headers: CredentialHeaders {
             authorization: token.access_token.clone(),
@@ -463,7 +461,7 @@ async fn reduce_claims() {
     };
 
     let response =
-        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
+        oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
 
     // --------------------------------------------------
     // Bob extracts and verifies the received credential
@@ -511,7 +509,7 @@ async fn notify_accepted() {
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
-        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
+        oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -526,13 +524,13 @@ async fn notify_accepted() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token = endpoint::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+    let token = oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a proof for a credential request
     // --------------------------------------------------
     let nonce =
-        endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
+        oid4vci::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
     let bob_key = BOB
@@ -561,7 +559,7 @@ async fn notify_accepted() {
         .with_proof(jwt)
         .build();
 
-    let request = endpoint::Request {
+    let request = oid4vci::Request {
         body: request,
         headers: CredentialHeaders {
             authorization: token.access_token.clone(),
@@ -569,7 +567,7 @@ async fn notify_accepted() {
     };
 
     let response =
-        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
+        oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
 
     // --------------------------------------------------
     // Bob send a notication advising the credential was accepted
@@ -584,12 +582,12 @@ async fn notify_accepted() {
         .event_description("Credential accepted")
         .build();
 
-    let request = endpoint::Request {
+    let request = oid4vci::Request {
         body: request,
         headers: NotificationHeaders {
             authorization: token.access_token.clone(),
         },
     };
 
-    endpoint::handle(ISSUER_ID, request, &provider).await.expect("response is ok");
+    oid4vci::handle(ISSUER_ID, request, &provider).await.expect("response is ok");
 }

@@ -12,7 +12,7 @@ use credibil_vc::format::w3c_vc::W3cVcBuilder;
 use credibil_vc::format::{mso_mdoc, sd_jwt, w3c_vc};
 use credibil_vc::oid4vp::types::{DcqlQuery, ResponseMode};
 use credibil_vc::oid4vp::{
-    AuthorzationResponse, DeviceFlow, GenerateRequest, GenerateResponse, endpoint, vp_token,
+    self, AuthorzationResponse, DeviceFlow, GenerateRequest, GenerateResponse, vp_token,
 };
 use futures::executor::block_on;
 use provider::issuer::{ISSUER_ID, Issuer};
@@ -57,7 +57,7 @@ async fn multiple_claims() {
         },
     };
     let response =
-        endpoint::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
+        oid4vp::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
 
     // extract request object and send to Wallet
     let GenerateResponse::Object(request_object) = response.body else {
@@ -85,7 +85,7 @@ async fn multiple_claims() {
     // Verifier processes the Wallets's Authorization Response.
     // --------------------------------------------------
     let response =
-        endpoint::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
+        oid4vp::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
 
     // --------------------------------------------------
     // Wallet follows Verifier's redirect.
@@ -152,7 +152,7 @@ async fn multiple_credentials() {
         },
     };
     let response =
-        endpoint::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
+        oid4vp::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
 
     // extract request object and send to Wallet
     let GenerateResponse::Object(request_object) = response.body else {
@@ -178,7 +178,7 @@ async fn multiple_credentials() {
         state: request_object.state,
     };
     let response =
-        endpoint::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
+        oid4vp::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
 
     // --------------------------------------------------
     // Wallet follows Verifier's redirect.

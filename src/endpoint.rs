@@ -1,7 +1,7 @@
 //! # Endpoint
 //!
 //! `Endpoint` provides the entry point to the public API. Requests are routed
-//! to the appropriate handler for processing, returning a response that can 
+//! to the appropriate handler for processing, returning a response that can
 //! be serialized to a JSON object or directly to HTTP.
 
 use std::fmt::Debug;

@@ -89,7 +89,7 @@
 //! [RFC6749]: (https://www.rfc-editor.org/rfc/rfc6749.html)
 
 pub mod client;
-pub mod endpoint;
+mod endpoint;
 pub mod provider;
 pub mod types;
 
@@ -110,15 +110,15 @@ pub mod proof {
 
 /// Status
 pub mod status {
-    pub use crate::status::bitstring::{DEFAULT_TTL, bitstring, credential};
     pub use crate::status::bitstring::issuer::*;
+    pub use crate::status::bitstring::{DEFAULT_TTL, bitstring, credential};
 }
-
-use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
 
+pub use self::endpoint::*;
 pub use self::error::Error;
+pub use self::types::*;
 
 /// The JWT `typ` header parameter.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -148,7 +148,7 @@ impl From<&JwtType> for String {
     }
 }
 
-impl Display for JwtType {
+impl std::fmt::Display for JwtType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s: String = self.into();
         write!(f, "{s}")

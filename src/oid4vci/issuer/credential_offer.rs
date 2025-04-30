@@ -14,7 +14,7 @@
 //!
 //! [JWT VC Issuance Profile]: (https://identity.foundation/jwt-vc-issuance-profile)
 
-use crate::oid4vci::endpoint::{Body,Error,Result, Handler, NoHeaders, Request, Response};
+use crate::oid4vci::endpoint::{Body, Error, Handler, NoHeaders, Request, Response, Result};
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::{Stage, State};
 use crate::oid4vci::types::{CredentialOfferRequest, CredentialOfferResponse};

@@ -5,9 +5,8 @@
 
 use std::future::Future;
 
-use super::error::Error;
-use super::provider;
 use crate::format::w3c_vc::CredentialStatus;
+use crate::status::bitstring::Result;
 
 /// The `Status` trait is used to proxy the resolution of a credential status.
 ///
@@ -24,7 +23,7 @@ pub trait Status: Send + Sync {
     /// for the given credential cannot be resolved from the list.
     fn status(
         &self, status: &CredentialStatus, credential_identifier: &str,
-    ) -> impl Future<Output = provider::Result<bool>> + Send;
+    ) -> impl Future<Output = Result<bool>> + Send;
 }
 
 /// Validates a credential from the status information contained inside it.
@@ -36,7 +35,7 @@ pub trait Status: Send + Sync {
 ///
 /// Will return a specific `ValidationError` if the status list is not resolved
 /// or processing the status list fails for the given `CredentialStatus`.
-pub fn validate(_resolver: &impl Status, _status: &CredentialStatus) -> Result<bool, Error> {
+pub fn validate(_resolver: &impl Status, _status: &CredentialStatus) -> Result<bool> {
     // The following process, or one generating the exact output, MUST be followed
     // when validating a verifiable credential that is contained in a
     // BitstringStatusListCredential. The algorithm takes a status list verifiable

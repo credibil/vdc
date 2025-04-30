@@ -7,7 +7,6 @@ mod config;
 pub mod error;
 pub mod issuer;
 mod log;
-pub mod provider;
 pub mod verifier;
 
 use std::io::Write;
@@ -22,9 +21,9 @@ use credibil_jose::encode_jws;
 use flate2::write::GzEncoder;
 use serde_json::{Map, Value};
 
-use self::config::ListConfig;
 use self::log::StatusLogEntry;
 use crate::format::w3c_vc::{CredentialSubject, StatusPurpose, VerifiableCredential, W3cVcClaims};
+use crate::status::bitstring::config::ListConfig;
 use crate::{Kind, OneMany};
 
 // TODO: Configurable.
@@ -40,6 +39,9 @@ const MAX_ENTRIES: usize = 131_072;
 
 /// Default time-to-live in milliseconds for a status list credential.
 pub const DEFAULT_TTL: u64 = 300_000;
+
+/// Result is used for all external errors.
+pub type Result<T, E = anyhow::Error> = std::result::Result<T, E>;
 
 /// Generates a compressed, encoded bitstring representing the status list for
 /// the given issued credentials and the purpose implied by a list

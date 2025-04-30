@@ -163,7 +163,7 @@
 
 pub mod client;
 pub mod dcql;
-pub mod endpoint;
+mod endpoint;
 pub mod provider;
 pub mod types;
 pub mod vp_token;
@@ -176,15 +176,14 @@ use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
 
-pub use crate::format::w3c_vc::VerifiablePresentation;
-pub use crate::oid4vp::types::*;
+pub use self::endpoint::*;
+pub use self::error::Error;
+pub use self::types::*;
 
 /// Re-export status traits and types.
 pub mod status {
     pub use crate::status::bitstring::verifier::*;
 }
-
-pub use error::Error;
 
 /// The JWS `typ` header parameter.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
