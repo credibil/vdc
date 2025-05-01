@@ -29,6 +29,7 @@ use crate::oid4vci::types::{
     SingleProof,
 };
 use crate::server;
+use crate::token_status::{StatusList, StatusStore};
 
 /// Credential request handler.
 ///
@@ -196,9 +197,9 @@ impl CredentialRequest {
         };
 
         match &self.credential {
-            RequestBy::Identifier(ident) => {
+            RequestBy::Identifier(id) => {
                 for ad in &token.details {
-                    if ad.credential_identifiers.contains(ident) {
+                    if ad.credential_identifiers.contains(id) {
                         return Ok(ad.clone());
                     }
                 }
@@ -216,8 +217,6 @@ impl CredentialRequest {
     }
 }
 
-use crate::token_status::{StatusList, StatusToken};
-
 impl Context {
     // Issue the requested credential.
     async fn issue(
@@ -230,7 +229,7 @@ impl Context {
 
         // create a credential for each proof
         for kid in &self.proof_kids {
-            let _status_claim = status_list
+            let status_claim = status_list
                 .add_entry("http://credibil.io/statuslists/1")
                 .map_err(|e| server!("issue creating status claim: {e}"))?;
 
@@ -242,26 +241,13 @@ impl Context {
                     let Some(did) = kid.split('#').next() else {
                         return Err(Error::InvalidProof("Proof JWT DID is invalid".to_string()));
                     };
-                    let builder = W3cVcBuilder::new()
+                    let jwt = W3cVcBuilder::new()
                         .type_(credential_definition.type_.clone())
                         .issuer(&self.issuer.credential_issuer)
                         .holder(did)
+                        .status(status_claim)
                         .claims(dataset.claims.clone())
-                        .signer(provider);
-
-                    // credential's status lookup
-                    // let Some(subject_id) = &self.state.subject_id else {
-                    //     return Err(Error::AccessDenied("invalid subject id".to_string()));
-                    // };
-                    // if let Some(status) =
-                    //     Status::status(provider, subject_id, "credential_identifier")
-                    //         .await
-                    //         .map_err(|e| server!("issue populating credential status: {e}"))?
-                    // {
-                    //     builder = builder.status(status);
-                    // }
-
-                    let jwt = builder
+                        .signer(provider)
                         .build()
                         .await
                         .map_err(|e| server!("issue creating `jwt_vc_json` credential: {e}"))?;
@@ -270,7 +256,6 @@ impl Context {
                         credential: jwt.into(),
                     }
                 }
-
                 FormatProfile::MsoMdoc { doctype } => {
                     let jwk = did_jwk(kid, provider).await.map_err(|e| {
                         server!("issue retrieving JWK for `dc+sd-jwt` credential: {e}")
@@ -289,7 +274,6 @@ impl Context {
                         credential: mdl.into(),
                     }
                 }
-
                 FormatProfile::DcSdJwt { vct } => {
                     // TODO: cache the result of jwk when verifying proof (`verify` method)
                     let jwk = did_jwk(kid, provider).await.map_err(|e| {
@@ -305,6 +289,7 @@ impl Context {
                         .claims(dataset.claims.clone())
                         .key_binding(jwk)
                         .holder(did)
+                        .status(status_claim)
                         .signer(provider)
                         .build()
                         .await
@@ -314,8 +299,6 @@ impl Context {
                         credential: sd_jwt.into(),
                     }
                 }
-
-                // TODO: oustanding credential formats
                 FormatProfile::JwtVcJsonLd { .. } => todo!(),
                 FormatProfile::LdpVc { .. } => todo!(),
             };
@@ -325,7 +308,7 @@ impl Context {
 
         let token =
             &status_list.to_jwt().map_err(|e| server!("issue creating status list JWT: {e}"))?;
-        StatusToken::put(provider, "https://example.com/statuslists/1", token)
+        StatusStore::put(provider, "https://example.com/statuslists/1", token)
             .await
             .map_err(|e| server!("issue saving status list: {e}"))?;
 

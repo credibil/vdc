@@ -17,6 +17,7 @@ use serde_json::{Map, Value};
 
 use crate::format::sd_jwt::{Disclosure, JwtType, KeyBinding, SdJwtClaims};
 use crate::server;
+use crate::token_status::StatusClaim;
 
 /// Generate an IETF `dc+sd-jwt` format credential.
 #[derive(Debug)]
@@ -26,7 +27,7 @@ pub struct SdJwtVcBuilder<V, I, K, C, S> {
     key_binding: K,
     claims: C,
     holder: Option<String>,
-    // status: Option<OneMany<CredentialStatus>>,
+    status: Option<StatusClaim>,
     signer: S,
 }
 
@@ -81,6 +82,7 @@ impl SdJwtVcBuilder<NoVct, NoIssuer, NoKeyBinding, NoClaims, NoSigner> {
             key_binding: NoKeyBinding,
             claims: NoClaims,
             holder: None,
+            status: None,
             signer: NoSigner,
         }
     }
@@ -97,6 +99,7 @@ impl<I, K, C, S> SdJwtVcBuilder<NoVct, I, K, C, S> {
             key_binding: self.key_binding,
             claims: self.claims,
             holder: self.holder,
+            status: self.status,
             signer: self.signer,
         }
     }
@@ -113,6 +116,7 @@ impl<V, K, C, S> SdJwtVcBuilder<V, NoIssuer, K, C, S> {
             key_binding: self.key_binding,
             claims: self.claims,
             holder: self.holder,
+            status: self.status,
             signer: self.signer,
         }
     }
@@ -131,6 +135,7 @@ impl<V, I, C, S> SdJwtVcBuilder<V, I, NoKeyBinding, C, S> {
             key_binding: HasKeyBinding(key_binding.into()),
             claims: self.claims,
             holder: self.holder,
+            status: self.status,
             signer: self.signer,
         }
     }
@@ -147,6 +152,7 @@ impl<V, I, K, S> SdJwtVcBuilder<V, I, K, NoClaims, S> {
             key_binding: self.key_binding,
             claims: HasClaims(claims),
             holder: self.holder,
+            status: self.status,
             signer: self.signer,
         }
     }
@@ -158,6 +164,13 @@ impl<V, I, K, C, S> SdJwtVcBuilder<V, I, K, C, S> {
     #[must_use]
     pub fn holder(mut self, holder: impl Into<String>) -> Self {
         self.holder = Some(holder.into());
+        self
+    }
+
+    /// Set the credential status.
+    #[must_use]
+    pub fn status(mut self, status: StatusClaim) -> Self {
+        self.status = Some(status);
         self
     }
 }
@@ -175,6 +188,7 @@ impl<V, I, K, C> SdJwtVcBuilder<V, I, K, C, NoSigner> {
             key_binding: self.key_binding,
             claims: self.claims,
             holder: self.holder,
+            status: self.status,
             signer: HasSigner(signer),
         }
     }
@@ -207,7 +221,7 @@ impl<S: SignerExt> SdJwtVcBuilder<Vct, HasIssuer, HasKeyBinding, HasClaims, HasS
             vct: self.vct.0,
             sd_alg: Some("sha-256".to_string()),
             cnf: Some(self.key_binding.0),
-            // status: None,
+            status: self.status,
             sub: self.holder,
             ..SdJwtClaims::default()
         };
@@ -273,6 +287,6 @@ mod tests {
             .await
             .expect("should build");
 
-        println!("{sd_jwt}");
+        dbg!(sd_jwt);
     }
 }

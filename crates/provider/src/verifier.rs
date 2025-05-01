@@ -5,6 +5,7 @@ use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
 use credibil_jose::jwe::{PublicKey, SharedSecret};
 use credibil_jose::{Algorithm, Receiver, Signer};
 use credibil_vc::BlockStore;
+use credibil_vc::token_status::StatusToken;
 
 use crate::blockstore::Mockstore;
 use crate::identity::DidIdentity;
@@ -82,5 +83,14 @@ impl BlockStore for Verifier {
 
     async fn purge(&self, _owner: &str, _partition: &str) -> Result<()> {
         unimplemented!()
+    }
+}
+
+impl StatusToken for Verifier {
+    async fn fetch(&self, uri: &str) -> Result<String> {
+        let Some(block) = BlockStore::get(self, "owner", "STATUSTOKEN", uri).await? else {
+            return Err(anyhow::anyhow!("could not find status token"));
+        };
+        Ok(serde_json::from_slice(&block)?)
     }
 }

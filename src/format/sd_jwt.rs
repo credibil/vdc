@@ -28,6 +28,7 @@ pub use self::issue::SdJwtVcBuilder;
 pub use self::present::SdJwtVpBuilder;
 pub use self::store::to_queryable;
 pub use self::verify::verify_vp;
+use crate::token_status::StatusClaim;
 
 /// Claims that can be included in the payload of SD-JWT VCs.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -90,7 +91,7 @@ pub struct SdJwtClaims {
 
     /// The information on how to read the status of the Verifiable Credential.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub status: Option<String>,
+    pub status: Option<StatusClaim>,
 }
 
 /// Key Binding JWT is used in SD-JWT presentations when requested by the

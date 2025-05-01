@@ -7,6 +7,7 @@ use credibil_jose::{Jwt, decode_jws};
 use crate::core::did_jwk;
 use crate::format::sd_jwt::{Disclosure, KbJwtClaims, KeyBinding, SdJwtClaims};
 use crate::oid4vp::types::{Claim, RequestObject};
+use crate::token_status::StatusToken;
 
 /// Verifies an SD-JWT credential.
 ///
@@ -31,9 +32,12 @@ pub async fn verify_vc(vc: &str, resolver: &impl IdentityResolver) -> Result<Jwt
 ///
 /// Returns an error if the SD-JWT presentation is invalid or if verification
 /// fails.
-pub async fn verify_vp(
-    vp: &str, request_object: &RequestObject, resolver: &impl IdentityResolver,
-) -> Result<Vec<Claim>> {
+pub async fn verify_vp<R>(
+    vp: &str, request_object: &RequestObject, resolver: &R,
+) -> Result<Vec<Claim>>
+where
+    R: IdentityResolver + StatusToken,
+{
     // extract components of the sd-jwt presentation
     let split = vp.split('~').collect::<Vec<_>>();
     if split.len() < 2 {
@@ -45,6 +49,15 @@ pub async fn verify_vp(
 
     // verify and unpack the sd-jwt
     let sd_jwt = verify_vc(credential, resolver).await?;
+
+    // ..verify Holder signature against `cnf` claim of issued credential
+    if let Some(status_claim) = &sd_jwt.claims.status {
+        // retrieve status list
+        let status_list = StatusToken::fetch(resolver, &status_claim.status_list.uri).await?;
+        println!("status list: {status_list:?}");
+
+        // verify credential's status
+    }
 
     // verify and unpack the kb-jwt:
     //  1. it should be signed by the holder of the sd-jwt (from the sd-jwt `cnf` claim)

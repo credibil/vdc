@@ -18,18 +18,18 @@ use serde::{Deserialize, Serialize};
 
 use crate::BlockStore;
 use crate::oid4vci::types::{Client, Dataset, Issuer, Server};
-use crate::token_status::StatusToken;
+use crate::token_status::StatusStore;
 
 /// Issuer Provider trait.
 pub trait Provider:
-    Metadata + Subject + StateStore + SignerExt + IdentityResolver + StatusToken + Clone
+    Metadata + Subject + StateStore + SignerExt + IdentityResolver + StatusStore + Clone
 {
 }
 
 /// A blanket implementation for `Provider` trait so that any type implementing
 /// the required super traits is considered a `Provider`.
 impl<T> Provider for T where
-    T: Metadata + Subject + StateStore + SignerExt + IdentityResolver + StatusToken + Clone
+    T: Metadata + Subject + StateStore + SignerExt + IdentityResolver + StatusStore + Clone
 {
 }
 
@@ -184,16 +184,16 @@ impl<T: BlockStore> Subject for T {
     }
 }
 
-impl<T: BlockStore> StatusToken for T {
+impl<T: BlockStore> StatusStore for T {
     #[allow(unused)]
-    async fn put(&self, key: &str, token: &str) -> Result<()> {
-        let state = serde_json::to_vec(token)?;
-        BlockStore::delete(self, "owner", STATUSTOKEN, key).await?;
-        BlockStore::put(self, "owner", STATUSTOKEN, key, &state).await
+    async fn put(&self, uri: &str, token: &str) -> Result<()> {
+        let data = serde_json::to_vec(token)?;
+        BlockStore::delete(self, "owner", STATUSTOKEN, uri).await?;
+        BlockStore::put(self, "owner", STATUSTOKEN, uri, &data).await
     }
 
-    async fn get(&self, key: &str) -> Result<Option<String>> {
-        let Some(block) = BlockStore::get(self, "owner", STATE, key).await? else {
+    async fn get(&self, uri: &str) -> Result<Option<String>> {
+        let Some(block) = BlockStore::get(self, "owner", STATUSTOKEN, uri).await? else {
             return Ok(None);
         };
         Ok(Some(serde_json::from_slice(&block)?))

@@ -2,7 +2,7 @@
 //!
 //! `Endpoint` provides the entry point for the `OpenId4VP` API. Requests are
 //! routed to the appropriate handler for processing, returning a response
-//! that can be serialized to JSON or directly to HTTP (using the 
+//! that can be serialized to JSON or directly to HTTP (using the
 //! [`crate::core::http::IntoHttp`] trait).
 
 use std::fmt::Debug;

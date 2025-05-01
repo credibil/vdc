@@ -3,7 +3,7 @@
 use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::Provider;
 use crate::oid4vp::NoHeaders;
-use crate::token_status::{StatusListRequest, StatusListResponse, StatusToken};
+use crate::token_status::{StatusListRequest, StatusListResponse, StatusStore};
 use crate::{invalid, server};
 
 /// Status List request handler.
@@ -19,7 +19,7 @@ async fn statuslist(
         return Err(invalid!("missing id"));
     };
 
-    let Some(token) = StatusToken::get(provider, &id)
+    let Some(token) = StatusStore::get(provider, &id)
         .await
         .map_err(|e| server!("issue getting metadata: {e}"))?
     else {

@@ -26,13 +26,19 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 
 pub use crate::endpoint::{Handler, NoHeaders, Request, Response};
 
-/// `StatusToken` is used to store and retrieve Status Tokens.
-pub trait StatusToken: Send + Sync {
+/// `StatusStore` is used to store and retrieve Status Tokens.
+pub trait StatusStore: Send + Sync {
     /// Store the Status Token using the provided key.
-    fn put(&self, key: &str, token: &str) -> impl Future<Output = Result<()>> + Send;
+    fn put(&self, uri: &str, token: &str) -> impl Future<Output = Result<()>> + Send;
 
     /// Retrieve the specified Status Token.
-    fn get(&self, key: &str) -> impl Future<Output = Result<Option<String>>> + Send;
+    fn get(&self, uri: &str) -> impl Future<Output = Result<Option<String>>> + Send;
+}
+
+/// `StatusToken` is used to store and retrieve Status Tokens.
+pub trait StatusToken: Send + Sync {
+    /// Fetch the specified status list.
+    fn fetch(&self, uri: &str) -> impl Future<Output = Result<String>> + Send;
 }
 
 // `typ` statuslist+jwt
@@ -235,8 +241,8 @@ mod tests {
 
     #[test]
     fn new() {
-        let status_list = StatusList::new();
-        println!("status_list: {status_list:?}");
+        let status_list = StatusList::new().expect("should create status list");
+        dbg!(status_list);
     }
 
     #[test]

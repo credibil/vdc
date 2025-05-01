@@ -10,13 +10,20 @@ use serde::{Deserialize, Serialize};
 
 use crate::BlockStore;
 use crate::oid4vp::types::{Verifier, Wallet};
+use crate::token_status::StatusToken;
 
 /// Verifier Provider trait.
-pub trait Provider: Metadata + StateStore + SignerExt + IdentityResolver + Clone {}
+pub trait Provider:
+    Metadata + StateStore + SignerExt + IdentityResolver + StatusToken + Clone
+{
+}
 
 /// A blanket implementation for `Provider` trait so that any type implementing
 /// the required super traits is considered a `Provider`.
-impl<T> Provider for T where T: Metadata + StateStore + SignerExt + IdentityResolver + Clone {}
+impl<T> Provider for T where
+    T: Metadata + StateStore + SignerExt + IdentityResolver + StatusToken + Clone
+{
+}
 
 /// The `Metadata` trait is used by implementers to provide `Verifier` (client)
 /// metadata to the library.

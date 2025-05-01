@@ -80,4 +80,3 @@ impl BlockStore for Issuer {
         unimplemented!()
     }
 }
-
