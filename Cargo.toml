@@ -30,7 +30,7 @@ anyhow.workspace = true
 base64ct.workspace = true
 bitvec = "1.0.1"
 bytes = "1.10.1"
-chrono = { version = "0.4.40", features = ["serde"] }
+chrono = { version = "0.4.41", features = ["serde"] }
 ciborium.workspace = true
 coset = "0.3.8"
 credibil-identity.workspace = true
@@ -50,7 +50,7 @@ rand = "0.9.1"
 serde.workspace = true
 serde_json.workspace = true
 serde_repr = "0.1"
-sha2 = "0.10.8"
+sha2 = "0.10.9"
 thiserror = "2.0.12"
 tracing = "0.1.41"
 uuid = { version = "1.16.0", features = ["fast-rng", "v4"] }
@@ -60,12 +60,12 @@ ed25519-dalek = { version = "2.1.1", features = ["rand_core"] }
 k256 = "0.13.4"
 
 [dev-dependencies]
-axum = { version = "0.8.3", features = ["macros"] }
+axum = { version = "0.8.4", features = ["macros"] }
 axum-extra = { version = "0.10.1", features = ["typed-header"] }
 ed25519-dalek.workspace = true
 
 hex = "0.4.3"
-insta = { version = "1.43.0", features = ["redactions", "yaml"] }
+insta = { version = "1.43.1", features = ["redactions", "yaml"] }
 oauth2 = { version = "5.0.0" }
 provider = { path = "crates/provider" }
 rand_core.workspace = true

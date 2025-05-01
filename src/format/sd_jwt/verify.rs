@@ -52,11 +52,8 @@ where
 
     // ..verify credential's status
     if let Some(status_claim) = &sd_jwt.claims.status {
-        // retrieve status list
         let jwt = StatusToken::fetch(resolver, &status_claim.status_list.uri).await?;
         let status_list = StatusList::from_jwt(&jwt)?;
-        println!("status list: {status_list:?}");
-
         if !status_list.is_valid(status_claim.status_list.idx)? {
             return Err(anyhow!("credential status is invalid"));
         }
