@@ -149,16 +149,20 @@ impl StatusList {
     }
 
     /// Check if the status list contains a valid status for the given index.
-    pub fn is_valid(&self, idx: usize) -> bool {
+    /// 
+    /// # Errors
+    /// 
+    /// Returns an error if the Zlib decompression fails or if the index is
+    /// out of bounds.
+    pub fn is_valid(&self, idx: usize) -> Result<bool> {
         let deflated = Base64UrlUnpadded::decode_vec(&self.lst)
-            .map_err(|_| anyhow::anyhow!("Invalid base64url-encoded status list"))
-            .unwrap();
+            .map_err(|_| anyhow::anyhow!("Invalid base64url-encoded status list"))?;
         let mut decoder = ZlibDecoder::new(deflated.as_slice());
         let mut inflated = Vec::new();
-        decoder.read_to_end(&mut inflated).unwrap();
+        decoder.read_to_end(&mut inflated)?;
 
         let bitslice = inflated.view_bits::<Lsb0>();
-        bitslice[idx]
+        Ok(bitslice.get(idx).is_some_and(|x| *x))
     }
 
     /// Encode the Status List Token as a JWT.
@@ -172,10 +176,15 @@ impl StatusList {
     }
 
     /// Decode a JWT into a Status List.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the JWT is invalid or if the deserialization
+    /// fails.
     pub fn from_jwt(jwt: &str) -> Result<Self> {
         let bytes = Base64UrlUnpadded::decode_vec(jwt)
             .map_err(|_| anyhow::anyhow!("Invalid base64url-encoded status list"))?;
-        let status_list: StatusList = serde_json::from_slice(&bytes)?;
+        let status_list = serde_json::from_slice(&bytes)?;
         Ok(status_list)
     }
 }

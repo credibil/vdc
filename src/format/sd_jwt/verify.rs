@@ -3,7 +3,6 @@
 use anyhow::{Result, anyhow};
 use credibil_identity::IdentityResolver;
 use credibil_jose::{Jwt, decode_jws};
-use http::status;
 
 use crate::core::did_jwk;
 use crate::format::sd_jwt::{Disclosure, KbJwtClaims, KeyBinding, SdJwtClaims};
@@ -58,7 +57,7 @@ where
         let status_list = StatusList::from_jwt(&jwt)?;
         println!("status list: {status_list:?}");
 
-        if !status_list.is_valid(status_claim.status_list.idx) {
+        if !status_list.is_valid(status_claim.status_list.idx)? {
             return Err(anyhow!("credential status is invalid"));
         }
     }
