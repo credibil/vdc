@@ -469,6 +469,8 @@ async fn specific_values() {
     assert_eq!(results.len(), 1);
 }
 
+use credibil_vc::token_status::{StatusClaim, StatusList};
+
 // Initialise a mock "wallet" with test credentials.
 async fn populate() -> Wallet {
     let mut wallet = Wallet::new();
@@ -478,11 +480,14 @@ async fn populate() -> Wallet {
     };
     let holder_jwk = did_jwk(&did_url, &wallet).await.expect("should get key");
 
-    // let mut status_list =
-    //     StatusList::new().map_err(|e| server!("issue creating status list: {e}"))?;
-    // let status_claim = status_list
-    //     .add_entry("http://credibil.io/statuslists/1")
-    //     .map_err(|e| server!("issue creating status claim: {e}"))?;
+    // create a status list
+    let mut status_list = StatusList::new().expect("should create status list");
+    let status_claim = status_list.add_entry("http://credibil.io/statuslists/1").unwrap();
+    let token = status_list.to_jwt().expect("should create token");
+    let data = serde_json::to_vec(&token).expect("should serialize");
+    BlockStore::put(&*ISSUER, "owner", "STATUSTOKEN", "http://credibil.io/statuslists/1", &data)
+        .await
+        .unwrap();
 
     // load credentials
     let vct = "https://credentials.example.com/identity_credential";
@@ -498,7 +503,7 @@ async fn populate() -> Wallet {
         },
         "birthdate": "2000-01-01"
     });
-    let jwt = sd_jwt(vct, claims, &holder_jwk).await;
+    let jwt = sd_jwt(vct, claims, &holder_jwk, &status_claim).await;
     let q = sd_jwt::to_queryable(&jwt, &*ISSUER).await.expect("should be SD-JWT");
     wallet.add(q);
 
@@ -515,7 +520,7 @@ async fn populate() -> Wallet {
         },
         "birthdate": "2000-01-01"
     });
-    let jwt = sd_jwt(vct, claims, &holder_jwk).await;
+    let jwt = sd_jwt(vct, claims, &holder_jwk, &status_claim).await;
     let q = sd_jwt::to_queryable(&jwt, &*ISSUER).await.expect("should be SD-JWT");
     wallet.add(q);
 
@@ -527,7 +532,7 @@ async fn populate() -> Wallet {
             "postal_code": "90210",
         },
     });
-    let jwt = sd_jwt(vct, claims, &holder_jwk).await;
+    let jwt = sd_jwt(vct, claims, &holder_jwk, &status_claim).await;
     let q = sd_jwt::to_queryable(&jwt, &*ISSUER).await.expect("should be SD-JWT");
     wallet.add(q);
 
@@ -535,7 +540,7 @@ async fn populate() -> Wallet {
     let claims = json!({
         "rewards_number": "1234567890",
     });
-    let jwt = sd_jwt(vct, claims, &holder_jwk).await;
+    let jwt = sd_jwt(vct, claims, &holder_jwk, &status_claim).await;
     let q = sd_jwt::to_queryable(&jwt, &*ISSUER).await.expect("should be SD-JWT");
     wallet.add(q);
 
@@ -581,12 +586,15 @@ async fn populate() -> Wallet {
     wallet
 }
 
-async fn sd_jwt(vct: &str, claims: Value, holder_jwk: &PublicKeyJwk) -> String {
+async fn sd_jwt(
+    vct: &str, claims: Value, holder_jwk: &PublicKeyJwk, status_claim: &StatusClaim,
+) -> String {
     SdJwtVcBuilder::new()
         .vct(vct)
         .claims(claims.as_object().unwrap().clone())
         .issuer(ISSUER_ID)
         .key_binding(holder_jwk.clone())
+        .status(status_claim.clone())
         .signer(&*ISSUER)
         .build()
         .await
