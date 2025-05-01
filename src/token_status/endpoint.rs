@@ -1,22 +1,20 @@
+#![allow(dead_code)]
+
 //! # Endpoint
-//!
-//! `Endpoint` provides the entry point for the `OpenId4VP` API. Requests are
-//! routed to the appropriate handler for processing, returning a response
-//! that can be serialized to JSON or directly to HTTP (using the 
-//! [`crate::core::http::IntoHttp`] trait).
 
 use std::fmt::Debug;
 
+use anyhow::Error;
 use tracing::instrument;
 
-pub use crate::endpoint::{Body, Handler, Headers, NoHeaders, Request, Response};
-pub use crate::oid4vp::error::Error;
+pub use crate::endpoint::{Body, Headers};
+pub use crate::endpoint::{Handler, Request, Response};
 use crate::oid4vp::provider::Provider;
 
-/// Result type for `OpenID` for Verifiable Presentations.
+/// Result type.
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
-/// Handle incoming OpenID for Verifiable Presentations requests.
+/// Handle incoming messages.
 ///
 /// # Errors
 ///

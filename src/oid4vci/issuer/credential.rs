@@ -216,6 +216,8 @@ impl CredentialRequest {
     }
 }
 
+use crate::token_status::{StatusList, StatusToken};
+
 impl Context {
     // Issue the requested credential.
     async fn issue(
@@ -223,8 +225,15 @@ impl Context {
     ) -> Result<CredentialResponse> {
         let mut credentials = vec![];
 
+        let mut status_list =
+            StatusList::new().map_err(|e| server!("issue creating status list: {e}"))?;
+
         // create a credential for each proof
         for kid in &self.proof_kids {
+            let _status_claim = status_list
+                .add_entry("https://example.com/statuslists/1")
+                .map_err(|e| server!("issue creating status claim: {e}"))?;
+
             let credential = match &self.configuration.profile {
                 FormatProfile::JwtVcJson {
                     credential_definition,
@@ -313,6 +322,12 @@ impl Context {
 
             credentials.push(credential);
         }
+
+        let token =
+            &status_list.to_jwt().map_err(|e| server!("issue creating status list JWT: {e}"))?;
+        StatusToken::put(provider, "https://example.com/statuslists/1", token)
+            .await
+            .map_err(|e| server!("issue saving status list: {e}"))?;
 
         // update token state with new `c_nonce`
         let mut state = self.state.clone();
