@@ -20,6 +20,7 @@ use credibil_vc::oid4vci::{
     CredentialRequest, DeferredCredentialRequest, IssuerRequest, NotificationHeaders,
     NotificationRequest, PushedAuthorizationRequest, ServerRequest, TokenRequest,
 };
+use credibil_vc::token_status::StatusListRequest;
 use credibil_vc::{BlockStore, urlencode};
 use oauth2::CsrfToken;
 use provider::issuer::data::{CLIENT, ISSUER, NORMAL_USER as USER, SERVER};
@@ -65,10 +66,11 @@ async fn main() {
         .route("/auth", get(authorize))
         .route("/par", get(par))
         .route("/login", post(handle_login))
-        .route("/notification", post(notification))
         .route("/token", post(token))
         .route("/credential", post(credential))
         .route("/deferred_credential", post(deferred_credential))
+        .route("/notification", post(notification))
+        .route("/statuslists/{id}", get(statuslists))
         .layer(TraceLayer::new_for_http())
         .layer(cors)
         .layer(SetResponseHeaderLayer::if_not_present(
@@ -91,7 +93,7 @@ async fn create_offer(
     oid4vci::handle(&format!("http://{host}"), req, &provider).await.into_http()
 }
 
-// Retrieve Authorization Request Object endpoint
+// Retrieve Credential Offer endpoint
 #[axum::debug_handler]
 async fn credential_offer(
     State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
@@ -322,26 +324,6 @@ async fn deferred_credential(
 }
 
 /// Notification endpoint
-///
-/// This endpoint is used by the Wallet to notify the Credential Issuer of
-/// certain events for issued Credentials. These events enable the Credential
-/// Issuer to take subsequent actions after issuance. The Credential Issuer
-/// needs to return one or more notification_id parameters in the Credential
-/// Response for the Wallet to be able to use this endpoint. Support for this
-/// endpoint is OPTIONAL. The Issuer cannot assume that a notification will be
-/// sent for every issued Credential since the use of this Endpoint is not
-/// mandatory for the Wallet.
-///
-/// The Wallet MUST present to the Notification Endpoint a valid Access Token
-/// issued at the Token Endpoint.
-///
-/// The notification from the Wallet is idempotent. When the Credential Issuer
-/// receives multiple identical calls from the Wallet for the same
-/// notification_id, it returns success. Due to the network errors, there are no
-/// guarantees that a Credential Issuer will receive a notification within a
-/// certain time period or at all.
-///
-/// Communication with the Notification Endpoint MUST utilize TLS.
 #[axum::debug_handler]
 async fn notification(
     State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
@@ -356,5 +338,14 @@ async fn notification(
             authorization: auth.token().to_string(),
         },
     };
+    oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
+}
+
+// Status Lists endpoint
+#[axum::debug_handler]
+async fn statuslists(
+    State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>, Path(id): Path<String>,
+) -> impl IntoResponse {
+    let request = StatusListRequest { id: Some(id) };
     oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }

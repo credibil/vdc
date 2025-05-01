@@ -1,0 +1,44 @@
+//! # Status List Endpoint
+
+use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
+use crate::oid4vci::provider::Provider;
+use crate::oid4vp::NoHeaders;
+use crate::token_status::{StatusListRequest, StatusListResponse, StatusToken};
+use crate::{invalid, server};
+
+/// Status List request handler.
+///
+/// # Errors
+///
+/// Returns an `OpenID4VP` error if the request is invalid or if the provider is
+/// not available.
+async fn statuslist(
+    _issuer: &str, provider: &impl Provider, request: StatusListRequest,
+) -> Result<StatusListResponse> {
+    let Some(id) = request.id else {
+        return Err(invalid!("missing id"));
+    };
+
+    let Some(token) = StatusToken::get(provider, &id)
+        .await
+        .map_err(|e| server!("issue getting metadata: {e}"))?
+    else {
+        return Err(invalid!("status token not found"));
+    };
+
+    Ok(StatusListResponse(token))
+}
+
+impl<P: Provider> Handler<P> for Request<StatusListRequest, NoHeaders> {
+    type Error = Error;
+    type Provider = P;
+    type Response = StatusListResponse;
+
+    async fn handle(
+        self, issuer: &str, provider: &Self::Provider,
+    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        statuslist(issuer, provider, self.body).await
+    }
+}
+
+impl Body for StatusListRequest {}

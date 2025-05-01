@@ -231,7 +231,7 @@ impl Context {
         // create a credential for each proof
         for kid in &self.proof_kids {
             let _status_claim = status_list
-                .add_entry("https://example.com/statuslists/1")
+                .add_entry("http://credibil.io/statuslists/1")
                 .map_err(|e| server!("issue creating status claim: {e}"))?;
 
             let credential = match &self.configuration.profile {

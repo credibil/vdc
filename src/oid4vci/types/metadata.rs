@@ -92,6 +92,13 @@ pub struct Issuer {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub notification_endpoint: Option<String>,
 
+    /// URL of the Credential Issuer's Token Status Endpoint. This URL
+    /// MUST use the https scheme and MAY contain port, path, and query
+    /// parameter components.  If omitted, the Credential Issuer does not
+    /// support the Token Status Endpoint.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status_list_aggregation_endpoint: Option<String>,
+
     /// Specifies whether (and how) the Credential Issuer supports encryption of
     /// the Credential and Batch Credential Response on top of TLS.
     #[serde(skip_serializing_if = "Option::is_none")]

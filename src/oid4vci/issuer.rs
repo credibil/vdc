@@ -9,3 +9,4 @@ pub mod deferred;
 pub mod metadata;
 pub mod nonce;
 pub mod notification;
+pub mod statuslist;

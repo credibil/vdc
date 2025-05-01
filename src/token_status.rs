@@ -7,8 +7,6 @@
 //! issuer and/or verifier implementations, and helper functions for dealing
 //! with supported status endpoint formats.
 
-mod endpoint;
-
 use std::fmt::Debug;
 use std::io::{Read, Write};
 
@@ -114,9 +112,9 @@ impl StatusList {
 
     /// Add an entry to the Status List, returning the claim to use in the
     /// referenced token/credential.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Returns an error if the Zlib decompression fails.
     pub fn add_entry(&mut self, uri: impl Into<String>) -> Result<StatusClaim> {
         // inflate the list
@@ -126,24 +124,28 @@ impl StatusList {
         let mut inflated = Vec::new();
         decoder.read_to_end(&mut inflated)?;
 
+        let idx = 0;
+
         // resize
         // inflated.resize(1, 0);
-        let bits = inflated.view_bits_mut::<Lsb0>();
-        bits.set(0, true);
-        // println!("bits: {bits:?}");
+        let bitslice = inflated.view_bits_mut::<Lsb0>();
+        bitslice.set(idx, true);
+
+        // compress and update the list
+        let mut encoder = ZlibEncoder::new(vec![], Compression::default());
+        encoder.write_all(inflated.as_slice())?;
+        let deflated = encoder.finish()?;
+        self.lst = Base64UrlUnpadded::encode_string(&deflated);
 
         Ok(StatusClaim {
-            status_list: StatusListEntry {
-                idx: 0,
-                uri: uri.into(),
-            },
+            status_list: StatusListEntry { idx, uri: uri.into() },
         })
     }
 
     /// Encode the Status List Token as a JWT.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Returns an error if the serialization to JSON fails.
     pub fn to_jwt(&self) -> Result<String> {
         let bytes = serde_json::to_vec(self)?;
@@ -198,7 +200,7 @@ pub struct StatusListEntry {
 }
 
 /// Valid credential status types.
-#[derive(Clone, Debug, Default, Deserialize_repr, Serialize_repr)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[repr(i64)]
 pub enum StatusType {
     /// The credential is valid.
@@ -211,6 +213,21 @@ pub enum StatusType {
     /// The credential is suspended.
     Suspended = 0x02,
 }
+
+/// Used to query the Status List endpoint in order to return Status List
+/// Token(s).
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct StatusListRequest {
+    /// The index of the Status List to retrieve. When not specified, all
+    /// status lists should be returned.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+}
+
+/// Used to query the Status List endpoint in order to return Status List
+/// Token(s).
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct StatusListResponse(pub String);
 
 #[cfg(test)]
 mod tests {
