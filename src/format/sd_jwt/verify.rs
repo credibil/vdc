@@ -3,11 +3,12 @@
 use anyhow::{Result, anyhow};
 use credibil_identity::IdentityResolver;
 use credibil_jose::{Jwt, decode_jws};
+use http::status;
 
 use crate::core::did_jwk;
 use crate::format::sd_jwt::{Disclosure, KbJwtClaims, KeyBinding, SdJwtClaims};
 use crate::oid4vp::types::{Claim, RequestObject};
-use crate::token_status::StatusToken;
+use crate::token_status::{StatusList, StatusToken};
 
 /// Verifies an SD-JWT credential.
 ///
@@ -50,13 +51,16 @@ where
     // verify and unpack the sd-jwt
     let sd_jwt = verify_vc(credential, resolver).await?;
 
-    // ..verify Holder signature against `cnf` claim of issued credential
+    // ..verify credential's status
     if let Some(status_claim) = &sd_jwt.claims.status {
         // retrieve status list
-        let status_list = StatusToken::fetch(resolver, &status_claim.status_list.uri).await?;
+        let jwt = StatusToken::fetch(resolver, &status_claim.status_list.uri).await?;
+        let status_list = StatusList::from_jwt(&jwt)?;
         println!("status list: {status_list:?}");
 
-        // verify credential's status
+        if !status_list.is_valid(status_claim.status_list.idx) {
+            return Err(anyhow!("credential status is invalid"));
+        }
     }
 
     // verify and unpack the kb-jwt:

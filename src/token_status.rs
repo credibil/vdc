@@ -148,6 +148,19 @@ impl StatusList {
         })
     }
 
+    /// Check if the status list contains a valid status for the given index.
+    pub fn is_valid(&self, idx: usize) -> bool {
+        let deflated = Base64UrlUnpadded::decode_vec(&self.lst)
+            .map_err(|_| anyhow::anyhow!("Invalid base64url-encoded status list"))
+            .unwrap();
+        let mut decoder = ZlibDecoder::new(deflated.as_slice());
+        let mut inflated = Vec::new();
+        decoder.read_to_end(&mut inflated).unwrap();
+
+        let bitslice = inflated.view_bits::<Lsb0>();
+        bitslice[idx]
+    }
+
     /// Encode the Status List Token as a JWT.
     ///
     /// # Errors
@@ -156,6 +169,14 @@ impl StatusList {
     pub fn to_jwt(&self) -> Result<String> {
         let bytes = serde_json::to_vec(self)?;
         Ok(Base64UrlUnpadded::encode_string(&bytes))
+    }
+
+    /// Decode a JWT into a Status List.
+    pub fn from_jwt(jwt: &str) -> Result<Self> {
+        let bytes = Base64UrlUnpadded::decode_vec(jwt)
+            .map_err(|_| anyhow::anyhow!("Invalid base64url-encoded status list"))?;
+        let status_list: StatusList = serde_json::from_slice(&bytes)?;
+        Ok(status_list)
     }
 }
 
@@ -211,13 +232,13 @@ pub struct StatusListEntry {
 pub enum StatusType {
     /// The credential is valid.
     #[default]
-    Valid = 0x00,
+    Valid = 0,
 
     /// The credential is revoked.
-    Invalid = 0x01,
+    Invalid = 1,
 
     /// The credential is suspended.
-    Suspended = 0x02,
+    Suspended = 2,
 }
 
 /// Used to query the Status List endpoint in order to return Status List
