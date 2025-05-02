@@ -23,12 +23,12 @@ pub mod oauth;
 pub mod token_status;
 
 /// Re-export DID resolution
-pub mod did {
+pub mod identity {
     pub use credibil_identity::*;
 }
 
 /// Re-export cryptographic types and functions
-pub mod infosec {
+pub mod jose {
     pub use credibil_jose::*;
 }
 
