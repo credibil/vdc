@@ -5,7 +5,6 @@ use anyhow::Context as _;
 use crate::invalid;
 use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::Provider;
-use crate::oid4vp::NoHeaders;
 use crate::token_status::{StatusListRequest, StatusListResponse, StatusStore};
 
 /// Status List request handler.
@@ -29,7 +28,7 @@ async fn statuslist(
     Ok(StatusListResponse(token))
 }
 
-impl<P: Provider> Handler<P> for Request<StatusListRequest, NoHeaders> {
+impl<P: Provider> Handler<P> for Request<StatusListRequest> {
     type Error = Error;
     type Provider = P;
     type Response = StatusListResponse;

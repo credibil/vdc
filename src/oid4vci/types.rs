@@ -17,22 +17,22 @@ pub use token::*;
 
 pub use crate::format::w3c_vc::{VerifiableCredential, W3cVcClaims};
 pub use crate::oauth::GrantType;
-use crate::oid4vci::endpoint::{AuthorizationHeaders, LanguageHeaders};
+use crate::oid4vci::endpoint::{AuthorizationHeader, LanguageHeader};
 
 /// Credential request headers.
-pub type CredentialHeaders = AuthorizationHeaders;
+pub type CredentialHeaders = AuthorizationHeader;
 
 /// Deferred Credential request headers.
-pub type DeferredHeaders = AuthorizationHeaders;
+pub type DeferredHeaders = AuthorizationHeader;
 
 /// Registration request headers.
-pub type MetadataHeaders = LanguageHeaders;
+pub type MetadataHeaders = LanguageHeader;
 
 /// Notification request headers.
-pub type NotificationHeaders = AuthorizationHeaders;
+pub type NotificationHeaders = AuthorizationHeader;
 
 /// Registration request headers.
-pub type RegistrationHeaders = AuthorizationHeaders;
+pub type RegistrationHeaders = AuthorizationHeader;
 
 /// Used by the Wallet to notify the Credential Issuer of certain events for
 /// issued Credentials. These events enable the Credential Issuer to take

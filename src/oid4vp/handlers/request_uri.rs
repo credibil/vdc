@@ -18,7 +18,7 @@ use anyhow::Context;
 use credibil_jose::JwsBuilder;
 
 use crate::oid4vp::JwtType;
-use crate::oid4vp::endpoint::{Body, Error, Handler, NoHeaders, Request, Response, Result};
+use crate::oid4vp::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::state::State;
 use crate::oid4vp::types::{ClientId, RequestUriRequest, RequestUriResponse};
@@ -70,7 +70,7 @@ pub async fn request_uri(
     Ok(RequestUriResponse::Jwt(jws.encode().context("issue encoding jwt")?))
 }
 
-impl<P: Provider> Handler<P> for Request<RequestUriRequest, NoHeaders> {
+impl<P: Provider> Handler<P> for Request<RequestUriRequest> {
     type Error = Error;
     type Provider = P;
     type Response = RequestUriResponse;

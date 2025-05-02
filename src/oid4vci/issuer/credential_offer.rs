@@ -17,7 +17,7 @@
 use anyhow::Context as _;
 
 use crate::invalid;
-use crate::oid4vci::endpoint::{Body, Error, Handler, NoHeaders, Request, Response, Result};
+use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::{Stage, State};
 use crate::oid4vci::types::{CredentialOfferRequest, CredentialOfferResponse};
@@ -48,7 +48,7 @@ async fn credential_offer(
     Ok(CredentialOfferResponse { credential_offer })
 }
 
-impl<P: Provider> Handler<P> for Request<CredentialOfferRequest, NoHeaders> {
+impl<P: Provider> Handler<P> for Request<CredentialOfferRequest> {
     type Error = Error;
     type Provider = P;
     type Response = CredentialOfferResponse;

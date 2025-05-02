@@ -7,7 +7,7 @@
 use std::fmt::Debug;
 use std::ops::Deref;
 
-use http::{HeaderMap, StatusCode};
+use http::StatusCode;
 
 /// Methods common to all messages.
 ///
@@ -44,7 +44,7 @@ pub trait Handler<P> {
 
 /// A request to process.
 #[derive(Clone, Debug)]
-pub struct Request<B, H>
+pub struct Request<B, H = NoHeaders>
 where
     B: Body,
     H: Headers,
@@ -56,7 +56,7 @@ where
     pub headers: H,
 }
 
-impl<B: Body> From<B> for Request<B, NoHeaders> {
+impl<B: Body> From<B> for Request<B> {
     fn from(body: B) -> Self {
         Self {
             body,
@@ -67,12 +67,15 @@ impl<B: Body> From<B> for Request<B, NoHeaders> {
 
 /// Top-level response data structure common to all handler.
 #[derive(Clone, Debug)]
-pub struct Response<T> {
+pub struct Response<T, H = NoHeaders>
+where
+    H: Headers,
+{
     /// Response HTTP status code.
     pub status: StatusCode,
 
     /// Response HTTP headers, if any.
-    pub headers: Option<HeaderMap>,
+    pub headers: Option<H>,
 
     /// The endpoint-specific response.
     pub body: T,

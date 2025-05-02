@@ -8,7 +8,7 @@ use anyhow::Context;
 use chrono::Utc;
 
 use crate::core::generate;
-use crate::oid4vp::endpoint::{Body, Error, Handler, NoHeaders, Request, Response, Result};
+use crate::oid4vp::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vp::provider::{Metadata, Provider, StateStore};
 use crate::oid4vp::state::{Expire, State};
 use crate::oid4vp::types::{
@@ -63,7 +63,7 @@ async fn create_request(
     Ok(response)
 }
 
-impl<P: Provider> Handler<P> for Request<GenerateRequest, NoHeaders> {
+impl<P: Provider> Handler<P> for Request<GenerateRequest> {
     type Error = Error;
     type Provider = P;
     type Response = GenerateResponse;

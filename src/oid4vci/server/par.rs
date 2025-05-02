@@ -10,7 +10,7 @@ use anyhow::Context as _;
 use chrono::{Duration, Utc};
 
 use crate::core::generate;
-use crate::oid4vci::endpoint::{Body, Error, Handler, NoHeaders, Request, Response, Result};
+use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore};
 use crate::oid4vci::server::authorize;
 use crate::oid4vci::state::{PushedAuthorization, Stage, State};
@@ -61,7 +61,7 @@ async fn par(
     })
 }
 
-impl<P: Provider> Handler<P> for Request<PushedAuthorizationRequest, NoHeaders> {
+impl<P: Provider> Handler<P> for Request<PushedAuthorizationRequest> {
     type Error = Error;
     type Provider = P;
     type Response = PushedAuthorizationResponse;

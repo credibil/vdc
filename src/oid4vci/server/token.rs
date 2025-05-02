@@ -19,7 +19,7 @@ use anyhow::Context as _;
 
 use crate::core::{generate, pkce};
 use crate::oauth::GrantType;
-use crate::oid4vci::endpoint::{Body, Error, Handler, NoHeaders, Request, Response, Result};
+use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore};
 use crate::oid4vci::state::{Expire, Stage, State, Token};
 use crate::oid4vci::types::{
@@ -101,7 +101,7 @@ async fn token(
     })
 }
 
-impl<P: Provider> Handler<P> for Request<TokenRequest, NoHeaders> {
+impl<P: Provider> Handler<P> for Request<TokenRequest> {
     type Error = Error;
     type Provider = P;
     type Response = TokenResponse;

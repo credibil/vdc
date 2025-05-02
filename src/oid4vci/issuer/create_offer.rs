@@ -13,7 +13,7 @@ use http::StatusCode;
 
 use crate::core::generate;
 use crate::oauth::GrantType;
-use crate::oid4vci::endpoint::{Body, Error, Handler, NoHeaders, Request, Response, Result};
+use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Expire, Offer, Stage, State};
 use crate::oid4vci::types::{
@@ -114,7 +114,7 @@ async fn create_offer(
     })
 }
 
-impl<P: Provider> Handler<P> for Request<CreateOfferRequest, NoHeaders> {
+impl<P: Provider> Handler<P> for Request<CreateOfferRequest> {
     type Error = Error;
     type Provider = P;
     type Response = CreateOfferResponse;

@@ -11,7 +11,7 @@ use anyhow::Context as _;
 use chrono::Utc;
 
 use crate::core::generate;
-use crate::oid4vci::endpoint::{Body, Error, Handler, NoHeaders, Request, Response, Result};
+use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::Expire;
 use crate::oid4vci::types::{NonceRequest, NonceResponse};
@@ -33,7 +33,7 @@ async fn nonce(_issuer: &str, provider: &impl Provider, _: NonceRequest) -> Resu
     Ok(NonceResponse { c_nonce })
 }
 
-impl<P: Provider> Handler<P> for Request<NonceRequest, NoHeaders> {
+impl<P: Provider> Handler<P> for Request<NonceRequest> {
     type Error = Error;
     type Provider = P;
     type Response = NonceResponse;

@@ -18,7 +18,7 @@
 
 use anyhow::Context as _;
 
-use crate::oid4vci::endpoint::{Body, Error, Handler, NoHeaders, Request, Response, Result};
+use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::{Metadata, Provider};
 use crate::oid4vci::types::{ServerRequest, ServerResponse};
 
@@ -40,7 +40,7 @@ async fn metadata(
     })
 }
 
-impl<P: Provider> Handler<P> for Request<ServerRequest, NoHeaders> {
+impl<P: Provider> Handler<P> for Request<ServerRequest> {
     type Error = Error;
     type Provider = P;
     type Response = ServerResponse;

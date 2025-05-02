@@ -72,7 +72,7 @@ use chrono::Utc;
 
 use crate::core::generate;
 use crate::oauth::GrantType;
-use crate::oid4vci::endpoint::{Body, Error, Handler, NoHeaders, Request, Response, Result};
+use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Authorization, Expire, Stage, State};
 use crate::oid4vci::types::{
@@ -176,7 +176,7 @@ async fn authorize(
     })
 }
 
-impl<P: Provider> Handler<P> for Request<AuthorizationRequest, NoHeaders> {
+impl<P: Provider> Handler<P> for Request<AuthorizationRequest> {
     type Error = Error;
     type Provider = P;
     type Response = AuthorizationResponse;

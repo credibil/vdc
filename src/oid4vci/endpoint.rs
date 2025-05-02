@@ -46,7 +46,7 @@ where
 /// An authorization-only header for use by handlers that soley require
 /// authorization.
 #[derive(Clone, Debug)]
-pub struct AuthorizationHeaders {
+pub struct AuthorizationHeader {
     /// The authorization header (access token).
     pub authorization: String,
 }
@@ -54,12 +54,12 @@ pub struct AuthorizationHeaders {
 /// An language-only header for use by handlers that soley require
 /// the `accept-language` header.
 #[derive(Clone, Debug)]
-pub struct LanguageHeaders {
+pub struct LanguageHeader {
     /// The `accept-language` header.
     pub accept_language: String,
 }
 
-impl TryFrom<HeaderMap> for LanguageHeaders {
+impl TryFrom<HeaderMap> for LanguageHeader {
     type Error = Error;
 
     fn try_from(headers: HeaderMap) -> Result<Self> {

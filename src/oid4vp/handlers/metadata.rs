@@ -7,7 +7,7 @@
 
 use anyhow::Context;
 
-use crate::oid4vp::endpoint::{Body, Error, Handler, NoHeaders, Request, Response, Result};
+use crate::oid4vp::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vp::provider::{Metadata, Provider};
 use crate::oid4vp::types::{MetadataRequest, MetadataResponse};
 
@@ -27,7 +27,7 @@ async fn metadata(
     })
 }
 
-impl<P: Provider> Handler<P> for Request<MetadataRequest, NoHeaders> {
+impl<P: Provider> Handler<P> for Request<MetadataRequest> {
     type Error = Error;
     type Provider = P;
     type Response = MetadataResponse;
