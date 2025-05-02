@@ -4,8 +4,8 @@ use std::sync::LazyLock;
 
 use credibil_identity::{Key, SignerExt};
 use credibil_jose::PublicKeyJwk;
-use credibil_vc::BlockStore;
-use credibil_vc::core::did_jwk;
+use credibil_vc::blockstore::BlockStore;
+use credibil_vc::did_jwk;
 use credibil_vc::format::mso_mdoc::MdocBuilder;
 use credibil_vc::format::sd_jwt::SdJwtVcBuilder;
 use credibil_vc::format::w3c_vc::W3cVcBuilder;

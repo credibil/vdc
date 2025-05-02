@@ -4,9 +4,7 @@ use std::sync::LazyLock;
 
 use anyhow::Result;
 use blockstore::{Blockstore as _, InMemoryBlockstore};
-use cid::Cid;
-use multihash_codetable::MultihashDigest;
-use serde::{Deserialize, Serialize};
+use credibil_vc::blockstore::unique_cid;
 
 // static START: Once = Once::new();
 static BLOCKSTORE: LazyLock<InMemoryBlockstore<64>> = LazyLock::new(InMemoryBlockstore::new);
@@ -36,16 +34,4 @@ impl Mockstore {
         let cid = unique_cid(owner, partition, key)?;
         Ok(BLOCKSTORE.remove(&cid).await?)
     }
-}
-
-#[derive(Serialize, Deserialize)]
-struct Identitifier<'a>(&'a str, &'a str, &'a str);
-const RAW: u64 = 0x55;
-
-fn unique_cid(owner: &str, partition: &str, key: &str) -> anyhow::Result<Cid> {
-    let id = Identitifier(owner, partition, key);
-    let mut buf = Vec::new();
-    ciborium::into_writer(&id, &mut buf)?;
-    let hash = multihash_codetable::Code::Sha2_256.digest(&buf);
-    Ok(Cid::new_v1(RAW, hash))
 }

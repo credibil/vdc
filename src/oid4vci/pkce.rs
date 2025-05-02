@@ -3,7 +3,7 @@
 use base64ct::{Base64UrlUnpadded, Encoding};
 use sha2::{Digest, Sha256};
 
-use super::generate::random_string;
+use crate::core::generate::random_string;
 
 const CHARS: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-.~_";
 const MIN_LEN: usize = 43;

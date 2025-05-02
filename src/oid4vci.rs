@@ -90,6 +90,7 @@
 
 pub mod client;
 mod endpoint;
+pub mod pkce;
 pub mod provider;
 pub mod types;
 
@@ -97,11 +98,6 @@ mod error;
 mod issuer;
 mod server;
 mod state;
-
-/// PKCE
-pub mod pkce {
-    pub use crate::core::pkce::{code_challenge, code_verifier};
-}
 
 /// Proofs
 pub mod proof {

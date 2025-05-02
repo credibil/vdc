@@ -5,6 +5,11 @@
 //! that can be serialized to JSON or directly to HTTP (using the
 //! [`crate::core::http::IntoHttp`] trait).
 
+mod create_request;
+mod metadata;
+mod request_uri;
+mod response;
+
 use std::fmt::Debug;
 
 use tracing::instrument;

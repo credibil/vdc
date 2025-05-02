@@ -12,11 +12,10 @@ use std::collections::HashMap;
 use std::future::Future;
 
 use anyhow::{Result, anyhow};
-use chrono::{DateTime, Utc};
 use credibil_identity::{IdentityResolver, SignerExt};
-use serde::{Deserialize, Serialize};
 
-use crate::BlockStore;
+use crate::core::blockstore::BlockStore;
+pub use crate::core::state::StateStore;
 use crate::oid4vci::types::{Client, Dataset, Issuer, Server};
 use crate::token_status::StatusStore;
 
@@ -50,23 +49,6 @@ pub trait Metadata: Send + Sync {
     fn register(&self, client: &Client) -> impl Future<Output = Result<Client>> + Send;
 }
 
-/// `StateStore` is used to store and retrieve server state between requests.
-pub trait StateStore: Send + Sync {
-    /// Store state using the provided key. The expiry parameter indicates
-    /// when data can be expunged from the state store.
-    fn put(
-        &self, key: &str, state: impl Serialize + Send, expiry: DateTime<Utc>,
-    ) -> impl Future<Output = Result<()>> + Send;
-
-    /// Retrieve data using the provided key.
-    fn get<T>(&self, key: &str) -> impl Future<Output = Result<T>> + Send
-    where
-        T: for<'de> Deserialize<'de>;
-
-    /// Remove data using the key provided.
-    fn purge(&self, key: &str) -> impl Future<Output = Result<()>> + Send;
-}
-
 /// The Subject trait specifies how the library expects issuance subject (user)
 /// information to be provided by implementers.
 pub trait Subject: Send + Sync {
@@ -88,7 +70,6 @@ pub trait Subject: Send + Sync {
 const ISSUER: &str = "ISSUER";
 const SERVER: &str = "SERVER";
 const CLIENT: &str = "CLIENT";
-const STATE: &str = "STATE";
 const SUBJECT: &str = "SUBJECT";
 const STATUSTOKEN: &str = "STATUSTOKEN";
 
@@ -121,31 +102,6 @@ impl<T: BlockStore> Metadata for T {
         let block = serde_json::to_vec(&client)?;
         BlockStore::put(self, "owner", CLIENT, &client.oauth.client_id, &block).await?;
         Ok(client)
-    }
-}
-
-impl<T: BlockStore> StateStore for T {
-    #[allow(unused)]
-    async fn put(
-        &self, key: &str, state: impl Serialize + Send, expiry: DateTime<Utc>,
-    ) -> Result<()> {
-        let state = serde_json::to_vec(&state)?;
-        BlockStore::delete(self, "owner", STATE, key).await?;
-        BlockStore::put(self, "owner", STATE, key, &state).await
-    }
-
-    async fn get<S>(&self, key: &str) -> Result<S>
-    where
-        S: for<'de> Deserialize<'de>,
-    {
-        let Some(block) = BlockStore::get(self, "owner", STATE, key).await? else {
-            return Err(anyhow!("could not find client"));
-        };
-        Ok(serde_json::from_slice(&block)?)
-    }
-
-    async fn purge(&self, key: &str) -> Result<()> {
-        BlockStore::delete(self, "owner", STATE, key).await
     }
 }
 
