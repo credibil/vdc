@@ -10,7 +10,7 @@
 use std::fmt::Debug;
 use std::io::{Read, Write};
 
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use bitvec::order::Lsb0;
 use bitvec::slice::BitSlice;
@@ -125,7 +125,7 @@ impl StatusList {
     pub fn add_entry(&mut self, uri: impl Into<String>) -> Result<StatusClaim> {
         // inflate the list
         let deflated = Base64UrlUnpadded::decode_vec(&self.lst)
-            .map_err(|_| anyhow::anyhow!("Invalid base64url-encoded status list"))?;
+            .map_err(|_| anyhow!("Invalid base64url-encoded status list"))?;
         let mut decoder = ZlibDecoder::new(deflated.as_slice());
         let mut inflated = Vec::new();
         decoder.read_to_end(&mut inflated)?;
@@ -149,14 +149,14 @@ impl StatusList {
     }
 
     /// Check if the status list contains a valid status for the given index.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Returns an error if the Zlib decompression fails or if the index is
     /// out of bounds.
     pub fn is_valid(&self, idx: usize) -> Result<bool> {
         let deflated = Base64UrlUnpadded::decode_vec(&self.lst)
-            .map_err(|_| anyhow::anyhow!("Invalid base64url-encoded status list"))?;
+            .map_err(|_| anyhow!("Invalid base64url-encoded status list"))?;
         let mut decoder = ZlibDecoder::new(deflated.as_slice());
         let mut inflated = Vec::new();
         decoder.read_to_end(&mut inflated)?;
@@ -183,7 +183,7 @@ impl StatusList {
     /// fails.
     pub fn from_jwt(jwt: &str) -> Result<Self> {
         let bytes = Base64UrlUnpadded::decode_vec(jwt)
-            .map_err(|_| anyhow::anyhow!("Invalid base64url-encoded status list"))?;
+            .map_err(|_| anyhow!("Invalid base64url-encoded status list"))?;
         let status_list = serde_json::from_slice(&bytes)?;
         Ok(status_list)
     }

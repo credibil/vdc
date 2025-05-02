@@ -67,6 +67,7 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 
+use anyhow::Context as _;
 use chrono::Utc;
 
 use crate::core::generate;
@@ -95,9 +96,8 @@ async fn authorize(
         AuthorizationRequest::Object(request) => request,
         AuthorizationRequest::Uri(uri) => {
             is_par = true;
-            let state: State = StateStore::get(provider, &uri.request_uri)
-                .await
-                .map_err(|e| server!("state issue: {e}"))?;
+            let state: State =
+                StateStore::get(provider, &uri.request_uri).await.context("state issue")?;
             let Stage::PushedAuthorization(par) = &state.stage else {
                 return Err(invalid!("invalid state"));
             };
@@ -162,13 +162,11 @@ async fn authorize(
     let code = generate::auth_code();
     StateStore::put(provider, &code, &state, state.expires_at)
         .await
-        .map_err(|e| server!("issue saving authorization state: {e}"))?;
+        .context("issue saving authorization state")?;
 
     // remove offer state
     if let Some(issuer_state) = &request.issuer_state {
-        StateStore::purge(provider, issuer_state)
-            .await
-            .map_err(|e| server!("issue purging offer state: {e}"))?;
+        StateStore::purge(provider, issuer_state).await.context("issue purging offer state")?;
     }
 
     Ok(AuthorizationResponse {
@@ -260,9 +258,8 @@ impl Context {
 
         // does offer `subject_id`  match request `subject_id`?
         if let Some(issuer_state) = &request.issuer_state {
-            let state: State = StateStore::get(provider, issuer_state)
-                .await
-                .map_err(|e| server!("issue getting state: {e}"))?;
+            let state: State =
+                StateStore::get(provider, issuer_state).await.context("issue getting state")?;
 
             if state.is_expired() {
                 return Err(invalid!("issuer state expired"));
@@ -346,7 +343,7 @@ impl Context {
                     let config_id = self
                         .issuer
                         .credential_configuration_id(fmt)
-                        .map_err(|e| server!("issue getting `credential_configuration_id`: {e}"))?;
+                        .context("issue getting `credential_configuration_id`")?;
 
                     detail.credential = AuthorizationCredential::ConfigurationId {
                         credential_configuration_id: config_id.clone(),

@@ -6,6 +6,7 @@
 //!
 //! [RFC9126]: (https://www.rfc-editor.org/rfc/rfc9126.html)
 
+use anyhow::Context as _;
 use chrono::{Duration, Utc};
 
 use crate::core::generate;
@@ -14,7 +15,6 @@ use crate::oid4vci::provider::{Metadata, Provider, StateStore};
 use crate::oid4vci::server::authorize;
 use crate::oid4vci::state::{PushedAuthorization, Stage, State};
 use crate::oid4vci::types::{PushedAuthorizationRequest, PushedAuthorizationResponse};
-use crate::server;
 
 /// Endpoint for the Wallet to push an Authorization Request when using Pushed
 /// Authorization Requests.
@@ -53,7 +53,7 @@ async fn par(
     };
     StateStore::put(provider, &request_uri, &state, state.expires_at)
         .await
-        .map_err(|e| server!("issue saving state: {e}"))?;
+        .context("issue saving state")?;
 
     Ok(PushedAuthorizationResponse {
         request_uri,

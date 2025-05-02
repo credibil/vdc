@@ -1,5 +1,7 @@
 //! # Dynamic Client Registration Endpoint
 
+use anyhow::Context as _;
+
 use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::State;
@@ -19,7 +21,7 @@ async fn register(
     // verify access token
     StateStore::get::<State>(provider, &request.headers.authorization)
         .await
-        .map_err(|e| server!("state not found: {e}"))?;
+        .context("state not found")?;
 
     let Ok(client_metadata) = provider.register(&request.body.client_metadata).await else {
         return Err(server!("Registration failed"));

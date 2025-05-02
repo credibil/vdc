@@ -7,7 +7,7 @@
 
 use std::vec;
 
-use anyhow::Context;
+use anyhow::Context as _;
 use chrono::Utc;
 use http::StatusCode;
 
@@ -33,15 +33,12 @@ struct Context {
 async fn create_offer(
     issuer: &str, provider: &impl Provider, request: CreateOfferRequest,
 ) -> Result<Response<CreateOfferResponse>> {
-    let iss = Metadata::issuer(provider, issuer)
-        .await
-        .map_err(|e| server!("issue getting issuer metadata: {e}"))?;
+    let iss = Metadata::issuer(provider, issuer).await.context("issue getting issuer metadata")?;
 
     // TODO: determine how to select correct server?
     // select `authorization_server`, if specified
-    let server = Metadata::server(provider, issuer)
-        .await
-        .map_err(|e| server!("issue getting server metadata: {e}"))?;
+    let server =
+        Metadata::server(provider, issuer).await.context("issue getting server metadata")?;
 
     let ctx = Context { issuer: iss, server };
 
@@ -77,7 +74,7 @@ async fn create_offer(
         };
         StateStore::put(provider, &state_key, &state, state.expires_at)
             .await
-            .map_err(|e| server!("issue saving state: {e}"))?;
+            .context("issue saving state")?;
         StateStore::put(provider, &state_key, &state, state.expires_at)
             .await
             .context("issue saving state")?;
@@ -105,7 +102,7 @@ async fn create_offer(
     };
     StateStore::put(provider, &uri_token, &state, state.expires_at)
         .await
-        .map_err(|e| server!("issue saving state: {e}"))?;
+        .context("issue saving state")?;
 
     Ok(Response {
         status: StatusCode::CREATED,
@@ -238,7 +235,7 @@ async fn authorize(
     for config_id in request.credential_configuration_ids.clone() {
         let identifiers = Subject::authorize(provider, &subject_id, &config_id)
             .await
-            .map_err(|e| server!("issue authorizing holder: {e}"))?;
+            .context("issue authorizing holder")?;
 
         authorized.push(AuthorizedDetail {
             authorization_detail: AuthorizationDetail {

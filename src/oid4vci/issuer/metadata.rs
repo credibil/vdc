@@ -23,10 +23,11 @@
 //!     Accept-Language: fr-ch, fr;q=0.9, en;q=0.8, de;q=0.7, *;q=0.5
 //! ```
 
+use anyhow::Context as _;
+
 use crate::oid4vci::endpoint::{Body, Error, Handler, Headers, Request, Response, Result};
 use crate::oid4vci::provider::{Metadata, Provider};
 use crate::oid4vci::types::{IssuerRequest, IssuerResponse, MetadataHeaders};
-use crate::server;
 
 /// Metadata request handler.
 ///
@@ -38,9 +39,8 @@ async fn metadata(
     issuer: &str, provider: &impl Provider, _: Request<IssuerRequest, MetadataHeaders>,
 ) -> Result<IssuerResponse> {
     // FIXME: use language header in request
-    let credential_issuer = Metadata::issuer(provider, issuer)
-        .await
-        .map_err(|e| server!("issue getting metadata: {e}"))?;
+    let credential_issuer =
+        Metadata::issuer(provider, issuer).await.context("issue getting metadata")?;
 
     Ok(IssuerResponse(credential_issuer))
 }

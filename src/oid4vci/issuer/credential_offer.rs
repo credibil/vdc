@@ -14,11 +14,13 @@
 //!
 //! [JWT VC Issuance Profile]: (https://identity.foundation/jwt-vc-issuance-profile)
 
+use anyhow::Context as _;
+
+use crate::invalid;
 use crate::oid4vci::endpoint::{Body, Error, Handler, NoHeaders, Request, Response, Result};
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::{Stage, State};
 use crate::oid4vci::types::{CredentialOfferRequest, CredentialOfferResponse};
-use crate::{invalid, server};
 
 /// Endpoint for the Wallet to request the Issuer's Credential Offer when
 /// engaged in a cross-device flow.
@@ -31,12 +33,9 @@ async fn credential_offer(
     _issuer: &str, provider: &impl Provider, request: CredentialOfferRequest,
 ) -> Result<CredentialOfferResponse> {
     // retrieve and then purge Credential Offer from state
-    let state = StateStore::get::<State>(provider, &request.id)
-        .await
-        .map_err(|e| server!("issue fetching state: {e}"))?;
-    StateStore::purge(provider, &request.id)
-        .await
-        .map_err(|e| server!("issue purging state: {e}"))?;
+    let state =
+        StateStore::get::<State>(provider, &request.id).await.context("issue fetching state")?;
+    StateStore::purge(provider, &request.id).await.context("issue purging state")?;
 
     if state.is_expired() {
         return Err(invalid!("state expired"));

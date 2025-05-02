@@ -15,6 +15,8 @@
 
 use std::fmt::Debug;
 
+use anyhow::Context as _;
+
 use crate::core::{generate, pkce};
 use crate::oauth::GrantType;
 use crate::oid4vci::endpoint::{Body, Error, Handler, NoHeaders, Request, Response, Result};
@@ -48,9 +50,7 @@ async fn token(
         return Err(Error::InvalidGrant("invalid authorization code".to_string()));
     };
     // authorization code is one-time use
-    StateStore::purge(provider, auth_code)
-        .await
-        .map_err(|e| server!("issue purging authorizaiton state: {e}"))?;
+    StateStore::purge(provider, auth_code).await.context("issue purging authorizaiton state")?;
 
     let ctx = Context {
         issuer,
@@ -90,7 +90,7 @@ async fn token(
     });
     StateStore::put(provider, &access_token, &state, state.expires_at)
         .await
-        .map_err(|e| server!("issue saving state: {e}"))?;
+        .context("issue saving state")?;
 
     // return response
     Ok(TokenResponse {
@@ -295,7 +295,7 @@ fn verify_claims(issuer: &Issuer, detail: &AuthorizationDetail) -> Result<()> {
             credential_configuration_id,
         } => credential_configuration_id,
         AuthorizationCredential::FormatProfile(fmt) => {
-            issuer.credential_configuration_id(fmt).map_err(|e| server!("issuer issue: {e}"))?
+            issuer.credential_configuration_id(fmt).context("issuer issue")?
         }
     };
     let config = issuer.credential_configuration(config_id).map_err(|e| {

@@ -7,7 +7,7 @@
 //! a way that is cryptographically secure, privacy respecting, and
 //! machine-verifiable.
 
-use anyhow::anyhow;
+use anyhow::Context as _;
 use credibil_identity::SignerExt;
 use credibil_jose::encode_jws;
 use serde_json::{Map, Value};
@@ -205,6 +205,6 @@ impl<S: SignerExt> W3cVcBuilder<HasType, HasIssuer, HasHolder, HasClaims, HasSig
         let key = self.signer.0.verification_method().await?;
         encode_jws(&W3cVcClaims::from(vc), &key.try_into()?, self.signer.0)
             .await
-            .map_err(|e| anyhow!("issue generating `jwt_vc_json` credential: {e}"))
+            .context("issue generating `jwt_vc_json` credential")
     }
 }

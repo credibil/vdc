@@ -7,14 +7,14 @@ use credibil_jose::JwsBuilder;
 use credibil_vc::oid4vci::proof::{self, Payload, Type, Verify};
 use credibil_vc::oid4vci::types::{
     AuthorizationRequest, AuthorizationResponse, Credential, CredentialOfferRequest,
-    CredentialRequest, DeferredCredentialRequest, DeferredCredentialResponse, FormatProfile, OfferType,
-    ProofClaims, ResponseType, TokenGrantType, TokenRequest, TokenResponse,
+    CredentialRequest, DeferredCredentialRequest, DeferredCredentialResponse, FormatProfile,
+    OfferType, ProofClaims, ResponseType, TokenGrantType, TokenRequest, TokenResponse,
 };
 use credibil_vc::oid4vci::{Error, Result, endpoint};
 use insta::assert_yaml_snapshot as assert_snapshot;
 use serde_json::json;
 use sha2::{Digest, Sha256};
-use test_issuer::{CLIENT_ID, CREDENTIAL_ISSUER, BOB_ID, ProviderImpl};
+use test_issuer::{BOB_ID, CLIENT_ID, CREDENTIAL_ISSUER, ProviderImpl};
 
 pub const CODE_VERIFIER: &str = "ABCDEF12345";
 pub const REDIRECT_URI: &str = "http://localhost:3000/callback";
@@ -142,9 +142,8 @@ impl Wallet {
             .payload(claims)
             .add_signer(&test_holder::ProviderImpl)
             .build()
-            .await
-            .map_err(|e| server!("{e}"))?;
-        let jwt = jws.encode().map_err(|e| server!("{e}"))?;
+            .await?;
+        let jwt = jws.encode()?;
 
         // FIXME: two paths: credential_identifier or format/type
         let Some(auth_dets) = &token_resp.authorization_details else {

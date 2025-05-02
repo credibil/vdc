@@ -1,6 +1,6 @@
 //! # W3C-VC Presentation
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context as _, Result, anyhow};
 use credibil_identity::{Key, SignerExt};
 use credibil_jose::encode_jws;
 
@@ -139,6 +139,6 @@ impl<S: SignerExt> W3cVpBuilder<HasMatched<'_>, HasClientId, HasSigner<'_, S>> {
         let key = self.signer.0.verification_method().await?;
         encode_jws(&vp_claims, &key.try_into()?, self.signer.0)
             .await
-            .map_err(|e| anyhow!("issue generating `jwt_vc_json` credential: {e}"))
+            .context("issue generating `jwt_vc_json` credential")
     }
 }

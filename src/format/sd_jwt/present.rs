@@ -1,13 +1,12 @@
 //! # SD-JWT Presentation
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context as _, Result, anyhow};
 use chrono::Utc;
 use credibil_identity::SignerExt;
 use credibil_jose::Jws;
 
 use crate::format::sd_jwt::{Disclosure, JwtType, KbJwtClaims};
 use crate::oid4vp::types::Matched;
-use crate::server;
 
 /// Generate an IETF `dc+sd-jwt` format credential.
 #[derive(Debug)]
@@ -156,7 +155,7 @@ impl<S: SignerExt> SdJwtVpBuilder<HasMatched<'_>, HasClientId, HasSigner<'_, S>>
             .add_signer(self.signer.0)
             .build()
             .await
-            .map_err(|e| server!("issue signing KB-JWT: {e}"))?
+            .context("issue signing KB-JWT")?
             .to_string();
 
         // assemble presentation

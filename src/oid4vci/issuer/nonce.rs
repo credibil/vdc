@@ -7,6 +7,7 @@
 //! Any Credential Issuer requiring `c_nonce` values in Credential
 //! Request proofs will support the Nonce Endpoint.
 
+use anyhow::Context as _;
 use chrono::Utc;
 
 use crate::core::generate;
@@ -14,7 +15,6 @@ use crate::oid4vci::endpoint::{Body, Error, Handler, NoHeaders, Request, Respons
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::Expire;
 use crate::oid4vci::types::{NonceRequest, NonceResponse};
-use crate::server;
 
 /// Nonce request handler.
 ///
@@ -28,7 +28,7 @@ async fn nonce(_issuer: &str, provider: &impl Provider, _: NonceRequest) -> Resu
 
     StateStore::put(provider, &c_nonce, &c_nonce, expire_at)
         .await
-        .map_err(|e| server!("failed to purge state: {e}"))?;
+        .context("failed to purge state")?;
 
     Ok(NonceResponse { c_nonce })
 }

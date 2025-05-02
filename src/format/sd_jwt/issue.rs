@@ -9,14 +9,13 @@
 //!
 //! [I-D.ietf-oauth-sd-jwt-vc]: https://www.ietf.org/archive/id/draft-ietf-oauth-selective-disclosure-jwt-17.html
 
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use chrono::Utc;
 use credibil_identity::SignerExt;
 use credibil_jose::Jws;
 use serde_json::{Map, Value};
 
 use crate::format::sd_jwt::{Disclosure, JwtType, KeyBinding, SdJwtClaims};
-use crate::server;
 use crate::token_status::StatusClaim;
 
 /// Generate an IETF `dc+sd-jwt` format credential.
@@ -234,7 +233,7 @@ impl<S: SignerExt> SdJwtVcBuilder<Vct, HasIssuer, HasKeyBinding, HasClaims, HasS
             .add_signer(self.signer.0)
             .build()
             .await
-            .map_err(|e| server!("issue signing SD-JWT: {e}"))?
+            .context("issue signing SD-JWT")?
             .to_string();
 
         // concatenate disclosures

@@ -16,10 +16,11 @@
 //! this is added as a path component such as
 //! `/.well-known/oauth-authorization-server/issuer1`.
 
+use anyhow::Context as _;
+
 use crate::oid4vci::endpoint::{Body, Error, Handler, NoHeaders, Request, Response, Result};
 use crate::oid4vci::provider::{Metadata, Provider};
 use crate::oid4vci::types::{ServerRequest, ServerResponse};
-use crate::server;
 
 /// OAuth server metadata request handler.
 ///
@@ -32,7 +33,7 @@ async fn metadata(
 ) -> Result<ServerResponse> {
     let auth_server = Metadata::server(provider, issuer)
         .await
-        .map_err(|e| server!("issue getting authorization server metadata: {e}"))?;
+        .context("issue getting authorization server metadata")?;
 
     Ok(ServerResponse {
         authorization_server: auth_server,

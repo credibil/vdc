@@ -8,6 +8,8 @@
 //! valid for the issuance of the Credential previously requested at the
 //! Credential Endpoint or the Batch Credential Endpoint.
 
+use anyhow::Context as _;
+
 use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::issuer::credential::credential;
 use crate::oid4vci::provider::{Provider, StateStore};
@@ -57,9 +59,7 @@ async fn deferred(
     }
 
     // remove deferred state item
-    StateStore::purge(provider, transaction_id)
-        .await
-        .map_err(|e| server!("issue purging state: {e}"))?;
+    StateStore::purge(provider, transaction_id).await.context("issue purging state")?;
 
     Ok(response)
 }

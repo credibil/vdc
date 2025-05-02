@@ -1,7 +1,7 @@
 use std::fmt::{self, Debug};
 use std::io::Cursor;
 
-use anyhow::anyhow;
+use anyhow::Context as _;
 use base64ct::{Base64, Encoding};
 use qrcode::QrCode;
 use serde::{Deserialize, Serialize};
@@ -171,12 +171,11 @@ impl CredentialOffer {
     /// Returns an `Error::ServerError` error if error if the Credential Offer
     /// cannot be serialized.
     pub fn to_qrcode(&self, endpoint: &str) -> anyhow::Result<String> {
-        let qs =
-            self.to_querystring().map_err(|e| anyhow!("Failed to generate querystring: {e}"))?;
+        let qs = self.to_querystring().context("failed to generate querystring")?;
 
         // generate qr code
-        let qr_code = QrCode::new(format!("{endpoint}{qs}"))
-            .map_err(|e| anyhow!("Failed to create QR code: {e}"))?;
+        let qr_code =
+            QrCode::new(format!("{endpoint}{qs}")).context("failed to create QR code: {e}")?;
 
         // write image to buffer
         let img_buf = qr_code.render::<image::Luma<u8>>().build();
@@ -184,7 +183,7 @@ impl CredentialOffer {
         let mut writer = Cursor::new(&mut buffer);
         img_buf
             .write_to(&mut writer, image::ImageFormat::Png)
-            .map_err(|e| anyhow!("Failed to create QR code: {e}"))?;
+            .context("failed to create QR code")?;
 
         // base64 encode image
         Ok(format!("data:image/png;base64,{}", Base64::encode_string(buffer.as_slice())))
@@ -197,7 +196,7 @@ impl CredentialOffer {
     /// Returns an `Error::ServerError` error if error if the Credential Offer
     /// cannot be serialized.
     pub fn to_querystring(&self) -> anyhow::Result<String> {
-        urlencode::to_string(self).map_err(|e| anyhow!("issue creating query string: {e}"))
+        urlencode::to_string(self).context("issue creating query string")
     }
 
     /// Convenience method for extracting a pre-authorized code grant from an
