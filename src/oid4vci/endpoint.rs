@@ -16,7 +16,7 @@ pub use crate::oid4vci::error::Error;
 use crate::oid4vci::provider::Provider;
 
 /// Result type for `OpenID` for Verifiable Credential Issuance.
-pub type Result<T, E = Error> = std::result::Result<T, E>;
+pub type Result<T, E = Error> = anyhow::Result<T, E>;
 
 /// Handle incoming messages.
 ///

@@ -7,6 +7,7 @@
 
 use std::vec;
 
+use anyhow::Context;
 use chrono::Utc;
 use http::StatusCode;
 
@@ -77,6 +78,9 @@ async fn create_offer(
         StateStore::put(provider, &state_key, &state, state.expires_at)
             .await
             .map_err(|e| server!("issue saving state: {e}"))?;
+        StateStore::put(provider, &state_key, &state, state.expires_at)
+            .await
+            .context("issue saving state")?;
     }
 
     // respond with Offer object or uri?
