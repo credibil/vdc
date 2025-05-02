@@ -105,7 +105,7 @@ impl StatusList {
         let bitslice = BitSlice::<u8>::from_slice(&[u8::MIN]);
         let mut bitvec: BitVec<u8> = bitslice.to_bitvec();
 
-        let mut encoder = ZlibEncoder::new(vec![], Compression::default());
+        let mut encoder = ZlibEncoder::new(vec![], Compression::best());
         encoder.write_all(bitvec.as_raw_mut_slice())?;
         let deflated = encoder.finish()?;
 
@@ -138,7 +138,7 @@ impl StatusList {
         bitslice.set(idx, true);
 
         // compress and update the list
-        let mut encoder = ZlibEncoder::new(vec![], Compression::default());
+        let mut encoder = ZlibEncoder::new(vec![], Compression::best());
         encoder.write_all(inflated.as_slice())?;
         let deflated = encoder.finish()?;
         self.lst = Base64UrlUnpadded::encode_string(&deflated);

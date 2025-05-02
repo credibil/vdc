@@ -356,19 +356,16 @@ impl CredentialConfiguration {
     /// Returns an error if the `claimset` contains unsupported claims or does
     /// not contain required (mandatory) claims.
     pub fn verify_claims(&self, claimset: &[ClaimsDescription]) -> Result<()> {
+        let Some(claims) = &self.claims else {
+            return Ok(());
+        };
+
         // ensure `claimset` claims exist in the supported claims
         if !claimset.is_empty() {
-            if let Some(claims) = &self.claims {
-                let _ = Self::claims_supported(claimset, claims);
-            }
+            Self::claims_supported(claimset, claims)?;
         }
-
         // ensure all mandatory claims are present
-        if let Some(claims) = &self.claims {
-            return Self::claims_required(claimset, claims);
-        }
-
-        Ok(())
+        Self::claims_required(claimset, claims)
     }
 
     /// Verifies `claimset` claims are supported by the Credential
@@ -376,10 +373,7 @@ impl CredentialConfiguration {
         requested: &[ClaimsDescription], supported: &[ClaimsDescription],
     ) -> Result<()> {
         for r in requested {
-            for s in supported {
-                if r.path == s.path {
-                    continue;
-                }
+            if supported.iter().find(|s| s.path == r.path).is_none() {
                 return Err(anyhow!("{} claim is not supported", r.path.join(".")));
             }
         }
@@ -392,11 +386,9 @@ impl CredentialConfiguration {
     ) -> Result<()> {
         for s in supported {
             if s.mandatory.unwrap_or_default() {
-                // check if claim is present
-                if requested.iter().any(|r| r.path == s.path) {
-                    continue;
+                if requested.iter().find(|r| r.path == s.path).is_none() {
+                    return Err(anyhow!("{} claim is required", s.path.join(".")));
                 }
-                return Err(anyhow!("{} claim is required", s.path.join(".")));
             }
         }
 

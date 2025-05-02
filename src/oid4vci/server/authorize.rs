@@ -212,10 +212,9 @@ impl Context {
 
         // If the server requires pushed authorization requests, the request
         // must be a PAR.
-        if let Some(must_be_par) = server.oauth.require_pushed_authorization_requests {
-            if must_be_par && !self.is_par {
-                return Err(invalid!("pushed authorization request is required"));
-            }
+        if server.oauth.require_pushed_authorization_requests.is_some_and(|par| par && !self.is_par)
+        {
+            return Err(invalid!("pushed authorization request is required"));
         }
 
         // Requested `response_type` must be supported by the authorization server.

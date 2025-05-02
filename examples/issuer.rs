@@ -302,7 +302,6 @@ async fn credential(
             authorization: auth.token().to_string(),
         },
     };
-
     oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }
 
@@ -319,7 +318,6 @@ async fn deferred_credential(
             authorization: auth.token().to_string(),
         },
     };
-
     oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }
 

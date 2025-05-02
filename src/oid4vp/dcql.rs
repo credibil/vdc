@@ -109,12 +109,9 @@ impl CredentialQuery {
         }
 
         // metadata match
-        if let Some(meta) = &self.meta {
-            if !meta.is_match(&queryable.meta) {
-                return None;
-            }
+        if self.meta.as_ref().is_some_and(|meta| !meta.is_match(&queryable.meta)) {
+            return None;
         }
-
         // claims match
         self.match_claims(queryable).ok()
     }
