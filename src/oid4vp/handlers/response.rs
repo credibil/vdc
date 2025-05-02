@@ -21,6 +21,8 @@
 //! If the Response Type value is "code" (Authorization Code Grant Type), the VP
 //! Token is provided in the Token Response.
 
+use anyhow::Context;
+
 use crate::core::Kind;
 use crate::format::{mso_mdoc, sd_jwt, w3c_vc};
 use crate::oid4vp::endpoint::{Body, Error, Handler, NoHeaders, Request, Response, Result};
@@ -44,9 +46,7 @@ async fn response(
     let Some(state_key) = &request.state else {
         return Err(Error::InvalidRequest("client state not found".to_string()));
     };
-    StateStore::purge(provider, state_key)
-        .await
-        .map_err(|e| Error::ServerError(format!("issue purging state: {e}")))?;
+    StateStore::purge(provider, state_key).await.context("issue purging state")?;
 
     Ok(RedirectResponse {
         // FIXME: add response to state using `response_code` so Wallet can fetch full response

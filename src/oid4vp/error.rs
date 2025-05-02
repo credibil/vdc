@@ -13,7 +13,7 @@ use crate::core::urlencode;
 
 /// `OpenID` error codes for  for Verifiable Credential Issuance and
 /// Presentation.
-#[derive(Error, Debug, Deserialize)]
+#[derive(Error, Clone, Debug, Deserialize)]
 #[allow(clippy::enum_variant_names)]
 pub enum Error {
     /// The request is missing a required parameter, includes an unsupported
@@ -59,6 +59,22 @@ pub enum Error {
     WalletUnavailable(String),
 }
 
+impl Error {
+    /// Transfrom error to `OpenID` compatible json format.
+    #[must_use]
+    pub fn to_json(&self) -> serde_json::Value {
+        serde_json::from_str(&self.to_string()).unwrap_or_default()
+    }
+
+    /// Transfrom error to `OpenID` compatible query string format.
+    /// Does not include `c_nonce` as this is not required for in query
+    /// string responses.
+    #[must_use]
+    pub fn to_querystring(&self) -> String {
+        urlencode::to_string(&self).unwrap_or_default()
+    }
+}
+
 /// Error response for `OpenID` for Verifiable Credentials.
 #[allow(clippy::module_name_repetitions)]
 #[derive(Deserialize, Serialize)]
@@ -93,27 +109,51 @@ impl Serialize for Error {
     }
 }
 
-impl Error {
-    /// Transfrom error to `OpenID` compatible json format.
-    #[must_use]
-    pub fn to_json(&self) -> serde_json::Value {
-        serde_json::from_str(&self.to_string()).unwrap_or_default()
-    }
-
-    /// Transfrom error to `OpenID` compatible query string format.
-    /// Does not include `c_nonce` as this is not required for in query
-    /// string responses.
-    #[must_use]
-    pub fn to_querystring(&self) -> String {
-        urlencode::to_string(&self).unwrap_or_default()
+impl From<anyhow::Error> for Error {
+    fn from(err: anyhow::Error) -> Self {
+        match err.downcast_ref::<Self>() {
+            Some(Self::InvalidRequest(e)) => Self::InvalidRequest(format!("{err}: {e}")),
+            Some(Self::UnsupportedResponseType(e)) => {
+                Self::UnsupportedResponseType(format!("{err}: {e}"))
+            }
+            Some(Self::ServerError(e)) => Self::ServerError(format!("{err}: {e}")),
+            Some(Self::VpFormatsNotSupported(e)) => {
+                Self::VpFormatsNotSupported(format!("{err}: {e}"))
+            }
+            Some(Self::InvalidPresentationDefinitionUri(e)) => {
+                Self::InvalidPresentationDefinitionUri(format!("{err}: {e}"))
+            }
+            Some(Self::InvalidPresentationDefinitionReference(e)) => {
+                Self::InvalidPresentationDefinitionReference(format!("{err}: {e}"))
+            }
+            Some(Self::WalletUnavailable(e)) => Self::WalletUnavailable(format!("{err}: {e}")),
+            None => {
+                let source = err.source().map_or_else(String::new, ToString::to_string);
+                Self::ServerError(format!("{err}: {source}"))
+            }
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
+    use anyhow::Context;
     use serde_json::{Value, json};
 
     use super::*;
+
+    // Test that error details are retuned as json.
+    #[test]
+    fn context() {
+        let err = create_error().unwrap_err();
+        dbg!(err);
+    }
+
+    fn create_error() -> anyhow::Result<(), Error> {
+        Err(anyhow::anyhow!("bad request")).context("some context")?
+        // Err(Error::InvalidRequest("this is an invalid request".to_string()))
+        //     .context("with some context")?
+    }
 
     // Test that error details are retuned as json.
     #[test]

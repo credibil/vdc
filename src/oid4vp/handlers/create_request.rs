@@ -4,6 +4,7 @@
 //! Authorization Request to use when requesting a Verifiable Presentation from
 //! a Wallet.
 
+use anyhow::Context;
 use chrono::Utc;
 
 use crate::core::generate;
@@ -57,7 +58,7 @@ async fn create_request(
     };
     StateStore::put(provider, &uri_token, &state, state.expires_at)
         .await
-        .map_err(|e| Error::ServerError(format!("issue saving state: {e}")))?;
+        .context("issue saving state")?;
 
     Ok(response)
 }

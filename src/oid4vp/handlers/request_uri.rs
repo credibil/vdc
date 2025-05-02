@@ -14,6 +14,7 @@
 //! information (using `wallet_metadata`) can be used tailor the Request Object
 //! to match the Wallet's capabilities.
 
+use anyhow::Context;
 use credibil_jose::JwsBuilder;
 
 use crate::oid4vp::JwtType;
@@ -33,9 +34,8 @@ pub async fn request_uri(
     verifier: &str, provider: &impl Provider, request: RequestUriRequest,
 ) -> Result<RequestUriResponse> {
     // retrieve request object from state
-    let state = StateStore::get::<State>(provider, &request.id)
-        .await
-        .map_err(|e| Error::ServerError(format!("issue fetching state: {e}")))?;
+    let state =
+        StateStore::get::<State>(provider, &request.id).await.context("issue fetching state")?;
     let mut req_obj = state.request_object;
 
     // verify client_id (perhaps should use 'verify' method?)
@@ -55,13 +55,8 @@ pub async fn request_uri(
 
     req_obj.wallet_nonce = request.wallet_nonce;
 
-    let kid = provider
-        .verification_method()
-        .await
-        .map_err(|e| Error::ServerError(format!("issue getting verification method: {e}")))?;
-
-    let key_ref =
-        kid.try_into().map_err(|e| Error::ServerError(format!("issue converting key_ref: {e}")))?;
+    let kid = provider.verification_method().await.context("issue getting verification method")?;
+    let key_ref = kid.try_into().context("issue converting key_ref")?;
 
     let jws = JwsBuilder::new()
         .typ(JwtType::OauthAuthzReqJwt)
@@ -70,11 +65,9 @@ pub async fn request_uri(
         .add_signer(provider)
         .build()
         .await
-        .map_err(|e| Error::ServerError(format!("issue building jwt: {e}")))?;
+        .context("issue building jwt")?;
 
-    Ok(RequestUriResponse::Jwt(
-        jws.encode().map_err(|e| Error::ServerError(format!("issue encoding jwt: {e}")))?,
-    ))
+    Ok(RequestUriResponse::Jwt(jws.encode().context("issue encoding jwt")?))
 }
 
 impl<P: Provider> Handler<P> for Request<RequestUriRequest, NoHeaders> {

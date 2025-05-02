@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Display, Formatter};
 use std::io::Cursor;
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use base64ct::{Base64, Encoding};
 pub use credibil_identity::SignerExt;
 use credibil_jose::{JwsBuilder, PublicKeyJwk};
@@ -100,14 +100,13 @@ impl GenerateResponse {
                 req_obj.to_qrcode(endpoint, signer).await
             }
             Self::Uri(uri) => {
-                let qr_code =
-                    QrCode::new(uri).map_err(|e| anyhow!("Failed to create QR code: {e}"))?;
+                let qr_code = QrCode::new(uri).context("failed to create QR code")?;
                 let img_buf = qr_code.render::<image::Luma<u8>>().build();
                 let mut buffer: Vec<u8> = Vec::new();
                 let mut writer = Cursor::new(&mut buffer);
                 img_buf
                     .write_to(&mut writer, image::ImageFormat::Png)
-                    .map_err(|e| anyhow!("Failed to create QR code: {e}"))?;
+                    .context("failed to create QR code")?;
                 Ok(format!("data:image/png;base64,{}", Base64::encode_string(buffer.as_slice())))
             }
         }
@@ -197,12 +196,10 @@ impl RequestObject {
     /// Returns an `Error::ServerError` error if the Request Object cannot be
     /// serialized.
     pub async fn to_qrcode(&self, endpoint: &str, signer: &impl SignerExt) -> Result<String> {
-        // let qs = self.url_params().map_err(|e| anyhow!("Failed to generate querystring: {e}"))?;
         let qs = self.to_querystring(signer).await?;
 
         // generate qr code
-        let qr_code = QrCode::new(format!("{endpoint}{qs}"))
-            .map_err(|e| anyhow!("Failed to create QR code: {e}"))?;
+        let qr_code = QrCode::new(format!("{endpoint}{qs}")).context("failed to create QR code")?;
 
         // write image to buffer
         let img_buf = qr_code.render::<image::Luma<u8>>().build();
@@ -210,7 +207,7 @@ impl RequestObject {
         let mut writer = Cursor::new(&mut buffer);
         img_buf
             .write_to(&mut writer, image::ImageFormat::Png)
-            .map_err(|e| anyhow!("Failed to create QR code: {e}"))?;
+            .context("failed to create QR code")?;
 
         // base64 encode image
         Ok(format!("data:image/png;base64,{}", Base64::encode_string(buffer.as_slice())))
@@ -225,7 +222,7 @@ impl RequestObject {
     /// serialized.
     #[deprecated(since = "0.1.0", note = "please use `url_value` instead")]
     pub fn url_params(&self) -> Result<String> {
-        urlencode::to_string(self).map_err(|e| anyhow!("issue creating query string: {e}"))
+        urlencode::to_string(self).context("issue creating query string")
     }
 
     /// Generate an  Authorization Request query string with a base64 encoded
@@ -246,9 +243,9 @@ impl RequestObject {
             .add_signer(signer)
             .build()
             .await
-            .map_err(|e| anyhow!("issue building jwt: {e}"))?;
+            .context("issue building jwt")?;
 
-        let encoded = jws.encode().map_err(|e| anyhow!("issue encoding jws: {e}"))?;
+        let encoded = jws.encode().context("issue encoding jws")?;
         let client_id = utf8_percent_encode(&self.client_id.to_string(), UNRESERVED).to_string();
 
         Ok(format!("{client_id}&request={encoded}"))
