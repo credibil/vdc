@@ -373,7 +373,7 @@ impl CredentialConfiguration {
         requested: &[ClaimsDescription], supported: &[ClaimsDescription],
     ) -> Result<()> {
         for r in requested {
-            if supported.iter().find(|s| s.path == r.path).is_none() {
+            if !supported.iter().any(|s| s.path == r.path) {
                 return Err(anyhow!("{} claim is not supported", r.path.join(".")));
             }
         }
@@ -385,10 +385,8 @@ impl CredentialConfiguration {
         requested: &[ClaimsDescription], supported: &[ClaimsDescription],
     ) -> Result<()> {
         for s in supported {
-            if s.mandatory.unwrap_or_default() {
-                if requested.iter().find(|r| r.path == s.path).is_none() {
-                    return Err(anyhow!("{} claim is required", s.path.join(".")));
-                }
+            if s.mandatory.unwrap_or_default() && !requested.iter().any(|r| r.path == s.path) {
+                return Err(anyhow!("{} claim is required", s.path.join(".")));
             }
         }
 
