@@ -19,6 +19,7 @@ use credibil_jose::JwsBuilder;
 
 use crate::oid4vp::JwtType;
 use crate::oid4vp::endpoint::{Body, Error, Handler, Request, Response, Result};
+use crate::oid4vp::error::invalid;
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::types::{ClientId, RequestObject, RequestUriRequest, RequestUriResponse};
 
@@ -41,7 +42,7 @@ pub async fn request_uri(
 
     // verify client_id (perhaps should use 'verify' method?)
     if request_object.client_id != ClientId::RedirectUri(format!("{verifier}/post")) {
-        return Err(Error::InvalidRequest("client ID mismatch".to_string()));
+        return Err(invalid!("client ID mismatch"));
     }
 
     // FIXME: use wallet_metadata to determine supported formats, alg_values, etc.

@@ -237,7 +237,6 @@ impl From<anyhow::Error> for Error {
 
 /// Construct an `Error::InvalidRequest` error from a string or existing error
 /// value.
-#[macro_export]
 macro_rules! invalid {
     ($fmt:expr, $($arg:tt)*) => {
         $crate::oid4vci::Error::InvalidRequest(format!($fmt, $($arg)*))
@@ -246,10 +245,10 @@ macro_rules! invalid {
         $crate::oid4vci::Error::InvalidRequest(format!($err))
     };
 }
+pub(crate) use invalid;
 
 /// Construct an `Error::ServerError` error from a string or existing error
 /// value.
-#[macro_export]
 macro_rules! server {
     ($fmt:expr, $($arg:tt)*) => {
         $crate::oid4vci::Error::ServerError(format!($fmt, $($arg)*))
@@ -261,6 +260,7 @@ macro_rules! server {
         $crate::oid4vci::Error::ServerError(format!($err))
     };
 }
+pub(crate) use server;
 
 #[cfg(test)]
 mod test {

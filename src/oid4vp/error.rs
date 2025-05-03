@@ -135,6 +135,18 @@ impl From<anyhow::Error> for Error {
     }
 }
 
+/// Construct an `Error::InvalidRequest` error from a string or existing error
+/// value.
+macro_rules! invalid {
+    ($fmt:expr, $($arg:tt)*) => {
+        $crate::oid4vp::Error::InvalidRequest(format!($fmt, $($arg)*))
+    };
+     ($err:expr $(,)?) => {
+        $crate::oid4vp::Error::InvalidRequest(format!($err))
+    };
+}
+pub(crate) use invalid;
+
 #[cfg(test)]
 mod test {
     use anyhow::Context;

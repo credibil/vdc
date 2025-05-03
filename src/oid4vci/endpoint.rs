@@ -11,8 +11,8 @@ use http::header::ACCEPT_LANGUAGE;
 use tracing::instrument;
 
 pub use crate::endpoint::{Body, Handler, Headers, NoHeaders, Request, Response};
-use crate::invalid;
 pub use crate::oid4vci::error::Error;
+use crate::oid4vci::error::invalid;
 use crate::oid4vci::provider::Provider;
 
 /// Result type for `OpenID` for Verifiable Credential Issuance.

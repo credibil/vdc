@@ -36,7 +36,6 @@ cid = { version = "0.11.1", features = ["alloc"] }
 coset = "0.3.8"
 credibil-identity.workspace = true
 credibil-jose.workspace = true
-derive_builder = "0.20.2"
 ecdsa = "0.16.9"
 ed25519-dalek = { version = "2.1.1", features = ["rand_core"] }
 fastrand = "2.3.0"

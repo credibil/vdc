@@ -3,10 +3,10 @@
 use anyhow::Context as _;
 
 use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
+use crate::oid4vci::error::server;
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::Token;
 use crate::oid4vci::types::{RegistrationHeaders, RegistrationRequest, RegistrationResponse};
-use crate::server;
 
 /// Registration request handler.
 ///

@@ -11,8 +11,10 @@ use anyhow::Context as _;
 use chrono::Utc;
 use http::StatusCode;
 
+use crate::generate;
 use crate::oauth::GrantType;
 use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
+use crate::oid4vci::error::{invalid, server};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Expire, Offered};
 use crate::oid4vci::types::{
@@ -21,7 +23,6 @@ use crate::oid4vci::types::{
     OfferType, PreAuthorizedCodeGrant, SendType, Server, TxCode,
 };
 use crate::state::State;
-use crate::{generate, invalid, server};
 
 #[derive(Debug, Default)]
 struct Context {

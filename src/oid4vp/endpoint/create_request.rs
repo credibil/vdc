@@ -9,6 +9,7 @@ use chrono::Utc;
 
 use crate::generate;
 use crate::oid4vp::endpoint::{Body, Error, Handler, Request, Response, Result};
+use crate::oid4vp::error::invalid;
 use crate::oid4vp::provider::{Metadata, Provider, StateStore};
 use crate::oid4vp::state::Expire;
 use crate::oid4vp::types::{
@@ -28,7 +29,7 @@ async fn create_request(
     let uri_token = generate::uri_token();
 
     let Ok(metadata) = Metadata::verifier(provider, verifier).await else {
-        return Err(Error::InvalidRequest("invalid client_id".to_string()));
+        return Err(invalid!("invalid `client_id`"));
     };
 
     // TODO: Response Mode "direct_post" is RECOMMENDED for cross-device flows.

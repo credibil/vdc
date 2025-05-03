@@ -19,8 +19,10 @@ use anyhow::Context as _;
 use chrono::Utc;
 use serde::de::DeserializeOwned;
 
+use crate::generate;
 use crate::oauth::GrantType;
 use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
+use crate::oid4vci::error::{invalid, server};
 use crate::oid4vci::pkce;
 use crate::oid4vci::provider::{Metadata, Provider, StateStore};
 use crate::oid4vci::state::{Authorized, Expire, Offered, Token};
@@ -29,7 +31,6 @@ use crate::oid4vci::types::{
     TokenRequest, TokenResponse, TokenType,
 };
 use crate::state::State;
-use crate::{generate, invalid, server};
 
 /// Token request handler.
 ///
@@ -42,8 +43,8 @@ async fn token(
 ) -> Result<TokenResponse> {
     let mut ctx = Context {
         issuer,
-        offer: None,
-        authorization: None,
+        offered: None,
+        authorized: None,
     };
 
     // get previously authorized credentials from state
@@ -52,6 +53,7 @@ async fn token(
             pre_authorized_code, ..
         } => {
             let state = get_state::<Offered>(pre_authorized_code, provider).await?;
+            ctx.offered = Some(state.body.clone());
             let Some(subject_id) = state.body.subject_id else {
                 return Err(server!("no authorized subject"));
             };
@@ -62,7 +64,7 @@ async fn token(
         }
         TokenGrantType::AuthorizationCode { code, .. } => {
             let state = get_state::<Authorized>(code, provider).await?;
-            ctx.authorization = Some(state.body.clone());
+            ctx.authorized = Some(state.body.clone());
             (state.body.subject_id, state.body.details)
         }
     };
@@ -109,8 +111,8 @@ impl Body for TokenRequest {}
 #[derive(Debug)]
 struct Context<'a> {
     issuer: &'a str,
-    offer: Option<Offered>,
-    authorization: Option<Authorized>,
+    offered: Option<Offered>,
+    authorized: Option<Authorized>,
 }
 
 async fn get_state<T: DeserializeOwned>(code: &str, provider: &impl Provider) -> Result<State<T>> {
@@ -145,7 +147,7 @@ impl TokenRequest {
         // grant_type
         match &self.grant_type {
             TokenGrantType::PreAuthorizedCode { tx_code, .. } => {
-                let Some(offer) = &ctx.offer else {
+                let Some(offer) = &ctx.offered else {
                     return Err(server!("pre-authorized state not set"));
                 };
                 // grant_type supported?
@@ -173,7 +175,7 @@ impl TokenRequest {
                 code_verifier,
                 ..
             } => {
-                let Some(authorization) = &ctx.authorization else {
+                let Some(authorization) = &ctx.authorized else {
                     return Err(server!("authorization state not set"));
                 };
 
