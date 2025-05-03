@@ -30,6 +30,15 @@ impl<T> State<T> {
     }
 }
 
+impl<T: Serialize> From<T> for State<T> {
+    fn from(body: T) -> Self {
+        Self {
+            body,
+            expires_at: Utc::now(), //+ Expire::Authorized.duration(),
+        }
+    }
+}
+
 /// The `StateStore` trait is implemented to provide concrete storage and
 /// retrieval of retrieve server state between requests.
 pub trait StateStore: Send + Sync {
@@ -52,7 +61,7 @@ where
 {
     #[allow(unused)]
     async fn put<T: Serialize + Sync>(&self, key: &str, state: &State<T>) -> Result<()> {
-        let state = serde_json::to_vec(&state)?;
+        let state = serde_json::to_vec(state)?;
         BlockStore::delete(self, "owner", STATE, key).await?;
         BlockStore::put(self, "owner", STATE, key, &state).await
     }

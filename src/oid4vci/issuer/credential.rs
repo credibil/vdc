@@ -192,14 +192,14 @@ impl CredentialRequest {
 
         match &self.credential {
             RequestBy::Identifier(id) => {
-                for ad in &token.details {
+                for ad in &token.authorized_details {
                     if ad.credential_identifiers.contains(id) {
                         return Ok(ad.clone());
                     }
                 }
             }
             RequestBy::ConfigurationId(id) => {
-                for ad in &token.details {
+                for ad in &token.authorized_details {
                     if Some(id.as_str()) == ad.credential_configuration_id() {
                         return Ok(ad.clone());
                     }

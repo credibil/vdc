@@ -64,7 +64,7 @@ pub struct Token {
 
     /// A list `authorization_details` entries including credential
     /// identifiers.
-    pub details: Vec<AuthorizedDetail>,
+    pub authorized_details: Vec<AuthorizedDetail>,
 }
 
 // /// Issued Credential state (for Notification endpoint).

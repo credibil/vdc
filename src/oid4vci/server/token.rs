@@ -17,6 +17,7 @@ use std::fmt::Debug;
 
 use anyhow::Context as _;
 use chrono::Utc;
+use serde::de::DeserializeOwned;
 
 use crate::oauth::GrantType;
 use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
@@ -50,66 +51,44 @@ async fn token(
         TokenGrantType::PreAuthorizedCode {
             pre_authorized_code, ..
         } => {
-            // RFC 6749 requires a particular error here
-            let Ok(state) = StateStore::get::<Offered>(provider, pre_authorized_code).await else {
-                return Err(Error::InvalidGrant("invalid authorization code".to_string()));
-            };
-            StateStore::purge(provider, pre_authorized_code).await.context("purging state")?;
-            if state.is_expired() {
-                return Err(invalid!("authorization state expired"));
-            }
-
-            ctx.offer = Some(state.body.clone());
-
-            let Some(subject_id) = &state.body.subject_id else {
-                return Err(server!("no authorized items"));
+            let state = get_state::<Offered>(pre_authorized_code, provider).await?;
+            let Some(subject_id) = state.body.subject_id else {
+                return Err(server!("no authorized subject"));
             };
             let Some(authorization_details) = state.body.details else {
                 return Err(server!("no authorized items"));
             };
-
-            (subject_id.clone(), authorization_details)
+            (subject_id, authorization_details)
         }
         TokenGrantType::AuthorizationCode { code, .. } => {
-            let Ok(state) = StateStore::get::<Authorized>(provider, code).await else {
-                return Err(Error::InvalidGrant("invalid authorization code".to_string()));
-            };
-            StateStore::purge(provider, code).await.context("purging state")?;
-            if state.is_expired() {
-                return Err(invalid!("authorization state expired"));
-            }
-
+            let state = get_state::<Authorized>(code, provider).await?;
             ctx.authorization = Some(state.body.clone());
-
             (state.body.subject_id, state.body.details)
         }
     };
 
-    // authorization code is one-time use
-
     request.verify(provider, &ctx).await?;
 
-    // find the subset of requested credentials from those previously authorized
-    let authorized_details = request.retain(provider, &ctx, &authorized_details).await?;
-    let access_token = generate::token();
+    // get the subset of requested credentials from those previously authorized
+    let retained_details = request.retain(provider, &ctx, &authorized_details).await?;
 
     // update state
     let state = State {
         body: Token {
-            subject_id: subject_id.clone(),
-            access_token: access_token.clone(),
-            details: authorized_details.clone(),
+            subject_id,
+            access_token: generate::token(),
+            authorized_details: retained_details,
         },
         expires_at: Utc::now() + Expire::Access.duration(),
     };
-    StateStore::put(provider, &access_token, &state).await.context("saving state")?;
+    StateStore::put(provider, &state.body.access_token, &state).await.context("saving state")?;
 
     // return response
     Ok(TokenResponse {
-        access_token,
+        access_token: state.body.access_token,
         token_type: TokenType::Bearer,
         expires_in: Expire::Access.duration().num_seconds(),
-        authorization_details: Some(authorized_details),
+        authorization_details: Some(state.body.authorized_details),
     })
 }
 
@@ -132,6 +111,17 @@ struct Context<'a> {
     issuer: &'a str,
     offer: Option<Offered>,
     authorization: Option<Authorized>,
+}
+
+async fn get_state<T: DeserializeOwned>(code: &str, provider: &impl Provider) -> Result<State<T>> {
+    let Ok(state) = StateStore::get::<T>(provider, code).await else {
+        return Err(Error::InvalidGrant("invalid authorization code".to_string()));
+    };
+    StateStore::purge(provider, code).await.context("purging state")?;
+    if state.is_expired() {
+        return Err(invalid!("authorization state expired"));
+    }
+    Ok(state)
 }
 
 impl TokenRequest {
