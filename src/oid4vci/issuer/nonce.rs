@@ -10,11 +10,12 @@
 use anyhow::Context as _;
 use chrono::Utc;
 
-use crate::core::generate;
+use crate::generate;
 use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::Expire;
 use crate::oid4vci::types::{NonceRequest, NonceResponse};
+use crate::state::State;
 
 /// Nonce request handler.
 ///
@@ -24,11 +25,12 @@ use crate::oid4vci::types::{NonceRequest, NonceResponse};
 /// not available.
 async fn nonce(_issuer: &str, provider: &impl Provider, _: NonceRequest) -> Result<NonceResponse> {
     let c_nonce = generate::nonce();
-    let expire_at = Utc::now() + Expire::Authorized.duration();
 
-    StateStore::put(provider, &c_nonce, &c_nonce, expire_at)
-        .await
-        .context("failed to purge state")?;
+    let state = &State {
+        body: c_nonce.clone(),
+        expires_at: Utc::now() + Expire::Authorized.duration(),
+    };
+    StateStore::put(provider, &c_nonce, state).await.context("failed to purge state")?;
 
     Ok(NonceResponse { c_nonce })
 }

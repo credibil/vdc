@@ -20,8 +20,7 @@ use credibil_jose::JwsBuilder;
 use crate::oid4vp::JwtType;
 use crate::oid4vp::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vp::provider::{Provider, StateStore};
-use crate::oid4vp::state::State;
-use crate::oid4vp::types::{ClientId, RequestUriRequest, RequestUriResponse};
+use crate::oid4vp::types::{ClientId, RequestObject, RequestUriRequest, RequestUriResponse};
 
 /// Endpoint for the Wallet to request the Verifier's Request Object when
 /// engaged in a cross-device flow.
@@ -34,12 +33,14 @@ pub async fn request_uri(
     verifier: &str, provider: &impl Provider, request: RequestUriRequest,
 ) -> Result<RequestUriResponse> {
     // retrieve request object from state
-    let state =
-        StateStore::get::<State>(provider, &request.id).await.context("issue fetching state")?;
-    let mut req_obj = state.request_object;
+    let state = StateStore::get::<RequestObject>(provider, &request.id)
+        .await
+        .context("retrieving state")?;
+
+    let mut request_object = state.body;
 
     // verify client_id (perhaps should use 'verify' method?)
-    if req_obj.client_id != ClientId::RedirectUri(format!("{verifier}/post")) {
+    if request_object.client_id != ClientId::RedirectUri(format!("{verifier}/post")) {
         return Err(Error::InvalidRequest("client ID mismatch".to_string()));
     }
 
@@ -53,21 +54,21 @@ pub async fn request_uri(
         // https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-request-uri-method-post
     }
 
-    req_obj.wallet_nonce = request.wallet_nonce;
+    request_object.wallet_nonce = request.wallet_nonce;
 
-    let kid = provider.verification_method().await.context("issue getting verification method")?;
-    let key_ref = kid.try_into().context("issue converting key_ref")?;
+    let kid = provider.verification_method().await.context("getting verification method")?;
+    let key_ref = kid.try_into().context("converting key_ref")?;
 
     let jws = JwsBuilder::new()
         .typ(JwtType::OauthAuthzReqJwt)
-        .payload(req_obj)
+        .payload(request_object)
         .key_ref(&key_ref)
         .add_signer(provider)
         .build()
         .await
-        .context("issue building jwt")?;
+        .context("building jwt")?;
 
-    Ok(RequestUriResponse::Jwt(jws.encode().context("issue encoding jwt")?))
+    Ok(RequestUriResponse::Jwt(jws.encode().context("encoding jwt")?))
 }
 
 impl<P: Provider> Handler<P> for Request<RequestUriRequest> {

@@ -16,18 +16,19 @@
 use std::fmt::Debug;
 
 use anyhow::Context as _;
+use chrono::Utc;
 
-use crate::core::generate;
 use crate::oauth::GrantType;
 use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::pkce;
 use crate::oid4vci::provider::{Metadata, Provider, StateStore};
-use crate::oid4vci::state::{Expire, Stage, State, Token};
+use crate::oid4vci::state::{Authorization, Expire, Offer, Token};
 use crate::oid4vci::types::{
     AuthorizationCredential, AuthorizationDetail, AuthorizedDetail, Issuer, TokenGrantType,
     TokenRequest, TokenResponse, TokenType,
 };
-use crate::{invalid, server};
+use crate::state::State;
+use crate::{generate, invalid, server};
 
 /// Token request handler.
 ///
@@ -38,60 +39,70 @@ use crate::{invalid, server};
 async fn token(
     issuer: &str, provider: &impl Provider, request: TokenRequest,
 ) -> Result<TokenResponse> {
-    // restore state
-    let auth_code = match &request.grant_type {
-        TokenGrantType::AuthorizationCode { code, .. } => code,
+    let mut ctx = Context {
+        issuer,
+        offer: None,
+        authorization: None,
+    };
+
+    // get previously authorized credentials from state
+    let (subject_id, authorized_details) = match &request.grant_type {
         TokenGrantType::PreAuthorizedCode {
             pre_authorized_code, ..
-        } => pre_authorized_code,
+        } => {
+            // RFC 6749 requires a particular error here
+            let Ok(state) = StateStore::get::<Offer>(provider, pre_authorized_code).await else {
+                return Err(Error::InvalidGrant("invalid authorization code".to_string()));
+            };
+            StateStore::purge(provider, pre_authorized_code).await.context("purging state")?;
+            if state.is_expired() {
+                return Err(invalid!("authorization state expired"));
+            }
+
+            ctx.offer = Some(state.body.clone());
+
+            let Some(subject_id) = &state.body.subject_id else {
+                return Err(server!("no authorized items"));
+            };
+            let Some(authorization_details) = state.body.details else {
+                return Err(server!("no authorized items"));
+            };
+
+            (subject_id.clone(), authorization_details)
+        }
+        TokenGrantType::AuthorizationCode { code, .. } => {
+            let Ok(state) = StateStore::get::<Authorization>(provider, code).await else {
+                return Err(Error::InvalidGrant("invalid authorization code".to_string()));
+            };
+            StateStore::purge(provider, code).await.context("purging state")?;
+            if state.is_expired() {
+                return Err(invalid!("authorization state expired"));
+            }
+
+            ctx.authorization = Some(state.body.clone());
+
+            (state.body.subject_id, state.body.details)
+        }
     };
 
-    // RFC 6749 requires a particular error here
-    let Ok(state) = StateStore::get::<State>(provider, auth_code).await else {
-        return Err(Error::InvalidGrant("invalid authorization code".to_string()));
-    };
     // authorization code is one-time use
-    StateStore::purge(provider, auth_code).await.context("issue purging authorizaiton state")?;
-
-    let ctx = Context {
-        issuer,
-        state: state.clone(),
-    };
 
     request.verify(provider, &ctx).await?;
 
-    // get previously authorized credentials from state
-    let authorized_details = match &request.grant_type {
-        TokenGrantType::PreAuthorizedCode { .. } => {
-            let Stage::Offered(offer) = &state.stage else {
-                return Err(server!("pre-authorized state not set"));
-            };
-            let Some(authorization_details) = &offer.details else {
-                return Err(server!("no authorized items"));
-            };
-            authorization_details
-        }
-        TokenGrantType::AuthorizationCode { .. } => {
-            let Stage::Authorized(authorization) = &state.stage else {
-                return Err(server!("authorization state not set"));
-            };
-            &authorization.details
-        }
-    };
-
     // find the subset of requested credentials from those previously authorized
-    let authorized_details = request.retain(provider, &ctx, authorized_details).await?;
+    let authorized_details = request.retain(provider, &ctx, &authorized_details).await?;
     let access_token = generate::token();
 
     // update state
-    let mut state = state;
-    state.stage = Stage::Validated(Token {
-        access_token: access_token.clone(),
-        details: authorized_details.clone(),
-    });
-    StateStore::put(provider, &access_token, &state, state.expires_at)
-        .await
-        .context("issue saving state")?;
+    let state = State {
+        body: Token {
+            subject_id: subject_id.clone(),
+            access_token: access_token.clone(),
+            details: authorized_details.clone(),
+        },
+        expires_at: Utc::now() + Expire::Access.duration(),
+    };
+    StateStore::put(provider, &access_token, &state).await.context("saving state")?;
 
     // return response
     Ok(TokenResponse {
@@ -119,17 +130,14 @@ impl Body for TokenRequest {}
 #[derive(Debug)]
 struct Context<'a> {
     issuer: &'a str,
-    state: State,
+    offer: Option<Offer>,
+    authorization: Option<Authorization>,
 }
 
 impl TokenRequest {
     // Verify the token request.
     async fn verify(&self, provider: &impl Provider, ctx: &Context<'_>) -> Result<()> {
         tracing::debug!("token::verify");
-
-        if ctx.state.is_expired() {
-            return Err(invalid!("authorization state expired"));
-        }
 
         // TODO: get Issuer metadata
         // If the Token Request contains authorization_details and Issuer
@@ -147,7 +155,7 @@ impl TokenRequest {
         // grant_type
         match &self.grant_type {
             TokenGrantType::PreAuthorizedCode { tx_code, .. } => {
-                let Stage::Offered(auth_state) = &ctx.state.stage else {
+                let Some(offer) = &ctx.offer else {
                     return Err(server!("pre-authorized state not set"));
                 };
                 // grant_type supported?
@@ -166,7 +174,7 @@ impl TokenRequest {
                 }
 
                 // tx_code (PIN)
-                if tx_code != &auth_state.tx_code {
+                if tx_code != &offer.tx_code {
                     return Err(Error::InvalidGrant("invalid `tx_code` provided".to_string()));
                 }
             }
@@ -175,7 +183,7 @@ impl TokenRequest {
                 code_verifier,
                 ..
             } => {
-                let Stage::Authorized(auth_state) = &ctx.state.stage else {
+                let Some(authorization) = &ctx.authorization else {
                     return Err(server!("authorization state not set"));
                 };
 
@@ -188,7 +196,7 @@ impl TokenRequest {
                 if self.client_id.is_none() {
                     return Err(invalid!("`client_id` is missing"));
                 }
-                if self.client_id.as_ref() != Some(&auth_state.client_id) {
+                if self.client_id.as_ref() != Some(&authorization.client_id) {
                     return Err(Error::InvalidClient(
                         "`client_id` differs from authorized one".to_string(),
                     ));
@@ -196,7 +204,7 @@ impl TokenRequest {
 
                 // redirect_uri is the same as the one provided in authorization request
                 // i.e. either 'None' or 'Some(redirect_uri)'
-                if redirect_uri != &auth_state.redirect_uri {
+                if redirect_uri != &authorization.redirect_uri {
                     return Err(Error::InvalidGrant(
                         "`redirect_uri` differs from authorized one".to_string(),
                     ));
@@ -206,7 +214,7 @@ impl TokenRequest {
                 let Some(verifier) = &code_verifier else {
                     return Err(Error::AccessDenied("`code_verifier` is missing".to_string()));
                 };
-                if pkce::code_challenge(verifier) != auth_state.code_challenge {
+                if pkce::code_challenge(verifier) != authorization.code_challenge {
                     return Err(Error::AccessDenied("`code_verifier` is invalid".to_string()));
                 }
             }

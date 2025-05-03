@@ -11,17 +11,17 @@ use anyhow::Context as _;
 use chrono::Utc;
 use http::StatusCode;
 
-use crate::core::generate;
 use crate::oauth::GrantType;
 use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
-use crate::oid4vci::state::{Expire, Offer, Stage, State};
+use crate::oid4vci::state::{Expire, Offer};
 use crate::oid4vci::types::{
     AuthorizationCodeGrant, AuthorizationCredential, AuthorizationDetail, AuthorizationDetailType,
     AuthorizedDetail, CreateOfferRequest, CreateOfferResponse, CredentialOffer, Grants, Issuer,
     OfferType, PreAuthorizedCodeGrant, SendType, Server, TxCode,
 };
-use crate::{invalid, server};
+use crate::state::State;
+use crate::{generate, invalid, server};
 
 #[derive(Debug, Default)]
 struct Context {
@@ -33,19 +33,18 @@ struct Context {
 async fn create_offer(
     issuer: &str, provider: &impl Provider, request: CreateOfferRequest,
 ) -> Result<Response<CreateOfferResponse>> {
-    let iss = Metadata::issuer(provider, issuer).await.context("issue getting issuer metadata")?;
+    let iss = Metadata::issuer(provider, issuer).await.context("getting issuer metadata")?;
 
     // TODO: determine how to select correct server?
     // select `authorization_server`, if specified
-    let server =
-        Metadata::server(provider, issuer).await.context("issue getting server metadata")?;
+    let server = Metadata::server(provider, issuer).await.context("getting server metadata")?;
 
     let ctx = Context { issuer: iss, server };
 
     request.verify(&ctx)?;
 
     let grant_types = request.grant_types.clone().unwrap_or_default();
-    let offer = request.create_offer(&ctx);
+    let credential_offer = request.create_offer(&ctx);
     let tx_code = if request.tx_code_required && grant_types.contains(&GrantType::PreAuthorizedCode)
     {
         Some(generate::tx_code())
@@ -62,22 +61,17 @@ async fn create_offer(
         } else {
             None
         };
-        let state_key = state_key(offer.grants.as_ref())?;
 
+        let state_key = state_key(credential_offer.grants.as_ref())?;
         let state = State {
             expires_at: Utc::now() + Expire::Authorized.duration(),
-            subject_id: request.subject_id.clone(),
-            stage: Stage::Offered(Offer {
+            body: Offer {
+                subject_id: request.subject_id.clone(),
                 details: auth_items,
                 tx_code: tx_code.clone(),
-            }),
+            },
         };
-        StateStore::put(provider, &state_key, &state, state.expires_at)
-            .await
-            .context("issue saving state")?;
-        StateStore::put(provider, &state_key, &state, state.expires_at)
-            .await
-            .context("issue saving state")?;
+        StateStore::put(provider, &state_key, &state).await.context("saving state")?;
     }
 
     // respond with Offer object or uri?
@@ -86,7 +80,7 @@ async fn create_offer(
             status: StatusCode::CREATED,
             headers: None,
             body: CreateOfferResponse {
-                offer_type: OfferType::Object(offer.clone()),
+                offer_type: OfferType::Object(credential_offer.clone()),
                 tx_code: tx_code.clone(),
             },
         });
@@ -97,12 +91,9 @@ async fn create_offer(
     // save offer to state
     let state = State {
         expires_at: Utc::now() + Expire::Authorized.duration(),
-        subject_id: request.subject_id,
-        stage: Stage::Pending(offer),
+        body: credential_offer,
     };
-    StateStore::put(provider, &uri_token, &state, state.expires_at)
-        .await
-        .context("issue saving state")?;
+    StateStore::put(provider, &uri_token, &state).await.context("saving state")?;
 
     Ok(Response {
         status: StatusCode::CREATED,
@@ -235,7 +226,7 @@ async fn authorize(
     for config_id in request.credential_configuration_ids.clone() {
         let identifiers = Subject::authorize(provider, &subject_id, &config_id)
             .await
-            .context("issue authorizing holder")?;
+            .context("authorizing holder")?;
 
         authorized.push(AuthorizedDetail {
             authorization_detail: AuthorizationDetail {

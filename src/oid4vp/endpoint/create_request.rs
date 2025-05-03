@@ -7,13 +7,14 @@
 use anyhow::Context;
 use chrono::Utc;
 
-use crate::core::generate;
+use crate::generate;
 use crate::oid4vp::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vp::provider::{Metadata, Provider, StateStore};
-use crate::oid4vp::state::{Expire, State};
+use crate::oid4vp::state::Expire;
 use crate::oid4vp::types::{
     ClientId, DeviceFlow, GenerateRequest, GenerateResponse, RequestObject, ResponseType,
 };
+use crate::state::State;
 
 /// Create an Authorization Request.
 ///
@@ -54,11 +55,9 @@ async fn create_request(
     // save request object in state
     let state = State {
         expires_at: Utc::now() + Expire::Request.duration(),
-        request_object: req_obj,
+        body: req_obj,
     };
-    StateStore::put(provider, &uri_token, &state, state.expires_at)
-        .await
-        .context("issue saving state")?;
+    StateStore::put(provider, &uri_token, &state).await.context("saving state")?;
 
     Ok(response)
 }

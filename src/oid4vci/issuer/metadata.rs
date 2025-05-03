@@ -40,7 +40,7 @@ async fn metadata(
 ) -> Result<IssuerResponse> {
     // FIXME: use language header in request
     let credential_issuer =
-        Metadata::issuer(provider, issuer).await.context("issue getting metadata")?;
+        Metadata::issuer(provider, issuer).await.context("getting metadata")?;
 
     Ok(IssuerResponse(credential_issuer))
 }

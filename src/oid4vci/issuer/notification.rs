@@ -21,7 +21,7 @@
 
 use crate::oid4vci::endpoint::{Body, Error, Handler, Headers, Request, Response, Result};
 use crate::oid4vci::provider::{Provider, StateStore};
-use crate::oid4vci::state::State;
+use crate::oid4vci::state::Token;
 use crate::oid4vci::types::{NotificationHeaders, NotificationRequest, NotificationResponse};
 
 /// Notification request handler.
@@ -35,12 +35,12 @@ async fn notification(
     request: Request<NotificationRequest, NotificationHeaders>,
 ) -> Result<NotificationResponse> {
     // verify access token
-    let _ = StateStore::get::<State>(provider, &request.headers.authorization)
+    let _ = StateStore::get::<Token>(provider, &request.headers.authorization)
         .await
         .map_err(|_| Error::AccessDenied("invalid access token".to_string()))?;
 
     let request = request.body;
-    let Ok(_state) = StateStore::get::<State>(provider, &request.notification_id).await else {
+    let Ok(_state) = StateStore::get::<Token>(provider, &request.notification_id).await else {
         return Err(Error::AccessDenied("invalid notification id".to_string()));
     };
 

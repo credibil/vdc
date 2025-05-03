@@ -23,13 +23,14 @@ use crate::format::w3c_vc::W3cVcBuilder;
 use crate::oid4vci::JwtType;
 use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
-use crate::oid4vci::state::{Deferrance, Expire, Stage, State};
+use crate::oid4vci::state::{Deferrance, Expire, Token};
 use crate::oid4vci::types::{
     AuthorizedDetail, Credential, CredentialConfiguration, CredentialHeaders, CredentialRequest,
     CredentialResponse, Dataset, Issuer, MultipleProofs, Proof, ProofClaims, RequestBy,
     SingleProof,
 };
 use crate::server;
+use crate::state::State;
 use crate::token_status::{StatusList, StatusStore};
 
 /// Credential request handler.
@@ -41,15 +42,16 @@ use crate::token_status::{StatusList, StatusStore};
 pub async fn credential(
     issuer: &str, provider: &impl Provider, request: Request<CredentialRequest, CredentialHeaders>,
 ) -> Result<CredentialResponse> {
-    let Ok(state) = StateStore::get::<State>(provider, &request.headers.authorization).await else {
+    let Ok(state) = StateStore::get::<Token>(provider, &request.headers.authorization).await else {
         return Err(Error::AccessDenied("invalid access token".to_string()));
     };
 
     // create a request context for data accessed more than once
     let mut ctx = Context {
         state,
-        issuer: Metadata::issuer(provider, issuer).await.context("metadata issue")?,
-        ..Context::default()
+        issuer: Metadata::issuer(provider, issuer).await.context("fetching metadata")?,
+        configuration: CredentialConfiguration::default(),
+        proof_kids: vec![],
     };
 
     let request = request.body;
@@ -68,10 +70,9 @@ pub async fn credential(
     let Some(config) = ctx.issuer.credential_configurations_supported.get(config_id) else {
         return Err(server!("credential configuration unable to be found"));
     };
+
     ctx.configuration = config.clone();
-
     request.verify(provider, &mut ctx).await?;
-
     ctx.issue(provider, dataset).await
 }
 
@@ -89,9 +90,9 @@ impl<P: Provider> Handler<P> for Request<CredentialRequest, CredentialHeaders> {
 
 impl Body for CredentialRequest {}
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct Context {
-    state: State,
+    state: State<Token>,
     issuer: Issuer,
     configuration: CredentialConfiguration,
     proof_kids: Vec<String>,
@@ -176,12 +177,8 @@ impl CredentialRequest {
 
             // should only be a single c_nonce, but just in case...
             for c_nonce in nonces {
-                StateStore::get::<String>(provider, &c_nonce)
-                    .await
-                    .context("proof nonce claim is invalid")?;
-                StateStore::purge(provider, &c_nonce)
-                    .await
-                    .context("issue deleting proof nonce")?;
+                StateStore::get::<String>(provider, &c_nonce).await.context("proof nonce claim")?;
+                StateStore::purge(provider, &c_nonce).await.context("deleting proof nonce")?;
             }
         }
 
@@ -191,9 +188,7 @@ impl CredentialRequest {
     // Get `Authorized` for `credential_identifier` and
     // `credential_configuration_id`.
     fn authorized_detail(&self, ctx: &Context) -> Result<AuthorizedDetail> {
-        let Stage::Validated(token) = &ctx.state.stage else {
-            return Err(Error::AccessDenied("invalid access token state".to_string()));
-        };
+        let token = &ctx.state.body;
 
         match &self.credential {
             RequestBy::Identifier(id) => {
@@ -223,13 +218,13 @@ impl Context {
     ) -> Result<CredentialResponse> {
         let mut credentials = vec![];
 
-        let mut status_list = StatusList::new().context("issue creating status list")?;
+        let mut status_list = StatusList::new().context("creating status list")?;
 
         // create a credential for each proof
         for kid in &self.proof_kids {
             let status_claim = status_list
                 .add_entry("http://credibil.io/statuslists/1")
-                .context("issue creating status claim")?;
+                .context("creating status claim")?;
 
             let credential = match &self.configuration.profile {
                 FormatProfile::JwtVcJson {
@@ -248,7 +243,7 @@ impl Context {
                         .signer(provider)
                         .build()
                         .await
-                        .context("issue creating `jwt_vc_json` credential")?;
+                        .context("creating `jwt_vc_json` credential")?;
 
                     Credential {
                         credential: jwt.into(),
@@ -257,7 +252,7 @@ impl Context {
                 FormatProfile::MsoMdoc { doctype } => {
                     let jwk = did_jwk(kid, provider)
                         .await
-                        .context("issue retrieving JWK for `dc+sd-jwt` credential")?;
+                        .context("retrieving JWK for `dc+sd-jwt` credential")?;
 
                     let mdl = MdocBuilder::new()
                         .doctype(doctype)
@@ -266,7 +261,7 @@ impl Context {
                         .signer(provider)
                         .build()
                         .await
-                        .context("issue creating `mso_mdoc` credential")?;
+                        .context("creating `mso_mdoc` credential")?;
 
                     Credential {
                         credential: mdl.into(),
@@ -274,9 +269,8 @@ impl Context {
                 }
                 FormatProfile::DcSdJwt { vct } => {
                     // TODO: cache the result of jwk when verifying proof (`verify` method)
-                    let jwk = did_jwk(kid, provider)
-                        .await
-                        .context("issue getting JWK for `dc+sd-jwt`")?;
+                    let jwk =
+                        did_jwk(kid, provider).await.context("getting JWK for `dc+sd-jwt`")?;
                     let Some(did) = kid.split('#').next() else {
                         return Err(Error::InvalidProof("Proof JWT DID is invalid".to_string()));
                     };
@@ -291,7 +285,7 @@ impl Context {
                         .signer(provider)
                         .build()
                         .await
-                        .context("issue creating `dc+sd-jwt` credential")?;
+                        .context("creating `dc+sd-jwt` credential")?;
 
                     Credential {
                         credential: sd_jwt.into(),
@@ -304,31 +298,21 @@ impl Context {
             credentials.push(credential);
         }
 
-        let token = &status_list.to_jwt().context("issue creating status list JWT")?;
+        let token = &status_list.to_jwt().context("creating status list JWT")?;
         StatusStore::put(provider, "https://example.com/statuslists/1", token)
             .await
-            .context("issue saving status list")?;
+            .context("saving status list")?;
 
         // update token state with new `c_nonce`
         let mut state = self.state.clone();
         state.expires_at = Utc::now() + Expire::Access.duration();
 
-        let Stage::Validated(token_state) = state.stage else {
-            return Err(Error::AccessDenied("invalid access token state".to_string()));
-        };
-        state.stage = Stage::Validated(token_state.clone());
-
-        StateStore::put(provider, &token_state.access_token, &state, state.expires_at)
-            .await
-            .context("issue saving state")?;
+        let token = &state.body;
+        StateStore::put(provider, &token.access_token, &state).await.context("saving state")?;
 
         // TODO: create issuance state for notification endpoint
-        // state.stage = Stage::Issued(credential_configuration_id, credential_identifier);
         let notification_id = generate::notification_id();
-
-        StateStore::put(provider, &notification_id, &state, state.expires_at)
-            .await
-            .context("issue saving state")?;
+        StateStore::put(provider, &notification_id, &state).await.context("saving state")?;
 
         Ok(CredentialResponse::Credentials {
             credentials,
@@ -343,16 +327,13 @@ impl Context {
         let txn_id = generate::transaction_id();
 
         let state = State {
-            subject_id: None,
-            stage: Stage::Deferred(Deferrance {
+            body: Deferrance {
                 transaction_id: txn_id.clone(),
                 credential_request: request,
-            }),
+            },
             expires_at: Utc::now() + Expire::Access.duration(),
         };
-        StateStore::put(provider, &txn_id, &state, state.expires_at)
-            .await
-            .context("issue saving state")?;
+        StateStore::put(provider, &txn_id, &state).await.context("saving state")?;
 
         Ok(CredentialResponse::TransactionId {
             transaction_id: txn_id,
@@ -371,12 +352,10 @@ impl Context {
         };
 
         // get claims dataset for `credential_identifier`
-        let Some(subject_id) = &self.state.subject_id else {
-            return Err(Error::AccessDenied("invalid subject id".to_string()));
-        };
+        let subject_id = &self.state.body.subject_id;
         let mut dataset = Subject::dataset(provider, subject_id, identifier)
             .await
-            .context("issue populating claims")?;
+            .context("populating claims")?;
 
         // only include previously requested/authorized claims
         if let Some(claims) = &authorized.authorization_detail.claims {

@@ -205,6 +205,6 @@ impl<S: SignerExt> W3cVcBuilder<HasType, HasIssuer, HasHolder, HasClaims, HasSig
         let key = self.signer.0.verification_method().await?;
         encode_jws(&W3cVcClaims::from(vc), &key.try_into()?, self.signer.0)
             .await
-            .context("issue generating `jwt_vc_json` credential")
+            .context("generating `jwt_vc_json` credential")
     }
 }

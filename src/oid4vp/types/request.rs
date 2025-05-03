@@ -222,7 +222,7 @@ impl RequestObject {
     /// serialized.
     #[deprecated(since = "0.1.0", note = "please use `url_value` instead")]
     pub fn url_params(&self) -> Result<String> {
-        urlencode::to_string(self).context("issue creating query string")
+        urlencode::to_string(self).context("creating query string")
     }
 
     /// Generate an  Authorization Request query string with a base64 encoded
@@ -243,9 +243,9 @@ impl RequestObject {
             .add_signer(signer)
             .build()
             .await
-            .context("issue building jwt")?;
+            .context("building jwt")?;
 
-        let encoded = jws.encode().context("issue encoding jws")?;
+        let encoded = jws.encode().context("encoding jws")?;
         let client_id = utf8_percent_encode(&self.client_id.to_string(), UNRESERVED).to_string();
 
         Ok(format!("{client_id}&request={encoded}"))

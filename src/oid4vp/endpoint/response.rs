@@ -27,8 +27,9 @@ use crate::core::Kind;
 use crate::format::{mso_mdoc, sd_jwt, w3c_vc};
 use crate::oid4vp::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vp::provider::{Provider, StateStore};
-use crate::oid4vp::state::State;
-use crate::oid4vp::types::{AuthorzationResponse, Queryable, RedirectResponse, RequestedFormat};
+use crate::oid4vp::types::{
+    AuthorzationResponse, Queryable, RedirectResponse, RequestObject, RequestedFormat,
+};
 
 /// Endpoint for the Wallet to respond Verifier's Authorization Request.
 ///
@@ -46,7 +47,7 @@ async fn response(
     let Some(state_key) = &request.state else {
         return Err(Error::InvalidRequest("client state not found".to_string()));
     };
-    StateStore::purge(provider, state_key).await.context("issue purging state")?;
+    StateStore::purge(provider, state_key).await.context("purging state")?;
 
     Ok(RedirectResponse {
         // FIXME: add response to state using `response_code` so Wallet can fetch full response
@@ -77,11 +78,11 @@ async fn verify(provider: &impl Provider, request: &AuthorzationResponse) -> Res
     let Some(state_key) = &request.state else {
         return Err(Error::InvalidRequest("client state not found".to_string()));
     };
-    let Ok(state) = StateStore::get::<State>(provider, state_key).await else {
+    let Ok(state) = StateStore::get::<RequestObject>(provider, state_key).await else {
         return Err(Error::InvalidRequest("state not found".to_string()));
     };
 
-    let request_object = &state.request_object;
+    let request_object = &state.body;
     let dcql_query = &request_object.dcql_query;
 
     // verify presentation matches query:

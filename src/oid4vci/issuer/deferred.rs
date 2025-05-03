@@ -10,15 +10,15 @@
 
 use anyhow::Context as _;
 
+use crate::invalid;
 use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::issuer::credential::credential;
 use crate::oid4vci::provider::{Provider, StateStore};
-use crate::oid4vci::state::{Stage, State};
+use crate::oid4vci::state::Deferrance;
 use crate::oid4vci::types::{
     CredentialHeaders, CredentialResponse, DeferredCredentialRequest, DeferredCredentialResponse,
     DeferredHeaders,
 };
-use crate::{invalid, server};
 
 /// Deferred credential request handler.
 ///
@@ -33,19 +33,16 @@ async fn deferred(
     let transaction_id = &request.body.transaction_id;
 
     // retrieve deferred credential request from state
-    let Ok(state) = StateStore::get::<State>(provider, transaction_id).await else {
+    let Ok(state) = StateStore::get::<Deferrance>(provider, transaction_id).await else {
         return Err(Error::InvalidTransactionId("deferred state not found".to_string()));
     };
     if state.is_expired() {
         return Err(invalid!("state expired"));
     }
-    let Stage::Deferred(deferred_state) = state.stage else {
-        return Err(server!("Deferred state not found."));
-    };
 
     // make credential request
     let req = Request {
-        body: deferred_state.credential_request,
+        body: state.body.credential_request,
         headers: CredentialHeaders {
             authorization: request.headers.authorization,
         },
@@ -59,7 +56,7 @@ async fn deferred(
     }
 
     // remove deferred state item
-    StateStore::purge(provider, transaction_id).await.context("issue purging state")?;
+    StateStore::purge(provider, transaction_id).await.context("purging state")?;
 
     Ok(response)
 }

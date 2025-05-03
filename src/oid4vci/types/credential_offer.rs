@@ -196,7 +196,7 @@ impl CredentialOffer {
     /// Returns an `Error::ServerError` error if error if the Credential Offer
     /// cannot be serialized.
     pub fn to_querystring(&self) -> anyhow::Result<String> {
-        urlencode::to_string(self).context("issue creating query string")
+        urlencode::to_string(self).context("creating query string")
     }
 
     /// Convenience method for extracting a pre-authorized code grant from an

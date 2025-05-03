@@ -155,7 +155,7 @@ impl<S: SignerExt> SdJwtVpBuilder<HasMatched<'_>, HasClientId, HasSigner<'_, S>>
             .add_signer(self.signer.0)
             .build()
             .await
-            .context("issue signing KB-JWT")?
+            .context("building KB-JWT")?
             .to_string();
 
         // assemble presentation

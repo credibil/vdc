@@ -19,8 +19,7 @@ use anyhow::Context as _;
 use crate::invalid;
 use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::{Provider, StateStore};
-use crate::oid4vci::state::{Stage, State};
-use crate::oid4vci::types::{CredentialOfferRequest, CredentialOfferResponse};
+use crate::oid4vci::types::{CredentialOffer, CredentialOfferRequest, CredentialOfferResponse};
 
 /// Endpoint for the Wallet to request the Issuer's Credential Offer when
 /// engaged in a cross-device flow.
@@ -32,20 +31,18 @@ use crate::oid4vci::types::{CredentialOfferRequest, CredentialOfferResponse};
 async fn credential_offer(
     _issuer: &str, provider: &impl Provider, request: CredentialOfferRequest,
 ) -> Result<CredentialOfferResponse> {
-    // retrieve and then purge Credential Offer from state
-    let state =
-        StateStore::get::<State>(provider, &request.id).await.context("issue fetching state")?;
-    StateStore::purge(provider, &request.id).await.context("issue purging state")?;
+    let state = StateStore::get::<CredentialOffer>(provider, &request.id)
+        .await
+        .context("credential offer not found in state")?;
+    StateStore::purge(provider, &request.id).await.context("purging state")?;
 
     if state.is_expired() {
         return Err(invalid!("state expired"));
     }
 
-    let Stage::Pending(credential_offer) = state.stage else {
-        return Err(invalid!("no credential offer found"));
-    };
-
-    Ok(CredentialOfferResponse { credential_offer })
+    Ok(CredentialOfferResponse {
+        credential_offer: state.body,
+    })
 }
 
 impl<P: Provider> Handler<P> for Request<CredentialOfferRequest> {

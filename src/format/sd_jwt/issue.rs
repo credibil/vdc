@@ -233,7 +233,7 @@ impl<S: SignerExt> SdJwtVcBuilder<Vct, HasIssuer, HasKeyBinding, HasClaims, HasS
             .add_signer(self.signer.0)
             .build()
             .await
-            .context("issue signing SD-JWT")?
+            .context("building SD-JWT")?
             .to_string();
 
         // concatenate disclosures

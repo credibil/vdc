@@ -9,12 +9,12 @@
 use anyhow::Context as _;
 use chrono::{Duration, Utc};
 
-use crate::core::generate;
+use crate::generate;
 use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore};
 use crate::oid4vci::server::authorize;
-use crate::oid4vci::state::{PushedAuthorization, Stage, State};
 use crate::oid4vci::types::{PushedAuthorizationRequest, PushedAuthorizationResponse};
+use crate::state::State;
 
 /// Endpoint for the Wallet to push an Authorization Request when using Pushed
 /// Authorization Requests.
@@ -44,16 +44,10 @@ async fn par(
 
     // save request to state for retrieval by authorization endpoint
     let state = State {
-        subject_id: None,
-        stage: Stage::PushedAuthorization(PushedAuthorization {
-            request: request.request.clone(),
-            expires_at: Utc::now() + expires_in,
-        }),
+        body: request.request.clone(),
         expires_at: Utc::now() + expires_in,
     };
-    StateStore::put(provider, &request_uri, &state, state.expires_at)
-        .await
-        .context("issue saving state")?;
+    StateStore::put(provider, &request_uri, &state).await.context("saving state")?;
 
     Ok(PushedAuthorizationResponse {
         request_uri,

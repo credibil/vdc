@@ -4,7 +4,7 @@ use anyhow::Context as _;
 
 use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::{Provider, StateStore};
-use crate::oid4vci::state::State;
+use crate::oid4vci::state::Token;
 use crate::oid4vci::types::{RegistrationHeaders, RegistrationRequest, RegistrationResponse};
 use crate::server;
 
@@ -19,12 +19,12 @@ async fn register(
     request: Request<RegistrationRequest, RegistrationHeaders>,
 ) -> Result<RegistrationResponse> {
     // verify access token
-    StateStore::get::<State>(provider, &request.headers.authorization)
+    StateStore::get::<Token>(provider, &request.headers.authorization)
         .await
-        .context("state not found")?;
+        .context("retrieving state")?;
 
     let Ok(client_metadata) = provider.register(&request.body.client_metadata).await else {
-        return Err(server!("Registration failed"));
+        return Err(server!("registration failed"));
     };
 
     Ok(RegistrationResponse { client_metadata })

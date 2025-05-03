@@ -70,16 +70,16 @@ use std::fmt::Debug;
 use anyhow::Context as _;
 use chrono::Utc;
 
-use crate::core::generate;
 use crate::oauth::GrantType;
 use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
-use crate::oid4vci::state::{Authorization, Expire, Stage, State};
+use crate::oid4vci::state::{Authorization, Expire, Offer};
 use crate::oid4vci::types::{
     AuthorizationCredential, AuthorizationDetail, AuthorizationDetailType, AuthorizationRequest,
     AuthorizationResponse, AuthorizedDetail, Issuer, RequestObject,
 };
-use crate::{invalid, server};
+use crate::state::State;
+use crate::{generate, invalid, server};
 
 /// Authorization request handler.
 ///
@@ -96,16 +96,14 @@ async fn authorize(
         AuthorizationRequest::Object(request) => request,
         AuthorizationRequest::Uri(uri) => {
             is_par = true;
-            let state: State =
-                StateStore::get(provider, &uri.request_uri).await.context("state issue")?;
-            let Stage::PushedAuthorization(par) = &state.stage else {
-                return Err(invalid!("invalid state"));
-            };
+            let state = StateStore::get::<RequestObject>(provider, &uri.request_uri)
+                .await
+                .context("retrieving state")?;
 
-            if par.expires_at < Utc::now() {
+            if state.expires_at < Utc::now() {
                 return Err(invalid!("`request_uri` has expired"));
             }
-            par.request.clone()
+            state.body.clone()
         }
     };
 
@@ -149,24 +147,22 @@ async fn authorize(
     // save authorization state
     let state = State {
         expires_at: Utc::now() + Expire::Authorized.duration(),
-        subject_id: Some(request.subject_id),
-        stage: Stage::Authorized(Authorization {
+        body: Authorization {
+            subject_id: request.subject_id,
             code_challenge: request.code_challenge,
             code_challenge_method: request.code_challenge_method,
             details,
             client_id: request.client_id,
             redirect_uri: request.redirect_uri.clone(),
-        }),
+        },
     };
 
     let code = generate::auth_code();
-    StateStore::put(provider, &code, &state, state.expires_at)
-        .await
-        .context("issue saving authorization state")?;
+    StateStore::put(provider, &code, &state).await.context("saving authorization state")?;
 
     // remove offer state
     if let Some(issuer_state) = &request.issuer_state {
-        StateStore::purge(provider, issuer_state).await.context("issue purging offer state")?;
+        StateStore::purge(provider, issuer_state).await.context("purging offer state")?;
     }
 
     Ok(AuthorizationResponse {
@@ -257,14 +253,15 @@ impl Context {
 
         // does offer `subject_id`  match request `subject_id`?
         if let Some(issuer_state) = &request.issuer_state {
-            let state: State =
-                StateStore::get(provider, issuer_state).await.context("issue getting state")?;
+            let state = StateStore::get::<Offer>(provider, issuer_state)
+                .await
+                .context("retrieving state")?;
 
             if state.is_expired() {
                 return Err(invalid!("issuer state expired"));
             }
 
-            if state.subject_id.as_ref() != Some(&request.subject_id) {
+            if state.body.subject_id.as_ref() != Some(&request.subject_id) {
                 return Err(invalid!("request `subject_id` does not match offer"));
             }
         }
@@ -342,7 +339,7 @@ impl Context {
                     let config_id = self
                         .issuer
                         .credential_configuration_id(fmt)
-                        .context("issue getting `credential_configuration_id`")?;
+                        .context("getting `credential_configuration_id`")?;
 
                     detail.credential = AuthorizationCredential::ConfigurationId {
                         credential_configuration_id: config_id.clone(),

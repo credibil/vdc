@@ -20,8 +20,7 @@ async fn statuslist(
         return Err(invalid!("missing id"));
     };
 
-    let Some(token) = StatusStore::get(provider, &id).await.context("issue getting metadata")?
-    else {
+    let Some(token) = StatusStore::get(provider, &id).await.context("getting metadata")? else {
         return Err(invalid!("status token not found"));
     };
 
