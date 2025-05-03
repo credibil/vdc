@@ -176,6 +176,7 @@ use serde::{Deserialize, Serialize};
 pub use self::error::Error;
 pub use self::handlers::*;
 pub use self::verifier::*;
+pub use self::wallet::*;
 
 /// The JWS `typ` header parameter.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
