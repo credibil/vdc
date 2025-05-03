@@ -161,22 +161,20 @@
 //! [OpenID4VP]: (https://openid.net/specs/openid-4-verifiable-presentations-1_0.html)
 //! [JWT VC Presentation Profile]: (https://identity.foundation/jwt-vc-presentation-profile)
 
-pub mod dcql;
-
 pub mod provider;
 pub mod verifier;
 pub mod wallet;
 
-mod handlers;
 mod error;
+mod handlers;
 mod state;
 
 use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
 
-pub use self::handlers::*;
 pub use self::error::Error;
+pub use self::handlers::*;
 pub use self::verifier::*;
 
 /// The JWS `typ` header parameter.

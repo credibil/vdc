@@ -10,8 +10,8 @@
 
 use anyhow::Context as _;
 
-use crate::oid4vci::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::error::invalid;
+use crate::oid4vci::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::issuer::credential::credential;
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::Deferred;

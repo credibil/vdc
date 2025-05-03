@@ -149,7 +149,7 @@ pub(crate) use invalid;
 
 #[cfg(test)]
 mod test {
-    use anyhow::{Context,anyhow, Result};
+    use anyhow::{Context, Result, anyhow};
     use serde_json::{Value, json};
 
     use super::*;

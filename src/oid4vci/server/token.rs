@@ -21,8 +21,8 @@ use serde::de::DeserializeOwned;
 
 use crate::generate;
 use crate::oauth::GrantType;
-use crate::oid4vci::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::error::{invalid, server};
+use crate::oid4vci::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::pkce;
 use crate::oid4vci::provider::{Metadata, Provider, StateStore};
 use crate::oid4vci::state::{Authorized, Expire, Offered, Token};

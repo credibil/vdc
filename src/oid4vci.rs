@@ -88,11 +88,11 @@
 //! [OpenID Connect]: (https://openid.net/specs/openid-connect-core-1_0.html)
 //! [RFC6749]: (https://www.rfc-editor.org/rfc/rfc6749.html)
 
-pub mod wallet;
 mod handlers;
 pub mod pkce;
 pub mod provider;
 pub mod types;
+pub mod wallet;
 
 mod error;
 mod issuer;
@@ -106,8 +106,8 @@ pub mod proof {
 
 use serde::{Deserialize, Serialize};
 
-pub use self::handlers::*;
 pub use self::error::Error;
+pub use self::handlers::*;
 pub use self::types::*;
 
 /// The JWT `typ` header parameter.
