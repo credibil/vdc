@@ -4,13 +4,12 @@
 use chrono::TimeDelta;
 use serde::{Deserialize, Serialize};
 
-use crate::format::w3c_vc::VerifiableCredential;
 use crate::oauth::CodeChallengeMethod;
 use crate::oid4vci::types::{AuthorizedDetail, CredentialRequest};
 
 /// Pre-authorization state from the `create_offer` endpoint.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct Offer {
+pub struct Offered {
     /// Identifies the (previously authenticated) Holder in order that Issuer
     /// can authorize credential issuance.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -29,7 +28,7 @@ pub struct Offer {
 /// Authorization state.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[allow(clippy::struct_field_names)]
-pub struct Authorization {
+pub struct Authorized {
     /// Identifies the (previously authenticated) Holder in order that Issuer
     /// can authorize credential issuance.
     pub subject_id: String,
@@ -68,16 +67,16 @@ pub struct Token {
     pub details: Vec<AuthorizedDetail>,
 }
 
-/// Issued Credential state (for Notification endpoint).
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct Credential {
-    /// The issued credential.
-    pub credential: VerifiableCredential,
-}
+// /// Issued Credential state (for Notification endpoint).
+// #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+// pub struct Issued {
+//     /// The issued credential.
+//     pub credential: VerifiableCredential,
+// }
 
 /// Deferred issuance state.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct Deferrance {
+pub struct Deferred {
     /// Used to identify a Deferred Issuance transaction. Is used as the
     /// state persistence key.
     pub transaction_id: String,

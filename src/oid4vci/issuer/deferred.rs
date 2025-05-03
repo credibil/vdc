@@ -14,7 +14,7 @@ use crate::invalid;
 use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::issuer::credential::credential;
 use crate::oid4vci::provider::{Provider, StateStore};
-use crate::oid4vci::state::Deferrance;
+use crate::oid4vci::state::Deferred;
 use crate::oid4vci::types::{
     CredentialHeaders, CredentialResponse, DeferredCredentialRequest, DeferredCredentialResponse,
     DeferredHeaders,
@@ -33,7 +33,7 @@ async fn deferred(
     let transaction_id = &request.body.transaction_id;
 
     // retrieve deferred credential request from state
-    let Ok(state) = StateStore::get::<Deferrance>(provider, transaction_id).await else {
+    let Ok(state) = StateStore::get::<Deferred>(provider, transaction_id).await else {
         return Err(Error::InvalidTransactionId("deferred state not found".to_string()));
     };
     if state.is_expired() {

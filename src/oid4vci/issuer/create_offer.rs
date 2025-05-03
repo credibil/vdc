@@ -14,7 +14,7 @@ use http::StatusCode;
 use crate::oauth::GrantType;
 use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
-use crate::oid4vci::state::{Expire, Offer};
+use crate::oid4vci::state::{Expire, Offered};
 use crate::oid4vci::types::{
     AuthorizationCodeGrant, AuthorizationCredential, AuthorizationDetail, AuthorizationDetailType,
     AuthorizedDetail, CreateOfferRequest, CreateOfferResponse, CredentialOffer, Grants, Issuer,
@@ -65,7 +65,7 @@ async fn create_offer(
         let state_key = state_key(credential_offer.grants.as_ref())?;
         let state = State {
             expires_at: Utc::now() + Expire::Authorized.duration(),
-            body: Offer {
+            body: Offered {
                 subject_id: request.subject_id.clone(),
                 details: auth_items,
                 tx_code: tx_code.clone(),

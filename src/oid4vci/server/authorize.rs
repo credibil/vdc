@@ -73,7 +73,7 @@ use chrono::Utc;
 use crate::oauth::GrantType;
 use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
-use crate::oid4vci::state::{Authorization, Expire, Offer};
+use crate::oid4vci::state::{Authorized, Expire, Offered};
 use crate::oid4vci::types::{
     AuthorizationCredential, AuthorizationDetail, AuthorizationDetailType, AuthorizationRequest,
     AuthorizationResponse, AuthorizedDetail, Issuer, RequestObject,
@@ -147,7 +147,7 @@ async fn authorize(
     // save authorization state
     let state = State {
         expires_at: Utc::now() + Expire::Authorized.duration(),
-        body: Authorization {
+        body: Authorized {
             subject_id: request.subject_id,
             code_challenge: request.code_challenge,
             code_challenge_method: request.code_challenge_method,
@@ -253,7 +253,7 @@ impl Context {
 
         // does offer `subject_id`  match request `subject_id`?
         if let Some(issuer_state) = &request.issuer_state {
-            let state = StateStore::get::<Offer>(provider, issuer_state)
+            let state = StateStore::get::<Offered>(provider, issuer_state)
                 .await
                 .context("retrieving state")?;
 

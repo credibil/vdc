@@ -22,7 +22,7 @@ use crate::oauth::GrantType;
 use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::pkce;
 use crate::oid4vci::provider::{Metadata, Provider, StateStore};
-use crate::oid4vci::state::{Authorization, Expire, Offer, Token};
+use crate::oid4vci::state::{Authorized, Expire, Offered, Token};
 use crate::oid4vci::types::{
     AuthorizationCredential, AuthorizationDetail, AuthorizedDetail, Issuer, TokenGrantType,
     TokenRequest, TokenResponse, TokenType,
@@ -51,7 +51,7 @@ async fn token(
             pre_authorized_code, ..
         } => {
             // RFC 6749 requires a particular error here
-            let Ok(state) = StateStore::get::<Offer>(provider, pre_authorized_code).await else {
+            let Ok(state) = StateStore::get::<Offered>(provider, pre_authorized_code).await else {
                 return Err(Error::InvalidGrant("invalid authorization code".to_string()));
             };
             StateStore::purge(provider, pre_authorized_code).await.context("purging state")?;
@@ -71,7 +71,7 @@ async fn token(
             (subject_id.clone(), authorization_details)
         }
         TokenGrantType::AuthorizationCode { code, .. } => {
-            let Ok(state) = StateStore::get::<Authorization>(provider, code).await else {
+            let Ok(state) = StateStore::get::<Authorized>(provider, code).await else {
                 return Err(Error::InvalidGrant("invalid authorization code".to_string()));
             };
             StateStore::purge(provider, code).await.context("purging state")?;
@@ -130,8 +130,8 @@ impl Body for TokenRequest {}
 #[derive(Debug)]
 struct Context<'a> {
     issuer: &'a str,
-    offer: Option<Offer>,
-    authorization: Option<Authorization>,
+    offer: Option<Offered>,
+    authorization: Option<Authorized>,
 }
 
 impl TokenRequest {
