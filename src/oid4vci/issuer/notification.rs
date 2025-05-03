@@ -19,7 +19,7 @@
 //! no guarantees that a Credential Issuer will receive a notification within a
 //! certain time period or at all.
 
-use crate::oid4vci::endpoint::{Body, Error, Handler, Headers, Request, Response, Result};
+use crate::oid4vci::handlers::{Body, Error, Handler, Headers, Request, Response, Result};
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::Token;
 use crate::oid4vci::types::{NotificationHeaders, NotificationRequest, NotificationResponse};

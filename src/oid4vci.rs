@@ -89,7 +89,7 @@
 //! [RFC6749]: (https://www.rfc-editor.org/rfc/rfc6749.html)
 
 pub mod wallet;
-mod endpoint;
+mod handlers;
 pub mod pkce;
 pub mod provider;
 pub mod types;
@@ -106,7 +106,7 @@ pub mod proof {
 
 use serde::{Deserialize, Serialize};
 
-pub use self::endpoint::*;
+pub use self::handlers::*;
 pub use self::error::Error;
 pub use self::types::*;
 

@@ -25,7 +25,7 @@
 
 use anyhow::Context as _;
 
-use crate::oid4vci::endpoint::{Body, Error, Handler, Headers, Request, Response, Result};
+use crate::oid4vci::handlers::{Body, Error, Handler, Headers, Request, Response, Result};
 use crate::oid4vci::provider::{Metadata, Provider};
 use crate::oid4vci::types::{IssuerRequest, IssuerResponse, MetadataHeaders};
 

@@ -21,7 +21,7 @@ use crate::format::mso_mdoc::MdocBuilder;
 use crate::format::sd_jwt::SdJwtVcBuilder;
 use crate::format::w3c_vc::W3cVcBuilder;
 use crate::oid4vci::JwtType;
-use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
+use crate::oid4vci::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::error::server;
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Deferred, Expire, Token};
