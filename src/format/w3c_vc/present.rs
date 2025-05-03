@@ -6,7 +6,7 @@ use credibil_jose::encode_jws;
 
 use crate::core::{Kind, OneMany};
 use crate::format::w3c_vc::{VerifiablePresentation, W3cVpClaims};
-use crate::oid4vp::types::Matched;
+use crate::oid4vp::verifier::Matched;
 
 /// Generate an IETF `dc+sd-jwt` format credential.
 #[derive(Debug)]

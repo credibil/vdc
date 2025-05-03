@@ -7,7 +7,7 @@ use credibil_identity::IdentityResolver;
 use crate::core::Kind;
 use crate::format::FormatProfile;
 use crate::format::mso_mdoc::{DataItem, IssuerSigned, MobileSecurityObject, serde_cbor, verify};
-use crate::oid4vp::types::{Claim, Queryable};
+use crate::oid4vp::verifier::{Claim, Queryable};
 
 /// Convert a `mso_mdoc` encoded credential to a `Queryable` object.
 ///

@@ -164,10 +164,10 @@
 pub mod dcql;
 
 pub mod provider;
-pub mod types;
+pub mod verifier;
 pub mod wallet;
 
-mod endpoint;
+mod handlers;
 mod error;
 mod state;
 
@@ -175,9 +175,9 @@ use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
 
-pub use self::endpoint::*;
+pub use self::handlers::*;
 pub use self::error::Error;
-pub use self::types::*;
+pub use self::verifier::*;
 
 /// The JWS `typ` header parameter.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]

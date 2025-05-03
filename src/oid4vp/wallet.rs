@@ -9,7 +9,7 @@ use crate::format::mso_mdoc::DeviceResponseBuilder;
 use crate::format::sd_jwt::SdJwtVpBuilder;
 use crate::format::w3c_vc::W3cVpBuilder;
 use crate::oid4vp::ResponseMode;
-use crate::oid4vp::types::{QueryResult, RequestObject, RequestedFormat};
+use crate::oid4vp::verifier::{QueryResult, RequestObject, RequestedFormat};
 
 /// Generate a Verifiable Presentation (VP) token.
 ///

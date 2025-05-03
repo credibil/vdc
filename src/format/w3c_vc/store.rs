@@ -11,7 +11,7 @@ use crate::core::Kind;
 use crate::format::FormatProfile;
 use crate::format::w3c_vc::{VerifiableCredential, W3cVcClaims};
 use crate::oid4vci::types::CredentialDefinition;
-use crate::oid4vp::types::{Claim, Queryable};
+use crate::oid4vp::verifier::{Claim, Queryable};
 
 /// Convert a `w3c` credential to a `Queryable` object.
 ///

@@ -6,7 +6,7 @@ use credibil_identity::SignerExt;
 use credibil_jose::Jws;
 
 use crate::format::sd_jwt::{Disclosure, JwtType, KbJwtClaims};
-use crate::oid4vp::types::Matched;
+use crate::oid4vp::verifier::Matched;
 
 /// Generate an IETF `dc+sd-jwt` format credential.
 #[derive(Debug)]

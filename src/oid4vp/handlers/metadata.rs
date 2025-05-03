@@ -7,9 +7,9 @@
 
 use anyhow::Context;
 
-use crate::oid4vp::endpoint::{Body, Error, Handler, Request, Response, Result};
+use crate::oid4vp::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vp::provider::{Metadata, Provider};
-use crate::oid4vp::types::{MetadataRequest, MetadataResponse};
+use crate::oid4vp::verifier::{MetadataRequest, MetadataResponse};
 
 /// Endpoint for Wallets to request Verifier (Client) metadata.
 ///

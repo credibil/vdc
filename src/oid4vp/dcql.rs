@@ -3,7 +3,7 @@
 use anyhow::{Result, anyhow};
 
 use crate::format::FormatProfile;
-use crate::oid4vp::types::{
+use crate::oid4vp::verifier::{
     Claim, ClaimQuery, CredentialQuery, CredentialSetQuery, DcqlQuery, Matched, MetadataQuery,
     QueryResult, Queryable, RequestedFormat,
 };

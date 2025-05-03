@@ -18,10 +18,10 @@ use anyhow::Context;
 use credibil_jose::JwsBuilder;
 
 use crate::oid4vp::JwtType;
-use crate::oid4vp::endpoint::{Body, Error, Handler, Request, Response, Result};
+use crate::oid4vp::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vp::error::invalid;
 use crate::oid4vp::provider::{Provider, StateStore};
-use crate::oid4vp::types::{ClientId, RequestObject, RequestUriRequest, RequestUriResponse};
+use crate::oid4vp::verifier::{ClientId, RequestObject, RequestUriRequest, RequestUriResponse};
 
 /// Endpoint for the Wallet to request the Verifier's Request Object when
 /// engaged in a cross-device flow.

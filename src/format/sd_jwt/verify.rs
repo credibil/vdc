@@ -6,7 +6,7 @@ use credibil_jose::{Jwt, decode_jws};
 
 use crate::core::did_jwk;
 use crate::format::sd_jwt::{Disclosure, KbJwtClaims, KeyBinding, SdJwtClaims};
-use crate::oid4vp::types::{Claim, RequestObject};
+use crate::oid4vp::verifier::{Claim, RequestObject};
 use crate::token_status::{StatusList, StatusToken};
 
 /// Verifies an SD-JWT credential.

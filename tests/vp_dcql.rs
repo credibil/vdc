@@ -10,7 +10,7 @@ use credibil_vc::format::mso_mdoc::MdocBuilder;
 use credibil_vc::format::sd_jwt::SdJwtVcBuilder;
 use credibil_vc::format::w3c_vc::W3cVcBuilder;
 use credibil_vc::format::{mso_mdoc, sd_jwt, w3c_vc};
-use credibil_vc::oid4vp::types::{DcqlQuery, ResponseMode};
+use credibil_vc::oid4vp::verifier::{DcqlQuery, ResponseMode};
 use credibil_vc::oid4vp::{
     self, AuthorzationResponse, DeviceFlow, GenerateRequest, GenerateResponse, wallet,
 };

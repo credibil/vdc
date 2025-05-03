@@ -7,7 +7,7 @@ use credibil_identity::IdentityResolver;
 pub use credibil_identity::SignerExt;
 
 use crate::blockstore::BlockStore;
-use crate::oid4vp::types::{Verifier, Wallet};
+use crate::oid4vp::verifier::{Verifier, Wallet};
 pub use crate::state::StateStore;
 use crate::token_status::StatusToken;
 
