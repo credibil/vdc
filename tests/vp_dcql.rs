@@ -12,7 +12,7 @@ use credibil_vc::format::w3c_vc::W3cVcBuilder;
 use credibil_vc::format::{mso_mdoc, sd_jwt, w3c_vc};
 use credibil_vc::oid4vp::types::{DcqlQuery, ResponseMode};
 use credibil_vc::oid4vp::{
-    self, AuthorzationResponse, DeviceFlow, GenerateRequest, GenerateResponse, vp_token,
+    self, AuthorzationResponse, DeviceFlow, GenerateRequest, GenerateResponse, wallet,
 };
 use futures::executor::block_on;
 use provider::issuer::{ISSUER_ID, Issuer};
@@ -73,7 +73,7 @@ async fn multiple_claims() {
     // assert_eq!(results.len(), 2);
 
     let vp_token =
-        vp_token::generate(&request_object, &results, &*WALLET).await.expect("should get token");
+        wallet::generate(&request_object, &results, &*WALLET).await.expect("should get token");
     // assert_eq!(vp_token.len(), 1);
 
     let request = AuthorzationResponse {
@@ -170,7 +170,7 @@ async fn multiple_credentials() {
     // return a single `vp_token` for the query
     // each credential query will result in a separate presentation
     let vp_token =
-        vp_token::generate(&request_object, &results, &*WALLET).await.expect("should get token");
+        wallet::generate(&request_object, &results, &*WALLET).await.expect("should get token");
     assert_eq!(vp_token.len(), 3);
 
     let request = AuthorzationResponse {

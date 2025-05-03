@@ -1,4 +1,4 @@
-//! # Client
+//! # Wallet
 
 mod authorization;
 mod credential;
