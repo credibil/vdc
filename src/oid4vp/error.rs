@@ -149,22 +149,34 @@ pub(crate) use invalid;
 
 #[cfg(test)]
 mod test {
-    use anyhow::Context;
+    use anyhow::{Context,anyhow, Result};
     use serde_json::{Value, json};
 
     use super::*;
 
     // Test that error details are retuned as json.
     #[test]
-    fn context() {
-        let err = create_error().unwrap_err();
-        dbg!(err);
+    fn oid4vp_context() {
+        let err = oid4vp_error().unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            r#"{"error": "invalid_request", "error_description": "request context: some invalid request"}"#
+        );
+    }
+    fn oid4vp_error() -> Result<(), Error> {
+        Err(Error::InvalidRequest("some invalid request".to_string())).context("request context")?
     }
 
-    fn create_error() -> anyhow::Result<(), Error> {
-        Err(anyhow::anyhow!("bad request")).context("some context")?
-        // Err(Error::InvalidRequest("this is an invalid request".to_string()))
-        //     .context("with some context")?
+    #[test]
+    fn anyhow_context() {
+        let err = anyhow_error().unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            r#"{"error": "server_error", "error_description": "error context: one-off error"}"#
+        );
+    }
+    fn anyhow_error() -> Result<(), Error> {
+        Err(anyhow!("one-off error")).context("error context")?
     }
 
     // Test that error details are retuned as json.
