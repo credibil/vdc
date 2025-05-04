@@ -1,394 +1,536 @@
-//! # Batch Credential Endpoint
-//!
-//! The Batch Credential Endpoint issues multiple Credentials in one Batch
-//! Credential Response as approved by the End-User upon presentation of a valid
-//! Access Token representing this approval.
-//!
-//! A Wallet can request issuance of multiple Credentials of certain types and
-//! formats in one Batch Credential Request. This includes Credentials of the
-//! same type and multiple formats, different types and one format, or both.
-
-use std::collections::HashSet;
 use std::fmt::Debug;
 
-use chrono::Utc;
-use credibil_jose::{Jwt, KeyBinding, decode_jws};
+use chrono::serde::ts_seconds;
+use chrono::{DateTime, Utc};
+use credibil_jose::PublicKeyJwk;
+use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
 
-use crate::core::{did_jwk, generate};
-use crate::format::FormatProfile;
-use crate::format::mso_mdoc::MdocBuilder;
-use crate::format::sd_jwt::SdJwtVcBuilder;
-use crate::format::w3c_vc::W3cVcBuilder;
-use crate::oid4vci::JwtType;
-use crate::oid4vci::endpoint::{Body, Error, Handler, Request, Response, Result};
-use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
-use crate::oid4vci::state::{Deferrance, Expire, Stage, State};
-use crate::oid4vci::types::{
-    AuthorizedDetail, Credential, CredentialConfiguration, CredentialHeaders, CredentialRequest,
-    CredentialResponse, Dataset, Issuer, MultipleProofs, Proof, ProofClaims, RequestBy,
-    SingleProof,
-};
-use crate::server;
-use crate::status::issuer::Status;
+use crate::core::Kind;
+use crate::format::w3c_vc::VerifiableCredential;
 
-/// Credential request handler.
+/// The user information returned by the Subject trait.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[serde(default)]
+pub struct Dataset {
+    /// The credential configuration ID of the credential this dataset is for.
+    pub credential_configuration_id: String,
+
+    /// The credential subject populated for the user.
+    pub claims: Map<String, Value>,
+
+    /// Specifies whether user information required for the credential subject
+    /// is pending.
+    pub pending: bool,
+}
+
+/// `CredentialRequest` is used by the Client to make a Credential Request to
+/// the Credential Endpoint.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(default)]
+pub struct CredentialRequest {
+    /// Identifies the credential requested for issuance using either a
+    /// `credential_identifier` or a supported format.
+    ///
+    /// If `credential_identifiers` were returned in the Token
+    /// Response, they MUST be used here. Otherwise, they MUST NOT be used.
+    #[serde(flatten)]
+    pub credential: RequestBy,
+
+    /// Wallet's proof of possession of cryptographic key material the issued
+    /// Credential will be bound to.
+    /// REQUIRED if the `proof_types_supported` parameter is non-empty and
+    /// present in the `credential_configurations_supported` parameter of
+    /// the Issuer metadata for the requested Credential.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(flatten)]
+    pub proof: Option<Proof>,
+
+    /// If present, specifies how the Credential Response should be encrypted.
+    /// If not present.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub credential_response_encryption: Option<CredentialResponseEncryption>,
+}
+
+/// Means used to identifiy Credential type and format when requesting a
+/// Credential.
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub enum RequestBy {
+    /// Credential is requested by `credential_identifier`.
+    /// REQUIRED when an Authorization Details of type `openid_credential` was
+    /// returned from the Token Response.
+    #[serde(rename = "credential_identifier")]
+    Identifier(String),
+
+    /// Credential is requested by `credential_configuration_id`. This
+    /// identifies the entry in the `credential_configurations_supported`
+    /// Issuer metadata.
+    #[serde(rename = "credential_configuration_id")]
+    ConfigurationId(String),
+}
+
+impl Default for RequestBy {
+    fn default() -> Self {
+        Self::Identifier(String::new())
+    }
+}
+
+/// Wallet's proof of possession of the key material the issued Credential is to
+/// be bound to.
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub enum Proof {
+    /// A single proof of possession of the cryptographic key material to which
+    /// the issued Credential instance will be bound to.
+    #[serde(rename = "proof")]
+    Single(SingleProof),
+
+    /// One or more proof of possessions of the cryptographic key material to
+    /// which the issued Credential instances will be bound to.
+    #[serde(rename = "proofs")]
+    Multiple(MultipleProofs),
+}
+
+impl Default for Proof {
+    fn default() -> Self {
+        Self::Single(SingleProof::default())
+    }
+}
+
+/// A single proof of possession of the cryptographic key material provided by
+/// the Wallet to which the issued Credential instance will be bound.
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(tag = "proof_type")]
+pub enum SingleProof {
+    /// The JWT containing the Wallet's proof of possession of key material.
+    #[serde(rename = "jwt")]
+    Jwt {
+        /// The JWT containing the Wallet's proof of possession of key material.
+        jwt: String,
+    },
+
+    /// A JWT containg a key attestation without using a proof of possession
+    /// of the key material that is being attested.
+    #[serde(rename = "attestation")]
+    Attestation {
+        /// The JWT containing the Wallet's proof of possession of key material.
+        attestation: String,
+    },
+    //
+    // /// A W3C Verifiable Presentation object signed using the Data Integrity Proof.
+    // #[serde(rename = "ldp_vp")]
+    // LdpVp {
+    //     /// The JWT containing the Wallet's proof of possession of key material.
+    //     ldp_vp: String,
+    // },
+}
+
+impl Default for SingleProof {
+    fn default() -> Self {
+        Self::Jwt { jwt: String::new() }
+    }
+}
+
+/// A a single proof of possession of the cryptographic key material provided by
+/// the Wallet to which the issued Credential instance will be bound.
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub enum MultipleProofs {
+    /// JWTs containing the Wallet's proof of possession of key material.
+    #[serde(rename = "jwt")]
+    Jwt(Vec<String>),
+
+    /// JWTs containg a key attestation without using a proof of possession
+    /// of the key material that is being attested.
+    #[serde(rename = "attestation")]
+    Attestation(Vec<String>),
+}
+
+impl Default for MultipleProofs {
+    fn default() -> Self {
+        Self::Jwt(vec![String::new()])
+    }
+}
+
+/// Claims containing a Wallet's proof of possession of key material that can be
+/// used for binding an issued Credential.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+pub struct ProofClaims {
+    /// The `client_id` of the Client making the Credential request.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "iss")]
+    pub client_id: Option<String>,
+
+    /// The Credential Issuer Identifier.
+    #[serde(rename = "aud")]
+    pub credential_issuer: String,
+
+    /// The time at which the proof was issued.
+    #[serde(with = "ts_seconds")]
+    pub iat: DateTime<Utc>,
+
+    /// A server-provided `c_nonce`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nonce: Option<String>,
+}
+
+impl ProofClaims {
+    /// Create a new `ProofClaims` instance.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            iat: Utc::now(),
+            ..Self::default()
+        }
+    }
+
+    /// Set the `client_id` of the Client making the Credential request.
+    #[must_use]
+    pub fn client_id(mut self, client_id: impl Into<String>) -> Self {
+        self.client_id = Some(client_id.into());
+        self
+    }
+
+    /// Set the Credential Issuer Identifier.
+    #[must_use]
+    pub fn credential_issuer(mut self, credential_issuer: impl Into<String>) -> Self {
+        self.credential_issuer = credential_issuer.into();
+        self
+    }
+
+    /// Set the server-provided `c_nonce`.
+    #[must_use]
+    pub fn nonce(mut self, nonce: impl Into<String>) -> Self {
+        self.nonce = Some(nonce.into());
+        self
+    }
+}
+
+/// Claims containing a Wallet's proof of possession of key material that can be
+/// used for binding an issued Credential.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+pub struct AttestationClaims {
+    /// The time at which the proof was issued, as a `NumericDate` (seconds
+    /// since 01-01-1970).
+    #[serde(with = "ts_seconds")]
+    pub iat: DateTime<Utc>,
+
+    /// The time at which the key attestation and the key(s) it is attesting
+    /// expire, as a `NumericDate` (seconds since 01-01-1970).
+    #[serde(with = "ts_seconds")]
+    pub exp: DateTime<Utc>,
+
+    /// Attested keys from the same key storage component.
+    pub attested_keys: Vec<PublicKeyJwk>,
+
+    /// Values that assert the attack potential resistance of the key storage
+    /// component and the keys attested to.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_storage: Option<Vec<AttackPotentialResistance>>,
+
+    /// Values that assert the attack potential resistance of the user
+    /// authentication methods allowed to access the private keys of the
+    /// keys attested to.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_authentication: Option<Vec<AttackPotentialResistance>>,
+
+    /// A server-provided `c_nonce`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nonce: Option<String>,
+
+    /// Defines the supported revocation check mechanisms. For example,
+    /// [ietf-oauth-status-list](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-status-list-09)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+}
+
+/// Options for asserting the attack potential resistance of `key_storage` and
+/// `user_authentication` parameters.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum AttackPotentialResistance {
+    /// Used when key storage or user authentication is resistant to attack
+    /// with attack potential "High", equivalent to VAN.5 according to ISO
+    /// 18045.
+    Iso18045High,
+
+    /// Used when key storage or user authentication is resistant to attack
+    /// with attack potential "Moderate", equivalent to VAN.4 according to
+    /// ISO 18045.
+    Iso18045Moderate,
+
+    /// Used when key storage or user authentication is resistant to attack
+    /// with attack potential "Enhanced-Basic", equivalent to VAN.3 according
+    /// to ISO 18045.
+    Iso18045EnhancedBasic,
+
+    /// Used when key storage or user authentication is resistant to attack
+    /// with attack potential "Basic", equivalent to VAN.2 according to ISO
+    /// 18045.
+    #[default]
+    Iso18045EBasic,
+}
+
+/// Contains information about whether the Credential Issuer supports encryption
+/// of the Credential Response on top of TLS.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+pub struct CredentialResponseEncryption {
+    /// The public key used for encrypting the Credential Response.
+    pub jwk: PublicKeyJwk,
+
+    /// JWE [RFC7516] alg algorithm [RFC7518] for encrypting Credential
+    /// Response.
+    ///
+    /// [RFC7516]: (https://www.rfc-editor.org/rfc/rfc7516)
+    /// [RFC7518]: (https://www.rfc-editor.org/rfc/rfc7518)
+    pub alg: String,
+
+    /// JWE [RFC7516] enc algorithm [RFC7518] for encoding Credential Response.
+    ///
+    /// [RFC7516]: (https://www.rfc-editor.org/rfc/rfc7516)
+    /// [RFC7518]: (https://www.rfc-editor.org/rfc/rfc7518)
+    pub enc: String,
+}
+
+/// The Credential Response can be Synchronous or Deferred.
 ///
-/// # Errors
-///
-/// Returns an `OpenID4VP` error if the request is invalid or if the provider is
-/// not available.
-pub async fn credential(
-    issuer: &str, provider: &impl Provider, request: Request<CredentialRequest, CredentialHeaders>,
-) -> Result<CredentialResponse> {
-    let Ok(state) = StateStore::get::<State>(provider, &request.headers.authorization).await else {
-        return Err(Error::AccessDenied("invalid access token".to_string()));
-    };
+/// The Credential Issuer MAY be able to immediately issue a requested
+/// Credential. In other cases, the Credential Issuer MAY NOT be able to
+/// immediately issue a requested Credential and will instead return a
+/// `transaction_id` to be used later to retrieve a Credential when it is ready.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum CredentialResponse {
+    /// Contains an array of issued Credentials. The values in the array MAY be
+    /// a string or an object, depending on the Credential Format Profile.
+    Credentials {
+        /// An array of one or more issued Credentials
+        credentials: Vec<Credential>,
 
-    // create a request context for data accessed more than once
-    let mut ctx = Context {
-        state,
-        issuer: Metadata::issuer(provider, issuer)
-            .await
-            .map_err(|e| server!("metadata issue: {e}"))?,
-        ..Context::default()
-    };
+        /// Used to identify one or more of the Credentials returned in the
+        /// response. The `notification_id` is included in the Notification
+        /// Request.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        notification_id: Option<String>,
+    },
 
-    let request = request.body;
-    let authorized = request.authorized_detail(&ctx)?;
-
-    // check whether issuance should be deferred
-    let dataset = ctx.dataset(provider, &request, &authorized).await?;
-    if dataset.pending {
-        return ctx.defer(provider, request).await;
-    }
-
-    // credential configuration
-    let Some(config_id) = authorized.credential_configuration_id() else {
-        return Err(Error::InvalidCredentialRequest("no credential_configuration_id".to_string()));
-    };
-    let Some(config) = ctx.issuer.credential_configurations_supported.get(config_id) else {
-        return Err(server!("credential configuration unable to be found"));
-    };
-    ctx.configuration = config.clone();
-
-    request.verify(provider, &mut ctx).await?;
-
-    ctx.issue(provider, dataset).await
+    /// String identifying a Deferred Issuance transaction. This parameter is
+    /// contained in the response if the Credential Issuer cannot
+    /// immediately issue the Credential. The value is subsequently used to
+    /// obtain the respective Credential with the Deferred Credential
+    /// Endpoint.
+    TransactionId {
+        /// The Deferred Issuance transaction identifier.
+        transaction_id: String,
+    },
 }
 
-impl<P: Provider> Handler<P> for Request<CredentialRequest, CredentialHeaders> {
-    type Error = Error;
-    type Provider = P;
-    type Response = CredentialResponse;
-
-    async fn handle(
-        self, issuer: &str, provider: &Self::Provider,
-    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
-        credential(issuer, provider, self).await
-    }
-}
-
-impl Body for CredentialRequest {}
-
-#[derive(Debug, Default)]
-struct Context {
-    state: State,
-    issuer: Issuer,
-    configuration: CredentialConfiguration,
-    proof_kids: Vec<String>,
-}
-
-impl CredentialRequest {
-    // TODO: check this list for compliance
-    // To validate a key proof, ensure that:
-    //   - the header parameter does not contain a private key
-    //   - the creation time of the JWT, as determined by either the issuance time,
-    //     or a server managed timestamp via the nonce claim, is within an
-    //     acceptable window (see Section 11.5).
-
-    // Verify the credential request
-    async fn verify(&self, provider: &impl Provider, ctx: &mut Context) -> Result<()> {
-        tracing::debug!("credential::verify");
-
-        if ctx.state.is_expired() {
-            return Err(Error::InvalidCredentialRequest("token state expired".to_string()));
+impl Default for CredentialResponse {
+    fn default() -> Self {
+        Self::Credentials {
+            credentials: vec![Credential {
+                credential: Kind::default(),
+            }],
+            notification_id: None,
         }
+    }
+}
 
-        // FIXME: refactor into separate function.
-        if let Some(supported_types) = &ctx.configuration.proof_types_supported {
-            let Some(proof) = &self.proof else {
-                return Err(Error::InvalidProof("proof not set".to_string()));
-            };
+/// The issued credential
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+pub struct Credential {
+    /// Contains one issued Credential. It MAY be a string or an object,
+    /// depending on the Credential Format Profile.
+    pub credential: Kind<VerifiableCredential>,
+}
 
-            // TODO: cater for non-JWT proofs - use w3c-vc::decode method
-            let _ = supported_types.get("jwt").ok_or_else(|| {
-                Error::InvalidCredentialRequest("proof type not supported".to_string())
-            })?;
+/// An HTTP POST request, which accepts an `acceptance_token` as the only
+/// parameter. The `acceptance_token` parameter MUST be sent as Access Token in
+/// the HTTP header.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct DeferredCredentialRequest {
+    /// Identifies a Deferred Issuance transaction from an earlier Credential
+    /// Request.
+    pub transaction_id: String,
+}
 
-            // extract proof JWT(s) from request
-            let proof_jwts = match proof {
-                Proof::Single(proof_type) => match proof_type {
-                    SingleProof::Jwt { jwt } => &vec![jwt.clone()],
-                    SingleProof::Attestation { .. } => todo!(),
+/// The Deferred Credential Response uses the same format and credential
+/// parameters defined for a Credential Response.
+pub type DeferredCredentialResponse = CredentialResponse;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::oid4vci::issuer::CredentialConfiguration;
+
+    #[test]
+    fn credential_identifier() {
+        let json = serde_json::json!({
+            "credential_identifier": "EngineeringDegree2023",
+            "proof": {
+                "proof_type": "jwt",
+                "jwt": "SomeJWT"
+            }
+        });
+        let request = CredentialRequest {
+            credential: RequestBy::Identifier("EngineeringDegree2023".to_string()),
+            proof: Some(Proof::Single(SingleProof::Jwt {
+                jwt: "SomeJWT".to_string(),
+            })),
+            ..CredentialRequest::default()
+        };
+
+        let deserialized: CredentialRequest =
+            serde_json::from_value(json.clone()).expect("should deserialize from json");
+        assert_eq!(request, deserialized);
+
+        let serialized = serde_json::to_value(&request).expect("should serialize to string");
+        assert_eq!(json, serialized);
+    }
+
+    #[test]
+    fn multiple_proofs() {
+        let json = serde_json::json!({
+            "credential_identifier": "EngineeringDegree2023",
+            "proofs": {
+                "jwt": [
+                    "SomeJWT1",
+                    "SomeJWT2"
+                ]
+            }
+        });
+        let request = CredentialRequest {
+            credential: RequestBy::Identifier("EngineeringDegree2023".to_string()),
+            proof: Some(Proof::Multiple(MultipleProofs::Jwt(vec![
+                "SomeJWT1".to_string(),
+                "SomeJWT2".to_string(),
+            ]))),
+            ..CredentialRequest::default()
+        };
+
+        let deserialized: CredentialRequest =
+            serde_json::from_value(json.clone()).expect("should deserialize from json");
+        assert_eq!(request, deserialized);
+
+        let serialized = serde_json::to_value(&request).expect("should serialize to string");
+        assert_eq!(json, serialized);
+    }
+
+    #[test]
+    fn claim_label_display() {
+        let json = serde_json::json!({
+            "format": "jwt_vc_json",
+            "scope": "EmployeeIDCredential",
+            "cryptographic_binding_methods_supported": [
+                "did:key",
+                "did:web"
+            ],
+            "credential_signing_alg_values_supported": [
+                "ES256K",
+                "EdDSA"
+            ],
+            "proof_types_supported": {
+                "jwt": {
+                    "proof_signing_alg_values_supported": [
+                        "ES256K",
+                        "EdDSA"
+                    ]
+                }
+            },
+            "display": [
+                {
+                    "name": "Employee ID",
+                    "description": "Credibil employee ID credential",
+                    "locale": "en-NZ",
+                    "logo": {
+                        "uri": "https://credibil.io/assets/employee.png",
+                        "alt_text": "Employee ID Logo"
+                    },
+                    "text_color": "#ffffff",
+                    "background_color": "#323ed2",
+                    "background_image": {
+                        "uri": "https://credibil.io/assets/employee-background.png",
+                        "alt_text": "Employee ID Background"
+                    }
+                }
+            ],
+            "credential_definition": {
+                "type": [
+                    "VerifiableCredential",
+                    "EmployeeIDCredential"
+                ]
+            },
+            "claims": [
+                {
+                    "path": ["credentialSubject", "email"],
+                    "mandatory": true,
+                    "display": [{
+                        "name": "Email",
+                        "locale": "en-NZ"
+                    }]
                 },
-                Proof::Multiple(proofs_type) => match proofs_type {
-                    MultipleProofs::Jwt(proof_jwts) => proof_jwts,
-                    MultipleProofs::Attestation(_) => todo!(),
+                {
+                    "path": ["credentialSubject", "family_name" ],
+                    "mandatory": true,
+                    "display": [{
+                        "name": "Family name",
+                        "locale": "en-NZ"
+                    }]
                 },
-            };
-
-            // the same c_nonce should be used for all proofs
-            let mut nonces = HashSet::new();
-            let resolver = async |kid: String| did_jwk(&kid, provider).await;
-
-            for proof in proof_jwts {
-                // TODO: ProofClaims cannot use `client_id` if the access token was
-                // obtained in a pre-auth flow with anonymous access to the token
-                // endpoint
-                // TODO: check proof is signed with supported algorithm (from proof_type)
-
-                let jwt: Jwt<ProofClaims> = match decode_jws(proof, resolver).await {
-                    Ok(jwt) => jwt,
-                    Err(e) => {
-                        return Err(Error::InvalidProof(format!("issue decoding JWT: {e}")));
-                    }
-                };
-
-                // proof type
-                if jwt.header.typ != JwtType::ProofJwt.to_string() {
-                    return Err(Error::InvalidProof("invalid proof type".to_string()));
+                {
+                    "path": ["credentialSubject", "given_name" ],
+                    "mandatory": true,
+                    "display": [{
+                        "name": "Given name",
+                        "locale": "en-NZ"
+                    }]
+                },
+                {
+                    "path": ["credentialSubject", "address"],
+                    "display": [{
+                        "name": "Residence",
+                        "locale": "en-NZ"
+                    }]
+                },
+                {
+                    "path": ["credentialSubject", "address", "street_address"],
+                    "display": [{
+                        "name": "Street Address",
+                        "locale": "en-NZ"
+                    }]
+                },
+                {
+                    "path": ["credentialSubject", "address", "locality"],
+                    "display": [{
+                        "name": "Locality",
+                        "locale": "en-NZ"
+                    }]
+                },
+                {
+                    "path": ["credentialSubject", "address", "region"],
+                    "display": [{
+                        "name": "Region",
+                        "locale": "en-NZ"
+                    }]
+                },
+                {
+                    "path": ["credentialSubject", "address", "country"],
+                    "display": [{
+                        "name": "Country",
+                        "locale": "en-NZ"
+                    }]
                 }
-                if jwt.claims.credential_issuer != ctx.issuer.credential_issuer {
-                    return Err(Error::InvalidProof("invalid proof issuer".to_string()));
-                }
+            ]
+        });
 
-                // c_nonce issued by token endpoint
-                let c_nonce = jwt.claims.nonce.as_ref().ok_or_else(|| {
-                    Error::InvalidProof("proof JWT nonce claim is missing".to_string())
-                })?;
-                nonces.insert(c_nonce.clone());
+        let config: CredentialConfiguration =
+            serde_json::from_value(json.clone()).expect("should deserialize from json");
+        let claims = config.claims_display(Some("en-NZ"));
+        assert_eq!(claims.len(), 8);
+        assert_eq!(claims[0], "Email");
+        assert_eq!(claims[7], "Country");
 
-                // extract Key ID for use when building credential
-                let KeyBinding::Kid(kid) = &jwt.header.key else {
-                    return Err(Error::InvalidProof("Proof JWT 'kid' is missing".to_string()));
-                };
-                ctx.proof_kids.push(kid.to_string());
-            }
-
-            // should only be a single c_nonce, but just in case...
-            for c_nonce in nonces {
-                StateStore::get::<String>(provider, &c_nonce)
-                    .await
-                    .map_err(|e| server!("proof nonce claim is invalid: {e}"))?;
-                StateStore::purge(provider, &c_nonce)
-                    .await
-                    .map_err(|e| server!("issue deleting proof nonce: {e}"))?;
-            }
-        }
-
-        Ok(())
-    }
-
-    // Get `Authorized` for `credential_identifier` and
-    // `credential_configuration_id`.
-    fn authorized_detail(&self, ctx: &Context) -> Result<AuthorizedDetail> {
-        let Stage::Validated(token) = &ctx.state.stage else {
-            return Err(Error::AccessDenied("invalid access token state".to_string()));
-        };
-
-        match &self.credential {
-            RequestBy::Identifier(ident) => {
-                for ad in &token.details {
-                    if ad.credential_identifiers.contains(ident) {
-                        return Ok(ad.clone());
-                    }
-                }
-            }
-            RequestBy::ConfigurationId(id) => {
-                for ad in &token.details {
-                    if Some(id.as_str()) == ad.credential_configuration_id() {
-                        return Ok(ad.clone());
-                    }
-                }
-            }
-        }
-
-        Err(Error::InvalidCredentialRequest("unauthorized credential requested".to_string()))
-    }
-}
-
-impl Context {
-    // Issue the requested credential.
-    async fn issue(
-        &self, provider: &impl Provider, dataset: Dataset,
-    ) -> Result<CredentialResponse> {
-        let mut credentials = vec![];
-
-        // create a credential for each proof
-        for kid in &self.proof_kids {
-            let credential = match &self.configuration.profile {
-                FormatProfile::JwtVcJson {
-                    credential_definition,
-                } => {
-                    // FIXME: do we need to resolve DID document?
-                    let Some(did) = kid.split('#').next() else {
-                        return Err(Error::InvalidProof("Proof JWT DID is invalid".to_string()));
-                    };
-                    let mut builder = W3cVcBuilder::new()
-                        .type_(credential_definition.type_.clone())
-                        .issuer(&self.issuer.credential_issuer)
-                        .holder(did)
-                        .claims(dataset.claims.clone())
-                        .signer(provider);
-
-                    // credential's status lookup
-                    let Some(subject_id) = &self.state.subject_id else {
-                        return Err(Error::AccessDenied("invalid subject id".to_string()));
-                    };
-                    if let Some(status) =
-                        Status::status(provider, subject_id, "credential_identifier")
-                            .await
-                            .map_err(|e| server!("issue populating credential status: {e}"))?
-                    {
-                        builder = builder.status(status);
-                    }
-
-                    let jwt = builder
-                        .build()
-                        .await
-                        .map_err(|e| server!("issue creating `jwt_vc_json` credential: {e}"))?;
-
-                    Credential {
-                        credential: jwt.into(),
-                    }
-                }
-
-                FormatProfile::MsoMdoc { doctype } => {
-                    let jwk = did_jwk(kid, provider).await.map_err(|e| {
-                        server!("issue retrieving JWK for `dc+sd-jwt` credential: {e}")
-                    })?;
-
-                    let mdl = MdocBuilder::new()
-                        .doctype(doctype)
-                        .device_key(jwk)
-                        .claims(dataset.claims.clone())
-                        .signer(provider)
-                        .build()
-                        .await
-                        .map_err(|e| server!("issue creating `mso_mdoc` credential: {e}"))?;
-
-                    Credential {
-                        credential: mdl.into(),
-                    }
-                }
-
-                FormatProfile::DcSdJwt { vct } => {
-                    // TODO: cache the result of jwk when verifying proof (`verify` method)
-                    let jwk = did_jwk(kid, provider).await.map_err(|e| {
-                        server!("issue retrieving JWK for `dc+sd-jwt` credential: {e}")
-                    })?;
-                    let Some(did) = kid.split('#').next() else {
-                        return Err(Error::InvalidProof("Proof JWT DID is invalid".to_string()));
-                    };
-
-                    let sd_jwt = SdJwtVcBuilder::new()
-                        .vct(vct)
-                        .issuer(self.issuer.credential_issuer.clone())
-                        .claims(dataset.claims.clone())
-                        .key_binding(jwk)
-                        .holder(did)
-                        .signer(provider)
-                        .build()
-                        .await
-                        .map_err(|e| server!("issue creating `dc+sd-jwt` credential: {e}"))?;
-
-                    Credential {
-                        credential: sd_jwt.into(),
-                    }
-                }
-
-                // TODO: oustanding credential formats
-                FormatProfile::JwtVcJsonLd { .. } => todo!(),
-                FormatProfile::LdpVc { .. } => todo!(),
-            };
-
-            credentials.push(credential);
-        }
-
-        // update token state with new `c_nonce`
-        let mut state = self.state.clone();
-        state.expires_at = Utc::now() + Expire::Access.duration();
-
-        let Stage::Validated(token_state) = state.stage else {
-            return Err(Error::AccessDenied("invalid access token state".to_string()));
-        };
-        state.stage = Stage::Validated(token_state.clone());
-
-        StateStore::put(provider, &token_state.access_token, &state, state.expires_at)
-            .await
-            .map_err(|e| server!("issue saving state: {e}"))?;
-
-        // TODO: create issuance state for notification endpoint
-        // state.stage = Stage::Issued(credential_configuration_id, credential_identifier);
-        let notification_id = generate::notification_id();
-
-        StateStore::put(provider, &notification_id, &state, state.expires_at)
-            .await
-            .map_err(|e| server!("issue saving state: {e}"))?;
-
-        Ok(CredentialResponse::Credentials {
-            credentials,
-            notification_id: Some(notification_id),
-        })
-    }
-
-    // Defer issuance of the requested credential.
-    async fn defer(
-        &self, provider: &impl Provider, request: CredentialRequest,
-    ) -> Result<CredentialResponse> {
-        let txn_id = generate::transaction_id();
-
-        let state = State {
-            subject_id: None,
-            stage: Stage::Deferred(Deferrance {
-                transaction_id: txn_id.clone(),
-                credential_request: request,
-            }),
-            expires_at: Utc::now() + Expire::Access.duration(),
-        };
-        StateStore::put(provider, &txn_id, &state, state.expires_at)
-            .await
-            .map_err(|e| server!("issue saving state: {e}"))?;
-
-        Ok(CredentialResponse::TransactionId {
-            transaction_id: txn_id,
-        })
-    }
-
-    // Get credential dataset for the request
-    async fn dataset(
-        &self, provider: &impl Provider, request: &CredentialRequest, authorized: &AuthorizedDetail,
-    ) -> Result<Dataset> {
-        let RequestBy::Identifier(identifier) = &request.credential else {
-            return Err(Error::InvalidCredentialRequest(
-                "requesting credentials by `credential_configuration_id` is unsupported"
-                    .to_string(),
-            ));
-        };
-
-        // get claims dataset for `credential_identifier`
-        let Some(subject_id) = &self.state.subject_id else {
-            return Err(Error::AccessDenied("invalid subject id".to_string()));
-        };
-        let mut dataset = Subject::dataset(provider, subject_id, identifier)
-            .await
-            .map_err(|e| server!("issue populating claims: {e}"))?;
-
-        // only include previously requested/authorized claims
-        if let Some(claims) = &authorized.authorization_detail.claims {
-            dataset.claims.retain(|k, _| claims.iter().any(|c| c.path.contains(k)));
-        }
-
-        Ok(dataset)
+        let default = config.claims_display(None);
+        assert_eq!(default.len(), 8);
+        assert_eq!(default[0], "CredentialSubject.email");
+        assert_eq!(default[7], "CredentialSubject.address.country");
     }
 }

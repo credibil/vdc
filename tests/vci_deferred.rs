@@ -5,14 +5,14 @@ use std::sync::LazyLock;
 
 use credibil_identity::{Key, SignerExt};
 use credibil_jose::{JwsBuilder, Jwt, decode_jws};
-use credibil_vc::core::did_jwk;
-use credibil_vc::oid4vci::types::{
+use credibil_vc::blockstore::BlockStore;
+use credibil_vc::oid4vci::issuer::{
     CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, CredentialResponse,
     Dataset, DeferredCredentialRequest, DeferredHeaders, NonceRequest, ProofClaims, TokenGrantType,
     TokenRequest, W3cVcClaims,
 };
-use credibil_vc::oid4vci::{JwtType, endpoint};
-use credibil_vc::{BlockStore, OneMany};
+use credibil_vc::oid4vci::{self, JwtType};
+use credibil_vc::{OneMany, did_jwk};
 use provider::issuer::{CAROL_ID, ISSUER_ID, Issuer, data};
 use provider::wallet::Wallet;
 use serde_json::json;
@@ -37,7 +37,7 @@ async fn deferred() {
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
-        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
+        oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -52,13 +52,13 @@ async fn deferred() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token = endpoint::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+    let token = oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a proof for a credential request
     // --------------------------------------------------
     let nonce =
-        endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
+        oid4vci::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
     let key = CAROL
@@ -87,7 +87,7 @@ async fn deferred() {
         .with_proof(jwt)
         .build();
 
-    let request = endpoint::Request {
+    let request = oid4vci::Request {
         body: request,
         headers: CredentialHeaders {
             authorization: token.access_token.clone(),
@@ -95,7 +95,7 @@ async fn deferred() {
     };
 
     let response =
-        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
+        oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
 
     // --------------------------------------------------
     // Alice approves issuance of the credential
@@ -119,7 +119,7 @@ async fn deferred() {
         panic!("expected transaction_id");
     };
 
-    let request = endpoint::Request {
+    let request = oid4vci::Request {
         body: DeferredCredentialRequest {
             transaction_id: transaction_id.clone(),
         },
@@ -128,7 +128,7 @@ async fn deferred() {
         },
     };
     let response =
-        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
+        oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
 
     // --------------------------------------------------
     // Bob extracts and verifies the received credential

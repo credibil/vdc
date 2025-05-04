@@ -7,14 +7,14 @@ use std::sync::LazyLock;
 use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_identity::{Key, SignerExt};
 use credibil_jose::{JwsBuilder, Jwt, decode_jws};
-use credibil_vc::core::did_jwk;
+use credibil_vc::blockstore::BlockStore;
 use credibil_vc::format::sd_jwt::SdJwtClaims;
-use credibil_vc::oid4vci::types::{
+use credibil_vc::oid4vci::issuer::{
     CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, CredentialResponse,
     NonceRequest, ProofClaims, TokenGrantType, TokenRequest, W3cVcClaims,
 };
-use credibil_vc::oid4vci::{JwtType, endpoint};
-use credibil_vc::{BlockStore, OneMany};
+use credibil_vc::oid4vci::{self, JwtType};
+use credibil_vc::{OneMany, did_jwk};
 use provider::issuer::{BOB_ID, ISSUER_ID, Issuer, data};
 use provider::wallet::Wallet;
 use serde_json::json;
@@ -39,7 +39,7 @@ async fn two_proofs() {
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
-        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
+        oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -54,13 +54,13 @@ async fn two_proofs() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token = endpoint::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+    let token = oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares 2 proofs for the credential request
     // --------------------------------------------------
     let nonce =
-        endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
+        oid4vci::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
     let bob_key = BOB
@@ -106,7 +106,7 @@ async fn two_proofs() {
         .with_proof(jws_2.encode().expect("should encode JWS"))
         .build();
 
-    let request = endpoint::Request {
+    let request = oid4vci::Request {
         body: request,
         headers: CredentialHeaders {
             authorization: token.access_token.clone(),
@@ -114,7 +114,7 @@ async fn two_proofs() {
     };
 
     let response =
-        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
+        oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
 
     // --------------------------------------------------
     // Bob extracts and verifies the received credentials
@@ -171,7 +171,7 @@ async fn sd_jwt() {
     let request =
         CreateOfferRequest::builder().subject_id(BOB_ID).with_credential("Identity_SD_JWT").build();
     let response =
-        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
+        oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -186,13 +186,13 @@ async fn sd_jwt() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token = endpoint::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+    let token = oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares 2 proofs for the credential request
     // --------------------------------------------------
     let nonce =
-        endpoint::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
+        oid4vci::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
     let bob_key = BOB
@@ -220,7 +220,7 @@ async fn sd_jwt() {
         .with_proof(jws.encode().expect("should encode JWS"))
         .build();
 
-    let request = endpoint::Request {
+    let request = oid4vci::Request {
         body: request,
         headers: CredentialHeaders {
             authorization: token.access_token.clone(),
@@ -228,7 +228,7 @@ async fn sd_jwt() {
     };
 
     let response =
-        endpoint::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
+        oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
 
     // --------------------------------------------------
     // Bob extracts and verifies the received credentials

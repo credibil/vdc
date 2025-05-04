@@ -161,12 +161,9 @@
 //! [OpenID4VP]: (https://openid.net/specs/openid-4-verifiable-presentations-1_0.html)
 //! [JWT VC Presentation Profile]: (https://identity.foundation/jwt-vc-presentation-profile)
 
-pub mod client;
-pub mod dcql;
-pub mod endpoint;
 pub mod provider;
-pub mod types;
-pub mod vp_token;
+pub mod verifier;
+pub mod wallet;
 
 mod error;
 mod handlers;
@@ -176,15 +173,10 @@ use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
 
-pub use crate::format::w3c_vc::VerifiablePresentation;
-pub use crate::oid4vp::types::*;
-
-/// Re-export status traits and types.
-pub mod status {
-    pub use crate::status::verifier::*;
-}
-
-pub use error::Error;
+pub use self::error::Error;
+pub use self::handlers::*;
+pub use self::verifier::*;
+pub use self::wallet::*;
 
 /// The JWS `typ` header parameter.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]

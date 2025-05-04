@@ -146,6 +146,22 @@ pub enum Error {
     InvalidTransactionId(String),
 }
 
+impl Error {
+    /// Transfrom error to `OpenID` compatible json format.
+    #[must_use]
+    pub fn to_json(&self) -> serde_json::Value {
+        serde_json::from_str(&self.to_string()).unwrap_or_default()
+    }
+
+    /// Transfrom error to `OpenID` compatible query string format.
+    /// Does not include `c_nonce` as this is not required for in query
+    /// string responses.
+    #[must_use]
+    pub fn to_querystring(&self) -> String {
+        urlencode::to_string(&self).unwrap_or_default()
+    }
+}
+
 /// Error response for `OpenID` for Verifiable Credentials.
 #[allow(clippy::module_name_repetitions)]
 #[derive(Deserialize, Serialize)]
@@ -167,25 +183,60 @@ impl Serialize for Error {
     }
 }
 
-impl Error {
-    /// Transfrom error to `OpenID` compatible json format.
-    #[must_use]
-    pub fn to_json(&self) -> serde_json::Value {
-        serde_json::from_str(&self.to_string()).unwrap_or_default()
-    }
+impl From<anyhow::Error> for Error {
+    fn from(err: anyhow::Error) -> Self {
+        match err.downcast_ref::<Self>() {
+            Some(Self::InvalidRequest(e)) => Self::InvalidRequest(format!("{err}: {e}")),
+            Some(Self::InvalidClient(e)) => Self::InvalidClient(format!("{err}: {e}")),
+            Some(Self::InvalidGrant(e)) => Self::InvalidGrant(format!("{err}: {e}")),
+            Some(Self::UnauthorizedClient(e)) => Self::UnauthorizedClient(format!("{err}: {e}")),
+            Some(Self::UnsupportedGrantType(e)) => {
+                Self::UnsupportedGrantType(format!("{err}: {e}"))
+            }
+            Some(Self::InvalidScope(e)) => Self::InvalidScope(format!("{err}: {e}")),
+            Some(Self::InvalidAuthorizationDetails(e)) => {
+                Self::InvalidAuthorizationDetails(format!("{err}: {e}"))
+            }
+            Some(Self::AccessDenied(e)) => Self::AccessDenied(format!("{err}: {e}")),
+            Some(Self::UnsupportedResponseType(e)) => {
+                Self::UnsupportedResponseType(format!("{err}: {e}"))
+            }
+            Some(Self::ServerError(e)) => Self::ServerError(format!("{err}: {e}")),
 
-    /// Transfrom error to `OpenID` compatible query string format.
-    /// Does not include `c_nonce` as this is not required for in query
-    /// string responses.
-    #[must_use]
-    pub fn to_querystring(&self) -> String {
-        urlencode::to_string(&self).unwrap_or_default()
+            Some(Self::TemporarilyUnavailable(e)) => {
+                Self::TemporarilyUnavailable(format!("{err}: {e}"))
+            }
+            Some(Self::InvalidCredentialRequest(e)) => {
+                Self::InvalidCredentialRequest(format!("{err}: {e}"))
+            }
+            Some(Self::UnsupportedCredentialType(e)) => {
+                Self::UnsupportedCredentialType(format!("{err}: {e}"))
+            }
+            Some(Self::UnsupportedCredentialFormat(e)) => {
+                Self::UnsupportedCredentialFormat(format!("{err}: {e}"))
+            }
+            Some(Self::InvalidProof(e)) => Self::InvalidProof(format!("{err}: {e}")),
+            Some(Self::InvalidNonce(e)) => Self::InvalidNonce(format!("{err}: {e}")),
+            Some(Self::InvalidEncryptionParameters(e)) => {
+                Self::InvalidEncryptionParameters(format!("{err}: {e}"))
+            }
+            Some(Self::CredentialRequestDenied(e)) => {
+                Self::CredentialRequestDenied(format!("{err}: {e}"))
+            }
+            Some(Self::IssuancePending(i)) => Self::IssuancePending(*i),
+            Some(Self::InvalidTransactionId(e)) => {
+                Self::InvalidTransactionId(format!("{err}: {e}"))
+            }
+            None => {
+                let source = err.source().map_or_else(String::new, ToString::to_string);
+                Self::ServerError(format!("{err}: {source}"))
+            }
+        }
     }
 }
 
 /// Construct an `Error::InvalidRequest` error from a string or existing error
 /// value.
-#[macro_export]
 macro_rules! invalid {
     ($fmt:expr, $($arg:tt)*) => {
         $crate::oid4vci::Error::InvalidRequest(format!($fmt, $($arg)*))
@@ -194,10 +245,10 @@ macro_rules! invalid {
         $crate::oid4vci::Error::InvalidRequest(format!($err))
     };
 }
+pub(crate) use invalid;
 
 /// Construct an `Error::ServerError` error from a string or existing error
 /// value.
-#[macro_export]
 macro_rules! server {
     ($fmt:expr, $($arg:tt)*) => {
         $crate::oid4vci::Error::ServerError(format!($fmt, $($arg)*))
@@ -209,6 +260,7 @@ macro_rules! server {
         $crate::oid4vci::Error::ServerError(format!($err))
     };
 }
+pub(crate) use server;
 
 #[cfg(test)]
 mod test {

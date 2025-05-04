@@ -13,8 +13,6 @@ mod store;
 mod verify;
 
 use std::collections::HashMap;
-use std::fmt;
-use std::fmt::Display;
 use std::ops::Deref;
 
 use chrono::serde::{ts_seconds, ts_seconds_option};
@@ -27,6 +25,7 @@ pub use self::issue::W3cVcBuilder;
 pub use self::present::W3cVpBuilder;
 pub use self::store::to_queryable;
 use crate::core::{Kind, OneMany};
+use crate::token_status::StatusClaim;
 
 /// `VerifiableCredential` represents a naive implementation of the W3C
 /// Verifiable Credential data model v1.1.
@@ -197,92 +196,14 @@ pub struct CredentialStatus {
 pub enum CredentialStatusType {
     /// A bitstring credential status list method for checking credential
     /// status.
-    #[serde(rename = "BitstringStatusListEntry", rename_all = "camelCase")]
-    Bitstring(Bitstring),
+    #[serde(rename = "TokenStatusListEntry", rename_all = "camelCase")]
+    TokenStatus(StatusClaim),
 }
 
 impl Default for CredentialStatusType {
     fn default() -> Self {
-        Self::Bitstring(Bitstring {
-            status_purpose: StatusPurpose::Revocation,
-            status_list_index: 0,
-            status_list_credential: String::new(),
-            status_size: None,
-            status_message: None,
-            status_reference: None,
-        })
+        Self::TokenStatus(StatusClaim::default())
     }
-}
-
-/// `Bitstring` is a credential status method.
-///
-/// [Bitstring Status List v1.0](https://www.w3.org/TR/vc-bitstring-status-list/)
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
-#[allow(clippy::struct_field_names)]
-pub struct Bitstring {
-    /// The purpose of the status declaration stored in the bitstring.
-    pub status_purpose: StatusPurpose,
-
-    /// The position of the status flag in the bitstring.
-    pub status_list_index: usize,
-
-    /// A URL to a verifiable credential. When dereferenced, the resulting
-    /// VC will have a type property that includes
-    /// `BitstringStatusListCredential`.
-    pub status_list_credential: String,
-
-    /// The size of the status entry in bits. If not present, the size is
-    /// assumed to be 1.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub status_size: Option<usize>,
-
-    /// A list of arbitrary status codes and messages for the `Message`
-    /// status purpose.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub status_message: Option<Vec<StatusMessage>>,
-
-    /// A URL to more information on the status method.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub status_reference: Option<String>,
-}
-
-/// `StatusPurpose` defines the purpose of the issuer's credential status
-/// information that may be stored on a verifiable credential.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub enum StatusPurpose {
-    /// Used to permanently cancel the validity of a verifiable credential.
-    #[default]
-    Revocation,
-    /// Used to temporarily suspend the validity of a verifiable credential.
-    Suspension,
-    /// Used to convey an arbitrary message related to the status of the
-    /// verifiable credential.
-    Message,
-}
-
-impl Display for StatusPurpose {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Revocation => write!(f, "revocation"),
-            Self::Suspension => write!(f, "suspension"),
-            Self::Message => write!(f, "message"),
-        }
-    }
-}
-
-/// `StatusMessage` is used to convey an arbitrary status code and message
-/// for a verifiable credential.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct StatusMessage {
-    /// A string representing the hexadecimal value of the status prefixed
-    /// with `0x`.
-    pub status: String,
-
-    /// A string used by developers to assist with debugging but should not be
-    /// displayed to end users.
-    pub message: String,
 }
 
 /// `CredentialSchema` defines the structure of the credential and the datatypes

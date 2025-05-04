@@ -7,15 +7,16 @@
 //! a way that is cryptographically secure, privacy respecting, and
 //! machine-verifiable.
 
-use anyhow::anyhow;
+use anyhow::Context as _;
 use credibil_identity::SignerExt;
 use credibil_jose::encode_jws;
 use serde_json::{Map, Value};
 
 use crate::core::{Kind, OneMany};
 use crate::format::w3c_vc::{
-    CredentialStatus, CredentialSubject, VerifiableCredential, W3cVcClaims,
+    CredentialStatus, CredentialStatusType, CredentialSubject, VerifiableCredential, W3cVcClaims,
 };
+use crate::token_status::StatusClaim;
 
 /// Generate a W3C `jwt_vc_json` format credential.
 #[derive(Debug)]
@@ -24,7 +25,7 @@ pub struct W3cVcBuilder<T, I, H, C, S> {
     issuer: I,
     holder: H,
     claims: C,
-    status: Option<OneMany<CredentialStatus>>,
+    status: Option<StatusClaim>,
     signer: S,
 }
 
@@ -167,7 +168,7 @@ impl<G, I, H, C> W3cVcBuilder<G, I, H, C, NoSigner> {
 impl<G, I, H, C, S> W3cVcBuilder<G, I, H, C, S> {
     /// Sets the status property.
     #[must_use]
-    pub fn status(mut self, status: OneMany<CredentialStatus>) -> Self {
+    pub fn status(mut self, status: StatusClaim) -> Self {
         self.status = Some(status);
         self
     }
@@ -179,6 +180,15 @@ impl<S: SignerExt> W3cVcBuilder<HasType, HasIssuer, HasHolder, HasClaims, HasSig
     /// # Errors
     /// TODO: Document errors
     pub async fn build(self) -> anyhow::Result<String> {
+        let credential_status = if let Some(status_claim) = self.status {
+            Some(OneMany::One(CredentialStatus {
+                id: Some(status_claim.status_list.uri.clone()),
+                credential_status_type: CredentialStatusType::TokenStatus(status_claim),
+            }))
+        } else {
+            None
+        };
+
         let vc = VerifiableCredential {
             id: Some(format!("{}/credentials/{}", self.issuer.0, uuid::Uuid::new_v4())),
             type_: self.type_.0,
@@ -187,7 +197,7 @@ impl<S: SignerExt> W3cVcBuilder<HasType, HasIssuer, HasHolder, HasClaims, HasSig
                 id: Some(self.holder.0),
                 claims: self.claims.0,
             }),
-            credential_status: self.status,
+            credential_status,
             ..VerifiableCredential::default()
         };
 
@@ -195,6 +205,6 @@ impl<S: SignerExt> W3cVcBuilder<HasType, HasIssuer, HasHolder, HasClaims, HasSig
         let key = self.signer.0.verification_method().await?;
         encode_jws(&W3cVcClaims::from(vc), &key.try_into()?, self.signer.0)
             .await
-            .map_err(|e| anyhow!("issue generating `jwt_vc_json` credential: {e}"))
+            .context("generating `jwt_vc_json` credential")
     }
 }

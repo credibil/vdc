@@ -88,37 +88,25 @@
 //! [OpenID Connect]: (https://openid.net/specs/openid-connect-core-1_0.html)
 //! [RFC6749]: (https://www.rfc-editor.org/rfc/rfc6749.html)
 
-pub mod client;
-pub mod endpoint;
+pub mod issuer;
+pub mod pkce;
 pub mod provider;
-pub mod types;
+pub mod wallet;
 
 mod error;
-mod issuer;
-mod server;
+mod handlers;
 mod state;
-
-/// PKCE
-pub mod pkce {
-    pub use crate::core::pkce::{code_challenge, code_verifier};
-}
 
 /// Proofs
 pub mod proof {
     pub use crate::format::w3c_vc::{Payload, Verify, W3cVcClaims};
 }
 
-/// Status
-pub mod status {
-    pub use crate::status::bitstring::{DEFAULT_TTL, bitstring, credential};
-    pub use crate::status::issuer::*;
-}
-
-use std::fmt::Display;
-
 use serde::{Deserialize, Serialize};
 
 pub use self::error::Error;
+pub use self::handlers::*;
+pub use self::issuer::*;
 
 /// The JWT `typ` header parameter.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -148,7 +136,7 @@ impl From<&JwtType> for String {
     }
 }
 
-impl Display for JwtType {
+impl std::fmt::Display for JwtType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s: String = self.into();
         write!(f, "{s}")

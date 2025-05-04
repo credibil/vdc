@@ -14,14 +14,15 @@ use axum::{Form, Json, Router};
 use axum_extra::TypedHeader;
 use axum_extra::headers::authorization::Bearer;
 use axum_extra::headers::{Authorization, Host};
-use credibil_vc::core::http::IntoHttp;
-use credibil_vc::oid4vci::endpoint;
-use credibil_vc::oid4vci::types::{
-    AuthorizationRequest, CreateOfferRequest, CredentialHeaders, CredentialOfferRequest,
+use credibil_vc::blockstore::BlockStore;
+use credibil_vc::http::IntoHttp;
+use credibil_vc::oid4vci::{
+    self, AuthorizationRequest, CreateOfferRequest, CredentialHeaders, CredentialOfferRequest,
     CredentialRequest, DeferredCredentialRequest, IssuerRequest, NotificationHeaders,
     NotificationRequest, PushedAuthorizationRequest, ServerRequest, TokenRequest,
 };
-use credibil_vc::{BlockStore, urlencode};
+use credibil_vc::token_status::StatusListRequest;
+use credibil_vc::urlencode;
 use oauth2::CsrfToken;
 use provider::issuer::data::{CLIENT, ISSUER, NORMAL_USER as USER, SERVER};
 use provider::issuer::{BOB_ID, ISSUER_ID, Issuer};
@@ -66,10 +67,11 @@ async fn main() {
         .route("/auth", get(authorize))
         .route("/par", get(par))
         .route("/login", post(handle_login))
-        .route("/notification", post(notification))
         .route("/token", post(token))
         .route("/credential", post(credential))
         .route("/deferred_credential", post(deferred_credential))
+        .route("/notification", post(notification))
+        .route("/statuslists/{id}", get(statuslists))
         .layer(TraceLayer::new_for_http())
         .layer(cors)
         .layer(SetResponseHeaderLayer::if_not_present(
@@ -89,17 +91,17 @@ async fn create_offer(
     State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
     Json(req): Json<CreateOfferRequest>,
 ) -> impl IntoResponse {
-    endpoint::handle(&format!("http://{host}"), req, &provider).await.into_http()
+    oid4vci::handle(&format!("http://{host}"), req, &provider).await.into_http()
 }
 
-// Retrieve Authorization Request Object endpoint
+// Retrieve Credential Offer endpoint
 #[axum::debug_handler]
 async fn credential_offer(
     State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
     Path(offer_id): Path<String>,
 ) -> impl IntoResponse {
     let request = CredentialOfferRequest { id: offer_id };
-    endpoint::handle(&format!("http://{host}"), request, &provider).await.into_http()
+    oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }
 
 // Metadata endpoint
@@ -108,11 +110,11 @@ async fn credential_offer(
 async fn metadata(
     headers: HeaderMap, State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
 ) -> impl IntoResponse {
-    let request = endpoint::Request {
+    let request = oid4vci::Request {
         body: IssuerRequest,
         headers: headers.try_into().expect("should find language header"),
     };
-    endpoint::handle(&format!("http://{host}"), request, &provider).await.into_http()
+    oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }
 
 // OAuth Server metadata endpoint
@@ -124,7 +126,7 @@ async fn oauth_server(
         // Issuer should be derived from path component if necessary
         issuer: None,
     };
-    endpoint::handle(&format!("http://{host}"), req, &provider).await.into_http()
+    oid4vci::handle(&format!("http://{host}"), req, &provider).await.into_http()
 }
 
 /// Authorize endpoint
@@ -176,7 +178,7 @@ async fn authorize(
             .into_response();
     };
 
-    match endpoint::handle(&format!("http://{host}"), req, &provider).await {
+    match oid4vci::handle(&format!("http://{host}"), req, &provider).await {
         Ok(v) => (StatusCode::FOUND, Redirect::to(&format!("{redirect_uri}?code={}", v.body.code)))
             .into_response(),
         Err(e) => {
@@ -229,7 +231,7 @@ async fn par(
     }
 
     // process request
-    endpoint::handle(&format!("http://{host}"), req, &provider).await.into_http().into_response()
+    oid4vci::handle(&format!("http://{host}"), req, &provider).await.into_http().into_response()
 }
 
 #[derive(Deserialize)]
@@ -286,7 +288,7 @@ async fn token(
         return (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid request"})))
             .into_response();
     };
-    endpoint::handle(&format!("http://{host}"), tr, &provider).await.into_http().into_response()
+    oid4vci::handle(&format!("http://{host}"), tr, &provider).await.into_http().into_response()
 }
 
 // Credential endpoint
@@ -295,14 +297,13 @@ async fn credential(
     State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>, Json(request): Json<CredentialRequest>,
 ) -> impl IntoResponse {
-    let request = endpoint::Request {
+    let request = oid4vci::Request {
         body: request,
         headers: CredentialHeaders {
             authorization: auth.token().to_string(),
         },
     };
-
-    endpoint::handle(&format!("http://{host}"), request, &provider).await.into_http()
+    oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }
 
 // Deferred endpoint
@@ -312,37 +313,16 @@ async fn deferred_credential(
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     Json(request): Json<DeferredCredentialRequest>,
 ) -> impl IntoResponse {
-    let request = endpoint::Request {
+    let request = oid4vci::Request {
         body: request,
         headers: CredentialHeaders {
             authorization: auth.token().to_string(),
         },
     };
-
-    endpoint::handle(&format!("http://{host}"), request, &provider).await.into_http()
+    oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }
 
 /// Notification endpoint
-///
-/// This endpoint is used by the Wallet to notify the Credential Issuer of
-/// certain events for issued Credentials. These events enable the Credential
-/// Issuer to take subsequent actions after issuance. The Credential Issuer
-/// needs to return one or more notification_id parameters in the Credential
-/// Response for the Wallet to be able to use this endpoint. Support for this
-/// endpoint is OPTIONAL. The Issuer cannot assume that a notification will be
-/// sent for every issued Credential since the use of this Endpoint is not
-/// mandatory for the Wallet.
-///
-/// The Wallet MUST present to the Notification Endpoint a valid Access Token
-/// issued at the Token Endpoint.
-///
-/// The notification from the Wallet is idempotent. When the Credential Issuer
-/// receives multiple identical calls from the Wallet for the same
-/// notification_id, it returns success. Due to the network errors, there are no
-/// guarantees that a Credential Issuer will receive a notification within a
-/// certain time period or at all.
-///
-/// Communication with the Notification Endpoint MUST utilize TLS.
 #[axum::debug_handler]
 async fn notification(
     State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
@@ -351,11 +331,20 @@ async fn notification(
 ) -> impl IntoResponse {
     let mut headers = HeaderMap::new();
     headers.insert(AUTHORIZATION, auth.token().parse().unwrap());
-    let request = endpoint::Request {
+    let request = oid4vci::Request {
         body: request,
         headers: NotificationHeaders {
             authorization: auth.token().to_string(),
         },
     };
-    endpoint::handle(&format!("http://{host}"), request, &provider).await.into_http()
+    oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
+}
+
+// Status Lists endpoint
+#[axum::debug_handler]
+async fn statuslists(
+    State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>, Path(id): Path<String>,
+) -> impl IntoResponse {
+    let request = StatusListRequest { id: Some(id) };
+    oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }

@@ -4,16 +4,18 @@
 //! Authorization Request to use when requesting a Verifiable Presentation from
 //! a Wallet.
 
+use anyhow::Context;
 use chrono::Utc;
 
-use crate::core::generate;
-
-use crate::oid4vp::endpoint::{Body,Error, Handler, NoHeaders, Request, Response, Result};
+use crate::generate;
+use crate::oid4vp::error::invalid;
+use crate::oid4vp::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vp::provider::{Metadata, Provider, StateStore};
-use crate::oid4vp::state::{Expire, State};
-use crate::oid4vp::types::{
+use crate::oid4vp::state::Expire;
+use crate::oid4vp::verifier::{
     ClientId, DeviceFlow, GenerateRequest, GenerateResponse, RequestObject, ResponseType,
 };
+use crate::state::State;
 
 /// Create an Authorization Request.
 ///
@@ -27,7 +29,7 @@ async fn create_request(
     let uri_token = generate::uri_token();
 
     let Ok(metadata) = Metadata::verifier(provider, verifier).await else {
-        return Err(Error::InvalidRequest("invalid client_id".to_string()));
+        return Err(invalid!("invalid `client_id`"));
     };
 
     // TODO: Response Mode "direct_post" is RECOMMENDED for cross-device flows.
@@ -54,16 +56,14 @@ async fn create_request(
     // save request object in state
     let state = State {
         expires_at: Utc::now() + Expire::Request.duration(),
-        request_object: req_obj,
+        body: req_obj,
     };
-    StateStore::put(provider, &uri_token, &state, state.expires_at)
-        .await
-        .map_err(|e| Error::ServerError(format!("issue saving state: {e}")))?;
+    StateStore::put(provider, &uri_token, &state).await.context("saving state")?;
 
     Ok(response)
 }
 
-impl<P: Provider> Handler<P> for Request<GenerateRequest, NoHeaders> {
+impl<P: Provider> Handler<P> for Request<GenerateRequest> {
     type Error = Error;
     type Provider = P;
     type Response = GenerateResponse;

@@ -14,7 +14,7 @@ use crate::format::mso_mdoc::{
     Document, Handover, IssuerSigned, MobileSecurityObject, OID4VPHandover, ResponseStatus,
     SessionTranscript, VersionString, cose,
 };
-use crate::oid4vp::types::Matched;
+use crate::oid4vp::verifier::Matched;
 
 /// Generate an IETF `dc+sd-jwt` format credential.
 #[derive(Debug)]
@@ -261,7 +261,7 @@ mod tests {
     use super::*;
     use crate::core::did_jwk;
     use crate::format::mso_mdoc::MdocBuilder;
-    use crate::oid4vp::types::Claim;
+    use crate::oid4vp::verifier::Claim;
 
     #[tokio::test]
     async fn build_vp() {

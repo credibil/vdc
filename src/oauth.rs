@@ -5,13 +5,11 @@
 use std::fmt::{self, Display};
 use std::str::FromStr;
 
+use anyhow::anyhow;
 use chrono::serde::ts_seconds_option;
 use chrono::{DateTime, Utc};
 use credibil_jose::Algorithm;
 use serde::{Deserialize, Serialize};
-
-use crate::invalid;
-use crate::oid4vci::Error;
 
 /// OAuth 2 client metadata used for registering clients of the issuance and
 /// wallet authorization servers.
@@ -148,11 +146,11 @@ impl Display for OAuthClient {
 }
 
 impl FromStr for OAuthClient {
-    type Err = Error;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let Ok(res) = serde_json::from_str(s) else {
-            return Err(invalid!("failed to parse Verifier"));
+            return Err(anyhow!("failed to parse Verifier"));
         };
         Ok(res)
     }

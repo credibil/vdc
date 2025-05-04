@@ -7,7 +7,7 @@ use credibil_jose::{Jwt, decode_jws};
 use super::W3cVpClaims;
 use crate::core::did_jwk;
 use crate::format::w3c_vc::store;
-use crate::oid4vp::types::{Claim, RequestObject};
+use crate::oid4vp::verifier::{Claim, RequestObject};
 
 // /// Verifies an SD-JWT credential.
 // ///
@@ -51,6 +51,15 @@ pub async fn verify_vp(
         return Err(anyhow!("`nonce` claim does not match verification request"));
     }
     // FIXME: verify `iss` claim
+
+    // FIXME: verify credential's status
+    // if let Some(status_claim) = &sd_jwt.claims.status {
+    //     let jwt = StatusToken::fetch(resolver, &status_claim.status_list.uri).await?;
+    //     let status_list = StatusList::from_jwt(&jwt)?;
+    //     if !status_list.is_valid(status_claim.status_list.idx)? {
+    //         return Err(anyhow!("credential status is invalid"));
+    //     }
+    // }
 
     //  unpack claims
     let Some(vcs) = vp_jwt.claims.vp.verifiable_credential else {

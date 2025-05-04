@@ -2,6 +2,7 @@
     "credential_issuer": "http://credibil.io",
     "credential_endpoint": "http://credibil.io/credential",
     "deferred_credential_endpoint": "http://credibil.io/deferred",
+    "status_list_aggregation_endpoint": "http://credibil.io/statuslists",
     "display": {
         "name": "Credibil",
         "locale": "en-NZ"

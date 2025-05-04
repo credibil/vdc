@@ -1,7 +1,0 @@
----
-source: src/oid4vp/types/response.rs
-assertion_line: 122
-expression: "&map"
----
-state: Z2VVKkglOWt-MkNDbX5VN05RRFI4ZkZeT01ZelEzQG8
-vp_token: "%7B%22my_credential%22%3A%5B%22eyJ.etc%22%5D%7D"

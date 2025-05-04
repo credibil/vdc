@@ -7,7 +7,7 @@ use credibil_identity::IdentityResolver;
 
 use crate::core::{did_jwk, serde_cbor};
 use crate::format::mso_mdoc::{CoseKey, DeviceAuth, DeviceResponse};
-use crate::oid4vp::types::{Claim, RequestObject};
+use crate::oid4vp::verifier::{Claim, RequestObject};
 
 /// Verifies an ISO mdoc presentation.
 ///

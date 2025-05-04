@@ -4,15 +4,15 @@ use std::sync::LazyLock;
 
 use credibil_identity::{Key, SignerExt};
 use credibil_jose::PublicKeyJwk;
-use credibil_vc::BlockStore;
-use credibil_vc::core::did_jwk;
+use credibil_vc::blockstore::BlockStore;
+use credibil_vc::did_jwk;
 use credibil_vc::format::mso_mdoc::MdocBuilder;
 use credibil_vc::format::sd_jwt::SdJwtVcBuilder;
 use credibil_vc::format::w3c_vc::W3cVcBuilder;
 use credibil_vc::format::{mso_mdoc, sd_jwt, w3c_vc};
-use credibil_vc::oid4vp::types::{DcqlQuery, ResponseMode};
+use credibil_vc::oid4vp::verifier::{DcqlQuery, ResponseMode};
 use credibil_vc::oid4vp::{
-    AuthorzationResponse, DeviceFlow, GenerateRequest, GenerateResponse, endpoint, vp_token,
+    self, AuthorzationResponse, DeviceFlow, GenerateRequest, GenerateResponse, wallet,
 };
 use futures::executor::block_on;
 use provider::issuer::{ISSUER_ID, Issuer};
@@ -57,7 +57,7 @@ async fn multiple_claims() {
         },
     };
     let response =
-        endpoint::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
+        oid4vp::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
 
     // extract request object and send to Wallet
     let GenerateResponse::Object(request_object) = response.body else {
@@ -73,7 +73,7 @@ async fn multiple_claims() {
     // assert_eq!(results.len(), 2);
 
     let vp_token =
-        vp_token::generate(&request_object, &results, &*WALLET).await.expect("should get token");
+        wallet::generate(&request_object, &results, &*WALLET).await.expect("should get token");
     // assert_eq!(vp_token.len(), 1);
 
     let request = AuthorzationResponse {
@@ -85,7 +85,7 @@ async fn multiple_claims() {
     // Verifier processes the Wallets's Authorization Response.
     // --------------------------------------------------
     let response =
-        endpoint::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
+        oid4vp::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
 
     // --------------------------------------------------
     // Wallet follows Verifier's redirect.
@@ -152,7 +152,7 @@ async fn multiple_credentials() {
         },
     };
     let response =
-        endpoint::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
+        oid4vp::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
 
     // extract request object and send to Wallet
     let GenerateResponse::Object(request_object) = response.body else {
@@ -170,7 +170,7 @@ async fn multiple_credentials() {
     // return a single `vp_token` for the query
     // each credential query will result in a separate presentation
     let vp_token =
-        vp_token::generate(&request_object, &results, &*WALLET).await.expect("should get token");
+        wallet::generate(&request_object, &results, &*WALLET).await.expect("should get token");
     assert_eq!(vp_token.len(), 3);
 
     let request = AuthorzationResponse {
@@ -178,7 +178,7 @@ async fn multiple_credentials() {
         state: request_object.state,
     };
     let response =
-        endpoint::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
+        oid4vp::handle(VERIFIER_ID, request, &*VERIFIER).await.expect("should create request");
 
     // --------------------------------------------------
     // Wallet follows Verifier's redirect.
@@ -469,6 +469,8 @@ async fn specific_values() {
     assert_eq!(results.len(), 1);
 }
 
+use credibil_vc::token_status::{StatusClaim, StatusList, TokenBuilder};
+
 // Initialise a mock "wallet" with test credentials.
 async fn populate() -> Wallet {
     let mut wallet = Wallet::new();
@@ -477,6 +479,21 @@ async fn populate() -> Wallet {
         panic!("should have did");
     };
     let holder_jwk = did_jwk(&did_url, &wallet).await.expect("should get key");
+
+    // create a status list token
+    let mut status_list = StatusList::new().expect("should create status list");
+    let status_claim = status_list.add_entry("http://credibil.io/statuslists/1").unwrap();
+    let token = TokenBuilder::new()
+        .status_list(status_list.clone())
+        .uri("https://example.com/statuslists/1")
+        .signer(&*ISSUER)
+        .build()
+        .await
+        .expect("should build status list token");
+    let data = serde_json::to_vec(&token).expect("should serialize");
+    BlockStore::put(&*ISSUER, "owner", "STATUSTOKEN", "http://credibil.io/statuslists/1", &data)
+        .await
+        .unwrap();
 
     // load credentials
     let vct = "https://credentials.example.com/identity_credential";
@@ -492,7 +509,7 @@ async fn populate() -> Wallet {
         },
         "birthdate": "2000-01-01"
     });
-    let jwt = sd_jwt(vct, claims, &holder_jwk).await;
+    let jwt = sd_jwt(vct, claims, &holder_jwk, &status_claim).await;
     let q = sd_jwt::to_queryable(&jwt, &*ISSUER).await.expect("should be SD-JWT");
     wallet.add(q);
 
@@ -509,7 +526,7 @@ async fn populate() -> Wallet {
         },
         "birthdate": "2000-01-01"
     });
-    let jwt = sd_jwt(vct, claims, &holder_jwk).await;
+    let jwt = sd_jwt(vct, claims, &holder_jwk, &status_claim).await;
     let q = sd_jwt::to_queryable(&jwt, &*ISSUER).await.expect("should be SD-JWT");
     wallet.add(q);
 
@@ -521,7 +538,7 @@ async fn populate() -> Wallet {
             "postal_code": "90210",
         },
     });
-    let jwt = sd_jwt(vct, claims, &holder_jwk).await;
+    let jwt = sd_jwt(vct, claims, &holder_jwk, &status_claim).await;
     let q = sd_jwt::to_queryable(&jwt, &*ISSUER).await.expect("should be SD-JWT");
     wallet.add(q);
 
@@ -529,7 +546,7 @@ async fn populate() -> Wallet {
     let claims = json!({
         "rewards_number": "1234567890",
     });
-    let jwt = sd_jwt(vct, claims, &holder_jwk).await;
+    let jwt = sd_jwt(vct, claims, &holder_jwk, &status_claim).await;
     let q = sd_jwt::to_queryable(&jwt, &*ISSUER).await.expect("should be SD-JWT");
     wallet.add(q);
 
@@ -575,12 +592,15 @@ async fn populate() -> Wallet {
     wallet
 }
 
-async fn sd_jwt(vct: &str, claims: Value, holder_jwk: &PublicKeyJwk) -> String {
+async fn sd_jwt(
+    vct: &str, claims: Value, holder_jwk: &PublicKeyJwk, status_claim: &StatusClaim,
+) -> String {
     SdJwtVcBuilder::new()
         .vct(vct)
         .claims(claims.as_object().unwrap().clone())
         .issuer(ISSUER_ID)
         .key_binding(holder_jwk.clone())
+        .status(status_claim.clone())
         .signer(&*ISSUER)
         .build()
         .await

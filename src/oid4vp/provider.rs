@@ -3,20 +3,27 @@
 use std::future::Future;
 
 use anyhow::{Result, anyhow};
-use chrono::{DateTime, Utc};
 use credibil_identity::IdentityResolver;
 pub use credibil_identity::SignerExt;
-use serde::{Deserialize, Serialize};
 
-use crate::BlockStore;
-use crate::oid4vp::types::{Verifier, Wallet};
+use crate::blockstore::BlockStore;
+use crate::oid4vp::verifier::Verifier;
+// use crate::oid4vp::wallet::Wallet;
+pub use crate::state::StateStore;
+use crate::token_status::StatusToken;
 
 /// Verifier Provider trait.
-pub trait Provider: Metadata + StateStore + SignerExt + IdentityResolver + Clone {}
+pub trait Provider:
+    Metadata + StateStore + SignerExt + IdentityResolver + StatusToken + Clone
+{
+}
 
 /// A blanket implementation for `Provider` trait so that any type implementing
 /// the required super traits is considered a `Provider`.
-impl<T> Provider for T where T: Metadata + StateStore + SignerExt + IdentityResolver + Clone {}
+impl<T> Provider for T where
+    T: Metadata + StateStore + SignerExt + IdentityResolver + StatusToken + Clone
+{
+}
 
 /// The `Metadata` trait is used by implementers to provide `Verifier` (client)
 /// metadata to the library.
@@ -24,46 +31,21 @@ pub trait Metadata: Send + Sync {
     /// Verifier (Client) metadata for the specified verifier.
     fn verifier(&self, verifier_id: &str) -> impl Future<Output = Result<Verifier>> + Send;
 
-    /// Wallet (Authorization Server) metadata.
-    fn wallet(&self, wallet_id: &str) -> impl Future<Output = Result<Wallet>> + Send;
+    // /// Wallet (Authorization Server) metadata.
+    // fn wallet(&self, wallet_id: &str) -> impl Future<Output = Result<Wallet>> + Send;
 
     /// Used by OAuth 2.0 clients to dynamically register with the authorization
     /// server.
     fn register(&self, verifier: &Verifier) -> impl Future<Output = Result<Verifier>> + Send;
 }
 
-/// `StateStore` is used to store and retrieve server state between requests.
-pub trait StateStore: Send + Sync {
-    /// Store state using the provided key. The expiry parameter indicates
-    /// when data can be expunged from the state store.
-    fn put(
-        &self, key: &str, state: impl Serialize + Send, expiry: DateTime<Utc>,
-    ) -> impl Future<Output = Result<()>> + Send;
-
-    /// Retrieve data using the provided key.
-    fn get<T>(&self, key: &str) -> impl Future<Output = Result<T>> + Send
-    where
-        T: for<'de> Deserialize<'de>;
-
-    /// Remove data using the key provided.
-    fn purge(&self, key: &str) -> impl Future<Output = Result<()>> + Send;
-}
-
-const WALLET: &str = "WALLET";
+// const WALLET: &str = "WALLET";
 const VERIFIER: &str = "VERIFIER";
-const STATE: &str = "STATE";
 
 impl<T: BlockStore> Metadata for T {
     async fn verifier(&self, verifier_id: &str) -> Result<Verifier> {
         let Some(block) = BlockStore::get(self, "owner", VERIFIER, verifier_id).await? else {
             return Err(anyhow!("could not find client"));
-        };
-        Ok(serde_json::from_slice(&block)?)
-    }
-
-    async fn wallet(&self, wallet_id: &str) -> Result<Wallet> {
-        let Some(block) = BlockStore::get(self, "owner", WALLET, wallet_id).await? else {
-            return Err(anyhow!("could not find issuer"));
         };
         Ok(serde_json::from_slice(&block)?)
     }
@@ -76,29 +58,11 @@ impl<T: BlockStore> Metadata for T {
         BlockStore::put(self, "owner", VERIFIER, &verifier.oauth.client_id, &block).await?;
         Ok(verifier)
     }
-}
 
-impl<T: BlockStore> StateStore for T {
-    #[allow(unused)]
-    async fn put(
-        &self, key: &str, state: impl Serialize + Send, expiry: DateTime<Utc>,
-    ) -> Result<()> {
-        let state = serde_json::to_vec(&state)?;
-        BlockStore::delete(self, "owner", STATE, key).await?;
-        BlockStore::put(self, "owner", STATE, key, &state).await
-    }
-
-    async fn get<S>(&self, key: &str) -> Result<S>
-    where
-        S: for<'de> Deserialize<'de>,
-    {
-        let Some(block) = BlockStore::get(self, "owner", STATE, key).await? else {
-            return Err(anyhow!("could not find client"));
-        };
-        Ok(serde_json::from_slice(&block)?)
-    }
-
-    async fn purge(&self, key: &str) -> Result<()> {
-        BlockStore::delete(self, "owner", STATE, key).await
-    }
+    // async fn wallet(&self, wallet_id: &str) -> Result<Wallet> {
+    //     let Some(block) = BlockStore::get(self, "owner", WALLET, wallet_id).await? else {
+    //         return Err(anyhow!("could not find issuer"));
+    //     };
+    //     Ok(serde_json::from_slice(&block)?)
+    // }
 }

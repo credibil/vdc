@@ -12,24 +12,23 @@ use std::collections::HashMap;
 use std::future::Future;
 
 use anyhow::{Result, anyhow};
-use chrono::{DateTime, Utc};
 use credibil_identity::{IdentityResolver, SignerExt};
-use serde::{Deserialize, Serialize};
 
-use crate::BlockStore;
-use crate::oid4vci::types::{Client, Dataset, Issuer, Server};
-use crate::status::issuer::Status;
+use crate::blockstore::BlockStore;
+use crate::oid4vci::issuer::{Client, Dataset, Issuer, Server};
+pub use crate::state::StateStore;
+use crate::token_status::StatusStore;
 
 /// Issuer Provider trait.
 pub trait Provider:
-    Metadata + Subject + StateStore + SignerExt + IdentityResolver + Status + Clone
+    Metadata + Subject + StateStore + SignerExt + IdentityResolver + StatusStore + Clone
 {
 }
 
 /// A blanket implementation for `Provider` trait so that any type implementing
 /// the required super traits is considered a `Provider`.
 impl<T> Provider for T where
-    T: Metadata + Subject + StateStore + SignerExt + IdentityResolver + Status + Clone
+    T: Metadata + Subject + StateStore + SignerExt + IdentityResolver + StatusStore + Clone
 {
 }
 
@@ -48,23 +47,6 @@ pub trait Metadata: Send + Sync {
     /// Used to dynamically register OAuth 2.0 clients with the authorization
     /// server.
     fn register(&self, client: &Client) -> impl Future<Output = Result<Client>> + Send;
-}
-
-/// `StateStore` is used to store and retrieve server state between requests.
-pub trait StateStore: Send + Sync {
-    /// Store state using the provided key. The expiry parameter indicates
-    /// when data can be expunged from the state store.
-    fn put(
-        &self, key: &str, state: impl Serialize + Send, expiry: DateTime<Utc>,
-    ) -> impl Future<Output = Result<()>> + Send;
-
-    /// Retrieve data using the provided key.
-    fn get<T>(&self, key: &str) -> impl Future<Output = Result<T>> + Send
-    where
-        T: for<'de> Deserialize<'de>;
-
-    /// Remove data using the key provided.
-    fn purge(&self, key: &str) -> impl Future<Output = Result<()>> + Send;
 }
 
 /// The Subject trait specifies how the library expects issuance subject (user)
@@ -88,7 +70,8 @@ pub trait Subject: Send + Sync {
 const ISSUER: &str = "ISSUER";
 const SERVER: &str = "SERVER";
 const CLIENT: &str = "CLIENT";
-const STATE: &str = "STATE";
+const SUBJECT: &str = "SUBJECT";
+const STATUSTOKEN: &str = "STATUSTOKEN";
 
 impl<T: BlockStore> Metadata for T {
     async fn client(&self, client_id: &str) -> Result<Client> {
@@ -122,36 +105,11 @@ impl<T: BlockStore> Metadata for T {
     }
 }
 
-impl<T: BlockStore> StateStore for T {
-    #[allow(unused)]
-    async fn put(
-        &self, key: &str, state: impl Serialize + Send, expiry: DateTime<Utc>,
-    ) -> Result<()> {
-        let state = serde_json::to_vec(&state)?;
-        BlockStore::delete(self, "owner", STATE, key).await?;
-        BlockStore::put(self, "owner", STATE, key, &state).await
-    }
-
-    async fn get<S>(&self, key: &str) -> Result<S>
-    where
-        S: for<'de> Deserialize<'de>,
-    {
-        let Some(block) = BlockStore::get(self, "owner", STATE, key).await? else {
-            return Err(anyhow!("could not find client"));
-        };
-        Ok(serde_json::from_slice(&block)?)
-    }
-
-    async fn purge(&self, key: &str) -> Result<()> {
-        BlockStore::delete(self, "owner", STATE, key).await
-    }
-}
-
 impl<T: BlockStore> Subject for T {
     async fn authorize(
         &self, subject_id: &str, credential_configuration_id: &str,
     ) -> Result<Vec<String>> {
-        let Some(block) = BlockStore::get(self, "owner", "SUBJECT", subject_id).await? else {
+        let Some(block) = BlockStore::get(self, "owner", SUBJECT, subject_id).await? else {
             return Err(anyhow!("could not find dataset for subject"));
         };
         let datasets: HashMap<String, Dataset> = serde_json::from_slice(&block)?;
@@ -170,7 +128,7 @@ impl<T: BlockStore> Subject for T {
     }
 
     async fn dataset(&self, subject_id: &str, credential_identifier: &str) -> Result<Dataset> {
-        let Some(block) = BlockStore::get(self, "owner", "SUBJECT", subject_id).await? else {
+        let Some(block) = BlockStore::get(self, "owner", SUBJECT, subject_id).await? else {
             return Err(anyhow!("could not find dataset for subject"));
         };
         let datasets: HashMap<String, Dataset> = serde_json::from_slice(&block)?;
@@ -179,5 +137,21 @@ impl<T: BlockStore> Subject for T {
             return Err(anyhow!("could not find dataset for subject"));
         };
         Ok(dataset.clone())
+    }
+}
+
+impl<T: BlockStore> StatusStore for T {
+    #[allow(unused)]
+    async fn put(&self, uri: &str, token: &str) -> Result<()> {
+        let data = serde_json::to_vec(token)?;
+        BlockStore::delete(self, "owner", STATUSTOKEN, uri).await?;
+        BlockStore::put(self, "owner", STATUSTOKEN, uri, &data).await
+    }
+
+    async fn get(&self, uri: &str) -> Result<Option<String>> {
+        let Some(block) = BlockStore::get(self, "owner", STATUSTOKEN, uri).await? else {
+            return Ok(None);
+        };
+        Ok(Some(serde_json::from_slice(&block)?))
     }
 }

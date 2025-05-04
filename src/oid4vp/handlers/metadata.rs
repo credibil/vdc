@@ -5,9 +5,12 @@
 //! As the Verifier is a client to the Wallet's Authorization Server, this
 //! endpoint returns Client metadata as defined in [RFC7591](https://www.rfc-editor.org/rfc/rfc7591).
 
-use crate::oid4vp::endpoint::{Body,Error, Result, Handler, NoHeaders, Request, Response};
+use anyhow::Context;
+
+use crate::oid4vp::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vp::provider::{Metadata, Provider};
-use crate::oid4vp::types::{MetadataRequest, MetadataResponse};
+use crate::oid4vp::verifier::MetadataResponse;
+use crate::oid4vp::wallet::MetadataRequest;
 
 /// Endpoint for Wallets to request Verifier (Client) metadata.
 ///
@@ -21,11 +24,11 @@ async fn metadata(
     Ok(MetadataResponse {
         client: Metadata::verifier(provider, &request.client_id)
             .await
-            .map_err(|e| Error::ServerError(format!("issue getting metadata: {e}")))?,
+            .context("getting metadata")?,
     })
 }
 
-impl<P: Provider> Handler<P> for Request<MetadataRequest, NoHeaders> {
+impl<P: Provider> Handler<P> for Request<MetadataRequest> {
     type Error = Error;
     type Provider = P;
     type Response = MetadataResponse;
