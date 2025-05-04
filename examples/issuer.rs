@@ -182,7 +182,7 @@ async fn authorize(
         Ok(v) => (StatusCode::FOUND, Redirect::to(&format!("{redirect_uri}?code={}", v.body.code)))
             .into_response(),
         Err(e) => {
-            let err_params = e.to_querystring();
+            let err_params = serde_urlencoded::to_string(&e).unwrap();
             (StatusCode::FOUND, Redirect::to(&format!("{redirect_uri}?{err_params}")))
                 .into_response()
         }

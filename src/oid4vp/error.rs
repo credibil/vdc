@@ -9,8 +9,6 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::core::urlencode;
-
 /// `OpenID` error codes for  for Verifiable Credential Issuance and
 /// Presentation.
 #[derive(Error, Clone, Debug, Serialize, Deserialize)]
@@ -60,22 +58,6 @@ pub enum Error {
     WalletUnavailable(String),
 }
 
-impl Error {
-    /// Transfrom error to `OpenID` compatible json format.
-    #[must_use]
-    pub fn to_json(&self) -> serde_json::Value {
-        serde_json::from_str(&self.to_string()).unwrap_or_default()
-    }
-
-    /// Transfrom error to `OpenID` compatible query string format.
-    /// Does not include `c_nonce` as this is not required for in query
-    /// string responses.
-    #[must_use]
-    pub fn to_querystring(&self) -> String {
-        urlencode::to_string(&self).unwrap_or_default()
-    }
-}
-
 impl From<anyhow::Error> for Error {
     fn from(err: anyhow::Error) -> Self {
         match err.downcast_ref::<Self>() {
@@ -117,7 +99,7 @@ pub(crate) use invalid;
 #[cfg(test)]
 mod test {
     use anyhow::{Context, Result, anyhow};
-    use serde_json::{Value, json};
+    use serde_json::json;
 
     use super::*;
 
@@ -146,25 +128,17 @@ mod test {
         Err(anyhow!("one-off error")).context("error context")?
     }
 
-    // Test that error details are retuned as json.
-    #[test]
-    fn err_json() {
-        let err = Error::InvalidRequest("bad request".to_string());
-        let ser: Value = serde_json::from_str(&err.to_string()).unwrap();
-        assert_eq!(ser, json!({"error":"invalid_request", "error_description": "bad request"}));
-    }
-
     // Test that the error details are returned as an http query string.
     #[test]
-    fn err_querystring() {
+    fn querystring() {
         let err = Error::InvalidRequest("Invalid request description".to_string());
-        let ser = urlencode::to_string(&err).unwrap();
-        assert_eq!(ser, "error=invalid_request&error_description=Invalid%20request%20description");
+        let ser = serde_urlencoded::to_string(&err).unwrap();
+        assert_eq!(ser, "error=invalid_request&error_description=Invalid+request+description");
     }
 
     // Test that the error details are returned as an http query string.
     #[test]
-    fn err_serialize() {
+    fn json() {
         let err = Error::InvalidRequest("bad request".to_string());
         let ser = serde_json::to_value(&err).unwrap();
         assert_eq!(ser, json!({"error":"invalid_request", "error_description": "bad request"}));
