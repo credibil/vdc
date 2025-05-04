@@ -469,7 +469,7 @@ async fn specific_values() {
     assert_eq!(results.len(), 1);
 }
 
-use credibil_vc::token_status::{StatusClaim, StatusList};
+use credibil_vc::token_status::{StatusClaim, StatusList, TokenBuilder};
 
 // Initialise a mock "wallet" with test credentials.
 async fn populate() -> Wallet {
@@ -480,10 +480,16 @@ async fn populate() -> Wallet {
     };
     let holder_jwk = did_jwk(&did_url, &wallet).await.expect("should get key");
 
-    // create a status list
+    // create a status list token
     let mut status_list = StatusList::new().expect("should create status list");
     let status_claim = status_list.add_entry("http://credibil.io/statuslists/1").unwrap();
-    let token = status_list.to_jwt().expect("should create token");
+    let token = TokenBuilder::new()
+        .status_list(status_list.clone())
+        .uri("https://example.com/statuslists/1")
+        .signer(&*ISSUER)
+        .build()
+        .await
+        .expect("should build status list token");
     let data = serde_json::to_vec(&token).expect("should serialize");
     BlockStore::put(&*ISSUER, "owner", "STATUSTOKEN", "http://credibil.io/statuslists/1", &data)
         .await

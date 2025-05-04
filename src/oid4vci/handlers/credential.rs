@@ -31,7 +31,7 @@ use crate::oid4vci::issuer::{
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Deferred, Expire, Token};
 use crate::state::State;
-use crate::token_status::{StatusList, StatusStore};
+use crate::token_status::{StatusList, StatusStore, TokenBuilder};
 
 /// Credential request handler.
 ///
@@ -298,8 +298,14 @@ impl Context {
             credentials.push(credential);
         }
 
-        let token = &status_list.to_jwt().context("creating status list JWT")?;
-        StatusStore::put(provider, "https://example.com/statuslists/1", token)
+        let token = TokenBuilder::new()
+            .status_list(status_list.clone())
+            .uri("https://example.com/statuslists/1")
+            .signer(provider)
+            .build()
+            .await
+            .context("building status list token")?;
+        StatusStore::put(provider, "https://example.com/statuslists/1", &token)
             .await
             .context("saving status list")?;
 

@@ -83,16 +83,6 @@ impl StatusList {
             status_list: StatusListEntry { idx, uri: uri.into() },
         })
     }
-
-    /// Encode the Status List Token as a JWT.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the serialization to JSON fails.
-    pub fn to_jwt(&self) -> Result<String> {
-        let bytes = serde_json::to_vec(self)?;
-        Ok(Base64UrlUnpadded::encode_string(&bytes))
-    }
 }
 
 /// Used to query the Status List endpoint in order to return Status List
@@ -100,7 +90,7 @@ impl StatusList {
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct StatusListResponse(pub String);
 
-/// Generate an IETF `dc+sd-jwt` format credential.
+/// Generate a Status List token.
 #[derive(Debug)]
 pub struct TokenBuilder<L, U, S> {
     status_list: L,

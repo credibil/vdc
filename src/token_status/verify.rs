@@ -35,19 +35,6 @@ impl StatusList {
         let bitslice = inflated.view_bits::<Lsb0>();
         Ok(bitslice.get(idx).is_some_and(|x| *x))
     }
-
-    /// Decode a JWT into a Status List.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the JWT is invalid or if the deserialization
-    /// fails.
-    pub fn from_jwt(jwt: &str) -> Result<Self> {
-        let bytes = Base64UrlUnpadded::decode_vec(jwt)
-            .map_err(|_| anyhow!("Invalid base64url-encoded status list"))?;
-        let status_list = serde_json::from_slice(&bytes)?;
-        Ok(status_list)
-    }
 }
 
 /// Used to query the Status List endpoint in order to return Status List

@@ -7,7 +7,7 @@ use credibil_jose::{Jwt, decode_jws};
 use crate::core::did_jwk;
 use crate::format::sd_jwt::{Disclosure, KbJwtClaims, KeyBinding, SdJwtClaims};
 use crate::oid4vp::verifier::{Claim, RequestObject};
-use crate::token_status::{StatusList, StatusToken};
+use crate::token_status::{StatusListClaims, StatusToken};
 
 /// Verifies an SD-JWT credential.
 ///
@@ -52,9 +52,11 @@ where
 
     // ..verify credential's status
     if let Some(status_claim) = &sd_jwt.claims.status {
-        let jwt = StatusToken::fetch(resolver, &status_claim.status_list.uri).await?;
-        let status_list = StatusList::from_jwt(&jwt)?;
-        if !status_list.is_valid(status_claim.status_list.idx)? {
+        // FIXME: move this code  to `StatusList`
+        let token = StatusToken::fetch(resolver, &status_claim.status_list.uri).await?;
+        let jwk = async |kid: String| did_jwk(&kid, resolver).await;
+        let decoded: Jwt<StatusListClaims> = decode_jws(&token, jwk).await?;
+        if !decoded.claims.status_list.is_valid(status_claim.status_list.idx)? {
             return Err(anyhow!("credential status is invalid"));
         }
     }
