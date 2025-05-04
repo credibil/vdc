@@ -7,7 +7,7 @@
 use anyhow::Context;
 use chrono::Utc;
 
-use crate::generate;
+use crate::core::generate;
 use crate::oid4vp::error::invalid;
 use crate::oid4vp::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vp::provider::{Metadata, Provider, StateStore};
@@ -15,7 +15,7 @@ use crate::oid4vp::state::Expire;
 use crate::oid4vp::verifier::{
     ClientId, DeviceFlow, GenerateRequest, GenerateResponse, RequestObject, ResponseType,
 };
-use crate::state::State;
+use crate::core::state::State;
 
 /// Create an Authorization Request.
 ///

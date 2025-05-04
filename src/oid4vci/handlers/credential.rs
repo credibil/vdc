@@ -15,6 +15,7 @@ use anyhow::Context as _;
 use chrono::Utc;
 use credibil_jose::{Jwt, KeyBinding, decode_jws};
 
+use crate::core::state::State;
 use crate::core::{did_jwk, generate};
 use crate::format::FormatProfile;
 use crate::format::mso_mdoc::MdocBuilder;
@@ -30,7 +31,6 @@ use crate::oid4vci::issuer::{
 };
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Deferred, Expire, Token};
-use crate::state::State;
 use crate::token_status::{StatusList, StatusStore, TokenBuilder};
 
 /// Credential request handler.

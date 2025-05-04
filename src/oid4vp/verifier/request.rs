@@ -10,8 +10,7 @@ use qrcode::QrCode;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::Kind;
-use crate::core::urlencode;
+use crate::core::{Kind, urlencode};
 use crate::oid4vp::JwtType;
 use crate::oid4vp::verifier::{DcqlQuery, VerifierMetadata};
 use crate::oid4vp::wallet::Wallet;

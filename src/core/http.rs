@@ -4,7 +4,7 @@ use bytes::Bytes;
 use http::{Response, StatusCode, header};
 use serde::Serialize;
 
-use crate::endpoint;
+use crate::core::endpoint;
 
 /// Trait for converting a `Result` into an HTTP response.
 pub trait IntoHttp {

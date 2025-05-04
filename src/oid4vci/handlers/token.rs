@@ -19,7 +19,8 @@ use anyhow::Context as _;
 use chrono::Utc;
 use serde::de::DeserializeOwned;
 
-use crate::generate;
+use crate::core::generate;
+use crate::core::state::State;
 use crate::oauth::GrantType;
 use crate::oid4vci::error::{invalid, server};
 use crate::oid4vci::handlers::{Body, Error, Handler, Request, Response, Result};
@@ -30,7 +31,6 @@ use crate::oid4vci::issuer::{
 use crate::oid4vci::pkce;
 use crate::oid4vci::provider::{Metadata, Provider, StateStore};
 use crate::oid4vci::state::{Authorized, Expire, Offered, Token};
-use crate::state::State;
 
 /// Token request handler.
 ///

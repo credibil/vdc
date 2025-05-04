@@ -7,7 +7,7 @@ use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_identity::SignerExt;
 use sha2::{Digest, Sha256};
 
-use crate::Kind;
+use crate::core::Kind;
 use crate::core::{generate, serde_cbor};
 use crate::format::mso_mdoc::{
     DataItem, DeviceAuth, DeviceAuthentication, DeviceNameSpaces, DeviceResponse, DeviceSigned,

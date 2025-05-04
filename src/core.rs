@@ -8,9 +8,11 @@ pub mod blockstore;
 pub mod generate;
 pub mod http;
 pub mod serde_cbor;
-pub mod state;
-pub mod strings;
 pub mod urlencode;
+
+pub(crate) mod endpoint;
+pub(crate) mod state;
+pub(crate) mod strings;
 
 use anyhow::{Result, anyhow};
 use credibil_identity::IdentityResolver;

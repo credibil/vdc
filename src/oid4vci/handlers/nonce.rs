@@ -10,12 +10,12 @@
 use anyhow::Context as _;
 use chrono::Utc;
 
-use crate::generate;
+use crate::core::generate;
 use crate::oid4vci::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::issuer::{NonceRequest, NonceResponse};
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::Expire;
-use crate::state::State;
+use crate::core::state::State;
 
 /// Nonce request handler.
 ///

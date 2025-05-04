@@ -6,10 +6,10 @@ use anyhow::{Result, anyhow};
 use credibil_identity::IdentityResolver;
 pub use credibil_identity::SignerExt;
 
-use crate::blockstore::BlockStore;
-use crate::oid4vp::verifier::Verifier;
+use crate::core::blockstore::BlockStore;
 // use crate::oid4vp::wallet::Wallet;
-pub use crate::state::StateStore;
+pub use crate::core::state::StateStore;
+use crate::oid4vp::verifier::Verifier;
 use crate::token_status::StatusToken;
 
 /// Verifier Provider trait.

@@ -21,7 +21,6 @@ pub mod oauth;
 pub mod token_status;
 
 mod core;
-mod endpoint;
 
 /// Re-export DID resolution
 pub mod identity {
@@ -33,5 +32,6 @@ pub mod jose {
     pub use credibil_jose::*;
 }
 
-/// Re-export basic types
+// /// Re-export basic types
+// pub use crate::core::{Kind, OneMany, blockstore, did_jwk, generate, http, serde_cbor, urlencode};
 pub use crate::core::*;
