@@ -1,6 +1,6 @@
-//! # Credential Format
+//! # Verifiable Digital Credential
 //!
-//! This module provides the implementations for supported Credential Formats.
+//! This module provides the implementations for supported Credential formats.
 
 pub mod mso_mdoc;
 pub mod sd_jwt;

@@ -5,8 +5,8 @@ use credibil_identity::IdentityResolver;
 use serde_json::Value;
 
 use crate::core::Kind;
-use crate::format::FormatProfile;
-use crate::format::sd_jwt::{Disclosure, verify};
+use crate::vdc::FormatProfile;
+use crate::vdc::sd_jwt::{Disclosure, verify};
 use crate::oid4vp::verifier::{Claim, Queryable};
 
 /// Convert a `dc+sd-jwt` encoded credential to a `Queryable` object.

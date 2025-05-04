@@ -8,8 +8,8 @@ use credibil_jose::Jws;
 use serde_json::Value;
 
 use crate::core::Kind;
-use crate::format::FormatProfile;
-use crate::format::w3c_vc::{VerifiableCredential, W3cVcClaims};
+use crate::vdc::FormatProfile;
+use crate::vdc::w3c_vc::{VerifiableCredential, W3cVcClaims};
 use crate::oid4vci::issuer::CredentialDefinition;
 use crate::oid4vp::verifier::{Claim, Queryable};
 

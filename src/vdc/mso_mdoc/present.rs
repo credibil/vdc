@@ -9,7 +9,7 @@ use sha2::{Digest, Sha256};
 
 use crate::core::Kind;
 use crate::core::{generate, serde_cbor};
-use crate::format::mso_mdoc::{
+use crate::vdc::mso_mdoc::{
     DataItem, DeviceAuth, DeviceAuthentication, DeviceNameSpaces, DeviceResponse, DeviceSigned,
     Document, Handover, IssuerSigned, MobileSecurityObject, OID4VPHandover, ResponseStatus,
     SessionTranscript, VersionString, cose,
@@ -260,7 +260,7 @@ mod tests {
 
     use super::*;
     use crate::core::did_jwk;
-    use crate::format::mso_mdoc::MdocBuilder;
+    use crate::vdc::mso_mdoc::MdocBuilder;
     use crate::oid4vp::verifier::Claim;
 
     #[tokio::test]

@@ -6,10 +6,10 @@ use credibil_identity::{Key, SignerExt};
 use credibil_jose::PublicKeyJwk;
 use credibil_vc::blockstore::BlockStore;
 use credibil_vc::did_jwk;
-use credibil_vc::format::mso_mdoc::MdocBuilder;
-use credibil_vc::format::sd_jwt::SdJwtVcBuilder;
-use credibil_vc::format::w3c_vc::W3cVcBuilder;
-use credibil_vc::format::{mso_mdoc, sd_jwt, w3c_vc};
+use credibil_vc::vdc::mso_mdoc::MdocBuilder;
+use credibil_vc::vdc::sd_jwt::SdJwtVcBuilder;
+use credibil_vc::vdc::w3c_vc::W3cVcBuilder;
+use credibil_vc::vdc::{mso_mdoc, sd_jwt, w3c_vc};
 use credibil_vc::oid4vp::verifier::{DcqlQuery, ResponseMode};
 use credibil_vc::oid4vp::{
     self, AuthorzationResponse, DeviceFlow, GenerateRequest, GenerateResponse, wallet,

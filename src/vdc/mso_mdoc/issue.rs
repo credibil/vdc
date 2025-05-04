@@ -11,8 +11,8 @@ use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 
 use crate::core::serde_cbor;
-use crate::format::mso_mdoc::cose;
-pub use crate::format::mso_mdoc::{
+use crate::vdc::mso_mdoc::cose;
+pub use crate::vdc::mso_mdoc::{
     CoseKey, DigestIdGenerator, IssuerAuth, IssuerSigned, IssuerSignedItem, MobileSecurityObject,
 };
 
@@ -181,7 +181,7 @@ mod tests {
 
     use super::*;
     use crate::core::did_jwk;
-    use crate::format::mso_mdoc::{DataItem, DigestAlgorithm, KeyType, serde_cbor};
+    use crate::vdc::mso_mdoc::{DataItem, DigestAlgorithm, KeyType, serde_cbor};
 
     #[tokio::test]
     async fn build_vc() {

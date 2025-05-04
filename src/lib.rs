@@ -16,7 +16,7 @@ pub mod oid4vci;
 #[cfg(feature = "verifier")]
 pub mod oid4vp;
 
-pub mod format;
+pub mod vdc;
 pub mod oauth;
 pub mod token_status;
 

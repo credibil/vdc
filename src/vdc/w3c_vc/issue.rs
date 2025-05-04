@@ -13,7 +13,7 @@ use credibil_jose::encode_jws;
 use serde_json::{Map, Value};
 
 use crate::core::{Kind, OneMany};
-use crate::format::w3c_vc::{
+use crate::vdc::w3c_vc::{
     CredentialStatus, CredentialStatusType, CredentialSubject, VerifiableCredential, W3cVcClaims,
 };
 use crate::token_status::StatusClaim;

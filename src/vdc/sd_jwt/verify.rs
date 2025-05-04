@@ -5,7 +5,7 @@ use credibil_identity::IdentityResolver;
 use credibil_jose::{Jwt, decode_jws};
 
 use crate::core::did_jwk;
-use crate::format::sd_jwt::{Disclosure, KbJwtClaims, KeyBinding, SdJwtClaims};
+use crate::vdc::sd_jwt::{Disclosure, KbJwtClaims, KeyBinding, SdJwtClaims};
 use crate::oid4vp::verifier::{Claim, RequestObject};
 use crate::token_status::{StatusListClaims, StatusToken};
 

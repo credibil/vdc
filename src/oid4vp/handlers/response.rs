@@ -24,7 +24,7 @@
 use anyhow::Context;
 
 use crate::core::Kind;
-use crate::format::{mso_mdoc, sd_jwt, w3c_vc};
+use crate::vdc::{mso_mdoc, sd_jwt, w3c_vc};
 use crate::oid4vp::error::invalid;
 use crate::oid4vp::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vp::provider::{Provider, StateStore};

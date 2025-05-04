@@ -6,7 +6,7 @@ use credibil_jose::Algorithm;
 use credibil_jose::jwe::EncAlgorithm;
 use serde::{Deserialize, Serialize};
 
-use crate::format::mso_mdoc::cose;
+use crate::vdc::mso_mdoc::cose;
 use crate::oauth::OAuthClient;
 
 /// Response containing the Verifier's client metadata.
