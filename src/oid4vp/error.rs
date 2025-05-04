@@ -6,15 +6,16 @@
 // TODO: add support for "client-state" in error responses.
 // TODO: use custom serialisation for Err enum.
 
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::core::urlencode;
 
 /// `OpenID` error codes for  for Verifiable Credential Issuance and
 /// Presentation.
-#[derive(Error, Clone, Debug, Deserialize)]
-#[allow(clippy::enum_variant_names)]
+#[derive(Error, Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[serde(tag = "error", content = "error_description")]
 pub enum Error {
     /// The request is missing a required parameter, includes an unsupported
     /// parameter value, repeats a parameter, includes multiple credentials,
@@ -72,40 +73,6 @@ impl Error {
     #[must_use]
     pub fn to_querystring(&self) -> String {
         urlencode::to_string(&self).unwrap_or_default()
-    }
-}
-
-/// Error response for `OpenID` for Verifiable Credentials.
-#[allow(clippy::module_name_repetitions)]
-#[derive(Deserialize, Serialize)]
-pub struct OidError {
-    /// Error code.
-    pub error: String,
-
-    /// Error description.
-    pub error_description: String,
-
-    /// Optional client-state parameter.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub state: Option<String>,
-
-    /// A fresh `c_nonce` to use when retrying Proof submission.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub c_nonce: Option<String>,
-
-    /// The expiry time of the `c_nonce`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub c_nonce_expires_in: Option<i64>,
-}
-
-impl Serialize for Error {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        use serde::ser::Error as SerdeError;
-
-        let Ok(error) = serde_json::from_str::<OidError>(&self.to_string()) else {
-            return Err(SerdeError::custom("issue deserializing Err"));
-        };
-        error.serialize(serializer)
     }
 }
 
