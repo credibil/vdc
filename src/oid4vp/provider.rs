@@ -7,7 +7,8 @@ use credibil_identity::IdentityResolver;
 pub use credibil_identity::SignerExt;
 
 use crate::blockstore::BlockStore;
-use crate::oid4vp::verifier::{Verifier, Wallet};
+use crate::oid4vp::verifier::Verifier;
+// use crate::oid4vp::wallet::Wallet;
 pub use crate::state::StateStore;
 use crate::token_status::StatusToken;
 
@@ -31,27 +32,20 @@ pub trait Metadata: Send + Sync {
     fn verifier(&self, verifier_id: &str) -> impl Future<Output = Result<Verifier>> + Send;
 
     /// Wallet (Authorization Server) metadata.
-    fn wallet(&self, wallet_id: &str) -> impl Future<Output = Result<Wallet>> + Send;
+    // fn wallet(&self, wallet_id: &str) -> impl Future<Output = Result<Wallet>> + Send;
 
     /// Used by OAuth 2.0 clients to dynamically register with the authorization
     /// server.
     fn register(&self, verifier: &Verifier) -> impl Future<Output = Result<Verifier>> + Send;
 }
 
-const WALLET: &str = "WALLET";
+// const WALLET: &str = "WALLET";
 const VERIFIER: &str = "VERIFIER";
 
 impl<T: BlockStore> Metadata for T {
     async fn verifier(&self, verifier_id: &str) -> Result<Verifier> {
         let Some(block) = BlockStore::get(self, "owner", VERIFIER, verifier_id).await? else {
             return Err(anyhow!("could not find client"));
-        };
-        Ok(serde_json::from_slice(&block)?)
-    }
-
-    async fn wallet(&self, wallet_id: &str) -> Result<Wallet> {
-        let Some(block) = BlockStore::get(self, "owner", WALLET, wallet_id).await? else {
-            return Err(anyhow!("could not find issuer"));
         };
         Ok(serde_json::from_slice(&block)?)
     }
@@ -64,4 +58,11 @@ impl<T: BlockStore> Metadata for T {
         BlockStore::put(self, "owner", VERIFIER, &verifier.oauth.client_id, &block).await?;
         Ok(verifier)
     }
+
+    // async fn wallet(&self, wallet_id: &str) -> Result<Wallet> {
+    //     let Some(block) = BlockStore::get(self, "owner", WALLET, wallet_id).await? else {
+    //         return Err(anyhow!("could not find issuer"));
+    //     };
+    //     Ok(serde_json::from_slice(&block)?)
+    // }
 }

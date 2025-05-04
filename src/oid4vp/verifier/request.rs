@@ -13,7 +13,8 @@ use serde_json::Value;
 use crate::Kind;
 use crate::core::urlencode;
 use crate::oid4vp::JwtType;
-use crate::oid4vp::verifier::{DcqlQuery, VerifierMetadata, Wallet};
+use crate::oid4vp::verifier::{DcqlQuery, VerifierMetadata};
+use crate::oid4vp::wallet::Wallet;
 
 const UNRESERVED: &AsciiSet =
     &NON_ALPHANUMERIC.remove(b'&').remove(b'=').remove(b'.').remove(b'_').remove(b'-').remove(b'~');
