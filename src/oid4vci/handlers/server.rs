@@ -20,7 +20,7 @@ use anyhow::Context as _;
 
 use crate::oid4vci::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::{Metadata, Provider};
-use crate::oid4vci::types::{ServerRequest, ServerResponse};
+use crate::oid4vci::issuer::{ServerRequest, ServerResponse};
 
 /// OAuth server metadata request handler.
 ///

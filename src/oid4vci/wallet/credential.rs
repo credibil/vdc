@@ -1,6 +1,6 @@
 //! # Credential Request Builder
 
-use crate::oid4vci::types::{
+use crate::oid4vci::issuer::{
     CredentialRequest, CredentialResponseEncryption, MultipleProofs, NotificationEvent,
     NotificationRequest, Proof, RequestBy, SingleProof,
 };

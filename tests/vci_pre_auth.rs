@@ -6,7 +6,7 @@ use std::sync::LazyLock;
 use credibil_identity::{Key, SignerExt};
 use credibil_jose::{JwsBuilder, Jwt, decode_jws};
 use credibil_vc::blockstore::BlockStore;
-use credibil_vc::oid4vci::types::{
+use credibil_vc::oid4vci::issuer::{
     AuthorizationDetail, CreateOfferRequest, Credential, CredentialHeaders, CredentialOfferRequest,
     CredentialRequest, CredentialResponse, NonceRequest, NotificationEvent, NotificationHeaders,
     NotificationRequest, ProofClaims, TokenGrantType, TokenRequest, W3cVcClaims,

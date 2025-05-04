@@ -26,7 +26,7 @@ use crate::oid4vci::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::pkce;
 use crate::oid4vci::provider::{Metadata, Provider, StateStore};
 use crate::oid4vci::state::{Authorized, Expire, Offered, Token};
-use crate::oid4vci::types::{
+use crate::oid4vci::issuer::{
     AuthorizationCredential, AuthorizationDetail, AuthorizedDetail, Issuer, TokenGrantType,
     TokenRequest, TokenResponse, TokenType,
 };

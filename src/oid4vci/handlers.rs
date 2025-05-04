@@ -4,6 +4,20 @@
 //! to the appropriate handler for processing, returning a reply that can be
 //! serialized to a JSON object.
 
+mod authorize;
+mod create_offer;
+mod credential;
+mod credential_offer;
+mod deferred;
+mod issuer;
+mod nonce;
+mod notification;
+mod par;
+mod register;
+mod server;
+mod statuslist;
+mod token;
+
 use std::fmt::Debug;
 
 use http::HeaderMap;

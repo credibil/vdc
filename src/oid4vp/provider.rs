@@ -31,7 +31,7 @@ pub trait Metadata: Send + Sync {
     /// Verifier (Client) metadata for the specified verifier.
     fn verifier(&self, verifier_id: &str) -> impl Future<Output = Result<Verifier>> + Send;
 
-    /// Wallet (Authorization Server) metadata.
+    // /// Wallet (Authorization Server) metadata.
     // fn wallet(&self, wallet_id: &str) -> impl Future<Output = Result<Wallet>> + Send;
 
     /// Used by OAuth 2.0 clients to dynamically register with the authorization

@@ -5,7 +5,7 @@ use chrono::TimeDelta;
 use serde::{Deserialize, Serialize};
 
 use crate::oauth::CodeChallengeMethod;
-use crate::oid4vci::types::{AuthorizedDetail, CredentialRequest};
+use crate::oid4vci::issuer::{AuthorizedDetail, CredentialRequest};
 
 /// Pre-authorization state from the `create_offer` endpoint.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]

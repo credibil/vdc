@@ -3,7 +3,7 @@ use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
-use crate::oid4vci::types::{AuthorizationCredential, AuthorizationDetail, ClientAssertion};
+use crate::oid4vci::issuer::{AuthorizationCredential, AuthorizationDetail, ClientAssertion};
 
 /// Upon receiving a successful Authorization Response, a Token Request is made
 /// as defined in [RFC6749] with extensions to support the Pre-Authorized Code
@@ -276,7 +276,7 @@ impl AuthorizedDetail {
 mod tests {
 
     use super::*;
-    use crate::oid4vci::types::{
+    use crate::oid4vci::issuer::{
         AuthorizationCredential, AuthorizationDetailType, ClaimsDescription,
     };
 

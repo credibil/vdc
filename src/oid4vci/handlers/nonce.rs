@@ -14,7 +14,7 @@ use crate::generate;
 use crate::oid4vci::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::Expire;
-use crate::oid4vci::types::{NonceRequest, NonceResponse};
+use crate::oid4vci::issuer::{NonceRequest, NonceResponse};
 use crate::state::State;
 
 /// Nonce request handler.

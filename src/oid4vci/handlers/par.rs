@@ -10,10 +10,9 @@ use anyhow::Context as _;
 use chrono::{Duration, Utc};
 
 use crate::generate;
-use crate::oid4vci::handlers::{Body, Error, Handler, Request, Response, Result};
+use crate::oid4vci::handlers::{Body, Error, Handler, Request, Response, Result, authorize};
 use crate::oid4vci::provider::{Metadata, Provider, StateStore};
-use crate::oid4vci::server::authorize;
-use crate::oid4vci::types::{PushedAuthorizationRequest, PushedAuthorizationResponse};
+use crate::oid4vci::issuer::{PushedAuthorizationRequest, PushedAuthorizationResponse};
 use crate::state::State;
 
 /// Endpoint for the Wallet to push an Authorization Request when using Pushed

@@ -9,7 +9,7 @@ use credibil_identity::{Key, SignerExt};
 use credibil_jose::{JwsBuilder, Jwt, decode_jws};
 use credibil_vc::blockstore::BlockStore;
 use credibil_vc::format::sd_jwt::SdJwtClaims;
-use credibil_vc::oid4vci::types::{
+use credibil_vc::oid4vci::issuer::{
     CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, CredentialResponse,
     NonceRequest, ProofClaims, TokenGrantType, TokenRequest, W3cVcClaims,
 };

@@ -6,7 +6,7 @@ use crate::oid4vci::error::server;
 use crate::oid4vci::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::Token;
-use crate::oid4vci::types::{RegistrationHeaders, RegistrationRequest, RegistrationResponse};
+use crate::oid4vci::issuer::{RegistrationHeaders, RegistrationRequest, RegistrationResponse};
 
 /// Registration request handler.
 ///

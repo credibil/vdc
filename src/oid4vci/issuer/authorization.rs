@@ -492,7 +492,7 @@ mod tests {
     use super::*;
     use crate::core::urlencode;
     use crate::oauth;
-    use crate::oid4vci::types::{ClaimsDescription, CredentialDefinition};
+    use crate::oid4vci::issuer::{ClaimsDescription, CredentialDefinition};
 
     #[test]
     fn authorization_configuration_id() {

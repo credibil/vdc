@@ -1,7 +1,7 @@
 //! # Create Offer Builder
 
 use crate::oauth::GrantType;
-use crate::oid4vci::types::{CreateOfferRequest, SendType};
+use crate::oid4vci::issuer::{CreateOfferRequest, SendType};
 
 impl CreateOfferRequest {
     /// Create a new `CreateOfferRequestBuilder`.

@@ -1,6 +1,6 @@
 //! # Token Request Builder
 
-use crate::oid4vci::types::{AuthorizationDetail, ClientAssertion, TokenGrantType, TokenRequest};
+use crate::oid4vci::issuer::{AuthorizationDetail, ClientAssertion, TokenGrantType, TokenRequest};
 
 impl TokenRequest {
     /// Create a new `TokenRequestBuilder`.

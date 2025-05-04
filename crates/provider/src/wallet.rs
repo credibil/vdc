@@ -9,7 +9,7 @@ use credibil_jose::{Algorithm, Jws, Signer};
 use credibil_vc::format::FormatProfile;
 use credibil_vc::format::mso_mdoc::{IssuerSigned, MobileSecurityObject};
 use credibil_vc::format::sd_jwt::SdJwtClaims;
-use credibil_vc::oid4vci::types::Credential;
+use credibil_vc::oid4vci::issuer::Credential;
 use credibil_vc::oid4vp::verifier::{Claim, Queryable};
 use credibil_vc::serde_cbor;
 use serde_json::Value;

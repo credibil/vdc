@@ -2,7 +2,7 @@
 
 use crate::format::FormatProfile;
 use crate::oauth::{CodeChallengeMethod, ResponseType};
-use crate::oid4vci::types::{
+use crate::oid4vci::issuer::{
     AuthorizationCredential, AuthorizationDetail, AuthorizationDetailType, AuthorizationRequest,
     ClaimsDescription, RequestObject,
 };

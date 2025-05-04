@@ -10,7 +10,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use crate::oid4vci::types::CredentialDefinition;
+use crate::oid4vci::issuer::CredentialDefinition;
 
 /// Format Profile defines supported Credential data models. Each profile
 /// defines a specific set of parameters or claims used to support a particular

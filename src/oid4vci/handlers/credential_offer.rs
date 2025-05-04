@@ -19,7 +19,7 @@ use anyhow::Context as _;
 use crate::oid4vci::error::invalid;
 use crate::oid4vci::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::{Provider, StateStore};
-use crate::oid4vci::types::{CredentialOffer, CredentialOfferRequest, CredentialOfferResponse};
+use crate::oid4vci::issuer::{CredentialOffer, CredentialOfferRequest, CredentialOfferResponse};
 
 /// Endpoint for the Wallet to request the Issuer's Credential Offer when
 /// engaged in a cross-device flow.
