@@ -16,7 +16,7 @@ use crate::core::{Kind, OneMany};
 use crate::vdc::w3c_vc::{
     CredentialStatus, CredentialStatusType, CredentialSubject, VerifiableCredential, W3cVcClaims,
 };
-use crate::token_status::StatusClaim;
+use crate::status::StatusClaim;
 
 /// Generate a W3C `jwt_vc_json` format credential.
 #[derive(Debug)]

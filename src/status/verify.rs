@@ -10,7 +10,7 @@ use bitvec::view::BitView;
 use flate2::read::ZlibDecoder;
 use serde::{Deserialize, Serialize};
 
-use crate::token_status::StatusList;
+use crate::status::StatusList;
 
 /// `StatusToken` is used to store and retrieve Status Tokens.
 pub trait StatusToken: Send + Sync {

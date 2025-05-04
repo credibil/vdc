@@ -10,7 +10,7 @@ use crate::core::blockstore::BlockStore;
 // use crate::oid4vp::wallet::Wallet;
 pub use crate::core::state::StateStore;
 use crate::oid4vp::verifier::Verifier;
-use crate::token_status::StatusToken;
+use crate::status::StatusToken;
 
 /// Verifier Provider trait.
 pub trait Provider:

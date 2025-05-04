@@ -31,7 +31,7 @@ use crate::oid4vci::issuer::{
 };
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Deferred, Expire, Token};
-use crate::token_status::{StatusList, StatusStore, TokenBuilder};
+use crate::status::{StatusList, StatusStore, TokenBuilder};
 
 /// Credential request handler.
 ///

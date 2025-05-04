@@ -21,7 +21,7 @@ use credibil_vc::oid4vci::{
     CredentialRequest, DeferredCredentialRequest, IssuerRequest, NotificationHeaders,
     NotificationRequest, PushedAuthorizationRequest, ServerRequest, TokenRequest,
 };
-use credibil_vc::token_status::StatusListRequest;
+use credibil_vc::status::StatusListRequest;
 use credibil_vc::urlencode;
 use oauth2::CsrfToken;
 use provider::issuer::data::{CLIENT, ISSUER, NORMAL_USER as USER, SERVER};

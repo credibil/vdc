@@ -17,7 +17,7 @@ use flate2::read::ZlibDecoder;
 use flate2::write::ZlibEncoder;
 use serde::{Deserialize, Serialize};
 
-use crate::token_status::{
+use crate::status::{
     BitsPerToken, StatusClaim, StatusList, StatusListClaims, StatusListEntry,
 };
 

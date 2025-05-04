@@ -18,7 +18,7 @@ pub mod oid4vp;
 
 pub mod vdc;
 pub mod oauth;
-pub mod token_status;
+pub mod status;
 
 mod core;
 

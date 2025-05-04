@@ -469,7 +469,7 @@ async fn specific_values() {
     assert_eq!(results.len(), 1);
 }
 
-use credibil_vc::token_status::{StatusClaim, StatusList, TokenBuilder};
+use credibil_vc::status::{StatusClaim, StatusList, TokenBuilder};
 
 // Initialise a mock "wallet" with test credentials.
 async fn populate() -> Wallet {
