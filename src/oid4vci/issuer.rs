@@ -2,16 +2,16 @@
 
 mod authorization;
 mod credential;
-mod offer;
 mod metadata;
+mod offer;
 mod token;
 
 use std::fmt::Debug;
 
 pub use authorization::*;
 pub use credential::*;
-pub use offer::*;
 pub use metadata::*;
+pub use offer::*;
 use serde::{Deserialize, Serialize};
 pub use token::*;
 

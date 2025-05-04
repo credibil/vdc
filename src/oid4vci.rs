@@ -88,9 +88,9 @@
 //! [OpenID Connect]: (https://openid.net/specs/openid-connect-core-1_0.html)
 //! [RFC6749]: (https://www.rfc-editor.org/rfc/rfc6749.html)
 
+pub mod issuer;
 pub mod pkce;
 pub mod provider;
-pub mod issuer;
 pub mod wallet;
 
 mod error;

@@ -74,12 +74,12 @@ use crate::generate;
 use crate::oauth::GrantType;
 use crate::oid4vci::error::{invalid, server};
 use crate::oid4vci::handlers::{Body, Error, Handler, Request, Response, Result};
-use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
-use crate::oid4vci::state::{Authorized, Expire, Offered};
 use crate::oid4vci::issuer::{
     AuthorizationCredential, AuthorizationDetail, AuthorizationDetailType, AuthorizationRequest,
     AuthorizationResponse, AuthorizedDetail, Issuer, RequestObject,
 };
+use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
+use crate::oid4vci::state::{Authorized, Expire, Offered};
 use crate::state::State;
 
 /// Authorization request handler.

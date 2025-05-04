@@ -23,13 +23,13 @@ use crate::format::w3c_vc::W3cVcBuilder;
 use crate::oid4vci::JwtType;
 use crate::oid4vci::error::server;
 use crate::oid4vci::handlers::{Body, Error, Handler, Request, Response, Result};
-use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
-use crate::oid4vci::state::{Deferred, Expire, Token};
 use crate::oid4vci::issuer::{
     AuthorizedDetail, Credential, CredentialConfiguration, CredentialHeaders, CredentialRequest,
     CredentialResponse, Dataset, Issuer, MultipleProofs, Proof, ProofClaims, RequestBy,
     SingleProof,
 };
+use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
+use crate::oid4vci::state::{Deferred, Expire, Token};
 use crate::state::State;
 use crate::token_status::{StatusList, StatusStore};
 

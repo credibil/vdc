@@ -20,9 +20,9 @@
 //! certain time period or at all.
 
 use crate::oid4vci::handlers::{Body, Error, Handler, Headers, Request, Response, Result};
+use crate::oid4vci::issuer::{NotificationHeaders, NotificationRequest, NotificationResponse};
 use crate::oid4vci::provider::{Provider, StateStore};
 use crate::oid4vci::state::Token;
-use crate::oid4vci::issuer::{NotificationHeaders, NotificationRequest, NotificationResponse};
 
 /// Notification request handler.
 ///

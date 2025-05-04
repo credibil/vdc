@@ -7,4 +7,3 @@ mod request;
 pub use dcql::*;
 pub use metadata::*;
 pub use request::*;
-
