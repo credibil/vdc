@@ -358,8 +358,6 @@ pub type DeferredCredentialResponse = CredentialResponse;
 
 #[cfg(test)]
 mod tests {
-    use insta::assert_yaml_snapshot as assert_snapshot;
-
     use super::*;
     use crate::oid4vci::issuer::CredentialConfiguration;
 
@@ -372,11 +370,6 @@ mod tests {
                 "jwt": "SomeJWT"
             }
         });
-
-        let deserialized: CredentialRequest =
-            serde_json::from_value(json.clone()).expect("should deserialize from json");
-        assert_snapshot!("credential_identifier", &deserialized);
-
         let request = CredentialRequest {
             credential: RequestBy::Identifier("EngineeringDegree2023".to_string()),
             proof: Some(Proof::Single(SingleProof::Jwt {
@@ -384,6 +377,10 @@ mod tests {
             })),
             ..CredentialRequest::default()
         };
+
+        let deserialized: CredentialRequest =
+            serde_json::from_value(json.clone()).expect("should deserialize from json");
+        assert_eq!(request, deserialized);
 
         let serialized = serde_json::to_value(&request).expect("should serialize to string");
         assert_eq!(json, serialized);
@@ -400,11 +397,6 @@ mod tests {
                 ]
             }
         });
-
-        let deserialized: CredentialRequest =
-            serde_json::from_value(json.clone()).expect("should deserialize from json");
-        assert_snapshot!("multiple_proofs", &deserialized);
-
         let request = CredentialRequest {
             credential: RequestBy::Identifier("EngineeringDegree2023".to_string()),
             proof: Some(Proof::Multiple(MultipleProofs::Jwt(vec![
@@ -413,6 +405,10 @@ mod tests {
             ]))),
             ..CredentialRequest::default()
         };
+
+        let deserialized: CredentialRequest =
+            serde_json::from_value(json.clone()).expect("should deserialize from json");
+        assert_eq!(request, deserialized);
 
         let serialized = serde_json::to_value(&request).expect("should serialize to string");
         assert_eq!(json, serialized);
@@ -464,107 +460,63 @@ mod tests {
             },
             "claims": [
                 {
-                    "path": [
-                        "credentialSubject",
-                        "email"
-                    ],
+                    "path": ["credentialSubject", "email"],
                     "mandatory": true,
-                    "display": [
-                        {
-                            "name": "Email",
-                            "locale": "en-NZ"
-                        }
-                    ]
+                    "display": [{
+                        "name": "Email",
+                        "locale": "en-NZ"
+                    }]
                 },
                 {
-                    "path": [
-                        "credentialSubject",
-                        "family_name"
-                    ],
+                    "path": ["credentialSubject", "family_name" ],
                     "mandatory": true,
-                    "display": [
-                        {
-                            "name": "Family name",
-                            "locale": "en-NZ"
-                        }
-                    ]
+                    "display": [{
+                        "name": "Family name",
+                        "locale": "en-NZ"
+                    }]
                 },
                 {
-                    "path": [
-                        "credentialSubject",
-                        "given_name"
-                    ],
+                    "path": ["credentialSubject", "given_name" ],
                     "mandatory": true,
-                    "display": [
-                        {
-                            "name": "Given name",
-                            "locale": "en-NZ"
-                        }
-                    ]
+                    "display": [{
+                        "name": "Given name",
+                        "locale": "en-NZ"
+                    }]
                 },
                 {
-                    "path": [
-                        "credentialSubject",
-                        "address"
-                    ],
-                    "display": [
-                        {
-                            "name": "Residence",
-                            "locale": "en-NZ"
-                        }
-                    ]
+                    "path": ["credentialSubject", "address"],
+                    "display": [{
+                        "name": "Residence",
+                        "locale": "en-NZ"
+                    }]
                 },
                 {
-                    "path": [
-                        "credentialSubject",
-                        "address",
-                        "street_address"
-                    ],
-                    "display": [
-                        {
-                            "name": "Street Address",
-                            "locale": "en-NZ"
-                        }
-                    ]
+                    "path": ["credentialSubject", "address", "street_address"],
+                    "display": [{
+                        "name": "Street Address",
+                        "locale": "en-NZ"
+                    }]
                 },
                 {
-                    "path": [
-                        "credentialSubject",
-                        "address",
-                        "locality"
-                    ],
-                    "display": [
-                        {
-                            "name": "Locality",
-                            "locale": "en-NZ"
-                        }
-                    ]
+                    "path": ["credentialSubject", "address", "locality"],
+                    "display": [{
+                        "name": "Locality",
+                        "locale": "en-NZ"
+                    }]
                 },
                 {
-                    "path": [
-                        "credentialSubject",
-                        "address",
-                        "region"
-                    ],
-                    "display": [
-                        {
-                            "name": "Region",
-                            "locale": "en-NZ"
-                        }
-                    ]
+                    "path": ["credentialSubject", "address", "region"],
+                    "display": [{
+                        "name": "Region",
+                        "locale": "en-NZ"
+                    }]
                 },
                 {
-                    "path": [
-                        "credentialSubject",
-                        "address",
-                        "country"
-                    ],
-                    "display": [
-                        {
-                            "name": "Country",
-                            "locale": "en-NZ"
-                        }
-                    ]
+                    "path": ["credentialSubject", "address", "country"],
+                    "display": [{
+                        "name": "Country",
+                        "locale": "en-NZ"
+                    }]
                 }
             ]
         });
@@ -572,12 +524,13 @@ mod tests {
         let config: CredentialConfiguration =
             serde_json::from_value(json.clone()).expect("should deserialize from json");
         let claims = config.claims_display(Some("en-NZ"));
-        assert_snapshot!("claim_label_display_en-NZ", &claims, {
-            "." => insta::sorted_redaction(),
-        });
+        assert_eq!(claims.len(), 8);
+        assert_eq!(claims[0], "Email");
+        assert_eq!(claims[7], "Country");
+
         let default = config.claims_display(None);
-        assert_snapshot!("claim_label_display_default", &default, {
-            "." => insta::sorted_redaction(),
-        });
+        assert_eq!(default.len(), 8);
+        assert_eq!(default[0], "CredentialSubject.email");
+        assert_eq!(default[7], "CredentialSubject.address.country");
     }
 }

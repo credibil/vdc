@@ -64,7 +64,6 @@ axum = { version = "0.8.4", features = ["macros"] }
 axum-extra = { version = "0.10.1", features = ["typed-header"] }
 ed25519-dalek.workspace = true
 hex = "0.4.3"
-insta = { version = "1.43.1", features = ["redactions", "yaml"] }
 oauth2 = { version = "5.0.0" }
 provider = { path = "crates/provider" }
 rand_core.workspace = true
