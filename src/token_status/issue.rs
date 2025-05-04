@@ -3,18 +3,23 @@
 use std::fmt::Debug;
 use std::io::{Read, Write};
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use bitvec::order::Lsb0;
 use bitvec::slice::BitSlice;
 use bitvec::vec::BitVec;
 use bitvec::view::BitView;
+use chrono::{DateTime, Utc};
+use credibil_identity::SignerExt;
+use credibil_jose::Jws;
 use flate2::Compression;
 use flate2::read::ZlibDecoder;
 use flate2::write::ZlibEncoder;
 use serde::{Deserialize, Serialize};
 
-use crate::token_status::{BitsPerToken, StatusClaim, StatusList, StatusListEntry};
+use crate::token_status::{
+    BitsPerToken, StatusClaim, StatusList, StatusListClaims, StatusListEntry,
+};
 
 /// `StatusStore` is used to store and retrieve Status Tokens.
 pub trait StatusStore: Send + Sync {
@@ -94,3 +99,128 @@ impl StatusList {
 /// Token(s).
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct StatusListResponse(pub String);
+
+/// Generate an IETF `dc+sd-jwt` format credential.
+#[derive(Debug)]
+pub struct TokenBuilder<L, U, S> {
+    status_list: L,
+    uri: U,
+    expiry: Option<DateTime<Utc>>,
+    signer: S,
+}
+
+/// Builder has no status list.
+#[doc(hidden)]
+pub struct NoList;
+/// Builder has a status list.
+#[doc(hidden)]
+pub struct HasList(StatusList);
+
+/// Builder has no Status List Token URI.
+#[doc(hidden)]
+pub struct NoUri;
+/// Builder has a Status List Token URI.
+#[doc(hidden)]
+pub struct HasUri(String);
+
+/// Builder has no signer.
+#[doc(hidden)]
+pub struct NoSigner;
+/// Builder state has a signer.
+#[doc(hidden)]
+pub struct HasSigner<'a, S: SignerExt>(pub &'a S);
+
+impl Default for TokenBuilder<NoList, NoUri, NoSigner> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl TokenBuilder<NoList, NoUri, NoSigner> {
+    /// Create a new `TokenBuilder`.
+    #[must_use]
+    pub const fn new() -> Self {
+        Self {
+            status_list: NoList,
+            uri: NoUri,
+            expiry: None,
+            signer: NoSigner,
+        }
+    }
+}
+
+impl<U, S> TokenBuilder<NoList, U, S> {
+    /// Set the status list.
+    pub fn status_list(self, status_list: StatusList) -> TokenBuilder<HasList, U, S> {
+        TokenBuilder {
+            status_list: HasList(status_list),
+            uri: self.uri,
+            expiry: self.expiry,
+            signer: self.signer,
+        }
+    }
+}
+
+impl<L, S> TokenBuilder<L, NoUri, S> {
+    /// Set the status list URI (`sub` claim).
+    pub fn uri(self, uri: impl Into<String>) -> TokenBuilder<L, HasUri, S> {
+        TokenBuilder {
+            status_list: self.status_list,
+            uri: HasUri(uri.into()),
+            expiry: self.expiry,
+            signer: self.signer,
+        }
+    }
+}
+
+impl<L, U, S> TokenBuilder<L, U, S> {
+    /// Set the expiration date for the status list.
+    #[must_use]
+    pub const fn expiry(mut self, expiry: DateTime<Utc>) -> Self {
+        self.expiry = Some(expiry);
+        self
+    }
+}
+
+impl<L, U> TokenBuilder<L, U, NoSigner> {
+    /// Set the token signer.
+    #[must_use]
+    pub fn signer<S: SignerExt>(self, signer: &'_ S) -> TokenBuilder<L, U, HasSigner<'_, S>> {
+        TokenBuilder {
+            status_list: self.status_list,
+            uri: self.uri,
+            expiry: self.expiry,
+            signer: HasSigner(signer),
+        }
+    }
+}
+
+impl<S: SignerExt> TokenBuilder<HasList, HasUri, HasSigner<'_, S>> {
+    /// Build the token.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the token JWS cannot be built.
+    pub async fn build(self) -> Result<String> {
+        let claims = StatusListClaims {
+            sub: self.uri.0,
+            iat: Utc::now(),
+            exp: self.expiry,
+            ttl: None,
+            status_list: self.status_list.0,
+        };
+
+        let key_ref = self.signer.0.verification_method().await?.try_into()?;
+        let jws = Jws::builder()
+            .typ("statuslist+jwt")
+            .payload(claims)
+            .key_ref(&key_ref)
+            .add_signer(self.signer.0)
+            .build()
+            .await
+            .context("building Status List Token")?
+            .to_string();
+
+        Ok(jws)
+    }
+}
