@@ -3,10 +3,10 @@ use std::io::Cursor;
 
 use anyhow::Context as _;
 use base64ct::{Base64, Encoding};
+use percent_encoding::{NON_ALPHANUMERIC, percent_decode_str, utf8_percent_encode};
 use qrcode::QrCode;
 use serde::{Deserialize, Serialize};
 
-use crate::core::urlencode;
 use crate::oauth::GrantType;
 use crate::oid4vci::issuer::{AuthorizationCodeGrant, Grants, PreAuthorizedCodeGrant};
 
@@ -127,6 +127,10 @@ impl OfferType {
 /// request.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct CredentialOffer {
+    /// The URL of the Credential Issuer which the Wallet can use to obtain
+    /// Credentials and the Issuer's Metadata.
+    pub credential_issuer: String,
+
     /// Credentials offered to the Wallet.
     /// A list of names identifying entries in the
     /// `credential_configurations_supported` `HashMap` in the Credential
@@ -196,7 +200,7 @@ impl CredentialOffer {
     /// Returns an `Error::ServerError` error if error if the Credential Offer
     /// cannot be serialized.
     pub fn to_querystring(&self) -> anyhow::Result<String> {
-        urlencode::to_string(self).context("creating query string")
+        self.try_into()
     }
 
     /// Convenience method for extracting a pre-authorized code grant from an
@@ -211,6 +215,32 @@ impl CredentialOffer {
     #[must_use]
     pub fn authorization_code(&self) -> Option<AuthorizationCodeGrant> {
         self.grants.as_ref().and_then(|grants| grants.authorization_code.clone())
+    }
+}
+
+impl TryInto<String> for CredentialOffer {
+    type Error = anyhow::Error;
+
+    fn try_into(self) -> Result<String, Self::Error> {
+        (&self).try_into()
+    }
+}
+
+impl TryInto<String> for &CredentialOffer {
+    type Error = anyhow::Error;
+
+    fn try_into(self) -> Result<String, Self::Error> {
+        let stringified = serde_json::to_string(&self)?;
+        Ok(utf8_percent_encode(&stringified, NON_ALPHANUMERIC).to_string())
+    }
+}
+
+impl TryFrom<String> for CredentialOffer {
+    type Error = anyhow::Error;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let stringified = percent_decode_str(&value).decode_utf8_lossy();
+        Ok(serde_json::from_str(&stringified)?)
     }
 }
 
@@ -235,11 +265,16 @@ pub struct CredentialOfferResponse {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
+    // const UNRESERVED: &AsciiSet =
+    //     &NON_ALPHANUMERIC.remove(b'.').remove(b'_').remove(b'-').remove(b'~');
+
     #[test]
-    fn credential_offer() {
+    fn serialize() {
         let offer = CredentialOffer {
+            credential_issuer: "https://issuer.example.com".to_string(),
             credential_configuration_ids: vec!["UniversityDegree_JWT".to_string()],
             grants: None,
         };
@@ -248,5 +283,23 @@ mod tests {
         let offer2: CredentialOffer =
             serde_json::from_str(&offer_str).expect("should deserialize from string");
         assert_eq!(offer, offer2);
+    }
+
+    // GET /credential_offer?credential_offer=%7B%22credential_issuer%22:%22https://credential-issuer.example.com%22,
+    //  %22credential_configuration_ids%22:%5B%22UniversityDegree_JWT%22,%22org.iso.18013.5.1.mDL%22%5D,
+    //  %22grants%22:%7B%22urn:ietf:params:oauth:grant-type:pre-authorized_code%22:%7B%22pre-authorized_code%22:
+    //  %22oaKazRN8I0IbtZ0C7JuMn5%22,%22tx_code%22:%7B%7D%7D%7D%7D
+    #[test]
+    fn querystring() {
+        let offer = &CredentialOffer {
+            credential_issuer: "https://issuer.example.com".to_string(),
+            credential_configuration_ids: vec!["UniversityDegree_JWT".to_string()],
+            grants: None,
+        };
+
+        let qs: String = offer.try_into().expect("should serialize to string");
+        let offer2: CredentialOffer = qs.try_into().expect("should deserialize from string");
+
+        assert_eq!(offer, &offer2);
     }
 }

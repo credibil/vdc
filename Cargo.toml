@@ -54,6 +54,7 @@ rand = "0.9.1"
 serde.workspace = true
 serde_json.workspace = true
 serde_repr = "0.1"
+serde_urlencoded = "0.7.1"
 sha2 = "0.10.9"
 thiserror = "2.0.12"
 tracing = "0.1.41"
@@ -67,7 +68,6 @@ hex = "0.4.3"
 oauth2 = { version = "5.0.0" }
 provider = { path = "crates/provider" }
 rand_core.workspace = true
-serde_urlencoded = "0.7.1"
 tokio = { version = "1.44.2", features = ["macros", "rt-multi-thread"] }
 tower-http = { version = "0.6.2", features = ["cors", "set-header", "trace"] }
 tracing-subscriber = { version = "0.3.19", features = ["env-filter", "fmt"] }
