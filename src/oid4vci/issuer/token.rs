@@ -1,8 +1,8 @@
-use std::collections::HashMap;
 use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
+use crate::core::urlencode;
 use crate::oid4vci::issuer::{AuthorizationCredential, AuthorizationDetail, ClientAssertion};
 
 /// Upon receiving a successful Authorization Response, a Token Request is made
@@ -53,49 +53,7 @@ impl TokenRequest {
     /// serialized to JSON and URL-encoded. (`authorization_details` and
     /// `client_assertion`).
     pub fn form_encode(&self) -> anyhow::Result<String> {
-        let mut encoder = form_urlencoded::Serializer::new(String::new());
-
-        if let Some(client_id) = &self.client_id {
-            encoder.append_pair("client_id", client_id);
-        }
-        match &self.grant_type {
-            TokenGrantType::AuthorizationCode {
-                code,
-                redirect_uri,
-                code_verifier,
-            } => {
-                encoder.append_pair("code", code);
-                if let Some(redirect_uri) = redirect_uri {
-                    encoder.append_pair("redirect_uri", redirect_uri);
-                }
-                if let Some(code_verifier) = code_verifier {
-                    encoder.append_pair("code_verifier", code_verifier);
-                }
-            }
-            TokenGrantType::PreAuthorizedCode {
-                pre_authorized_code,
-                tx_code,
-            } => {
-                encoder.append_pair("pre-authorized_code", pre_authorized_code);
-                if let Some(tx_code) = tx_code {
-                    encoder.append_pair("tx_code", tx_code);
-                }
-            }
-        }
-        if let Some(authorization_details) = &self.authorization_details {
-            let as_json = serde_json::to_string(authorization_details)?;
-            encoder.append_pair("authorization_details", &as_json);
-        }
-        if let Some(client_assertion) = &self.client_assertion {
-            encoder.append_pair(
-                "client_assertion_type",
-                "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-            );
-            let ClientAssertion::JwtBearer { client_assertion } = client_assertion;
-            encoder.append_pair("client_assertion", client_assertion);
-        }
-
-        Ok(encoder.finish())
+        urlencode::to_string(self)
     }
 
     /// Create a `TokenRequest` from a `HashMap` representation. Suitable for
@@ -106,42 +64,7 @@ impl TokenRequest {
     /// URL-encoded JSON, cannot be decoded. (`authorization_details` and
     /// `client_assertion`).
     pub fn form_decode(form: &str) -> anyhow::Result<Self> {
-        let decoded = form_urlencoded::parse(form.as_bytes())
-            .into_owned()
-            .collect::<HashMap<String, String>>();
-
-        let mut req = Self {
-            client_id: decoded.get("client_id").cloned(),
-            ..Self::default()
-        };
-
-        if let Some(code) = decoded.get("code") {
-            req.grant_type = TokenGrantType::AuthorizationCode {
-                code: code.clone(),
-                redirect_uri: decoded.get("redirect_uri").cloned(),
-                code_verifier: decoded.get("code_verifier").cloned(),
-            };
-        } else if let Some(pre_authorized_code) = decoded.get("pre-authorized_code") {
-            req.grant_type = TokenGrantType::PreAuthorizedCode {
-                pre_authorized_code: pre_authorized_code.clone(),
-                tx_code: decoded.get("tx_code").cloned(),
-            };
-        }
-        if let Some(authorization_details) = decoded.get("authorization_details") {
-            req.authorization_details = Some(serde_json::from_str(authorization_details)?);
-        }
-        if let Some(client_assertion) = decoded.get("client_assertion") {
-            if let Some(client_assertion_type) = decoded.get("client_assertion_type") {
-                if client_assertion_type == "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
-                {
-                    req.client_assertion = Some(ClientAssertion::JwtBearer {
-                        client_assertion: client_assertion.clone(),
-                    });
-                }
-            }
-        }
-
-        Ok(req)
+        urlencode::from_str(form)
     }
 }
 
@@ -352,8 +275,8 @@ mod tests {
 
         let encoded = request.form_encode().expect("should encode");
         assert!(encoded.contains("client_id=1234"));
-        assert!(encoded.contains("&pre-authorized_code=WQHhDmQ3ZygxyOPlBjunlA"));
-        assert!(encoded.contains("&authorization_details=%5B%7B%22"));
+        assert!(encoded.contains("pre-authorized_code=WQHhDmQ3ZygxyOPlBjunlA"));
+        assert!(encoded.contains("authorization_details=%5B%7B%22"));
 
         let decoded = TokenRequest::form_decode(&encoded).expect("should decode");
         assert_eq!(request, decoded);

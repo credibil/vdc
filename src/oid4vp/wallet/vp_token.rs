@@ -5,11 +5,11 @@ use std::collections::HashMap;
 use anyhow::Result;
 use credibil_identity::SignerExt;
 
+use crate::oid4vp::ResponseMode;
+use crate::oid4vp::verifier::{QueryResult, RequestObject, RequestedFormat};
 use crate::vdc::mso_mdoc::DeviceResponseBuilder;
 use crate::vdc::sd_jwt::SdJwtVpBuilder;
 use crate::vdc::w3c_vc::W3cVpBuilder;
-use crate::oid4vp::ResponseMode;
-use crate::oid4vp::verifier::{QueryResult, RequestObject, RequestedFormat};
 
 /// Generate a Verifiable Presentation (VP) token.
 ///

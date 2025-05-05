@@ -1,8 +1,10 @@
 use std::collections::HashMap;
-use std::fmt::Debug;
+use std::fmt::{self, Debug, Display};
+use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
+use crate::core::urlencode;
 // use crate::core::Kind;
 // use crate::format::w3c::VerifiablePresentation;
 
@@ -28,15 +30,7 @@ impl AuthorzationResponse {
     /// Will return an error if any nested objects cannot be serialized and
     /// URL-encoded.
     pub fn form_encode(&self) -> anyhow::Result<String> {
-        let mut encoder = form_urlencoded::Serializer::new(String::new());
-
-        encoder.append_pair("vp_token", &serde_json::to_string(&self.vp_token)?);
-
-        if let Some(state) = &self.state {
-            encoder.append_pair("state", state);
-        }
-
-        Ok(encoder.finish())
+        Ok(self.to_string())
     }
 
     /// Create a `AuthorzationResponse` from a
@@ -51,17 +45,22 @@ impl AuthorzationResponse {
     /// Will return an error if any nested objects cannot be deserialized from
     /// URL-encoded JSON strings.
     pub fn form_decode(form: &str) -> anyhow::Result<Self> {
-        let mut req = Self::default();
-        let decoded = form_urlencoded::parse(form.as_bytes())
-            .into_owned()
-            .collect::<HashMap<String, String>>();
+        urlencode::from_str(form)
+    }
+}
 
-        if let Some(vp_token) = decoded.get("vp_token") {
-            req.vp_token = serde_json::from_str(vp_token)?;
-        }
-        req.state = decoded.get("state").cloned();
+impl Display for AuthorzationResponse {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = urlencode::to_string(self).map_err(|_| fmt::Error)?;
+        write!(f, "{s}")
+    }
+}
 
-        Ok(req)
+impl FromStr for AuthorzationResponse {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        urlencode::from_str(s)
     }
 }
 

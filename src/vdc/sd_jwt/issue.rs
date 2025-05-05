@@ -15,8 +15,8 @@ use credibil_identity::SignerExt;
 use credibil_jose::Jws;
 use serde_json::{Map, Value};
 
-use crate::vdc::sd_jwt::{Disclosure, JwtType, KeyBinding, SdJwtClaims};
 use crate::status::StatusClaim;
+use crate::vdc::sd_jwt::{Disclosure, JwtType, KeyBinding, SdJwtClaims};
 
 /// Generate an IETF `dc+sd-jwt` format credential.
 #[derive(Debug)]

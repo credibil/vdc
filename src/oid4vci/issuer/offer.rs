@@ -1,12 +1,13 @@
-use std::fmt::{self, Debug};
+use std::fmt::{self, Display};
 use std::io::Cursor;
+use std::str::FromStr;
 
 use anyhow::Context as _;
 use base64ct::{Base64, Encoding};
-use percent_encoding::{NON_ALPHANUMERIC, percent_decode_str, utf8_percent_encode};
 use qrcode::QrCode;
 use serde::{Deserialize, Serialize};
 
+use crate::core::urlencode;
 use crate::oauth::GrantType;
 use crate::oid4vci::issuer::{AuthorizationCodeGrant, Grants, PreAuthorizedCodeGrant};
 
@@ -175,11 +176,11 @@ impl CredentialOffer {
     /// Returns an `Error::ServerError` error if error if the Credential Offer
     /// cannot be serialized.
     pub fn to_qrcode(&self, endpoint: &str) -> anyhow::Result<String> {
-        let qs = self.to_querystring().context("failed to generate querystring")?;
+        let qs = self.to_querystring();
 
         // generate qr code
         let qr_code =
-            QrCode::new(format!("{endpoint}{qs}")).context("failed to create QR code: {e}")?;
+            QrCode::new(format!("{endpoint}?{qs}")).context("failed to create QR code: {e}")?;
 
         // write image to buffer
         let img_buf = qr_code.render::<image::Luma<u8>>().build();
@@ -199,8 +200,9 @@ impl CredentialOffer {
     ///
     /// Returns an `Error::ServerError` error if error if the Credential Offer
     /// cannot be serialized.
-    pub fn to_querystring(&self) -> anyhow::Result<String> {
-        self.try_into()
+    #[must_use]
+    pub fn to_querystring(&self) -> String {
+        format!("credential_offer={self}")
     }
 
     /// Convenience method for extracting a pre-authorized code grant from an
@@ -218,29 +220,18 @@ impl CredentialOffer {
     }
 }
 
-impl TryInto<String> for CredentialOffer {
-    type Error = anyhow::Error;
-
-    fn try_into(self) -> Result<String, Self::Error> {
-        (&self).try_into()
+impl Display for CredentialOffer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = urlencode::to_string(self).map_err(|_| fmt::Error)?;
+        write!(f, "{s}")
     }
 }
 
-impl TryInto<String> for &CredentialOffer {
-    type Error = anyhow::Error;
+impl FromStr for CredentialOffer {
+    type Err = anyhow::Error;
 
-    fn try_into(self) -> Result<String, Self::Error> {
-        let stringified = serde_json::to_string(&self)?;
-        Ok(utf8_percent_encode(&stringified, NON_ALPHANUMERIC).to_string())
-    }
-}
-
-impl TryFrom<String> for CredentialOffer {
-    type Error = anyhow::Error;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        let stringified = percent_decode_str(&value).decode_utf8_lossy();
-        Ok(serde_json::from_str(&stringified)?)
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        urlencode::from_str(s)
     }
 }
 
@@ -265,11 +256,7 @@ pub struct CredentialOfferResponse {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
-
-    // const UNRESERVED: &AsciiSet =
-    //     &NON_ALPHANUMERIC.remove(b'.').remove(b'_').remove(b'-').remove(b'~');
 
     #[test]
     fn serialize() {
@@ -297,9 +284,31 @@ mod tests {
             grants: None,
         };
 
-        let qs: String = offer.try_into().expect("should serialize to string");
-        let offer2: CredentialOffer = qs.try_into().expect("should deserialize from string");
+        let qs: String = offer.to_string();
+        let offer2: CredentialOffer = qs.parse().expect("should deserialize from string");
 
         assert_eq!(offer, &offer2);
     }
+
+    // #[test]
+    // fn querystring2() {
+    //     let offer = &CredentialOffer {
+    //         credential_issuer: "https://issuer.example.com".to_string(),
+    //         credential_configuration_ids: vec!["UniversityDegree_JWT".to_string()],
+    //         grants: None,
+    //     };
+
+    //     // let qs: String = form_urlencoded::Serializer::new(String::new())
+    //     //     .append_pair("credential_offer", &offer.to_string())
+    //     //     .finish();
+
+    //     let bytes = serde_json::to_vec(&offer).expect("should serialize to string");
+    //     let enc = form_urlencoded::byte_serialize(&bytes).collect::<String>();
+    //     println!("enc: {:?}", enc);
+
+    //     let dec = form_urlencoded::parse(enc.as_bytes()).into_owned().collect::<String>();
+
+    //     let offer2: CredentialOffer = enc.parse().expect("should deserialize from string");
+    //     assert_eq!(offer, &offer2);
+    // }
 }

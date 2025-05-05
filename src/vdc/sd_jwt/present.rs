@@ -5,8 +5,8 @@ use chrono::Utc;
 use credibil_identity::SignerExt;
 use credibil_jose::Jws;
 
-use crate::vdc::sd_jwt::{Disclosure, JwtType, KbJwtClaims};
 use crate::oid4vp::verifier::Matched;
+use crate::vdc::sd_jwt::{Disclosure, JwtType, KbJwtClaims};
 
 /// Generate an IETF `dc+sd-jwt` format credential.
 #[derive(Debug)]

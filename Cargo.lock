@@ -588,7 +588,6 @@ dependencies = [
  "ed25519-dalek",
  "fastrand",
  "flate2",
- "form_urlencoded",
  "futures",
  "hex",
  "http",

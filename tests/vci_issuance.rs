@@ -8,12 +8,12 @@ use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_identity::{Key, SignerExt};
 use credibil_jose::{JwsBuilder, Jwt, decode_jws};
 use credibil_vc::blockstore::BlockStore;
-use credibil_vc::vdc::sd_jwt::SdJwtClaims;
 use credibil_vc::oid4vci::issuer::{
     CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, CredentialResponse,
     NonceRequest, ProofClaims, TokenGrantType, TokenRequest, W3cVcClaims,
 };
 use credibil_vc::oid4vci::{self, JwtType};
+use credibil_vc::vdc::sd_jwt::SdJwtClaims;
 use credibil_vc::{OneMany, did_jwk};
 use provider::issuer::{BOB_ID, ISSUER_ID, Issuer, data};
 use provider::wallet::Wallet;

@@ -6,8 +6,8 @@ use credibil_jose::{Jwt, decode_jws};
 
 use super::W3cVpClaims;
 use crate::core::did_jwk;
-use crate::vdc::w3c_vc::store;
 use crate::oid4vp::verifier::{Claim, RequestObject};
+use crate::vdc::w3c_vc::store;
 
 // /// Verifies an SD-JWT credential.
 // ///
