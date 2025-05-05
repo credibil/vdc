@@ -5,7 +5,7 @@ use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
 use credibil_jose::jwe::{PublicKey, SharedSecret};
 use credibil_jose::{Algorithm, Receiver, Signer};
 use credibil_vc::blockstore::BlockStore;
-use credibil_vc::token_status::StatusToken;
+use credibil_vc::status::StatusToken;
 
 use crate::blockstore::Mockstore;
 use crate::identity::DidIdentity;

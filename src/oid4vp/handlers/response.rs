@@ -24,12 +24,12 @@
 use anyhow::Context;
 
 use crate::core::Kind;
-use crate::format::{mso_mdoc, sd_jwt, w3c_vc};
 use crate::oid4vp::error::invalid;
 use crate::oid4vp::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vp::provider::{Provider, StateStore};
 use crate::oid4vp::verifier::{Queryable, RequestObject, RequestedFormat};
 use crate::oid4vp::wallet::{AuthorzationResponse, RedirectResponse};
+use crate::vdc::{mso_mdoc, sd_jwt, w3c_vc};
 
 /// Endpoint for the Wallet to respond Verifier's Authorization Request.
 ///

@@ -17,9 +17,7 @@ use flate2::read::ZlibDecoder;
 use flate2::write::ZlibEncoder;
 use serde::{Deserialize, Serialize};
 
-use crate::token_status::{
-    BitsPerToken, StatusClaim, StatusList, StatusListClaims, StatusListEntry,
-};
+use crate::status::{BitsPerToken, StatusClaim, StatusList, StatusListClaims, StatusListEntry};
 
 /// `StatusStore` is used to store and retrieve Status Tokens.
 pub trait StatusStore: Send + Sync {

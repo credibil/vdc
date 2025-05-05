@@ -15,11 +15,8 @@ use anyhow::Context as _;
 use chrono::Utc;
 use credibil_jose::{Jwt, KeyBinding, decode_jws};
 
+use crate::core::state::State;
 use crate::core::{did_jwk, generate};
-use crate::format::FormatProfile;
-use crate::format::mso_mdoc::MdocBuilder;
-use crate::format::sd_jwt::SdJwtVcBuilder;
-use crate::format::w3c_vc::W3cVcBuilder;
 use crate::oid4vci::JwtType;
 use crate::oid4vci::error::server;
 use crate::oid4vci::handlers::{Body, Error, Handler, Request, Response, Result};
@@ -30,8 +27,11 @@ use crate::oid4vci::issuer::{
 };
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Deferred, Expire, Token};
-use crate::state::State;
-use crate::token_status::{StatusList, StatusStore, TokenBuilder};
+use crate::status::{StatusList, StatusStore, TokenBuilder};
+use crate::vdc::FormatProfile;
+use crate::vdc::mso_mdoc::MdocBuilder;
+use crate::vdc::sd_jwt::SdJwtVcBuilder;
+use crate::vdc::w3c_vc::W3cVcBuilder;
 
 /// Credential request handler.
 ///

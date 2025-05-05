@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
-use crate::blockstore::BlockStore;
+use crate::core::blockstore::BlockStore;
 
 const STATE: &str = "STATE";
 

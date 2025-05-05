@@ -6,14 +6,14 @@ use credibil_identity::{Key, SignerExt};
 use credibil_jose::PublicKeyJwk;
 use credibil_vc::blockstore::BlockStore;
 use credibil_vc::did_jwk;
-use credibil_vc::format::mso_mdoc::MdocBuilder;
-use credibil_vc::format::sd_jwt::SdJwtVcBuilder;
-use credibil_vc::format::w3c_vc::W3cVcBuilder;
-use credibil_vc::format::{mso_mdoc, sd_jwt, w3c_vc};
 use credibil_vc::oid4vp::verifier::{DcqlQuery, ResponseMode};
 use credibil_vc::oid4vp::{
     self, AuthorzationResponse, DeviceFlow, GenerateRequest, GenerateResponse, wallet,
 };
+use credibil_vc::vdc::mso_mdoc::MdocBuilder;
+use credibil_vc::vdc::sd_jwt::SdJwtVcBuilder;
+use credibil_vc::vdc::w3c_vc::W3cVcBuilder;
+use credibil_vc::vdc::{mso_mdoc, sd_jwt, w3c_vc};
 use futures::executor::block_on;
 use provider::issuer::{ISSUER_ID, Issuer};
 use provider::verifier::{VERIFIER_ID, Verifier, data};
@@ -469,7 +469,7 @@ async fn specific_values() {
     assert_eq!(results.len(), 1);
 }
 
-use credibil_vc::token_status::{StatusClaim, StatusList, TokenBuilder};
+use credibil_vc::status::{StatusClaim, StatusList, TokenBuilder};
 
 // Initialise a mock "wallet" with test credentials.
 async fn populate() -> Wallet {

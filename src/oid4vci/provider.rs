@@ -14,10 +14,10 @@ use std::future::Future;
 use anyhow::{Result, anyhow};
 use credibil_identity::{IdentityResolver, SignerExt};
 
-use crate::blockstore::BlockStore;
+use crate::core::blockstore::BlockStore;
+pub use crate::core::state::StateStore;
 use crate::oid4vci::issuer::{Client, Dataset, Issuer, Server};
-pub use crate::state::StateStore;
-use crate::token_status::StatusStore;
+use crate::status::StatusStore;
 
 /// Issuer Provider trait.
 pub trait Provider:

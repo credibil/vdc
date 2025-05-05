@@ -21,7 +21,7 @@ use credibil_vc::oid4vci::{
     CredentialRequest, DeferredCredentialRequest, IssuerRequest, NotificationHeaders,
     NotificationRequest, PushedAuthorizationRequest, ServerRequest, TokenRequest,
 };
-use credibil_vc::token_status::StatusListRequest;
+use credibil_vc::status::StatusListRequest;
 use credibil_vc::urlencode;
 use oauth2::CsrfToken;
 use provider::issuer::data::{CLIENT, ISSUER, NORMAL_USER as USER, SERVER};
@@ -182,7 +182,7 @@ async fn authorize(
         Ok(v) => (StatusCode::FOUND, Redirect::to(&format!("{redirect_uri}?code={}", v.body.code)))
             .into_response(),
         Err(e) => {
-            let err_params = e.to_querystring();
+            let err_params = serde_urlencoded::to_string(&e).unwrap();
             (StatusCode::FOUND, Redirect::to(&format!("{redirect_uri}?{err_params}")))
                 .into_response()
         }

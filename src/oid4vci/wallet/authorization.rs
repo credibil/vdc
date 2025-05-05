@@ -1,11 +1,11 @@
 //! # Authorization
 
-use crate::format::FormatProfile;
 use crate::oauth::{CodeChallengeMethod, ResponseType};
 use crate::oid4vci::issuer::{
     AuthorizationCredential, AuthorizationDetail, AuthorizationDetailType, AuthorizationRequest,
     ClaimsDescription, RequestObject,
 };
+use crate::vdc::FormatProfile;
 
 impl AuthorizationRequest {
     /// Create a new `AuthorizationRequestBuilder`.

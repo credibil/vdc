@@ -16,12 +16,11 @@ pub mod oid4vci;
 #[cfg(feature = "verifier")]
 pub mod oid4vp;
 
-pub mod format;
 pub mod oauth;
-pub mod token_status;
+pub mod status;
+pub mod vdc;
 
 mod core;
-mod endpoint;
 
 /// Re-export DID resolution
 pub mod identity {
@@ -33,5 +32,6 @@ pub mod jose {
     pub use credibil_jose::*;
 }
 
-/// Re-export basic types
+// /// Re-export basic types
+// pub use crate::core::{Kind, OneMany, blockstore, did_jwk, generate, http, serde_cbor, urlencode};
 pub use crate::core::*;

@@ -7,14 +7,13 @@ use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_identity::SignerExt;
 use sha2::{Digest, Sha256};
 
-use crate::Kind;
-use crate::core::{generate, serde_cbor};
-use crate::format::mso_mdoc::{
+use crate::core::{Kind, generate, serde_cbor};
+use crate::oid4vp::verifier::Matched;
+use crate::vdc::mso_mdoc::{
     DataItem, DeviceAuth, DeviceAuthentication, DeviceNameSpaces, DeviceResponse, DeviceSigned,
     Document, Handover, IssuerSigned, MobileSecurityObject, OID4VPHandover, ResponseStatus,
     SessionTranscript, VersionString, cose,
 };
-use crate::oid4vp::verifier::Matched;
 
 /// Generate an IETF `dc+sd-jwt` format credential.
 #[derive(Debug)]
@@ -260,8 +259,8 @@ mod tests {
 
     use super::*;
     use crate::core::did_jwk;
-    use crate::format::mso_mdoc::MdocBuilder;
     use crate::oid4vp::verifier::Claim;
+    use crate::vdc::mso_mdoc::MdocBuilder;
 
     #[tokio::test]
     async fn build_vp() {

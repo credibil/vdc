@@ -4,8 +4,8 @@ use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 
 use crate::core::strings::title_case;
-use crate::format::FormatProfile;
 use crate::oauth::{OAuthClient, OAuthServer};
+use crate::vdc::FormatProfile;
 
 /// Request to retrieve the Credential Issuer's configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]

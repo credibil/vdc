@@ -41,12 +41,12 @@ pub struct StatusListClaims {
 
     /// The time at which the Status List Token expires.
     #[serde(with = "ts_seconds_option")]
-    #[serde(skip_serializing_if = "Option::is_none",default)]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub exp: Option<DateTime<Utc>>,
 
     /// The maximum amount of time, in seconds, that the Status List Token can
     /// be cached by a consumer before a fresh copy should be retrieved.
-    #[serde(skip_serializing_if = "Option::is_none",default)]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub ttl: Option<usize>,
 
     /// The status list.

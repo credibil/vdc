@@ -99,7 +99,9 @@ impl<T> Deref for Response<T> {
     }
 }
 
-pub use seal::{Body, Headers};
+/// 'Seal' `Header` and `Body` traits such that they can conly be implemented
+/// by this module. This is to prevent users from implementing their own `Body`
+/// and `Headers` types, which would break the API.
 pub mod seal {
     use std::fmt::Debug;
 
@@ -111,6 +113,7 @@ pub mod seal {
     /// request headers.
     pub trait Headers: Clone + Debug + Send + Sync {}
 }
+pub use seal::{Body, Headers};
 
 /// Implement empty headers for use by handlers that do not require headers.
 #[derive(Clone, Debug)]

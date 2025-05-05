@@ -1,12 +1,39 @@
 //! # Url Encoder/Decoder
+//!
+//! provides encoding and decoding of `application/x-www-form-urlencoded`
+//! HTML query strings and forms.
 
-mod error;
-mod ser;
+use anyhow::{Result, anyhow};
+use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, percent_decode_str, utf8_percent_encode};
+use serde::Serialize;
+use serde::de::DeserializeOwned;
+use serde_json::{Map, Value};
 
-use error::{Error, Result};
-use percent_encoding::percent_decode_str;
-pub use ser::{Serializer, to_string};
-use serde::Deserialize;
+const UNRESERVED: &AsciiSet = &NON_ALPHANUMERIC.remove(b'.').remove(b'_').remove(b'-').remove(b'~');
+
+/// Create an `application/x-www-form-urlencoded` representation of the
+/// provided value suitable for use in an HTML query strings or form post.
+///
+/// # Errors
+///
+/// Will return an error if any of the object-type fields cannot be
+/// serialized to JSON and URL-encoded.
+pub fn encode<T: Serialize>(value: &T) -> anyhow::Result<String> {
+    let encoded = match serde_json::to_value(value)? {
+        Value::Object(map) => map
+            .iter()
+            .map(|(k, v)| {
+                let s = if let Value::String(s) = v { s } else { &v.to_string() };
+                format!("{k}={}", utf8_percent_encode(s, UNRESERVED))
+            })
+            .collect::<Vec<String>>(),
+        Value::String(s) => {
+            vec![format!("{}", utf8_percent_encode(&s, UNRESERVED))]
+        }
+        _ => return Err(anyhow!("value must be an object")),
+    };
+    Ok(encoded.join("&"))
+}
 
 /// Deserializes a url-encoded string to a value.
 ///
@@ -43,33 +70,53 @@ use serde::Deserialize;
 ///
 /// # Errors
 /// // TODO: Add errors
-pub fn from_str<T>(s: &str) -> Result<T>
-where
-    T: for<'de> Deserialize<'de>,
-{
-    // HACK: deserializing with `serde_json` makes decoding trivial and takes ~60µs
-    let decoded = percent_decode_str(s).decode_utf8_lossy();
-    let decoded = format!("{{\"{decoded}\"}}");
-    let decoded = decoded
-        .replace('=', "\":\"")
-        .replace('&', "\",\"")
-        .replace("\"[", "[")
-        .replace("]\"", "]")
-        .replace("\"{", "{")
-        .replace("}\"", "}");
+pub fn decode<T: DeserializeOwned>(s: &str) -> Result<T> {
+    let mut map = Map::new();
 
-    serde_json::from_str(&decoded).map_err(|e| Error::Message(e.to_string()))
+    for part in s.split('&') {
+        let mut kv = part.split('=');
+        let key = kv.next().ok_or_else(|| anyhow!("missing key"))?;
+        let encoded = kv.next().ok_or_else(|| anyhow!("missing value"))?;
+
+        let decoded = percent_decode_str(encoded).decode_utf8_lossy();
+        let value = if decoded.starts_with('[') || decoded.starts_with('{') {
+            serde_json::from_str(&decoded).map_err(|e| anyhow!(e))?
+        } else {
+            Value::String(decoded.to_string())
+        };
+
+        map.insert(key.to_string(), value);
+    }
+
+    Ok(serde_json::from_value(Value::Object(map))?)
+}
+
+/// Serializes a value to a url-encoded string.
+///
+/// # Errors
+///
+/// Will return an error if the value cannot be serialized to JSON.
+pub fn to_string<T: Serialize>(value: &T) -> Result<String> {
+    encode(value)
+}
+
+/// Deserializes a url-encoded string to a value.
+///
+/// # Errors
+///
+/// Will return an error if the string cannot be deserialized to the specified
+/// type.
+pub fn from_str<T: DeserializeOwned>(s: &str) -> Result<T> {
+    decode(s)
 }
 
 #[cfg(test)]
 mod tests {
     use serde::{Deserialize, Serialize};
 
-    use super::ser;
-
     #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
     struct TopLevel {
-        field_1: String,
+        field_1: Option<String>,
         field_2: String,
         nested: Nested,
     }
@@ -83,11 +130,11 @@ mod tests {
     #[test]
     fn encode_struct() {
         let data = TopLevel {
-            field_1: "value1".to_owned(),
-            field_2: "value2".to_owned(),
+            field_1: Some("value1".to_string()),
+            field_2: "value2".to_string(),
             nested: Nested {
-                field_3: "value3".to_owned(),
-                field_4: "value4".to_owned(),
+                field_3: "value3".to_string(),
+                field_4: "value4".to_string(),
             },
         };
 
@@ -108,19 +155,19 @@ mod tests {
 
         let u = E::Unit;
         let expected = r#"Unit"#;
-        assert_eq!(ser::to_string(&u).unwrap(), expected);
+        assert_eq!(super::to_string(&u).unwrap(), expected);
 
         let n = E::Newtype(1);
         let expected = r#"Newtype=1"#;
-        assert_eq!(ser::to_string(&n).unwrap(), expected);
+        assert_eq!(super::to_string(&n).unwrap(), expected);
 
         let t = E::Tuple(1, 2);
         let expected = r#"Tuple=%5B1%2C2%5D"#;
-        assert_eq!(ser::to_string(&t).unwrap(), expected);
+        assert_eq!(super::to_string(&t).unwrap(), expected);
 
         let s = E::Struct { a: 1 };
-        let expected = r#"Struct=%7Ba%3A1%7D"#;
-        assert_eq!(ser::to_string(&s).unwrap(), expected);
+        let expected = r#"Struct=%7B%22a%22%3A1%7D"#;
+        assert_eq!(super::to_string(&s).unwrap(), expected);
     }
 
     #[test]
@@ -129,11 +176,11 @@ mod tests {
 
         let deserialized: TopLevel = super::from_str(&url).expect("should deserialize");
         let expected = TopLevel {
-            field_1: "value1".to_owned(),
-            field_2: "value2".to_owned(),
+            field_1: Some("value1".to_string()),
+            field_2: "value2".to_string(),
             nested: Nested {
-                field_3: "value3".to_owned(),
-                field_4: "value4".to_owned(),
+                field_3: "value3".to_string(),
+                field_4: "value4".to_string(),
             },
         };
         assert_eq!(deserialized, expected);

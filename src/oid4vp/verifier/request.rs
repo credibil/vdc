@@ -10,8 +10,7 @@ use qrcode::QrCode;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::Kind;
-use crate::core::urlencode;
+use crate::core::Kind;
 use crate::oid4vp::JwtType;
 use crate::oid4vp::verifier::{DcqlQuery, VerifierMetadata};
 use crate::oid4vp::wallet::Wallet;
@@ -223,7 +222,7 @@ impl RequestObject {
     /// serialized.
     #[deprecated(since = "0.1.0", note = "please use `url_value` instead")]
     pub fn url_params(&self) -> Result<String> {
-        urlencode::to_string(self).context("creating query string")
+        serde_urlencoded::to_string(self).context("creating query string")
     }
 
     /// Generate an  Authorization Request query string with a base64 encoded

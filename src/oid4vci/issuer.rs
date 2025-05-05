@@ -15,9 +15,9 @@ pub use offer::*;
 use serde::{Deserialize, Serialize};
 pub use token::*;
 
-pub use crate::format::w3c_vc::{VerifiableCredential, W3cVcClaims};
 pub use crate::oauth::GrantType;
 use crate::oid4vci::handlers::{AuthorizationHeader, LanguageHeader};
+pub use crate::vdc::w3c_vc::{VerifiableCredential, W3cVcClaims};
 
 /// Credential request headers.
 pub type CredentialHeaders = AuthorizationHeader;

@@ -28,7 +28,7 @@ pub use self::issue::SdJwtVcBuilder;
 pub use self::present::SdJwtVpBuilder;
 pub use self::store::to_queryable;
 pub use self::verify::verify_vp;
-use crate::token_status::StatusClaim;
+use crate::status::StatusClaim;
 
 /// Claims that can be included in the payload of SD-JWT VCs.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]

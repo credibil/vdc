@@ -13,10 +13,10 @@ use credibil_jose::encode_jws;
 use serde_json::{Map, Value};
 
 use crate::core::{Kind, OneMany};
-use crate::format::w3c_vc::{
+use crate::status::StatusClaim;
+use crate::vdc::w3c_vc::{
     CredentialStatus, CredentialStatusType, CredentialSubject, VerifiableCredential, W3cVcClaims,
 };
-use crate::token_status::StatusClaim;
 
 /// Generate a W3C `jwt_vc_json` format credential.
 #[derive(Debug)]

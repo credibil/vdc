@@ -6,15 +6,14 @@
 // TODO: add support for "client-state" in error responses.
 // TODO: use custom serialisation for Err enum.
 
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
-
-use crate::core::urlencode;
 
 /// `OpenID` error codes for  for Verifiable Credential Issuance and
 /// Presentation.
-#[derive(Error, Debug, Deserialize)]
-#[allow(clippy::enum_variant_names)]
+#[derive(Error, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[serde(tag = "error", content = "error_description")]
 pub enum Error {
     /// The request is missing a required parameter, includes an unsupported
     /// parameter value, repeats a parameter, includes multiple credentials,
@@ -146,43 +145,6 @@ pub enum Error {
     InvalidTransactionId(String),
 }
 
-impl Error {
-    /// Transfrom error to `OpenID` compatible json format.
-    #[must_use]
-    pub fn to_json(&self) -> serde_json::Value {
-        serde_json::from_str(&self.to_string()).unwrap_or_default()
-    }
-
-    /// Transfrom error to `OpenID` compatible query string format.
-    /// Does not include `c_nonce` as this is not required for in query
-    /// string responses.
-    #[must_use]
-    pub fn to_querystring(&self) -> String {
-        urlencode::to_string(&self).unwrap_or_default()
-    }
-}
-
-/// Error response for `OpenID` for Verifiable Credentials.
-#[allow(clippy::module_name_repetitions)]
-#[derive(Deserialize, Serialize)]
-struct OidError {
-    error: String,
-    error_description: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    state: Option<String>,
-}
-
-impl Serialize for Error {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        use serde::ser::Error as SerdeError;
-
-        let Ok(error) = serde_json::from_str::<OidError>(&self.to_string()) else {
-            return Err(SerdeError::custom("issue deserializing Err"));
-        };
-        error.serialize(serializer)
-    }
-}
-
 impl From<anyhow::Error> for Error {
     fn from(err: anyhow::Error) -> Self {
         match err.downcast_ref::<Self>() {
@@ -264,29 +226,21 @@ pub(crate) use server;
 
 #[cfg(test)]
 mod test {
-    use serde_json::{Value, json};
+    use serde_json::json;
 
     use super::*;
 
-    // Test that error details are retuned as json.
-    #[test]
-    fn err_json() {
-        let err = invalid!("bad request");
-        let ser: Value = serde_json::from_str(&err.to_string()).unwrap();
-        assert_eq!(ser, json!({"error":"invalid_request", "error_description": "bad request"}));
-    }
-
     // Test that the error details are returned as an http query string.
     #[test]
-    fn err_querystring() {
+    fn querystring() {
         let err = invalid!("Invalid request description");
-        let ser = urlencode::to_string(&err).unwrap();
-        assert_eq!(ser, "error=invalid_request&error_description=Invalid%20request%20description");
+        let ser = serde_urlencoded::to_string(&err).unwrap();
+        assert_eq!(ser, "error=invalid_request&error_description=Invalid+request+description");
     }
 
     // Test that the error details are returned as an http query string.
     #[test]
-    fn err_serialize() {
+    fn json() {
         let err = invalid!("bad request");
         let ser = serde_json::to_value(&err).unwrap();
         assert_eq!(ser, json!({"error":"invalid_request", "error_description": "bad request"}));

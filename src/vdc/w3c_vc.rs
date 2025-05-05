@@ -25,7 +25,7 @@ pub use self::issue::W3cVcBuilder;
 pub use self::present::W3cVpBuilder;
 pub use self::store::to_queryable;
 use crate::core::{Kind, OneMany};
-use crate::token_status::StatusClaim;
+use crate::status::StatusClaim;
 
 /// `VerifiableCredential` represents a naive implementation of the W3C
 /// Verifiable Credential data model v1.1.

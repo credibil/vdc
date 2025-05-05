@@ -1,4 +1,4 @@
-use std::fmt::{self, Debug};
+use std::fmt::{self, Display};
 use std::str::FromStr;
 
 use serde::de::{self, Deserializer, Visitor};
@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use super::ClaimsDescription;
 use crate::core::urlencode;
-use crate::format::FormatProfile;
 use crate::oauth;
+use crate::vdc::FormatProfile;
 
 /// An Authorization Request type.
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
@@ -28,7 +28,7 @@ impl Default for AuthorizationRequest {
     }
 }
 
-impl fmt::Display for AuthorizationRequest {
+impl Display for AuthorizationRequest {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = urlencode::to_string(self).map_err(|_| fmt::Error)?;
         write!(f, "{s}")
@@ -485,17 +485,65 @@ pub struct PushedAuthorizationResponse {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use std::collections::HashMap;
 
-    // use insta::assert_yaml_snapshot as assert_snapshot;
     use super::*;
-    use crate::core::urlencode;
-    use crate::oauth;
-    use crate::oid4vci::issuer::{ClaimsDescription, CredentialDefinition};
 
     #[test]
-    fn authorization_configuration_id() {
-        let request = AuthorizationRequest::Object(RequestObject {
+    fn qs_roundtrip() {
+        let request = request();
+        let serialized = request.to_string();
+        let deserialized = AuthorizationRequest::from_str(&serialized).expect("should parse");
+        assert_eq!(request, deserialized);
+    }
+
+    #[test]
+    fn qs_params() {
+        let request = request();
+
+        let serialized = request.to_string();
+        let params = serialized
+            .split('&')
+            .map(|s| {
+                let split = s.split('=').collect::<Vec<&str>>();
+                (split[0], split[1])
+            })
+            .collect::<HashMap<&str, &str>>();
+
+        assert_eq!(params.len(), 9);
+        assert_eq!(params["response_type"], "code");
+        assert_eq!(params["client_id"], "1234");
+        assert_eq!(params["redirect_uri"], "http%3A%2F%2Flocalhost%3A3000%2Fcallback");
+        assert_eq!(params["state"], "1234");
+        assert_eq!(params["code_challenge"], "1234");
+        assert_eq!(params["code_challenge_method"], "S256");
+        assert_eq!(
+            params["authorization_details"],
+            "%5B%7B%22claims%22%3A%5B%7B%22path%22%3A%5B%22given_name%22%5D%7D%2C%7B%22path%22%3A%5B%22family_name%22%5D%7D%2C%7B%22path%22%3A%5B%22email%22%5D%7D%5D%2C%22credential_configuration_id%22%3A%22EmployeeID_W3C_VC%22%2C%22type%22%3A%22openid_credential%22%7D%5D"
+        );
+        assert_eq!(params["subject_id"], "1234");
+        assert_eq!(params["wallet_issuer"], "1234");
+    }
+
+    // GET /authorize?
+    //     response_type=code
+    //     &client_id=s6BhdRkqt3
+    //     &code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM
+    //     &code_challenge_method=S256
+    //     &authorization_details=%5B%7B%22type%22%3A%20%22openid_credential%22%2C%20%22
+    //     credential_configuration_id%22%3A%20%22UniversityDegreeCredential%22%7D%5D
+    //     &redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb
+    #[test]
+    fn querystring() {
+        let request = request();
+        let querystring = request.to_string();
+        let request2: AuthorizationRequest =
+            querystring.parse().expect("should deserialize from string");
+        assert_eq!(request, request2);
+    }
+
+    fn request() -> AuthorizationRequest {
+        AuthorizationRequest::Object(RequestObject {
             response_type: oauth::ResponseType::Code,
             client_id: "1234".to_string(),
             redirect_uri: Some("http://localhost:3000/callback".to_string()),
@@ -526,59 +574,6 @@ mod tests {
             subject_id: "1234".to_string(),
             wallet_issuer: Some("1234".to_string()),
             ..RequestObject::default()
-        });
-
-        let serialized = request.to_string();
-        let deserialized = AuthorizationRequest::from_str(&serialized).expect("should parse");
-        assert_eq!(request, deserialized);
-    }
-
-    #[test]
-    fn authorization_format() {
-        let request = AuthorizationRequest::Object(RequestObject {
-            response_type: oauth::ResponseType::Code,
-            client_id: "1234".to_string(),
-            redirect_uri: Some("http://localhost:3000/callback".to_string()),
-            state: Some("1234".to_string()),
-            code_challenge: "1234".to_string(),
-            code_challenge_method: oauth::CodeChallengeMethod::S256,
-            authorization_details: Some(vec![AuthorizationDetail {
-                type_: AuthorizationDetailType::OpenIdCredential,
-                credential: AuthorizationCredential::FormatProfile(FormatProfile::JwtVcJson {
-                    credential_definition: CredentialDefinition {
-                        type_: vec![
-                            "VerifiableCredential".to_string(),
-                            "EmployeeIDCredential".to_string(),
-                        ],
-                        ..CredentialDefinition::default()
-                    },
-                }),
-
-                ..AuthorizationDetail::default()
-            }]),
-            subject_id: "1234".to_string(),
-            wallet_issuer: Some("1234".to_string()),
-            ..RequestObject::default()
-        });
-
-        let serialized = urlencode::to_string(&request).expect("should serialize to string");
-        let split = serialized.split('&').collect::<Vec<_>>();
-        assert_eq!(split.len(), 9);
-        assert_eq!(split[0], "response_type=code");
-        assert_eq!(split[1], "client_id=1234");
-        assert_eq!(split[2], "redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fcallback");
-        assert_eq!(split[3], "state=1234");
-        assert_eq!(split[4], "code_challenge=1234");
-        assert_eq!(split[5], "code_challenge_method=S256");
-        assert_eq!(
-            split[6],
-            "authorization_details=%5B%7B%22type%22%3A%22openid_credential%22%2C%22format%22%3A%22jwt_vc_json%22%2C%22credential_definition%22%3A%7B%22type%22%3A%5B%22VerifiableCredential%22%2C%22EmployeeIDCredential%22%5D%7D%7D%5D"
-        );
-        assert_eq!(split[7], "subject_id=1234");
-        assert_eq!(split[8], "wallet_issuer=1234");
-
-        let deserialized: AuthorizationRequest =
-            urlencode::from_str(&serialized).expect("should deserialize from string");
-        assert_eq!(request, deserialized);
+        })
     }
 }

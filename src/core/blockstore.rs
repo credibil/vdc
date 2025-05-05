@@ -23,7 +23,7 @@ pub trait BlockStore: Sized + Send + Sync {
         &self, owner: &str, partition: &str, cid: &str,
     ) -> impl Future<Output = anyhow::Result<()>> + Send;
 
-    /// Purge all blocks from the store.
+    /// Purge all blocks for the owner/partition.
     fn purge(
         &self, owner: &str, partition: &str,
     ) -> impl Future<Output = anyhow::Result<()>> + Send;

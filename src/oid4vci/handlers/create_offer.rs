@@ -11,7 +11,8 @@ use anyhow::Context as _;
 use chrono::Utc;
 use http::StatusCode;
 
-use crate::generate;
+use crate::core::generate;
+use crate::core::state::State;
 use crate::oauth::GrantType;
 use crate::oid4vci::error::{invalid, server};
 use crate::oid4vci::handlers::{Body, Error, Handler, Request, Response, Result};
@@ -22,7 +23,6 @@ use crate::oid4vci::issuer::{
 };
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Expire, Offered};
-use crate::state::State;
 
 #[derive(Debug, Default)]
 struct Context {
@@ -209,6 +209,7 @@ impl CreateOfferRequest {
         };
 
         CredentialOffer {
+            credential_issuer: ctx.issuer.credential_issuer.clone(),
             credential_configuration_ids: self.credential_configuration_ids.clone(),
             grants,
         }
