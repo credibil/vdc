@@ -54,7 +54,7 @@ pub enum SendType {
     ByRef,
 }
 
-impl fmt::Display for SendType {
+impl Display for SendType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::ByVal => write!(f, "by_val"),

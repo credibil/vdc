@@ -1,4 +1,7 @@
 //! # Url Encoder/Decoder
+//!
+//! provides encoding and decoding of `application/x-www-form-urlencoded`
+//! HTML query strings and forms.
 
 use anyhow::{Result, anyhow};
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, percent_decode_str, utf8_percent_encode};
@@ -7,7 +10,6 @@ use serde::de::DeserializeOwned;
 use serde_json::{Map, Value};
 
 const UNRESERVED: &AsciiSet = &NON_ALPHANUMERIC.remove(b'.').remove(b'_').remove(b'-').remove(b'~');
-// remove(b'/').remove(b':')
 
 /// Create an `application/x-www-form-urlencoded` representation of the
 /// provided value suitable for use in an HTML query strings or form post.
@@ -17,8 +19,7 @@ const UNRESERVED: &AsciiSet = &NON_ALPHANUMERIC.remove(b'.').remove(b'_').remove
 /// Will return an error if any of the object-type fields cannot be
 /// serialized to JSON and URL-encoded.
 pub fn encode<T: Serialize>(value: &T) -> anyhow::Result<String> {
-    let value = serde_json::to_value(value)?;
-    let encoded = match value {
+    let encoded = match serde_json::to_value(value)? {
         Value::Object(map) => map
             .iter()
             .map(|(k, v)| {
@@ -31,7 +32,6 @@ pub fn encode<T: Serialize>(value: &T) -> anyhow::Result<String> {
         }
         _ => return Err(anyhow!("value must be an object")),
     };
-
     Ok(encoded.join("&"))
 }
 
