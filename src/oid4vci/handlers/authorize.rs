@@ -325,7 +325,7 @@ impl Context {
     ) -> Result<()> {
         // check each credential requested is supported by the issuer
         for mut detail in authorization_details {
-            if detail.type_ != AuthorizationDetailType::OpenIdCredential {
+            if detail.r#type != AuthorizationDetailType::OpenIdCredential {
                 return Err(Error::InvalidAuthorizationDetails(
                     "invalid authorization_details type".to_string(),
                 ));
@@ -382,7 +382,7 @@ impl Context {
                 // save scope item + credential_configuration_id
                 if cred_cfg.scope == Some(scope_item.to_string()) {
                     let detail = AuthorizationDetail {
-                        type_: AuthorizationDetailType::OpenIdCredential,
+                        r#type: AuthorizationDetailType::OpenIdCredential,
                         credential: AuthorizationCredential::ConfigurationId {
                             credential_configuration_id: config_id.clone(),
                         },

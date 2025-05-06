@@ -535,7 +535,7 @@ pub struct CredentialDefinition {
     /// the root of the authorization details object. It MUST not be present
     /// otherwise.
     #[serde(rename = "type")]
-    pub type_: Vec<String>,
+    pub r#type: Vec<String>,
 }
 
 /// OAuth 2 client metadata used for registering clients of the issuance and

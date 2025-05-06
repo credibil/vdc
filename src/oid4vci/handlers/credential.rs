@@ -235,7 +235,7 @@ impl Context {
                         return Err(Error::InvalidProof("Proof JWT DID is invalid".to_string()));
                     };
                     let jwt = W3cVcBuilder::new()
-                        .type_(credential_definition.type_.clone())
+                        .r#type(credential_definition.r#type.clone())
                         .issuer(&self.issuer.credential_issuer)
                         .holder(did)
                         .status(status_claim)

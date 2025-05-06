@@ -463,7 +463,7 @@ pub enum RequestUriMethod {
 pub struct TransactionData {
     /// The name of the parameter set.
     #[serde(rename = "type")]
-    pub type_: String,
+    pub r#type: String,
 
     /// Credential IDs requested that can be used to authorize the transaction.
     /// In [DIF.PresentationExchange], the string matches the id field in the

@@ -126,7 +126,7 @@ impl<S: SignerExt> W3cVpBuilder<HasMatched<'_>, HasClientId, HasSigner<'_, S>> {
         let vp = VerifiablePresentation {
             context: vec![Kind::String("https://www.w3.org/2018/credentials/v1".to_string())],
             id: Some(format!("urn:uuid:{}", uuid::Uuid::new_v4())),
-            type_: OneMany::One("VerifiablePresentation".to_string()),
+            r#type: OneMany::One("VerifiablePresentation".to_string()),
             verifiable_credential: Some(vec![matched.issued.clone()]),
             holder: Some(holder_did.to_string()),
             ..Default::default()
