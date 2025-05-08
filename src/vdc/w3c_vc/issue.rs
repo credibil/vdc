@@ -21,7 +21,7 @@ use crate::vdc::w3c_vc::{
 /// Generate a W3C `jwt_vc_json` format credential.
 #[derive(Debug)]
 pub struct W3cVcBuilder<T, I, H, C, S> {
-    type_: T,
+    r#type: T,
     issuer: I,
     holder: H,
     claims: C,
@@ -75,7 +75,7 @@ impl W3cVcBuilder<NoType, NoIssuer, NoHolder, NoClaims, NoSigner> {
     #[must_use]
     pub const fn new() -> Self {
         Self {
-            type_: NoType,
+            r#type: NoType,
             issuer: NoIssuer,
             holder: NoHolder,
             claims: NoClaims,
@@ -89,9 +89,9 @@ impl W3cVcBuilder<NoType, NoIssuer, NoHolder, NoClaims, NoSigner> {
 impl<I, H, C, S> W3cVcBuilder<NoType, I, H, C, S> {
     /// Set the claims for the ISO mDL credential.
     #[must_use]
-    pub fn type_(self, type_: Vec<String>) -> W3cVcBuilder<HasType, I, H, C, S> {
+    pub fn r#type(self, r#type: Vec<String>) -> W3cVcBuilder<HasType, I, H, C, S> {
         W3cVcBuilder {
-            type_: HasType(type_),
+            r#type: HasType(r#type),
             issuer: self.issuer,
             holder: self.holder,
             claims: self.claims,
@@ -107,7 +107,7 @@ impl<G, H, C, S> W3cVcBuilder<G, NoIssuer, H, C, S> {
     #[must_use]
     pub fn issuer(self, issuer: impl Into<String>) -> W3cVcBuilder<G, HasIssuer, H, C, S> {
         W3cVcBuilder {
-            type_: self.type_,
+            r#type: self.r#type,
             issuer: HasIssuer(issuer.into()),
             holder: self.holder,
             claims: self.claims,
@@ -123,7 +123,7 @@ impl<G, I, C, S> W3cVcBuilder<G, I, NoHolder, C, S> {
     #[must_use]
     pub fn holder(self, holder: impl Into<String>) -> W3cVcBuilder<G, I, HasHolder, C, S> {
         W3cVcBuilder {
-            type_: self.type_,
+            r#type: self.r#type,
             issuer: self.issuer,
             holder: HasHolder(holder.into()),
             claims: self.claims,
@@ -139,7 +139,7 @@ impl<G, I, H, S> W3cVcBuilder<G, I, H, NoClaims, S> {
     #[must_use]
     pub fn claims(self, claims: Map<String, Value>) -> W3cVcBuilder<G, I, H, HasClaims, S> {
         W3cVcBuilder {
-            type_: self.type_,
+            r#type: self.r#type,
             issuer: self.issuer,
             holder: self.holder,
             claims: HasClaims(claims),
@@ -155,7 +155,7 @@ impl<G, I, H, C> W3cVcBuilder<G, I, H, C, NoSigner> {
     #[must_use]
     pub fn signer<S: SignerExt>(self, signer: &'_ S) -> W3cVcBuilder<G, I, H, C, HasSigner<'_, S>> {
         W3cVcBuilder {
-            type_: self.type_,
+            r#type: self.r#type,
             issuer: self.issuer,
             holder: self.holder,
             claims: self.claims,
@@ -191,7 +191,7 @@ impl<S: SignerExt> W3cVcBuilder<HasType, HasIssuer, HasHolder, HasClaims, HasSig
 
         let vc = VerifiableCredential {
             id: Some(format!("{}/credentials/{}", self.issuer.0, uuid::Uuid::new_v4())),
-            type_: self.type_.0,
+            r#type: self.r#type.0,
             issuer: Kind::String(self.issuer.0),
             credential_subject: OneMany::One(CredentialSubject {
                 id: Some(self.holder.0),

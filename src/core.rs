@@ -10,7 +10,6 @@ pub mod generate;
 pub mod http;
 pub mod serde_cbor;
 pub mod state;
-pub mod strings;
 pub mod urlencode;
 
 use anyhow::{Result, anyhow};

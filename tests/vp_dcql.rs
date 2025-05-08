@@ -577,7 +577,7 @@ async fn populate() -> Wallet {
     let q = mso_mdoc::to_queryable(&mdoc, &wallet).await.expect("should be mdoc");
     wallet.add(q);
 
-    let type_ = vec!["VerifiableCredential".to_string(), "EmployeeIDCredential".to_string()];
+    let r#type = vec!["VerifiableCredential".to_string(), "EmployeeIDCredential".to_string()];
     let claims = json!({
         "credentialSubject": {
             "given_name": "Jane",
@@ -585,7 +585,7 @@ async fn populate() -> Wallet {
         },
     });
     let did = did_url.split_once('#').unwrap().0;
-    let jwt = w3c_vc(type_, claims, did).await;
+    let jwt = w3c_vc(r#type, claims, did).await;
     let q = w3c_vc::to_queryable(jwt, &wallet).await.expect("should be mdoc");
     wallet.add(q);
 
@@ -618,9 +618,9 @@ async fn mso_mdoc(doctype: &str, claims: Value, holder_jwk: &PublicKeyJwk) -> St
         .expect("should build")
 }
 
-async fn w3c_vc(type_: Vec<String>, claims: Value, did: &str) -> String {
+async fn w3c_vc(r#type: Vec<String>, claims: Value, did: &str) -> String {
     W3cVcBuilder::new()
-        .type_(type_)
+        .r#type(r#type)
         .claims(claims.as_object().unwrap().clone())
         .issuer(ISSUER_ID)
         .holder(did)

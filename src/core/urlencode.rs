@@ -30,7 +30,7 @@ pub fn encode<T: Serialize>(value: &T) -> anyhow::Result<String> {
         Value::String(s) => {
             vec![format!("{}", utf8_percent_encode(&s, UNRESERVED))]
         }
-        _ => return Err(anyhow!("value must be an object")),
+        _ => return Err(anyhow!("unsupported value")),
     };
     Ok(encoded.join("&"))
 }
@@ -77,14 +77,12 @@ pub fn decode<T: DeserializeOwned>(s: &str) -> Result<T> {
         let mut kv = part.split('=');
         let key = kv.next().ok_or_else(|| anyhow!("missing key"))?;
         let encoded = kv.next().ok_or_else(|| anyhow!("missing value"))?;
-
         let decoded = percent_decode_str(encoded).decode_utf8_lossy();
         let value = if decoded.starts_with('[') || decoded.starts_with('{') {
-            serde_json::from_str(&decoded).map_err(|e| anyhow!(e))?
+            serde_json::from_str(&decoded)?
         } else {
             Value::String(decoded.to_string())
         };
-
         map.insert(key.to_string(), value);
     }
 

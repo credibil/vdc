@@ -56,7 +56,7 @@ pub struct VerifiableCredential {
     /// the type. Syntactic conveniences, such as JSON-LD, SHOULD be used to
     /// ease developer usage.
     #[serde(rename = "type")]
-    pub type_: Vec<String>,
+    pub r#type: Vec<String>,
 
     /// The name property expresses the name of the credential. If present, the
     /// value of the name property MUST be a string or a language value object.
@@ -221,7 +221,7 @@ pub struct CredentialSchema {
     /// Refers to the status method used to provide the (machine readable)
     /// status of the credential. e.g. "`JsonSchemaValidator2018`"
     #[serde(rename = "type")]
-    pub type_: String,
+    pub r#type: String,
 }
 
 /// `RelatedResource` allows external data to be associated with the credential
@@ -266,7 +266,7 @@ pub struct RefreshService {
     /// Refers to the status method used to provide the (machine readable)
     /// status of the credential.
     #[serde(rename = "type")]
-    pub type_: String,
+    pub r#type: String,
 
     /// Refresh token to present to the refresh service.
     pub refresh_token: String,
@@ -284,7 +284,7 @@ pub struct Term {
     /// Refers to the status method used to provide the (machine readable)
     /// status of the credential.
     #[serde(rename = "type")]
-    pub type_: String,
+    pub r#type: String,
 
     /// A URI where credential policy information can be retrieved.
     pub id: Option<String>,
@@ -310,7 +310,7 @@ pub struct Evidence {
     /// Type identifies the evidence scheme used for the instance of evidence.
     /// For example, "`DriversLicense`" or "`Passport`".
     #[serde(rename = "type")]
-    pub type_: Vec<String>,
+    pub r#type: Vec<String>,
 
     /// A human-readable title for the evidence type.
     pub name: Option<String>,
@@ -420,7 +420,7 @@ pub struct VerifiablePresentation {
     /// such as `VerifiablePresentation`. Consists of `VerifiablePresentation`
     /// and, optionally, a more specific verifiable presentation type.
     #[serde(rename = "type")]
-    pub type_: OneMany<String>,
+    pub r#type: OneMany<String>,
 
     /// One or more Verifiable Credentials, or data derived from Verifiable
     /// Credentials in a cryptographically verifiable format.
@@ -514,7 +514,7 @@ pub struct Proof {
     /// When set to "`DataIntegrityProof`", the `cryptosuite` and the
     /// `proofValue` properties MUST be set.
     #[serde(rename = "type")]
-    pub type_: String,
+    pub r#type: String,
 
     /// The value of the cryptosuite property identifies the cryptographic
     /// suite. If subtypes are supported, it MUST be the <https://w3id.org/security#cryptosuiteString>
@@ -775,7 +775,7 @@ mod tests {
             serde_json::from_value(vc_json).expect("should deserialize");
         assert_eq!(vc_de.context, vc.context);
         assert_eq!(vc_de.id, vc.id);
-        assert_eq!(vc_de.type_, vc.type_);
+        assert_eq!(vc_de.r#type, vc.r#type);
         assert_eq!(vc_de.credential_subject, vc.credential_subject);
         assert_eq!(vc_de.issuer, vc.issuer);
     }
@@ -856,7 +856,7 @@ mod tests {
                 Kind::String("https://www.w3.org/2018/credentials/v1".to_string()),
                 Kind::String("https://www.w3.org/2018/credentials/examples/v1".to_string()),
             ],
-            type_: vec!["VerifiableCredential".to_string(), "EmployeeIDCredential".to_string()],
+            r#type: vec!["VerifiableCredential".to_string(), "EmployeeIDCredential".to_string()],
             issuer: Kind::String("https://example.com/issuers/14".to_string()),
             id: Some("https://example.com/credentials/3732".to_string()),
             valid_from: Some(Utc.with_ymd_and_hms(2023, 11, 20, 23, 21, 55).unwrap()),
@@ -907,7 +907,7 @@ mod tests {
         let vp_de: VerifiablePresentation =
             serde_json::from_value(vp_json).expect("should deserialize");
         assert_eq!(vp_de.context, vp.context);
-        assert_eq!(vp_de.type_, vp.type_);
+        assert_eq!(vp_de.r#type, vp.r#type);
         assert_eq!(vp_de.verifiable_credential, vp.verifiable_credential);
     }
 
@@ -918,7 +918,7 @@ mod tests {
 
         let vc = VerifiableCredential {
             id: Some("https://example.com/credentials/3732".to_string()),
-            type_: vec!["VerifiableCredential".to_string(), "EmployeeIDCredential".to_string()],
+            r#type: vec!["VerifiableCredential".to_string(), "EmployeeIDCredential".to_string()],
             issuer: Kind::String("https://example.com/issuers/14".to_string()),
             credential_subject: OneMany::One(subj),
             ..VerifiableCredential::default()
@@ -926,7 +926,7 @@ mod tests {
 
         VerifiablePresentation {
             context: vec![Kind::String("https://www.w3.org/2018/credentials/v1".to_string())],
-            type_: OneMany::Many(vec![
+            r#type: OneMany::Many(vec![
                 "VerifiablePresentation".to_string(),
                 "EmployeeIDCredential".to_string(),
             ]),

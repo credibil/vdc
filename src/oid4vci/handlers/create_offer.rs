@@ -232,7 +232,7 @@ async fn authorize(
 
         authorized.push(AuthorizedDetail {
             authorization_detail: AuthorizationDetail {
-                type_: AuthorizationDetailType::OpenIdCredential,
+                r#type: AuthorizationDetailType::OpenIdCredential,
                 credential: AuthorizationCredential::ConfigurationId {
                     credential_configuration_id: config_id.clone(),
                 },

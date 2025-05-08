@@ -385,7 +385,7 @@ impl MetadataQuery {
                     // all `credential_definition.type` values must be
                     // contained in a single `type_values` set
                     'next_set: for type_value in type_values {
-                        for vc_type in &credential_definition.type_ {
+                        for vc_type in &credential_definition.r#type {
                             if !type_value.contains(vc_type) {
                                 continue 'next_set;
                             }
@@ -428,7 +428,7 @@ impl From<MetadataQuery> for FormatProfile {
             MetadataQuery::W3cVc { type_values } => Self::JwtVcJson {
                 credential_definition: CredentialDefinition {
                     context: None,
-                    type_: type_values[0].clone(),
+                    r#type: type_values[0].clone(),
                 },
             },
         }
@@ -481,7 +481,7 @@ impl Display for RequestedFormat {
 pub struct TrustedAuthoritiesQuery {
     /// An array of objects that specifies claims in the requested credential.
     #[serde(rename = "type")]
-    pub type_: Option<Vec<AuthorityType>>,
+    pub r#type: Option<Vec<AuthorityType>>,
 
     /// Combinations of claims to use when requesting credentials. Each set
     /// consists of one or more `claims` identifiers (i.e. `ClaimsQuery.id`).
@@ -574,7 +574,7 @@ mod tests {
     //         profile: FormatProfile::JwtVcJson {
     //             credential_definition: CredentialDefinition {
     //                 context: None,
-    //                 type_: vec![
+    //                 r#type: vec![
     //                     "VerifiableCredential".to_string(),
     //                     "EmployeeIDCredential".to_string(),
     //                 ],

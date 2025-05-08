@@ -212,7 +212,7 @@ mod tests {
                 tx_code: Some("111222".to_string()),
             },
             authorization_details: Some(vec![AuthorizationDetail {
-                type_: AuthorizationDetailType::OpenIdCredential,
+                r#type: AuthorizationDetailType::OpenIdCredential,
                 credential: AuthorizationCredential::ConfigurationId {
                     credential_configuration_id: "EmployeeID_W3C_VC".to_string(),
                 },

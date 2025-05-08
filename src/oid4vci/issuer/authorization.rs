@@ -348,8 +348,7 @@ pub struct RequestObject {
 pub struct AuthorizationDetail {
     /// Type determines the authorization details type. MUST be
     /// "`openid_credential`".
-    #[serde(rename = "type")]
-    pub type_: AuthorizationDetailType,
+    pub r#type: AuthorizationDetailType,
 
     /// Identifies credential to authorize for issuance using either
     /// `credential_configuration_id` or a supported credential `format`.
@@ -551,7 +550,7 @@ mod tests {
             code_challenge: "1234".to_string(),
             code_challenge_method: oauth::CodeChallengeMethod::S256,
             authorization_details: Some(vec![AuthorizationDetail {
-                type_: AuthorizationDetailType::OpenIdCredential,
+                r#type: AuthorizationDetailType::OpenIdCredential,
                 credential: AuthorizationCredential::ConfigurationId {
                     credential_configuration_id: "EmployeeID_W3C_VC".to_string(),
                 },

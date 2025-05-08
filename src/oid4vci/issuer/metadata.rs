@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 
-use crate::core::strings::title_case;
 use crate::oauth::{OAuthClient, OAuthServer};
 use crate::vdc::FormatProfile;
 
@@ -536,7 +535,7 @@ pub struct CredentialDefinition {
     /// the root of the authorization details object. It MUST not be present
     /// otherwise.
     #[serde(rename = "type")]
-    pub type_: Vec<String>,
+    pub r#type: Vec<String>,
 }
 
 /// OAuth 2 client metadata used for registering clients of the issuance and
@@ -574,5 +573,34 @@ pub struct Server {
     pub pre_authorized_grant_anonymous_access_supported: bool,
 }
 
+/// Capitalize the first letter of a string.
+#[must_use]
+fn title_case(s: &str) -> String {
+    let mut modified = String::new();
+    for word in s.split_whitespace() {
+        let mut chars = word.chars();
+        match chars.next() {
+            None => continue,
+            Some(c) => {
+                let capitalized = c.to_uppercase().chain(chars).collect::<String>();
+                modified.push_str(&capitalized);
+            }
+        }
+        modified.push(' ');
+    }
+    modified.trim().to_string()
+}
+
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_title_case() {
+        assert_eq!(title_case("hello, world!"), "Hello, World!");
+        assert_eq!(title_case("hello world"), "Hello World");
+        assert_eq!(title_case("hello"), "Hello");
+        assert_eq!(title_case("hello, World"), "Hello, World");
+        assert_eq!(title_case("hello, world!"), "Hello, World!");
+    }
+}

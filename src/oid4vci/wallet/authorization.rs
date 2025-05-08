@@ -241,7 +241,7 @@ impl AuthorizationDetailBuilder<Credential> {
     #[must_use]
     pub fn build(self) -> AuthorizationDetail {
         AuthorizationDetail {
-            type_: AuthorizationDetailType::OpenIdCredential,
+            r#type: AuthorizationDetailType::OpenIdCredential,
             credential: self.credential.0,
             claims: self.claims,
             locations: None,

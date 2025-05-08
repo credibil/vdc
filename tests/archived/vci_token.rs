@@ -13,7 +13,7 @@ use credibil_vc::oid4vci::types::{
 };
 use insta::assert_yaml_snapshot as assert_snapshot;
 use serde_json::json;
-use test_issuer::{CLIENT_ID, CREDENTIAL_ISSUER, BOB_ID};
+use test_issuer::{BOB_ID, CLIENT_ID, CREDENTIAL_ISSUER};
 
 #[tokio::test]
 async fn authorized() {
@@ -30,7 +30,7 @@ async fn authorized() {
             code_challenge_method: "S256".to_string(),
             details: vec![AuthorizedDetail {
                 authorization_detail: AuthorizationDetail {
-                    type_: AuthorizationDetailType::OpenIdCredential,
+                    r#type: AuthorizationDetailType::OpenIdCredential,
                     credential: AuthorizationCredential::ConfigurationId {
                         credential_configuration_id: "EmployeeID_W3C_VC".to_string(),
                     },
@@ -98,7 +98,7 @@ async fn authorization_details() {
             code_challenge_method: "S256".to_string(),
             details: vec![AuthorizedDetail {
                 authorization_detail: AuthorizationDetail {
-                    type_: AuthorizationDetailType::OpenIdCredential,
+                    r#type: AuthorizationDetailType::OpenIdCredential,
                     credential: AuthorizationCredential::ConfigurationId {
                         credential_configuration_id: "EmployeeID_W3C_VC".to_string(),
                     },
