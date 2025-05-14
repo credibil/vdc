@@ -36,6 +36,7 @@ cid = { version = "0.11.1", features = ["alloc"] }
 coset = "0.3.8"
 credibil-identity.workspace = true
 credibil-jose.workspace = true
+credibil-se.workspace = true
 ecdsa = "0.16.9"
 ed25519-dalek = { version = "2.1.1", features = ["rand_core"] }
 fastrand = "2.3.0"
@@ -70,6 +71,7 @@ rand_core.workspace = true
 tokio = { version = "1.44.2", features = ["macros", "rt-multi-thread"] }
 tower-http = { version = "0.6.2", features = ["cors", "set-header", "trace"] }
 tracing-subscriber = { version = "0.3.19", features = ["env-filter", "fmt"] }
+test-kms.workspace = true
 
 [[example]]
 name = "issuer"
@@ -114,15 +116,16 @@ nursery = "warn"
 [workspace.dependencies]
 anyhow = "1.0.98"
 base64ct = { version = "1.7.3", features = ["std"] }
-credibil-identity = { git = "https://github.com/credibil/identity.git" }
-credibil-jose = { git = "https://github.com/credibil/jose.git" }
+credibil-identity = { git = "https://github.com/credibil/identity.git", branch = "ose" }
+credibil-jose = { git = "https://github.com/credibil/jose.git", branch = "ose" }
+credibil-se = { git = "https://github.com/credibil/jose.git", branch = "ose" }
 credibil-vc = { path = "." }
 ed25519-dalek = "2.1.1"
 futures = "0.3.31"
-
 rand_core = "0.6.4"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140", features = ["alloc"] }
+test-kms = { git = "https://github.com/credibil/jose.git", branch = "ose" }
 
 [patch.crates-io]
 # credibil-identity = { path = "../identity" }

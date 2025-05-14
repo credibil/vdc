@@ -521,24 +521,19 @@ dependencies = [
 [[package]]
 name = "credibil-identity"
 version = "0.1.2"
-source = "git+https://github.com/credibil/identity.git#7a32cacd5d569dae2570933a50d3756d65a58e58"
+source = "git+https://github.com/credibil/identity.git?branch=ose#4b4e2fcb272e95f89ee1ac90c4a17fbc93bc0f07"
 dependencies = [
  "anyhow",
  "base64ct",
  "chrono",
  "credibil-jose",
- "curve25519-dalek",
- "ed25519-dalek",
+ "credibil-se",
  "multibase",
  "nom",
- "rand 0.8.5",
- "regex",
  "serde",
- "serde-querystring",
  "serde_json",
  "serde_json_canonicalizer",
  "sha2",
- "thiserror 2.0.12",
  "url",
  "uuid",
 ]
@@ -546,23 +541,41 @@ dependencies = [
 [[package]]
 name = "credibil-jose"
 version = "0.1.2"
-source = "git+https://github.com/credibil/jose.git#b4ebcdb0a511021f594c552562579d3ee63c53db"
+source = "git+https://github.com/credibil/jose.git?branch=ose#668cfddf2f8d9faf126a99b7d62e3acf9b038d09"
+dependencies = [
+ "anyhow",
+ "base64ct",
+ "credibil-se",
+ "multibase",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "serde_repr",
+ "tracing",
+ "zeroize",
+]
+
+[[package]]
+name = "credibil-se"
+version = "0.1.2"
+source = "git+https://github.com/credibil/jose.git?branch=ose#668cfddf2f8d9faf126a99b7d62e3acf9b038d09"
 dependencies = [
  "aes-gcm",
  "aes-kw",
  "anyhow",
  "base64ct",
  "chacha20poly1305",
- "ciborium",
  "ecdsa",
  "ecies",
  "ed25519-dalek",
  "k256",
  "multibase",
+ "p256",
  "rand 0.8.5",
  "serde",
  "serde_json",
  "serde_repr",
+ "sha2",
  "tracing",
  "x25519-dalek",
  "zeroize",
@@ -584,6 +597,7 @@ dependencies = [
  "coset",
  "credibil-identity",
  "credibil-jose",
+ "credibil-se",
  "ecdsa",
  "ed25519-dalek",
  "fastrand",
@@ -607,6 +621,7 @@ dependencies = [
  "serde_repr",
  "serde_urlencoded",
  "sha2",
+ "test-kms",
  "thiserror 2.0.12",
  "tokio",
  "tower-http",
@@ -739,6 +754,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e7c1832837b905bbfb5101e07cc24c8deddf52f93225eee6ead5f4d63d53ddcb"
 dependencies = [
  "const-oid",
+ "pem-rfc7468",
  "zeroize",
 ]
 
@@ -843,6 +859,7 @@ dependencies = [
  "ff",
  "generic-array",
  "group",
+ "pem-rfc7468",
  "pkcs8",
  "rand_core 0.6.4",
  "sec1",
@@ -1495,79 +1512,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 
 [[package]]
-name = "lexical"
-version = "7.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70ed980ff02623721dc334b9105150b66d0e1f246a92ab5a2eca0335d54c48f6"
-dependencies = [
- "lexical-core",
-]
-
-[[package]]
-name = "lexical-core"
-version = "1.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b765c31809609075565a70b4b71402281283aeda7ecaf4818ac14a7b2ade8958"
-dependencies = [
- "lexical-parse-float",
- "lexical-parse-integer",
- "lexical-util",
- "lexical-write-float",
- "lexical-write-integer",
-]
-
-[[package]]
-name = "lexical-parse-float"
-version = "1.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de6f9cb01fb0b08060209a057c048fcbab8717b4c1ecd2eac66ebfe39a65b0f2"
-dependencies = [
- "lexical-parse-integer",
- "lexical-util",
- "static_assertions",
-]
-
-[[package]]
-name = "lexical-parse-integer"
-version = "1.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72207aae22fc0a121ba7b6d479e42cbfea549af1479c3f3a4f12c70dd66df12e"
-dependencies = [
- "lexical-util",
- "static_assertions",
-]
-
-[[package]]
-name = "lexical-util"
-version = "1.0.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a82e24bf537fd24c177ffbbdc6ebcc8d54732c35b50a3f28cc3f4e4c949a0b3"
-dependencies = [
- "static_assertions",
-]
-
-[[package]]
-name = "lexical-write-float"
-version = "1.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5afc668a27f460fb45a81a757b6bf2f43c2d7e30cb5a2dcd3abf294c78d62bd"
-dependencies = [
- "lexical-util",
- "lexical-write-integer",
- "static_assertions",
-]
-
-[[package]]
-name = "lexical-write-integer"
-version = "1.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "629ddff1a914a836fb245616a7888b62903aae58fa771e1d83943035efa0f978"
-dependencies = [
- "lexical-util",
- "static_assertions",
-]
-
-[[package]]
 name = "libc"
 version = "0.2.172"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1786,7 +1730,7 @@ version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51e219e79014df21a225b1860a479e2dcd7cbd9130f4defd4bd0e191ea31d67d"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.21.7",
  "chrono",
  "getrandom 0.2.16",
  "http",
@@ -1832,6 +1776,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
 
 [[package]]
+name = "p256"
+version = "0.13.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c9863ad85fa8f4460f9c48cb909d38a0d689dba1f6f6988a5e3e0d31071bcd4b"
+dependencies = [
+ "ecdsa",
+ "elliptic-curve",
+ "primeorder",
+ "sha2",
+]
+
+[[package]]
 name = "parking_lot"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1852,6 +1808,15 @@ dependencies = [
  "redox_syscall",
  "smallvec",
  "windows-targets 0.52.6",
+]
+
+[[package]]
+name = "pem-rfc7468"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "88b39c9bfcfc231068454382784bb460aae594343fb030d46e9f50a645418412"
+dependencies = [
+ "base64ct",
 ]
 
 [[package]]
@@ -1934,6 +1899,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "primeorder"
+version = "0.13.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "353e1ca18966c16d9deb1c69278edbc5f194139612772bd9537af60ac231e1e6"
+dependencies = [
+ "elliptic-curve",
+]
+
+[[package]]
 name = "proc-macro-crate"
 version = "3.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1960,6 +1934,7 @@ dependencies = [
  "blockstore",
  "credibil-identity",
  "credibil-jose",
+ "credibil-se",
  "credibil-vc",
  "ed25519-dalek",
  "rand_core 0.6.4",
@@ -2357,16 +2332,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde-querystring"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ae1940bc2612f641456fc715125e4002cbd235d040188a1994e64b734054c2e"
-dependencies = [
- "lexical",
- "serde",
-]
-
-[[package]]
 name = "serde_derive"
 version = "1.0.219"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2538,12 +2503,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
-name = "static_assertions"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
-
-[[package]]
 name = "strobe-rs"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2598,6 +2557,25 @@ name = "tap"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
+
+[[package]]
+name = "test-kms"
+version = "0.1.2"
+source = "git+https://github.com/credibil/jose.git?branch=ose#668cfddf2f8d9faf126a99b7d62e3acf9b038d09"
+dependencies = [
+ "anyhow",
+ "blockstore",
+ "ciborium",
+ "cid",
+ "credibil-se",
+ "ecies",
+ "ed25519-dalek",
+ "multihash-codetable",
+ "rand 0.8.5",
+ "serde",
+ "sha2",
+ "x25519-dalek",
+]
 
 [[package]]
 name = "thiserror"

@@ -13,6 +13,7 @@ base64ct.workspace = true
 blockstore = "0.7.1"
 credibil-identity.workspace = true
 credibil-jose.workspace = true
+credibil-se.workspace = true
 credibil-vc.workspace = true
 ed25519-dalek.workspace = true
 rand_core.workspace = true

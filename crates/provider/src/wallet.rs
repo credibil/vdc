@@ -5,7 +5,8 @@ use std::str::FromStr;
 use anyhow::Result;
 use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
-use credibil_jose::{Algorithm, Jws, Signer};
+use credibil_jose::Jws;
+use credibil_se::{Algorithm, Signer};
 use credibil_vc::oid4vci::issuer::Credential;
 use credibil_vc::oid4vp::verifier::{Claim, Queryable};
 use credibil_vc::serde_cbor;
@@ -58,8 +59,8 @@ impl Signer for Wallet {
         self.identity.verifying_key().await
     }
 
-    fn algorithm(&self) -> Algorithm {
-        self.identity.algorithm()
+    async fn algorithm(&self) -> Result<Algorithm> {
+        Ok(self.identity.algorithm())
     }
 }
 

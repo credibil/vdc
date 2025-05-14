@@ -3,7 +3,7 @@
 use anyhow::Result;
 use credibil_identity::did::Document;
 use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
-use credibil_jose::{Algorithm, Signer};
+use credibil_se::{Algorithm, Signer};
 use credibil_vc::blockstore::BlockStore;
 
 use crate::blockstore::Mockstore;
@@ -52,8 +52,8 @@ impl Signer for Issuer {
         self.identity.verifying_key().await
     }
 
-    fn algorithm(&self) -> Algorithm {
-        self.identity.algorithm()
+    async fn algorithm(&self) -> Result<Algorithm> {
+        Ok(self.identity.algorithm())
     }
 }
 

@@ -10,7 +10,8 @@ use credibil_identity::did::{
     VmKeyId,
 };
 use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
-use credibil_jose::{Algorithm, Curve, KeyType, PublicKeyJwk};
+use credibil_jose::PublicKeyJwk;
+use credibil_se::{Algorithm, Curve, KeyType};
 use credibil_vc::generate;
 
 use crate::blockstore::Mockstore;

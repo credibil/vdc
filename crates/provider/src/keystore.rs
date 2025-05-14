@@ -9,7 +9,8 @@ use credibil_identity::did::{
     Document, DocumentBuilder, KeyPurpose, PublicKeyFormat, VerificationMethodBuilder, VmKeyId,
 };
 use credibil_identity::{IdentityResolver, Key, SignerExt};
-use credibil_jose::{Algorithm, PublicKeyJwk};
+use credibil_jose::PublicKeyJwk;
+use credibil_se::Algorithm;
 use ed25519_dalek::Signer as _;
 use rand_core::OsRng;
 

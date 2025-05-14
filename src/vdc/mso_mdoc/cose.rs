@@ -32,9 +32,9 @@ const Y: i64 = -3;
 /// Returns an error if the signing fails or if the algorithm is unsupported.
 pub async fn sign(payload: Vec<u8>, signer: &impl SignerExt) -> Result<CoseSign1> {
     // header
-    let algorithm = match signer.algorithm() {
-        credibil_jose::Algorithm::EdDSA => iana::Algorithm::EdDSA,
-        credibil_jose::Algorithm::ES256K => return Err(anyhow!("unsupported algorithm")),
+    let algorithm = match signer.algorithm().await? {
+        credibil_se::Algorithm::EdDSA => iana::Algorithm::EdDSA,
+        credibil_se::Algorithm::ES256K => return Err(anyhow!("unsupported algorithm")),
     };
     let Key::KeyId(key_id) = signer.verification_method().await? else {
         return Err(anyhow!("invalid verification method"));
@@ -138,13 +138,13 @@ impl CoseKey {
 impl From<PublicKeyJwk> for CoseKey {
     fn from(jwk: PublicKeyJwk) -> Self {
         let kty = match jwk.kty {
-            credibil_jose::KeyType::Okp => KeyType::Okp,
-            credibil_jose::KeyType::Ec => KeyType::Ec,
-            credibil_jose::KeyType::Oct => todo!("add support for KeyType::Oct"),
+            credibil_se::KeyType::Okp => KeyType::Okp,
+            credibil_se::KeyType::Ec => KeyType::Ec,
+            credibil_se::KeyType::Oct => todo!("add support for KeyType::Oct"),
         };
         let crv = match jwk.crv {
-            credibil_jose::Curve::Ed25519 => Curve::Ed25519,
-            credibil_jose::Curve::Es256K => Curve::Es256K,
+            credibil_se::Curve::Ed25519 => Curve::Ed25519,
+            credibil_se::Curve::Es256K => Curve::Es256K,
             _ => todo!("add support for other curves"),
         };
 
