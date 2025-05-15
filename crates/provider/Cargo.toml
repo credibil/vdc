@@ -18,4 +18,5 @@ credibil-vc.workspace = true
 ed25519-dalek.workspace = true
 rand_core.workspace = true
 serde_json.workspace = true
+test-kms.workspace = true
 x25519-dalek = { version = "2.0.1", features = ["static_secrets"] }

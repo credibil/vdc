@@ -25,7 +25,7 @@ use tracing_subscriber::FmtSubscriber;
 #[allow(clippy::needless_return)]
 #[tokio::main]
 async fn main() {
-    let provider = Verifier::new();
+    let provider = Verifier::new("examples_verifier").await;
 
     // add some data
     BlockStore::put(&provider, "owner", "VERIFIER", VERIFIER_ID, VERIFIER).await.unwrap();

@@ -282,7 +282,7 @@ mod tests {
             .issuer("https://example.com")
             .key_binding(jwk)
             .claims(claims.clone())
-            .signer(&Issuer::new())
+            .signer(&Issuer::new("vdc_sd_jwt_issue_tests_test_claims_issuer").await)
             .build()
             .await
             .expect("should build");

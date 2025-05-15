@@ -26,9 +26,9 @@ pub struct Wallet {
 }
 
 impl Wallet {
-    pub fn new() -> Self {
+    pub async fn new(owner: &str) -> Self {
         Self {
-            identity: DidIdentity::new(),
+            identity: DidIdentity::new(owner).await,
             // blockstore: Mockstore::new(),
             store: Vec::new(),
         }

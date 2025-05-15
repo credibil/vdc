@@ -621,7 +621,10 @@ mod tests {
             wallet_nonce: None,
         };
 
-        let querystring = request_object.to_querystring(&Verifier::new()).await.unwrap();
+        let querystring = request_object
+            .to_querystring(&Verifier::new("oid4vp_verifier_request_tests_querystring").await)
+            .await
+            .unwrap();
 
         let request = querystring
             .split('&')
