@@ -521,7 +521,7 @@ dependencies = [
 [[package]]
 name = "credibil-identity"
 version = "0.1.2"
-source = "git+https://github.com/credibil/identity.git#ef137d06896117c5cca25769190672ac034980cb"
+source = "git+https://github.com/credibil/identity.git#ebf4b769f7552e9ff948f23ca8b66c9674027d3b"
 dependencies = [
  "anyhow",
  "base64ct",
@@ -541,7 +541,7 @@ dependencies = [
 [[package]]
 name = "credibil-jose"
 version = "0.1.2"
-source = "git+https://github.com/credibil/jose.git#a844d57a133a1f3405b64ba3476d0ddc9c14bb1e"
+source = "git+https://github.com/credibil/se.git#a844d57a133a1f3405b64ba3476d0ddc9c14bb1e"
 dependencies = [
  "anyhow",
  "base64ct",
@@ -558,7 +558,7 @@ dependencies = [
 [[package]]
 name = "credibil-se"
 version = "0.1.2"
-source = "git+https://github.com/credibil/jose.git#a844d57a133a1f3405b64ba3476d0ddc9c14bb1e"
+source = "git+https://github.com/credibil/se.git#a844d57a133a1f3405b64ba3476d0ddc9c14bb1e"
 dependencies = [
  "aes-gcm",
  "aes-kw",
@@ -2542,7 +2542,7 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 [[package]]
 name = "test-kms"
 version = "0.1.2"
-source = "git+https://github.com/credibil/jose.git#a844d57a133a1f3405b64ba3476d0ddc9c14bb1e"
+source = "git+https://github.com/credibil/se.git#a844d57a133a1f3405b64ba3476d0ddc9c14bb1e"
 dependencies = [
  "anyhow",
  "blockstore",

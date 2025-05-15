@@ -113,18 +113,18 @@ nursery = "warn"
 anyhow = "1.0.98"
 base64ct = { version = "1.7.3", features = ["std"] }
 credibil-identity = { git = "https://github.com/credibil/identity.git" }
-credibil-jose = { git = "https://github.com/credibil/jose.git" }
-credibil-se = { git = "https://github.com/credibil/jose.git" }
+credibil-jose = { git = "https://github.com/credibil/se.git" }
+credibil-se = { git = "https://github.com/credibil/se.git" }
 credibil-vc = { path = "." }
 futures = "0.3.31"
 rand_core = "0.6.4"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140", features = ["alloc"] }
-test-kms = { git = "https://github.com/credibil/jose.git" }
+test-kms = { git = "https://github.com/credibil/se.git" }
 
 [patch.crates-io]
 # credibil-identity = { path = "../identity" }
-# credibil-jose = { path = "../jose" }
+# credibil-jose = { path = "../se" }
 
 [profile.release]
 # optimize for small code size
