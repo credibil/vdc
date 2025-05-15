@@ -2,8 +2,6 @@
 
 //! Pre-Authorized Code Flow Tests
 
-use std::sync::LazyLock;
-
 use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_identity::{Key, SignerExt};
 use credibil_jose::{JwsBuilder, Jwt, decode_jws};
@@ -19,13 +17,22 @@ use provider::issuer::{BOB_ID, ISSUER_ID, Issuer, data};
 use provider::wallet::Wallet;
 use serde_json::json;
 use sha2::{Digest, Sha256};
+use tokio::sync::OnceCell;
 
-static BOB: LazyLock<Wallet> = LazyLock::new(Wallet::new);
+static BOB: OnceCell<Wallet> = OnceCell::const_new();
+
+async fn bob() -> &'static Wallet {
+    BOB.get_or_init(|| async {
+        let wallet = Wallet::new("tests_vci_issuance_bob").await;
+        wallet
+    }).await
+}
 
 // Should allow the Wallet to provide 2 JWT proofs when requesting a credential.
 #[tokio::test]
 async fn two_proofs() {
-    let provider = Issuer::new();
+    let provider = Issuer::new("tests_vci_issuance_two_proofs_issuer").await;
+    let bob = bob().await;
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
@@ -63,7 +70,7 @@ async fn two_proofs() {
         oid4vci::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
-    let bob_key = BOB
+    let bob_key = bob
         .verification_method()
         .await
         .expect("should have key")
@@ -74,12 +81,12 @@ async fn two_proofs() {
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
         .key_ref(&bob_key)
-        .add_signer(&*BOB)
+        .add_signer(bob)
         .build()
         .await
         .expect("builds JWS");
 
-    let dan = Wallet::new();
+    let dan = Wallet::new("tests_vci_issuance_two_proofs_dan").await;
     let dan_key = dan
         .verification_method()
         .await
@@ -125,7 +132,7 @@ async fn two_proofs() {
 
     assert_eq!(credentials.len(), 2);
 
-    let Key::KeyId(bob_kid) = BOB.verification_method().await.unwrap() else {
+    let Key::KeyId(bob_kid) = bob.verification_method().await.unwrap() else {
         panic!("should have did");
     };
     let bob_did = bob_kid.split('#').next().expect("should have did");
@@ -159,7 +166,8 @@ async fn two_proofs() {
 // Should issue a SD-JWT credential.
 #[tokio::test]
 async fn sd_jwt() {
-    let provider = Issuer::new();
+    let provider = Issuer::new("tests_vci_issuance_sd_jwt_issuer").await;
+    let bob = bob().await;
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
@@ -195,7 +203,7 @@ async fn sd_jwt() {
         oid4vci::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
-    let bob_key = BOB
+    let bob_key = bob
         .verification_method()
         .await
         .expect("should have key")
@@ -206,7 +214,7 @@ async fn sd_jwt() {
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
         .key_ref(&bob_key)
-        .add_signer(&*BOB)
+        .add_signer(bob)
         .build()
         .await
         .expect("builds JWS");
@@ -249,7 +257,7 @@ async fn sd_jwt() {
     let jwt: Jwt<SdJwtClaims> = decode_jws(token, resolver).await.expect("should decode");
 
     // verify the credential
-    let Key::KeyId(bob_kid) = BOB.verification_method().await.unwrap() else {
+    let Key::KeyId(bob_kid) = bob.verification_method().await.unwrap() else {
         panic!("should have did");
     };
     let bob_did = bob_kid.split('#').next().expect("should have did");

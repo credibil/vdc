@@ -10,11 +10,12 @@ use credibil_identity::did::{
     VmKeyId,
 };
 use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
-use credibil_jose::{Algorithm, Curve, KeyType, PublicKeyJwk};
+use credibil_jose::PublicKeyJwk;
+use credibil_se::{Algorithm, Curve, KeyType};
 use credibil_vc::generate;
 
 use crate::blockstore::Mockstore;
-use crate::keystore::{self, KeyUse, Keyring, SigningKey};
+use crate::keystore::{self, KeyUse, Keyring};
 
 static DID_STORE: LazyLock<Arc<Mutex<HashMap<String, Document>>>> =
     LazyLock::new(|| Arc::new(Mutex::new(HashMap::new())));
@@ -27,20 +28,16 @@ pub struct DidIdentity {
 
 impl DidIdentity {
     // Generate a DID-based Identity.
-    pub fn new() -> Self {
+    pub async fn new(owner: &str) -> Self {
         // create a new keyring and add a signing key.
-        let mut keyring = Keyring::new();
-        let signing_key = SigningKey::new();
-
-        let verifying_key = PublicKeyJwk::from_bytes(&signing_key.verifying_key())
-            .expect("should convert verifying key to JWK");
-        keyring.add("signer", signing_key.clone());
+        let mut keyring = Keyring::new(owner).await.expect("keyring created");
+        keyring.add("signer", KeyUse::Signing).await.expect("signing key added");
+        let verifying_key =
+            keyring.verifying_key_jwk("signer").await.expect("JWK verifying key derived");
 
         // generate a did:web document
         let url = format!("https://credibil.io/{}", generate::uri_token());
         let did = did::web::default_did(&url).expect("should construct DID");
-        let mut keyring = Keyring::new();
-        keyring.add("signer", signing_key);
 
         let document = DocumentBuilder::new(&did)
             .add_verifying_key(&verifying_key, true)
@@ -55,17 +52,11 @@ impl DidIdentity {
     }
 
     pub async fn try_sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
-        let KeyUse::Signing(signer) = self.keyring.get("signer") else {
-            return Err(anyhow!("signer not found"));
-        };
-        Ok(signer.sign(msg))
+        self.keyring.sign("signer", msg).await
     }
 
     pub async fn verifying_key(&self) -> Result<Vec<u8>> {
-        let KeyUse::Signing(signer) = self.keyring.get("signer") else {
-            return Err(anyhow!("signer not found"));
-        };
-        Ok(signer.verifying_key())
+        self.keyring.verifying_key("signer").await
     }
 
     pub fn algorithm(&self) -> Algorithm {

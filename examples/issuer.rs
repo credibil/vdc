@@ -46,7 +46,7 @@ static PAR_REQUESTS: LazyLock<RwLock<HashMap<String, PushedAuthorizationRequest>
 #[allow(clippy::needless_return)]
 #[tokio::main]
 async fn main() {
-    let provider = Issuer::new();
+    let provider = Issuer::new("examples_issuer").await;
 
     // add some data
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, ISSUER).await.unwrap();

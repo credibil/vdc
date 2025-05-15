@@ -1,7 +1,6 @@
 //! Deferred Issuance Tests
 
 use std::collections::HashMap;
-use std::sync::LazyLock;
 
 use credibil_identity::{Key, SignerExt};
 use credibil_jose::{JwsBuilder, Jwt, decode_jws};
@@ -16,14 +15,23 @@ use credibil_vc::{OneMany, did_jwk};
 use provider::issuer::{CAROL_ID, ISSUER_ID, Issuer, data};
 use provider::wallet::Wallet;
 use serde_json::json;
+use tokio::sync::OnceCell;
 
-static CAROL: LazyLock<Wallet> = LazyLock::new(Wallet::new);
+static CAROL: OnceCell<Wallet> = OnceCell::const_new();
+
+async fn carol() -> &'static Wallet {
+    CAROL.get_or_init(|| async {
+        let wallet = Wallet::new("tests_vci_deferred_carol").await;
+        wallet
+    }).await
+}
 
 // Should return a credential when using the pre-authorized code flow and the
 // credential offer to the Wallet is made by value.
 #[tokio::test]
 async fn deferred() {
-    let provider = Issuer::new();
+    let provider = Issuer::new("tests_vci_deferred_deferred_issuer").await;
+    let carol = carol().await;
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
@@ -61,7 +69,7 @@ async fn deferred() {
         oid4vci::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
 
     // proof of possession of key material
-    let key = CAROL
+    let key = carol
         .verification_method()
         .await
         .expect("should have did")
@@ -72,7 +80,7 @@ async fn deferred() {
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
         .key_ref(&key)
-        .add_signer(&*CAROL)
+        .add_signer(carol)
         .build()
         .await
         .expect("builds JWS");
@@ -145,7 +153,7 @@ async fn deferred() {
     let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
     // verify the credential
-    let Key::KeyId(carol_kid) = CAROL.verification_method().await.unwrap() else {
+    let Key::KeyId(carol_kid) = carol.verification_method().await.unwrap() else {
         panic!("should have did");
     };
     let carol_did = carol_kid.split('#').next().expect("should have did");

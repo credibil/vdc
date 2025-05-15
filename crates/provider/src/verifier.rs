@@ -2,8 +2,7 @@
 
 use anyhow::Result;
 use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
-use credibil_jose::jwe::{PublicKey, SharedSecret};
-use credibil_jose::{Algorithm, Receiver, Signer};
+use credibil_se::{Algorithm, PublicKey, Receiver, SharedSecret, Signer};
 use credibil_vc::blockstore::BlockStore;
 use credibil_vc::status::StatusToken;
 
@@ -24,9 +23,9 @@ pub struct Verifier {
 
 impl Verifier {
     #[must_use]
-    pub fn new() -> Self {
+    pub async fn new(owner: &str) -> Self {
         Self {
-            identity: DidIdentity::new(),
+            identity: DidIdentity::new(owner).await,
             blockstore: Mockstore::new(),
         }
     }
@@ -47,8 +46,8 @@ impl Signer for Verifier {
         self.identity.verifying_key().await
     }
 
-    fn algorithm(&self) -> Algorithm {
-        self.identity.algorithm()
+    async fn algorithm(&self) -> Result<Algorithm> {
+        Ok(self.identity.algorithm())
     }
 }
 
@@ -59,7 +58,7 @@ impl SignerExt for Verifier {
 }
 
 impl Receiver for Verifier {
-    fn key_id(&self) -> String {
+    async fn key_id(&self) -> Result<String> {
         todo!()
     }
 

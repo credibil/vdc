@@ -286,7 +286,7 @@ mod tests {
             .client_id("client_id")
             .nonce("nonce")
             .response_uri("https://example.com/response")
-            .signer(&Issuer::new())
+            .signer(&Issuer::new("vdc_mso_mdoc_present_tests_build_vp_issuer").await)
             .build()
             .await
             .expect("should build");
@@ -308,7 +308,7 @@ mod tests {
     }
 
     async fn build_vc() -> String {
-        let wallet = Wallet::new();
+        let wallet = Wallet::new("vdc_mso_mdoc_present_tests_build_vc_wallet").await;
         let key_ref = wallet
             .verification_method()
             .await
@@ -334,7 +334,7 @@ mod tests {
             .doctype("org.iso.18013.5.1.mDL")
             .device_key(device_jwk)
             .claims(claims.clone())
-            .signer(&Issuer::new())
+            .signer(&Issuer::new("vdc_mso_mdoc_present_tests_build_vc_issuer").await)
             .build()
             .await
             .expect("should build")

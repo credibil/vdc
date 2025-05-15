@@ -2,8 +2,7 @@
 
 use std::fmt::Debug;
 
-use credibil_jose::Algorithm;
-use credibil_jose::jwe::EncAlgorithm;
+use credibil_se::{Algorithm, EncAlgorithm};
 use serde::{Deserialize, Serialize};
 
 use crate::oauth::OAuthClient;

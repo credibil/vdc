@@ -3,104 +3,51 @@
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock, Mutex};
 
-use anyhow::{Result, anyhow};
+use anyhow::anyhow;
 use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_identity::did::{
     Document, DocumentBuilder, KeyPurpose, PublicKeyFormat, VerificationMethodBuilder, VmKeyId,
 };
 use credibil_identity::{IdentityResolver, Key, SignerExt};
-use credibil_jose::{Algorithm, PublicKeyJwk};
-use ed25519_dalek::Signer as _;
+use credibil_jose::PublicKeyJwk;
+use credibil_se::{Algorithm, Curve, PublicKey};
 use rand_core::OsRng;
+use test_kms::Keyring as BaseKeyring;
 
 #[derive(Clone)]
 pub struct Keyring {
-    keys: HashMap<String, KeyUse>,
+    keys: BaseKeyring,
 }
 
 impl Keyring {
-    pub fn new() -> Self {
-        Self { keys: HashMap::new() }
+    pub async fn new(owner: &str) -> anyhow::Result<Self> {
+        Ok(Self { keys: BaseKeyring::new(owner).await? })
     }
 
-    pub fn add(&mut self, key_id: impl Into<String>, key: impl Into<KeyUse>) {
-        self.keys.insert(key_id.into(), key.into());
+    pub async fn add(&mut self, key_id: impl ToString, key: KeyUse) -> anyhow::Result<()> {
+        let curve = match key {
+            KeyUse::Signing => Curve::Ed25519,
+            KeyUse::Encryption => Curve::X25519,
+        };
+        self.keys.add(&curve, key_id).await
     }
 
-    pub fn get(&self, key_id: &str) -> &KeyUse {
-        self.keys.get(key_id).expect("should get key")
+    pub async fn verifying_key_jwk(&self, key_id: impl ToString) -> anyhow::Result<PublicKeyJwk> {
+        let key = self.keys.verifying_key(key_id).await?;
+        PublicKeyJwk::from_bytes(&key)
+    }
+
+    pub async fn verifying_key(&self, key_id: impl ToString) -> anyhow::Result<Vec<u8>> {
+        self.keys.verifying_key(key_id).await
+    }
+
+    pub async fn sign(&self, key_id: impl ToString, msg: &[u8]) -> anyhow::Result<Vec<u8>> {
+        self.keys.sign(key_id, msg).await
     }
 }
 
 #[derive(Clone)]
 pub enum KeyUse {
-    Signing(SigningKey),
-    Encryption(EncryptionKey),
-}
-
-#[derive(Clone)]
-pub struct SigningKey {
-    inner: ed25519_dalek::SigningKey,
-}
-
-impl SigningKey {
-    pub fn new() -> Self {
-        Self {
-            inner: ed25519_dalek::SigningKey::generate(&mut OsRng),
-        }
-    }
-
-    pub fn sign(&self, msg: &[u8]) -> Vec<u8> {
-        self.inner.sign(msg).to_bytes().to_vec()
-    }
-
-    pub fn verifying_key(&self) -> Vec<u8> {
-        self.inner.verifying_key().as_bytes().to_vec()
-    }
-
-    pub fn algorithm(&self) -> Algorithm {
-        Algorithm::EdDSA
-    }
-
-    // pub fn public_key(&self) -> x25519_dalek::PublicKey {
-    //     let verifying_key = self.signing_key.verifying_key();
-    //     x25519_dalek::PublicKey::from(verifying_key.to_montgomery().to_bytes())
-    // }
-}
-
-impl From<SigningKey> for KeyUse {
-    fn from(key: SigningKey) -> Self {
-        KeyUse::Signing(key)
-    }
-}
-
-#[derive(Clone)]
-pub struct EncryptionKey {
-    inner: x25519_dalek::StaticSecret,
-}
-
-impl EncryptionKey {
-    pub fn new() -> Self {
-        Self {
-            inner: x25519_dalek::StaticSecret::random_from_rng(&mut OsRng),
-        }
-    }
-
-    // impl DidOperator for Keyring {
-    //     fn verification(&self, purpose: KeyPurpose) -> Option<PublicKeyJwk> {
-    //         match purpose {
-    //             KeyPurpose::VerificationMethod => Some(PublicKeyJwk {
-    //                 kty: KeyType::Okp,
-    //                 crv: Curve::Ed25519,
-    //                 x: Base64UrlUnpadded::encode_string(self.verifying_key.as_bytes()),
-    //                 ..PublicKeyJwk::default()
-    //             }),
-    //             _ => panic!("unsupported purpose"),
-    //         }
-    //     }
-    // }
-
-    pub fn public_key(&self) -> x25519_dalek::PublicKey {
-        x25519_dalek::PublicKey::from(self.inner.to_bytes())
-    }
+    Signing,
+    Encryption,
 }

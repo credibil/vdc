@@ -8,7 +8,7 @@ use std::str::FromStr;
 use anyhow::anyhow;
 use chrono::serde::ts_seconds_option;
 use chrono::{DateTime, Utc};
-use credibil_jose::Algorithm;
+use credibil_se::Algorithm;
 use serde::{Deserialize, Serialize};
 
 /// OAuth 2 client metadata used for registering clients of the issuance and
