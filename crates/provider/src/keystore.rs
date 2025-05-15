@@ -11,7 +11,6 @@ use credibil_identity::did::{
 use credibil_identity::{IdentityResolver, Key, SignerExt};
 use credibil_jose::PublicKeyJwk;
 use credibil_se::{Algorithm, Curve, PublicKey};
-use ed25519_dalek::Signer as _;
 use rand_core::OsRng;
 use test_kms::Keyring as BaseKeyring;
 
