@@ -541,7 +541,7 @@ dependencies = [
 [[package]]
 name = "credibil-jose"
 version = "0.1.2"
-source = "git+https://github.com/credibil/se.git#01b855056fb3186e948aba736dec5da9550dcef5"
+source = "git+https://github.com/credibil/se.git#f8826f7c3690ac881a83eeb33bdc3fdf45a1323c"
 dependencies = [
  "anyhow",
  "base64ct",
@@ -558,7 +558,7 @@ dependencies = [
 [[package]]
 name = "credibil-se"
 version = "0.1.2"
-source = "git+https://github.com/credibil/se.git#01b855056fb3186e948aba736dec5da9550dcef5"
+source = "git+https://github.com/credibil/se.git#f8826f7c3690ac881a83eeb33bdc3fdf45a1323c"
 dependencies = [
  "aes-gcm",
  "aes-kw",
@@ -1701,7 +1701,7 @@ version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51e219e79014df21a225b1860a479e2dcd7cbd9130f4defd4bd0e191ea31d67d"
 dependencies = [
- "base64 0.21.7",
+ "base64 0.22.1",
  "chrono",
  "getrandom 0.2.16",
  "http",
@@ -2542,7 +2542,7 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 [[package]]
 name = "test-kms"
 version = "0.1.2"
-source = "git+https://github.com/credibil/se.git#01b855056fb3186e948aba736dec5da9550dcef5"
+source = "git+https://github.com/credibil/se.git#f8826f7c3690ac881a83eeb33bdc3fdf45a1323c"
 dependencies = [
  "anyhow",
  "blockstore",
