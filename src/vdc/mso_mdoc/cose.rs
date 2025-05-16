@@ -34,7 +34,7 @@ pub async fn sign(payload: Vec<u8>, signer: &impl SignerExt) -> Result<CoseSign1
     // header
     let algorithm = match signer.algorithm().await? {
         credibil_se::Algorithm::EdDSA => iana::Algorithm::EdDSA,
-        credibil_se::Algorithm::ES256K => return Err(anyhow!("unsupported algorithm")),
+        credibil_se::Algorithm::Es256K => return Err(anyhow!("unsupported algorithm")),
     };
     let Key::KeyId(key_id) = signer.verification_method().await? else {
         return Err(anyhow!("invalid verification method"));
@@ -94,27 +94,44 @@ impl CoseKey {
     pub fn verify(&self, sig: &[u8], sig_data: &[u8]) -> Result<()> {
         let verifying_key: PublicKey = self.clone().try_into()?;
         match self.crv {
-            Curve::Es256K => credibil_se::Curve::Es256K.verify(sig, sig_data, &verifying_key),
-            Curve::Ed25519 => credibil_se::Curve::Ed25519.verify(sig, sig_data, &verifying_key),
+            Curve::Es256K => credibil_se::Algorithm::Es256K.verify(sig_data, sig, &verifying_key),
+            Curve::Ed25519 => credibil_se::Algorithm::EdDSA.verify(sig_data, sig, &verifying_key),
             _ => bail!("unsupported DSA curve"),
         }
     }
 }
 
-impl TryInto<PublicKey> for CoseKey {
+impl TryFrom<CoseKey> for PublicKey {
     type Error = anyhow::Error;
 
-    fn try_into(self) -> Result<PublicKey> {
-        match self.crv {
-            Curve::Es256K => 
-                PublicKey::try_from((self.x.as_slice(), self.y.unwrap_or_default().as_slice()))
-                    .map_err(|e| anyhow!("unable to convert to public key: {e}")),
-            Curve::Ed25519 => PublicKey::try_from(self.x.as_slice())
+    fn try_from(cose_key: CoseKey) -> Result<Self> {
+        match cose_key.crv {
+            Curve::Es256K => {
+                let y = cose_key.y.as_ref().ok_or_else(|| anyhow!("Proof JWT 'y' is invalid"))?;
+                Self::try_from((cose_key.x.as_slice(), y.as_slice()))
+                .map_err(|e| anyhow!("unable to convert to public key: {e}"))
+            },
+            Curve::Ed25519 => Self::try_from(cose_key.x.as_slice())
                 .map_err(|e| anyhow!("unable to convert to public key: {e}")),
             _ => bail!("unsupported DSA curve"),
         }
     }
 }
+
+// impl TryInto<PublicKey> for CoseKey {
+//     type Error = anyhow::Error;
+
+//     fn try_into(self) -> Result<PublicKey> {
+//         match self.crv {
+//             Curve::Es256K => 
+//                 PublicKey::try_from((self.x.as_slice(), self.y.unwrap_or_default().as_slice()))
+//                     .map_err(|e| anyhow!("unable to convert to public key: {e}")),
+//             Curve::Ed25519 => PublicKey::try_from(self.x.as_slice())
+//                 .map_err(|e| anyhow!("unable to convert to public key: {e}")),
+//             _ => bail!("unsupported DSA curve"),
+//         }
+//     }
+// }
 
 
 impl From<PublicKeyJwk> for CoseKey {

@@ -116,7 +116,7 @@ impl OfferType {
     /// Convenience method for extracting a Credential Offer URI from an offer
     /// type if it exists.
     #[must_use]
-    pub fn as_uri(&self) -> Option<&str> {
+    pub const fn as_uri(&self) -> Option<&str> {
         match self {
             Self::Uri(uri) => Some(uri.as_str()),
             Self::Object(_) => None,

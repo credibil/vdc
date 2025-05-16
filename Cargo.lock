@@ -521,7 +521,7 @@ dependencies = [
 [[package]]
 name = "credibil-identity"
 version = "0.1.2"
-source = "git+https://github.com/credibil/identity.git#ebf4b769f7552e9ff948f23ca8b66c9674027d3b"
+source = "git+https://github.com/credibil/identity.git#bbc82f91512f212ce9ca035ac2011c4979481987"
 dependencies = [
  "anyhow",
  "base64ct",
@@ -541,7 +541,7 @@ dependencies = [
 [[package]]
 name = "credibil-jose"
 version = "0.1.2"
-source = "git+https://github.com/credibil/se.git#a844d57a133a1f3405b64ba3476d0ddc9c14bb1e"
+source = "git+https://github.com/credibil/se.git#01b855056fb3186e948aba736dec5da9550dcef5"
 dependencies = [
  "anyhow",
  "base64ct",
@@ -558,7 +558,7 @@ dependencies = [
 [[package]]
 name = "credibil-se"
 version = "0.1.2"
-source = "git+https://github.com/credibil/se.git#a844d57a133a1f3405b64ba3476d0ddc9c14bb1e"
+source = "git+https://github.com/credibil/se.git#01b855056fb3186e948aba736dec5da9550dcef5"
 dependencies = [
  "aes-gcm",
  "aes-kw",
@@ -1701,7 +1701,7 @@ version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51e219e79014df21a225b1860a479e2dcd7cbd9130f4defd4bd0e191ea31d67d"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.21.7",
  "chrono",
  "getrandom 0.2.16",
  "http",
@@ -2542,7 +2542,7 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 [[package]]
 name = "test-kms"
 version = "0.1.2"
-source = "git+https://github.com/credibil/se.git#a844d57a133a1f3405b64ba3476d0ddc9c14bb1e"
+source = "git+https://github.com/credibil/se.git#01b855056fb3186e948aba736dec5da9550dcef5"
 dependencies = [
  "anyhow",
  "blockstore",
@@ -3030,15 +3030,15 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "windows-core"
-version = "0.61.0"
+version = "0.61.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4763c1de310c86d75a878046489e2e5ba02c649d185f21c67d4cf8a56d098980"
+checksum = "46ec44dc15085cea82cf9c78f85a9114c463a369786585ad2882d1ff0b0acf40"
 dependencies = [
  "windows-implement",
  "windows-interface",
  "windows-link",
  "windows-result",
- "windows-strings 0.4.0",
+ "windows-strings 0.4.1",
 ]
 
 [[package]]
@@ -3082,9 +3082,9 @@ dependencies = [
 
 [[package]]
 name = "windows-result"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c64fd11a4fd95df68efcfee5f44a294fe71b8bc6a91993e2791938abcc712252"
+checksum = "4b895b5356fc36103d0f64dd1e94dfa7ac5633f1c9dd6e80fe9ec4adef69e09d"
 dependencies = [
  "windows-link",
 ]
@@ -3100,9 +3100,9 @@ dependencies = [
 
 [[package]]
 name = "windows-strings"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a2ba9642430ee452d5a7aa78d72907ebe8cfda358e8cb7918a2050581322f97"
+checksum = "2a7ab927b2637c19b3dbe0965e75d8f2d30bdd697a1516191cad2ec4df8fb28a"
 dependencies = [
  "windows-link",
 ]

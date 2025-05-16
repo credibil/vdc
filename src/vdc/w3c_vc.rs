@@ -642,7 +642,7 @@ impl LangString {
 
     /// Length of the `LangString` is the number of language objects.
     #[must_use]
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         match &self.0 {
             Kind::String(_) => 1,
             Kind::Object(lang_values) => lang_values.len(),
@@ -651,7 +651,7 @@ impl LangString {
 
     /// Check if the `LangString` is empty.
     #[must_use]
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.len() == 0
     }
 

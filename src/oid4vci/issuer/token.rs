@@ -185,7 +185,7 @@ impl AuthorizedDetail {
     /// Get the `credential_configuration_id` from the `AuthorizationDetail`
     /// object.
     #[must_use]
-    pub fn credential_configuration_id(&self) -> Option<&str> {
+    pub const fn credential_configuration_id(&self) -> Option<&str> {
         match &self.authorization_detail.credential {
             AuthorizationCredential::ConfigurationId {
                 credential_configuration_id,
