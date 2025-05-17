@@ -617,7 +617,6 @@ dependencies = [
  "serde_repr",
  "serde_urlencoded",
  "sha2",
- "test-kms",
  "test-providers",
  "thiserror 2.0.12",
  "tokio",
@@ -2556,6 +2555,7 @@ dependencies = [
  "rand_core 0.6.4",
  "serde_json",
  "test-kms",
+ "uuid",
 ]
 
 [[package]]

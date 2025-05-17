@@ -1,21 +1,8 @@
-#![allow(unused)]
-
-use std::str::FromStr;
-
 use anyhow::Result;
-use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
-use credibil_jose::Jws;
 use credibil_se::{Algorithm, Signer};
-use credibil_vc::oid4vci::issuer::Credential;
-use credibil_vc::oid4vp::verifier::{Claim, Queryable};
-use credibil_vc::serde_cbor;
-use credibil_vc::vdc::FormatProfile;
-use credibil_vc::vdc::mso_mdoc::{IssuerSigned, MobileSecurityObject};
-use credibil_vc::vdc::sd_jwt::SdJwtClaims;
-use serde_json::Value;
+use credibil_vc::oid4vp::verifier::Queryable;
 
-use crate::blockstore::Mockstore;
 use crate::identity::DidIdentity;
 
 #[derive(Clone)]

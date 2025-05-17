@@ -1,21 +1,12 @@
-#![allow(unused)]
-
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock, Mutex};
 
-use anyhow::{Result, anyhow, bail};
-use base64ct::{Base64UrlUnpadded, Encoding};
-use credibil_identity::did::{
-    self, Document, DocumentBuilder, KeyPurpose, PublicKeyFormat, VerificationMethodBuilder,
-    VmKeyId,
-};
-use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
-use credibil_jose::PublicKeyJwk;
-use credibil_se::{Algorithm, Curve, KeyType};
-use credibil_vc::generate;
+use anyhow::{Result, bail};
+use credibil_identity::did::{self, Document, DocumentBuilder};
+use credibil_identity::{Identity, Key};
+use credibil_se::Algorithm;
 
-use crate::blockstore::Mockstore;
-use crate::keystore::{self, KeyUse, Keyring};
+use crate::keystore::{KeyUse, Keyring};
 
 static DID_STORE: LazyLock<Arc<Mutex<HashMap<String, Document>>>> =
     LazyLock::new(|| Arc::new(Mutex::new(HashMap::new())));
@@ -36,7 +27,7 @@ impl DidIdentity {
             keyring.verifying_key_jwk("signer").await.expect("JWK verifying key derived");
 
         // generate a did:web document
-        let url = format!("https://credibil.io/{}", generate::uri_token());
+        let url = format!("https://credibil.io/{}", uuid::Uuid::new_v4());
         let did = did::web::default_did(&url).expect("should construct DID");
 
         let document = DocumentBuilder::new(&did)

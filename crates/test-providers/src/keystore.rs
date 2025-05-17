@@ -1,17 +1,5 @@
-#![allow(unused)]
-
-use std::collections::HashMap;
-use std::sync::{Arc, LazyLock, Mutex};
-
-use anyhow::anyhow;
-use base64ct::{Base64UrlUnpadded, Encoding};
-use credibil_identity::did::{
-    Document, DocumentBuilder, KeyPurpose, PublicKeyFormat, VerificationMethodBuilder, VmKeyId,
-};
-use credibil_identity::{IdentityResolver, Key, SignerExt};
 use credibil_jose::PublicKeyJwk;
-use credibil_se::{Algorithm, Curve, PublicKey};
-use rand_core::OsRng;
+use credibil_se::Curve;
 use test_kms::Keyring as BaseKeyring;
 
 #[derive(Clone)]
@@ -29,7 +17,7 @@ impl Keyring {
     pub async fn add(&mut self, key_id: impl ToString, key: KeyUse) -> anyhow::Result<()> {
         let curve = match key {
             KeyUse::Signing => Curve::Ed25519,
-            KeyUse::Encryption => Curve::X25519,
+            // KeyUse::Encryption => Curve::X25519,
         };
         self.keys.add(&curve, key_id).await
     }
@@ -51,5 +39,5 @@ impl Keyring {
 #[derive(Clone)]
 pub enum KeyUse {
     Signing,
-    Encryption,
+    // Encryption,
 }
