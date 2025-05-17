@@ -16,7 +16,6 @@ impl Wallet {
     pub async fn new(owner: &str) -> Self {
         Self {
             identity: DidIdentity::new(owner).await,
-            // blockstore: Mockstore::new(),
             store: Vec::new(),
         }
     }
