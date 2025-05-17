@@ -62,12 +62,12 @@ axum = { version = "0.8.4", features = ["macros"] }
 axum-extra = { version = "0.10.1", features = ["typed-header"] }
 hex = "0.4.3"
 oauth2 = { version = "5.0.0" }
-provider = { path = "crates/provider" }
 rand_core.workspace = true
+test-kms.workspace = true
+test-providers = { path = "crates/test-providers" }
 tokio = { version = "1.44.2", features = ["macros", "rt-multi-thread"] }
 tower-http = { version = "0.6.2", features = ["cors", "set-header", "trace"] }
 tracing-subscriber = { version = "0.3.19", features = ["env-filter", "fmt"] }
-test-kms.workspace = true
 
 [[example]]
 name = "issuer"
@@ -115,17 +115,12 @@ base64ct = { version = "1.7.3", features = ["std"] }
 credibil-identity = { git = "https://github.com/credibil/identity.git" }
 credibil-jose = { git = "https://github.com/credibil/se.git" }
 credibil-se = { git = "https://github.com/credibil/se.git" }
-# credibil-identity = { path = "../identity" }
-# credibil-jose = { path = "../se/jose" }
-# credibil-se = { path = "../se/se" }
-
 credibil-vc = { path = "." }
 futures = "0.3.31"
 rand_core = "0.6.4"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140", features = ["alloc"] }
 test-kms = { git = "https://github.com/credibil/se.git" }
-# test-kms = { path = "../se/crates/test-kms" }
 
 [patch.crates-io]
 # credibil-identity = { path = "../identity" }

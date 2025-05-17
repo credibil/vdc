@@ -253,9 +253,9 @@ impl<S: SignerExt>
 #[cfg(test)]
 mod tests {
     use credibil_jose::KeyBinding;
-    use provider::issuer::Issuer;
-    use provider::wallet::Wallet;
     use serde_json::{Value, json};
+    use test_providers::issuer::Issuer;
+    use test_providers::wallet::Wallet;
 
     use super::*;
     use crate::core::did_jwk;

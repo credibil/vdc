@@ -12,10 +12,10 @@ use credibil_vc::vdc::mso_mdoc::MdocBuilder;
 use credibil_vc::vdc::sd_jwt::SdJwtVcBuilder;
 use credibil_vc::vdc::w3c_vc::W3cVcBuilder;
 use credibil_vc::vdc::{mso_mdoc, sd_jwt, w3c_vc};
-use provider::issuer::{ISSUER_ID, Issuer};
-use provider::verifier::{VERIFIER_ID, Verifier, data};
-use provider::wallet::Wallet;
 use serde_json::{Value, json};
+use test_providers::issuer::{ISSUER_ID, Issuer};
+use test_providers::verifier::{VERIFIER_ID, Verifier, data};
+use test_providers::wallet::Wallet;
 use tokio::sync::OnceCell;
 
 static VERIFIER: OnceCell<Verifier> = OnceCell::const_new();
@@ -23,24 +23,30 @@ static ISSUER: OnceCell<Issuer> = OnceCell::const_new();
 static WALLET: OnceCell<Wallet> = OnceCell::const_new();
 
 async fn verifier() -> &'static Verifier {
-    VERIFIER.get_or_init(|| async {
-        let verifier = Verifier::new("tests_vp_dcql_verifier_verifier").await;
-        verifier
-    }).await
+    VERIFIER
+        .get_or_init(|| async {
+            let verifier = Verifier::new("tests_vp_dcql_verifier_verifier").await;
+            verifier
+        })
+        .await
 }
 
 async fn issuer() -> &'static Issuer {
-    ISSUER.get_or_init(|| async {
-        let issuer = Issuer::new("tests_vp_dcql_verifier_issuer").await;
-        issuer
-    }).await
+    ISSUER
+        .get_or_init(|| async {
+            let issuer = Issuer::new("tests_vp_dcql_verifier_issuer").await;
+            issuer
+        })
+        .await
 }
 
 async fn wallet() -> &'static Wallet {
-    WALLET.get_or_init(|| async {
-        let wallet = populate("tests_vp_dcql_verifier_wallet").await;
-        wallet
-    }).await
+    WALLET
+        .get_or_init(|| async {
+            let wallet = populate("tests_vp_dcql_verifier_wallet").await;
+            wallet
+        })
+        .await
 }
 
 // Should request a Credential with the claims `vehicle_holder` and `first_name`.

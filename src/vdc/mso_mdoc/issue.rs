@@ -175,9 +175,9 @@ impl<S: SignerExt> MdocBuilder<HasDocType, HasDeviceKey, HasClaims, HasSigner<'_
 #[cfg(test)]
 mod tests {
     use credibil_jose::KeyBinding;
-    use provider::issuer::Issuer;
-    use provider::wallet::Wallet;
     use serde_json::json;
+    use test_providers::issuer::Issuer;
+    use test_providers::wallet::Wallet;
 
     use super::*;
     use crate::core::did_jwk;

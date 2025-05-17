@@ -21,7 +21,9 @@ pub struct Keyring {
 
 impl Keyring {
     pub async fn new(owner: &str) -> anyhow::Result<Self> {
-        Ok(Self { keys: BaseKeyring::new(owner).await? })
+        Ok(Self {
+            keys: BaseKeyring::new(owner).await?,
+        })
     }
 
     pub async fn add(&mut self, key_id: impl ToString, key: KeyUse) -> anyhow::Result<()> {

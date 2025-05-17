@@ -572,7 +572,7 @@ impl From<RequestObject> for RequestObjectClaims {
 mod tests {
 
     use credibil_jose::Jwt;
-    use provider::verifier::Verifier;
+    use test_providers::verifier::Verifier;
 
     use super::*;
 

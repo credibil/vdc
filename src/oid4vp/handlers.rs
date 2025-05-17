@@ -19,7 +19,6 @@ pub use crate::oid4vp::error::Error;
 use crate::oid4vp::provider::Provider;
 
 /// Result type for `OpenID` for Verifiable Presentations.
-// pub type Result<T, E = Error> = std::result::Result<T, E>;
 pub type Result<T, E = Error> = anyhow::Result<T, E>;
 
 /// Handle incoming OpenID for Verifiable Presentations requests.

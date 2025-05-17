@@ -24,10 +24,10 @@ use credibil_vc::oid4vci::{
 use credibil_vc::status::StatusListRequest;
 use credibil_vc::urlencode;
 use oauth2::CsrfToken;
-use provider::issuer::data::{CLIENT, ISSUER, NORMAL_USER as USER, SERVER};
-use provider::issuer::{BOB_ID, ISSUER_ID, Issuer};
 use serde::Deserialize;
 use serde_json::json;
+use test_providers::issuer::data::{CLIENT, ISSUER, NORMAL_USER as USER, SERVER};
+use test_providers::issuer::{BOB_ID, ISSUER_ID, Issuer};
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};

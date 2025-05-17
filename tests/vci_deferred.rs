@@ -12,18 +12,20 @@ use credibil_vc::oid4vci::issuer::{
 };
 use credibil_vc::oid4vci::{self, JwtType};
 use credibil_vc::{OneMany, did_jwk};
-use provider::issuer::{CAROL_ID, ISSUER_ID, Issuer, data};
-use provider::wallet::Wallet;
 use serde_json::json;
+use test_providers::issuer::{CAROL_ID, ISSUER_ID, Issuer, data};
+use test_providers::wallet::Wallet;
 use tokio::sync::OnceCell;
 
 static CAROL: OnceCell<Wallet> = OnceCell::const_new();
 
 async fn carol() -> &'static Wallet {
-    CAROL.get_or_init(|| async {
-        let wallet = Wallet::new("tests_vci_deferred_carol").await;
-        wallet
-    }).await
+    CAROL
+        .get_or_init(|| async {
+            let wallet = Wallet::new("tests_vci_deferred_carol").await;
+            wallet
+        })
+        .await
 }
 
 // Should return a credential when using the pre-authorized code flow and the

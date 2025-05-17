@@ -13,10 +13,10 @@ use credibil_vc::oid4vci::issuer::{
 use credibil_vc::oid4vci::{self, JwtType};
 use credibil_vc::vdc::sd_jwt::SdJwtClaims;
 use credibil_vc::{OneMany, did_jwk};
-use provider::issuer::{BOB_ID, ISSUER_ID, Issuer, data};
-use provider::wallet::Wallet;
 use serde_json::json;
 use sha2::{Digest, Sha256};
+use test_providers::issuer::{BOB_ID, ISSUER_ID, Issuer, data};
+use test_providers::wallet::Wallet;
 use tokio::sync::OnceCell;
 
 static BOB: OnceCell<Wallet> = OnceCell::const_new();
@@ -25,7 +25,8 @@ async fn bob() -> &'static Wallet {
     BOB.get_or_init(|| async {
         let wallet = Wallet::new("tests_vci_issuance_bob").await;
         wallet
-    }).await
+    })
+    .await
 }
 
 // Should allow the Wallet to provide 2 JWT proofs when requesting a credential.

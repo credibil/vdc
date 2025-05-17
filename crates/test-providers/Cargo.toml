@@ -1,5 +1,5 @@
 [package]
-name = "provider"
+name = "test-providers"
 edition.workspace = true
 publish = false
 rust-version.workspace = true

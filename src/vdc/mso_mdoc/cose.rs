@@ -109,8 +109,8 @@ impl TryFrom<CoseKey> for PublicKey {
             Curve::Es256K => {
                 let y = cose_key.y.as_ref().ok_or_else(|| anyhow!("Proof JWT 'y' is invalid"))?;
                 Self::try_from((cose_key.x.as_slice(), y.as_slice()))
-                .map_err(|e| anyhow!("unable to convert to public key: {e}"))
-            },
+                    .map_err(|e| anyhow!("unable to convert to public key: {e}"))
+            }
             Curve::Ed25519 => Self::try_from(cose_key.x.as_slice())
                 .map_err(|e| anyhow!("unable to convert to public key: {e}")),
             _ => bail!("unsupported DSA curve"),
@@ -123,7 +123,7 @@ impl TryFrom<CoseKey> for PublicKey {
 
 //     fn try_into(self) -> Result<PublicKey> {
 //         match self.crv {
-//             Curve::Es256K => 
+//             Curve::Es256K =>
 //                 PublicKey::try_from((self.x.as_slice(), self.y.unwrap_or_default().as_slice()))
 //                     .map_err(|e| anyhow!("unable to convert to public key: {e}")),
 //             Curve::Ed25519 => PublicKey::try_from(self.x.as_slice())
@@ -132,7 +132,6 @@ impl TryFrom<CoseKey> for PublicKey {
 //         }
 //     }
 // }
-
 
 impl From<PublicKeyJwk> for CoseKey {
     fn from(jwk: PublicKeyJwk) -> Self {

@@ -12,9 +12,9 @@ use credibil_vc::oid4vci::issuer::{
 };
 use credibil_vc::oid4vci::{self, JwtType};
 use credibil_vc::{OneMany, did_jwk};
-use provider::issuer::{BOB_ID, ISSUER_ID, Issuer, data};
-use provider::wallet::Wallet;
 use serde_json::json;
+use test_providers::issuer::{BOB_ID, ISSUER_ID, Issuer, data};
+use test_providers::wallet::Wallet;
 use tokio::sync::OnceCell;
 
 static BOB: OnceCell<Wallet> = OnceCell::const_new();
@@ -23,7 +23,8 @@ async fn bob() -> &'static Wallet {
     BOB.get_or_init(|| async {
         let wallet = Wallet::new("tests_vci_pre_auth_bob").await;
         wallet
-    }).await
+    })
+    .await
 }
 
 // Should return a credential when using the pre-authorized code flow and the
