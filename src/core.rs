@@ -5,7 +5,7 @@
 // #![feature(error_generic_member_access)]
 
 pub mod blockstore;
-pub mod endpoint;
+pub mod api;
 pub mod generate;
 pub mod http;
 pub mod serde_cbor;

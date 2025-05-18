@@ -24,7 +24,7 @@ use http::HeaderMap;
 use http::header::ACCEPT_LANGUAGE;
 use tracing::instrument;
 
-pub use crate::core::endpoint::{Body, Handler, Headers, NoHeaders, Request, Response};
+pub use crate::core::api::{Body, Handler, Headers, NoHeaders, Request, Response};
 pub use crate::oid4vci::error::Error;
 use crate::oid4vci::error::invalid;
 use crate::oid4vci::provider::Provider;

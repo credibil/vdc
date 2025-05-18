@@ -4,7 +4,7 @@ use bytes::Bytes;
 use http::{Response, StatusCode, header};
 use serde::Serialize;
 
-use crate::core::endpoint;
+use crate::core::api;
 
 /// Trait for converting a `Result` into an HTTP response.
 pub trait IntoHttp {
@@ -15,7 +15,7 @@ pub trait IntoHttp {
     fn into_http(self) -> Response<Self::Body>;
 }
 
-impl<T, E> IntoHttp for Result<endpoint::Response<T>, E>
+impl<T, E> IntoHttp for Result<api::Response<T>, E>
 where
     T: Serialize,
     E: Serialize,
