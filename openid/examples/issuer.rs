@@ -15,7 +15,6 @@ use axum_extra::TypedHeader;
 use axum_extra::headers::authorization::Bearer;
 use axum_extra::headers::{Authorization, Host};
 use credibil_core::blockstore::BlockStore;
-use credibil_status::StatusListRequest;
 use credibil_openid::http::IntoHttp;
 use credibil_openid::oid4vci::{
     self, AuthorizationRequest, CreateOfferRequest, CredentialHeaders, CredentialOfferRequest,
@@ -23,6 +22,7 @@ use credibil_openid::oid4vci::{
     NotificationRequest, PushedAuthorizationRequest, ServerRequest, TokenRequest,
 };
 use credibil_openid::urlencode;
+use credibil_status::StatusListRequest;
 use oauth2::CsrfToken;
 use serde::Deserialize;
 use serde_json::json;
@@ -43,7 +43,6 @@ static AUTH_REQUESTS: LazyLock<RwLock<HashMap<String, AuthorizationRequest>>> =
 static PAR_REQUESTS: LazyLock<RwLock<HashMap<String, PushedAuthorizationRequest>>> =
     LazyLock::new(|| RwLock::new(HashMap::new()));
 
-#[allow(clippy::needless_return)]
 #[tokio::main]
 async fn main() {
     let provider = Issuer::new("examples_issuer").await;

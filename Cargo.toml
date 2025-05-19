@@ -1,5 +1,5 @@
 [workspace]
-members = ["openid", "status", "vdc", "crates/*"]
+members = ["openid", "crates/*"]
 resolver = "3"
 
 [workspace.package]
@@ -20,8 +20,6 @@ missing_docs = "warn"
 unused_extern_crates = "warn"
 
 [workspace.lints.clippy]
-# clippy::all = correctness, suspicious, style, complexity, perf
-# not using (yet) -Dclippy::restriction
 all = "warn"
 pedantic = "warn"
 nursery = "warn"
@@ -35,8 +33,8 @@ credibil-core = { path = "crates/core" }
 credibil-identity = { git = "https://github.com/credibil/identity.git" }
 credibil-jose = { git = "https://github.com/credibil/se.git" }
 credibil-se = { git = "https://github.com/credibil/se.git" }
-credibil-status = { path = "status" }
-credibil-vdc = { path = "vdc" }
+credibil-status = { path = "crates/status" }
+credibil-vdc = { path = "crates/vdc" }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140", features = ["alloc"] }
 serde_repr = "0.1"
