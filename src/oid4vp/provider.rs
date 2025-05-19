@@ -3,14 +3,13 @@
 use std::future::Future;
 
 use anyhow::{Result, anyhow};
+use credibil_core::blockstore::BlockStore;
 use credibil_identity::IdentityResolver;
 pub use credibil_identity::SignerExt;
+use credibil_status::StatusToken;
 
-use crate::core::blockstore::BlockStore;
-// use crate::oid4vp::wallet::Wallet;
 pub use crate::core::state::StateStore;
 use crate::oid4vp::verifier::Verifier;
-use crate::status::StatusToken;
 
 /// Verifier Provider trait.
 pub trait Provider:

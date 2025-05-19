@@ -12,12 +12,12 @@ use std::collections::HashMap;
 use std::future::Future;
 
 use anyhow::{Result, anyhow};
+use credibil_core::blockstore::BlockStore;
 use credibil_identity::{IdentityResolver, SignerExt};
+use credibil_status::StatusStore;
 
-use crate::core::blockstore::BlockStore;
 pub use crate::core::state::StateStore;
 use crate::oid4vci::issuer::{Client, Dataset, Issuer, Server};
-use crate::status::StatusStore;
 
 /// Issuer Provider trait.
 pub trait Provider:
@@ -71,7 +71,6 @@ const ISSUER: &str = "ISSUER";
 const SERVER: &str = "SERVER";
 const CLIENT: &str = "CLIENT";
 const SUBJECT: &str = "SUBJECT";
-const STATUSTOKEN: &str = "STATUSTOKEN";
 
 impl<T: BlockStore> Metadata for T {
     async fn client(&self, client_id: &str) -> Result<Client> {
@@ -140,18 +139,18 @@ impl<T: BlockStore> Subject for T {
     }
 }
 
-impl<T: BlockStore> StatusStore for T {
-    #[allow(unused)]
-    async fn put(&self, uri: &str, token: &str) -> Result<()> {
-        let data = serde_json::to_vec(token)?;
-        BlockStore::delete(self, "owner", STATUSTOKEN, uri).await?;
-        BlockStore::put(self, "owner", STATUSTOKEN, uri, &data).await
-    }
+// impl<T: BlockStore> StatusStore for T {
+//     #[allow(unused)]
+//     async fn put(&self, uri: &str, token: &str) -> Result<()> {
+//         let data = serde_json::to_vec(token)?;
+//         BlockStore::delete(self, "owner", STATUSTOKEN, uri).await?;
+//         BlockStore::put(self, "owner", STATUSTOKEN, uri, &data).await
+//     }
 
-    async fn get(&self, uri: &str) -> Result<Option<String>> {
-        let Some(block) = BlockStore::get(self, "owner", STATUSTOKEN, uri).await? else {
-            return Ok(None);
-        };
-        Ok(Some(serde_json::from_slice(&block)?))
-    }
-}
+//     async fn get(&self, uri: &str) -> Result<Option<String>> {
+//         let Some(block) = BlockStore::get(self, "owner", STATUSTOKEN, uri).await? else {
+//             return Ok(None);
+//         };
+//         Ok(Some(serde_json::from_slice(&block)?))
+//     }
+// }

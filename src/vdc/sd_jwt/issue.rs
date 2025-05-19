@@ -13,9 +13,9 @@ use anyhow::{Context as _, Result};
 use chrono::Utc;
 use credibil_identity::SignerExt;
 use credibil_jose::Jws;
+use credibil_status::StatusClaim;
 use serde_json::{Map, Value};
 
-use crate::status::StatusClaim;
 use crate::vdc::sd_jwt::{Disclosure, JwtType, KeyBinding, SdJwtClaims};
 
 /// Generate an IETF `dc+sd-jwt` format credential.

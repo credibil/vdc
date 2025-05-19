@@ -1,0 +1,24 @@
+[package]
+name = "credibil-core"
+description = "Credibil core components"
+readme = "README.md"
+authors.workspace = true
+categories.workspace = true
+edition.workspace = true
+exclude.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+anyhow = "1.0.98"
+ciborium = "0.2.2"
+cid = { version = "0.11.1", features = ["alloc"] }
+multihash-codetable = { version = "0.1.4", features = ["sha2"] }
+serde.workspace = true

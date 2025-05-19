@@ -3,10 +3,10 @@
 use anyhow::{Result, anyhow};
 use credibil_identity::IdentityResolver;
 use credibil_jose::{Jwt, decode_jws};
+use credibil_status::{StatusListClaims, StatusToken};
 
 use crate::core::did_jwk;
 use crate::oid4vp::verifier::{Claim, RequestObject};
-use crate::status::{StatusListClaims, StatusToken};
 use crate::vdc::sd_jwt::{Disclosure, KbJwtClaims, KeyBinding, SdJwtClaims};
 
 /// Verifies an SD-JWT credential.

@@ -1,11 +1,11 @@
 //! # Status List Endpoint
 
 use anyhow::Context as _;
+use credibil_status::{StatusListRequest, StatusListResponse, StatusStore};
 
 use crate::oid4vci::error::invalid;
 use crate::oid4vci::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vci::provider::Provider;
-use crate::status::{StatusListRequest, StatusListResponse, StatusStore};
 
 /// Status List request handler.
 ///

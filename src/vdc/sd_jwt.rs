@@ -19,6 +19,7 @@ use base64ct::{Base64UrlUnpadded, Encoding};
 use chrono::serde::{ts_seconds, ts_seconds_option};
 use chrono::{DateTime, Utc};
 use credibil_jose::KeyBinding;
+use credibil_status::StatusClaim;
 use rand::{Rng, rng};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -28,7 +29,6 @@ pub use self::issue::SdJwtVcBuilder;
 pub use self::present::SdJwtVpBuilder;
 pub use self::store::to_queryable;
 pub use self::verify::verify_vp;
-use crate::status::StatusClaim;
 
 /// Claims that can be included in the payload of SD-JWT VCs.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]

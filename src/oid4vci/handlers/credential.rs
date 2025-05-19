@@ -14,6 +14,7 @@ use std::fmt::Debug;
 use anyhow::Context as _;
 use chrono::Utc;
 use credibil_jose::{Jwt, KeyBinding, decode_jws};
+use credibil_status::{StatusList, StatusStore, TokenBuilder};
 
 use crate::core::state::State;
 use crate::core::{did_jwk, generate};
@@ -27,7 +28,6 @@ use crate::oid4vci::issuer::{
 };
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Deferred, Expire, Token};
-use crate::status::{StatusList, StatusStore, TokenBuilder};
 use crate::vdc::FormatProfile;
 use crate::vdc::mso_mdoc::MdocBuilder;
 use crate::vdc::sd_jwt::SdJwtVcBuilder;

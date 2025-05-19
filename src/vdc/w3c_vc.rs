@@ -17,6 +17,7 @@ use std::ops::Deref;
 
 use chrono::serde::{ts_seconds, ts_seconds_option};
 use chrono::{DateTime, TimeDelta, Utc};
+use credibil_status::StatusClaim;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 pub use verify::verify_vp;
@@ -25,7 +26,6 @@ pub use self::issue::W3cVcBuilder;
 pub use self::present::W3cVpBuilder;
 pub use self::store::to_queryable;
 use crate::core::{Kind, OneMany};
-use crate::status::StatusClaim;
 
 /// `VerifiableCredential` represents a naive implementation of the W3C
 /// Verifiable Credential data model v1.1.

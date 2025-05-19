@@ -2,9 +2,9 @@
 
 use std::collections::HashMap;
 
+use credibil_core::blockstore::BlockStore;
 use credibil_identity::{Key, SignerExt};
 use credibil_jose::{JwsBuilder, Jwt, decode_jws};
-use credibil_vc::blockstore::BlockStore;
 use credibil_vc::oid4vci::issuer::{
     AuthorizationDetail, CreateOfferRequest, Credential, CredentialHeaders, CredentialOfferRequest,
     CredentialRequest, CredentialResponse, NonceRequest, NotificationEvent, NotificationHeaders,
@@ -18,13 +18,8 @@ use test_providers::wallet::Wallet;
 use tokio::sync::OnceCell;
 
 static BOB: OnceCell<Wallet> = OnceCell::const_new();
-
 async fn bob() -> &'static Wallet {
-    BOB.get_or_init(|| async {
-        let wallet = Wallet::new("tests_vci_pre_auth_bob").await;
-        wallet
-    })
-    .await
+    BOB.get_or_init(|| async { Wallet::new("tests_vci_pre_auth_bob").await }).await
 }
 
 // Should return a credential when using the pre-authorized code flow and the

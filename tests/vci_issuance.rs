@@ -3,9 +3,9 @@
 //! Pre-Authorized Code Flow Tests
 
 use base64ct::{Base64UrlUnpadded, Encoding};
+use credibil_core::blockstore::BlockStore;
 use credibil_identity::{Key, SignerExt};
 use credibil_jose::{JwsBuilder, Jwt, decode_jws};
-use credibil_vc::blockstore::BlockStore;
 use credibil_vc::oid4vci::issuer::{
     CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, CredentialResponse,
     NonceRequest, ProofClaims, TokenGrantType, TokenRequest, W3cVcClaims,
@@ -20,13 +20,8 @@ use test_providers::wallet::Wallet;
 use tokio::sync::OnceCell;
 
 static BOB: OnceCell<Wallet> = OnceCell::const_new();
-
 async fn bob() -> &'static Wallet {
-    BOB.get_or_init(|| async {
-        let wallet = Wallet::new("tests_vci_issuance_bob").await;
-        wallet
-    })
-    .await
+    BOB.get_or_init(|| async { Wallet::new("tests_vci_issuance_bob").await }).await
 }
 
 // Should allow the Wallet to provide 2 JWT proofs when requesting a credential.

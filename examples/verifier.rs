@@ -11,7 +11,7 @@ use axum::routing::{get, post};
 use axum::{Form, Json, Router};
 use axum_extra::TypedHeader;
 use axum_extra::headers::Host;
-use credibil_vc::blockstore::BlockStore;
+use credibil_core::blockstore::BlockStore;
 use credibil_vc::http::IntoHttp;
 use credibil_vc::oid4vp::{self, AuthorzationResponse, GenerateRequest, RequestUriRequest};
 use test_providers::verifier::data::VERIFIER;

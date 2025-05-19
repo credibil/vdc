@@ -9,13 +9,13 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 anyhow = "1.0.98"
-base64ct.workspace = true
 blockstore = "0.7.1"
+credibil-core.workspace = true
 credibil-identity.workspace = true
 credibil-jose.workspace = true
 credibil-se.workspace = true
+credibil-status.workspace = true
 credibil-vc.workspace = true
-rand_core.workspace = true
 serde_json.workspace = true
 test-kms = { git = "https://github.com/credibil/se.git" }
-uuid.workspace=true
+uuid.workspace = true

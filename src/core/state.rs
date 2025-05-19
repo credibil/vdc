@@ -4,10 +4,9 @@
 
 use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
+use credibil_core::blockstore::BlockStore;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-
-use crate::core::blockstore::BlockStore;
 
 const STATE: &str = "STATE";
 

@@ -1,8 +1,8 @@
 use anyhow::Result;
+use credibil_core::blockstore::BlockStore;
 use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
 use credibil_se::{Algorithm, PublicKey, Receiver, SharedSecret, Signer};
-use credibil_vc::blockstore::BlockStore;
-use credibil_vc::status::StatusToken;
+use credibil_status::StatusToken;
 
 use crate::blockstore::Mockstore;
 use crate::identity::DidIdentity;

@@ -4,7 +4,7 @@ use std::sync::LazyLock;
 
 use anyhow::Result;
 use blockstore::{Blockstore as _, InMemoryBlockstore};
-use credibil_vc::blockstore::unique_cid;
+use credibil_core::blockstore::unique_cid;
 
 // static START: Once = Once::new();
 static BLOCKSTORE: LazyLock<InMemoryBlockstore<64>> = LazyLock::new(InMemoryBlockstore::new);

@@ -1,8 +1,9 @@
 //! Tests for the Verifier API
 
+use credibil_core::blockstore::BlockStore;
 use credibil_identity::{Key, SignerExt};
 use credibil_jose::PublicKeyJwk;
-use credibil_vc::blockstore::BlockStore;
+use credibil_status::{StatusClaim, StatusList, TokenBuilder};
 use credibil_vc::did_jwk;
 use credibil_vc::oid4vp::verifier::{DcqlQuery, ResponseMode};
 use credibil_vc::oid4vp::{
@@ -23,30 +24,13 @@ static ISSUER: OnceCell<Issuer> = OnceCell::const_new();
 static WALLET: OnceCell<Wallet> = OnceCell::const_new();
 
 async fn verifier() -> &'static Verifier {
-    VERIFIER
-        .get_or_init(|| async {
-            let verifier = Verifier::new("tests_vp_dcql_verifier_verifier").await;
-            verifier
-        })
-        .await
+    VERIFIER.get_or_init(|| async { Verifier::new("tests_vp_dcql_verifier_verifier").await }).await
 }
-
 async fn issuer() -> &'static Issuer {
-    ISSUER
-        .get_or_init(|| async {
-            let issuer = Issuer::new("tests_vp_dcql_verifier_issuer").await;
-            issuer
-        })
-        .await
+    ISSUER.get_or_init(|| async { Issuer::new("tests_vp_dcql_verifier_issuer").await }).await
 }
-
 async fn wallet() -> &'static Wallet {
-    WALLET
-        .get_or_init(|| async {
-            let wallet = populate("tests_vp_dcql_verifier_wallet").await;
-            wallet
-        })
-        .await
+    WALLET.get_or_init(|| async { populate("tests_vp_dcql_verifier_wallet").await }).await
 }
 
 // Should request a Credential with the claims `vehicle_holder` and `first_name`.
@@ -503,8 +487,6 @@ async fn specific_values() {
     let results = query.execute(all_vcs).expect("should execute");
     assert_eq!(results.len(), 1);
 }
-
-use credibil_vc::status::{StatusClaim, StatusList, TokenBuilder};
 
 // Initialise a mock "wallet" with test credentials.
 async fn populate(owner: &str) -> Wallet {
