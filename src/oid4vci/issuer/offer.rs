@@ -7,7 +7,7 @@ use base64ct::{Base64, Encoding};
 use qrcode::QrCode;
 use serde::{Deserialize, Serialize};
 
-use crate::core::urlencode;
+use crate::common::urlencode;
 use crate::oauth::GrantType;
 use crate::oid4vci::issuer::{AuthorizationCodeGrant, Grants, PreAuthorizedCodeGrant};
 

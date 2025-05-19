@@ -22,8 +22,8 @@
 //! Token is provided in the Token Response.
 
 use anyhow::Context;
+use credibil_core::Kind;
 
-use crate::core::Kind;
 use crate::oid4vp::error::invalid;
 use crate::oid4vp::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vp::provider::{Provider, StateStore};

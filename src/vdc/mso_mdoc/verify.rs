@@ -5,7 +5,7 @@ use base64ct::{Base64UrlUnpadded, Encoding};
 use coset::CoseSign1;
 use credibil_identity::IdentityResolver;
 
-use crate::core::{did_jwk, serde_cbor};
+use crate::common::{did_jwk, serde_cbor};
 use crate::oid4vp::verifier::{Claim, RequestObject};
 use crate::vdc::mso_mdoc::{CoseKey, DeviceAuth, DeviceResponse};
 

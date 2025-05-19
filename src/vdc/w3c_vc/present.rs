@@ -1,10 +1,10 @@
 //! # W3C-VC Presentation
 
 use anyhow::{Context as _, Result, anyhow};
+use credibil_core::{Kind, OneMany};
 use credibil_identity::{Key, SignerExt};
 use credibil_jose::encode_jws;
 
-use crate::core::{Kind, OneMany};
 use crate::oid4vp::verifier::Matched;
 use crate::vdc::w3c_vc::{VerifiablePresentation, W3cVpClaims};
 

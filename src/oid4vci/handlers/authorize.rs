@@ -70,8 +70,8 @@ use std::fmt::Debug;
 use anyhow::Context as _;
 use chrono::Utc;
 
-use crate::core::generate;
-use crate::core::state::State;
+use crate::common::generate;
+use crate::common::state::State;
 use crate::oauth::GrantType;
 use crate::oid4vci::error::{invalid, server};
 use crate::oid4vci::handlers::{Body, Error, Handler, Request, Response, Result};

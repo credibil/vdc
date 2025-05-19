@@ -3,11 +3,11 @@
 use std::str::FromStr;
 
 use anyhow::Result;
+use credibil_core::Kind;
 use credibil_identity::IdentityResolver;
 use credibil_jose::Jws;
 use serde_json::Value;
 
-use crate::core::Kind;
 use crate::oid4vci::issuer::CredentialDefinition;
 use crate::oid4vp::verifier::{Claim, Queryable};
 use crate::vdc::FormatProfile;

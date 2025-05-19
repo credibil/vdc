@@ -4,10 +4,11 @@
 
 use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
+use credibil_core::Kind;
 use credibil_identity::SignerExt;
 use sha2::{Digest, Sha256};
 
-use crate::core::{Kind, generate, serde_cbor};
+use crate::common::{generate, serde_cbor};
 use crate::oid4vp::verifier::Matched;
 use crate::vdc::mso_mdoc::{
     DataItem, DeviceAuth, DeviceAuthentication, DeviceNameSpaces, DeviceResponse, DeviceSigned,
@@ -258,7 +259,7 @@ mod tests {
     use test_providers::wallet::Wallet;
 
     use super::*;
-    use crate::core::did_jwk;
+    use crate::common::did_jwk;
     use crate::oid4vp::verifier::Claim;
     use crate::vdc::mso_mdoc::MdocBuilder;
 

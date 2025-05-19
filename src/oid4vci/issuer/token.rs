@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
-use crate::core::urlencode;
+use crate::common::urlencode;
 use crate::oid4vci::issuer::{AuthorizationCredential, AuthorizationDetail, ClientAssertion};
 
 /// Upon receiving a successful Authorization Response, a Token Request is made

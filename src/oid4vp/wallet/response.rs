@@ -4,8 +4,8 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
-use crate::core::urlencode;
-// use crate::core::Kind;
+use crate::common::urlencode;
+// use credibil_core::Kind;
 // use crate::format::w3c::VerifiablePresentation;
 
 /// Authorization Response request object is used by Wallets to send a VP Token

@@ -5,7 +5,7 @@ use credibil_identity::IdentityResolver;
 use credibil_jose::{Jwt, decode_jws};
 
 use super::W3cVpClaims;
-use crate::core::did_jwk;
+use crate::common::did_jwk;
 use crate::oid4vp::verifier::{Claim, RequestObject};
 use crate::vdc::w3c_vc::store;
 

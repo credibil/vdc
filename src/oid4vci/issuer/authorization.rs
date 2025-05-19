@@ -5,7 +5,7 @@ use serde::de::{self, Deserializer, Visitor};
 use serde::{Deserialize, Serialize};
 
 use super::ClaimsDescription;
-use crate::core::urlencode;
+use crate::common::urlencode;
 use crate::oauth;
 use crate::vdc::FormatProfile;
 

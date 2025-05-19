@@ -14,7 +14,7 @@ use std::fmt::Debug;
 
 use tracing::instrument;
 
-pub use crate::core::api::{Body, Handler, Headers, NoHeaders, Request, Response};
+pub use crate::common::api::{Body, Handler, Headers, NoHeaders, Request, Response};
 pub use crate::oid4vp::error::Error;
 use crate::oid4vp::provider::Provider;
 

@@ -2,16 +2,17 @@
 
 use std::collections::HashMap;
 
+use credibil_core::OneMany;
 use credibil_core::blockstore::BlockStore;
 use credibil_identity::{Key, SignerExt};
 use credibil_jose::{JwsBuilder, Jwt, decode_jws};
+use credibil_vc::did_jwk;
 use credibil_vc::oid4vci::issuer::{
     AuthorizationDetail, CreateOfferRequest, Credential, CredentialHeaders, CredentialOfferRequest,
     CredentialRequest, CredentialResponse, NonceRequest, NotificationEvent, NotificationHeaders,
     NotificationRequest, ProofClaims, TokenGrantType, TokenRequest, W3cVcClaims,
 };
 use credibil_vc::oid4vci::{self, JwtType};
-use credibil_vc::{OneMany, did_jwk};
 use serde_json::json;
 use test_providers::issuer::{BOB_ID, ISSUER_ID, Issuer, data};
 use test_providers::wallet::Wallet;

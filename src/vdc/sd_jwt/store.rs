@@ -1,10 +1,10 @@
 //! # Store
 
 use anyhow::{Result, anyhow};
+use credibil_core::Kind;
 use credibil_identity::IdentityResolver;
 use serde_json::Value;
 
-use crate::core::Kind;
 use crate::oid4vp::verifier::{Claim, Queryable};
 use crate::vdc::FormatProfile;
 use crate::vdc::sd_jwt::{Disclosure, verify};

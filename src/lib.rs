@@ -19,7 +19,7 @@ pub mod oid4vp;
 pub mod oauth;
 pub mod vdc;
 
-mod core;
+mod common;
 
 /// Re-export DID resolution
 pub mod identity {
@@ -33,4 +33,4 @@ pub mod jose {
 
 // /// Re-export basic types
 // pub use crate::core::{Kind, OneMany, blockstore, did_jwk, generate, http, serde_cbor, urlencode};
-pub use crate::core::*;
+pub use crate::common::*;

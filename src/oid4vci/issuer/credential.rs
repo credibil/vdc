@@ -2,11 +2,11 @@ use std::fmt::Debug;
 
 use chrono::serde::ts_seconds;
 use chrono::{DateTime, Utc};
+use credibil_core::Kind;
 use credibil_jose::PublicKeyJwk;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use crate::core::Kind;
 use crate::vdc::w3c_vc::VerifiableCredential;
 
 /// The user information returned by the Subject trait.

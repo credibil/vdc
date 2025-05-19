@@ -16,8 +16,8 @@ use chrono::Utc;
 use credibil_jose::{Jwt, KeyBinding, decode_jws};
 use credibil_status::{StatusList, StatusStore, TokenBuilder};
 
-use crate::core::state::State;
-use crate::core::{did_jwk, generate};
+use crate::common::state::State;
+use crate::common::{did_jwk, generate};
 use crate::oid4vci::JwtType;
 use crate::oid4vci::error::server;
 use crate::oid4vci::handlers::{Body, Error, Handler, Request, Response, Result};

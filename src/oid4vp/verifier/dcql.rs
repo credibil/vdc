@@ -3,10 +3,10 @@
 use std::fmt::{Display, Formatter};
 
 use anyhow::{Result, anyhow};
+use credibil_core::Kind;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::core::Kind;
 use crate::oid4vci::issuer::CredentialDefinition;
 use crate::vdc::FormatProfile;
 use crate::vdc::w3c_vc::VerifiableCredential;

@@ -16,7 +16,7 @@ use credibil_core::blockstore::BlockStore;
 use credibil_identity::{IdentityResolver, SignerExt};
 use credibil_status::StatusStore;
 
-pub use crate::core::state::StateStore;
+pub use crate::common::state::StateStore;
 use crate::oid4vci::issuer::{Client, Dataset, Issuer, Server};
 
 /// Issuer Provider trait.

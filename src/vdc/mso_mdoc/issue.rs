@@ -10,7 +10,7 @@ use rand::{Rng, rng};
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 
-use crate::core::serde_cbor;
+use crate::common::serde_cbor;
 use crate::vdc::mso_mdoc::cose;
 pub use crate::vdc::mso_mdoc::{
     CoseKey, DigestIdGenerator, IssuerAuth, IssuerSigned, IssuerSignedItem, MobileSecurityObject,
@@ -180,7 +180,7 @@ mod tests {
     use test_providers::wallet::Wallet;
 
     use super::*;
-    use crate::core::did_jwk;
+    use crate::common::did_jwk;
     use crate::vdc::mso_mdoc::{DataItem, DigestAlgorithm, KeyType, serde_cbor};
 
     #[tokio::test]

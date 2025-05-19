@@ -33,7 +33,7 @@ pub use self::issue::MdocBuilder;
 pub use self::present::DeviceResponseBuilder;
 pub use self::store::to_queryable;
 pub use self::verify::verify_vp;
-use crate::core::serde_cbor;
+use crate::common::serde_cbor;
 
 /// Supported device retrieval methods.
 #[derive(Clone, Debug, Deserialize_repr, Serialize_repr)]
@@ -1164,7 +1164,7 @@ where
 mod tests {
     // use hex::FromHex;
     use super::*;
-    use crate::core::serde_cbor;
+    use crate::common::serde_cbor;
 
     #[test]
     fn device_response() {
