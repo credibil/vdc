@@ -523,12 +523,17 @@ name = "credibil-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bytes",
  "ciborium",
  "cid",
  "credibil-identity",
  "credibil-jose",
+ "http",
+ "http-body",
+ "http-body-util",
  "multihash-codetable",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -576,7 +581,6 @@ dependencies = [
  "axum",
  "axum-extra",
  "base64ct",
- "bytes",
  "chrono",
  "credibil-core",
  "credibil-identity",
@@ -587,8 +591,6 @@ dependencies = [
  "fastrand",
  "hex",
  "http",
- "http-body",
- "http-body-util",
  "image",
  "oauth2",
  "percent-encoding",

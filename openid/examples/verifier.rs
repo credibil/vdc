@@ -12,7 +12,7 @@ use axum::{Form, Json, Router};
 use axum_extra::TypedHeader;
 use axum_extra::headers::Host;
 use credibil_core::blockstore::BlockStore;
-use credibil_openid::http::IntoHttp;
+use credibil_core::http::IntoHttp;
 use credibil_openid::oid4vp::{self, AuthorzationResponse, GenerateRequest, RequestUriRequest};
 use test_providers::verifier::data::VERIFIER;
 use test_providers::verifier::{VERIFIER_ID, Verifier};

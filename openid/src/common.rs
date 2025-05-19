@@ -6,6 +6,5 @@
 
 pub mod api;
 pub mod generate;
-pub mod http;
 pub mod state;
 pub mod urlencode;

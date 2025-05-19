@@ -1,7 +1,9 @@
 //! # Core
 
+pub mod api;
 pub mod blockstore;
 mod did;
+pub mod http;
 
 pub use did::*;
 use serde::{Deserialize, Serialize};

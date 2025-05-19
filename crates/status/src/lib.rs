@@ -14,6 +14,7 @@ use std::fmt::Debug;
 
 use chrono::serde::{ts_seconds, ts_seconds_option};
 use chrono::{DateTime, Utc};
+use credibil_core::api::Body;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
@@ -143,6 +144,8 @@ pub struct StatusListRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
 }
+
+impl Body for StatusListRequest {}
 
 /// Used to query the Status List endpoint in order to return Status List
 /// Token(s).

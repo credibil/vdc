@@ -42,6 +42,5 @@ where
     Request<B, H>: Handler<P, Response = U, Provider = P, Error = Error>,
 {
     let request: Request<B, H> = request.into();
-    request.validate(verifier, provider).await?;
     Ok(request.handle(verifier, provider).await?.into())
 }

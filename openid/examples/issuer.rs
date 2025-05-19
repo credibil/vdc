@@ -15,7 +15,7 @@ use axum_extra::TypedHeader;
 use axum_extra::headers::authorization::Bearer;
 use axum_extra::headers::{Authorization, Host};
 use credibil_core::blockstore::BlockStore;
-use credibil_openid::http::IntoHttp;
+use credibil_core::http::IntoHttp;
 use credibil_openid::oid4vci::{
     self, AuthorizationRequest, CreateOfferRequest, CredentialHeaders, CredentialOfferRequest,
     CredentialRequest, DeferredCredentialRequest, IssuerRequest, NotificationHeaders,

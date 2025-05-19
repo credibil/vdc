@@ -53,7 +53,6 @@ where
     Request<B, H>: Handler<P, Provider = P, Response = U, Error = Error>,
 {
     let request: Request<B, H> = request.into();
-    request.validate(issuer, provider).await?;
     Ok(request.handle(issuer, provider).await?.into())
 }
 
