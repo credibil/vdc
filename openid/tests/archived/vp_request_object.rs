@@ -3,16 +3,16 @@
 mod utils;
 
 use chrono::Utc;
-use credibil_vc::core::Kind;
-use credibil_vc::dif_exch::PresentationDefinition;
-use credibil_vc::oid4vp::endpoint;
-use credibil_vc::oid4vp::provider::StateStore;
-use credibil_vc::oid4vp::state::{Expire, State};
-use credibil_vc::oid4vp::types::{
+use credibil_openid::core::Kind;
+use credibil_openid::dif_exch::PresentationDefinition;
+use credibil_openid::oid4vp::endpoint;
+use credibil_openid::oid4vp::provider::StateStore;
+use credibil_openid::oid4vp::state::{Expire, State};
+use credibil_openid::oid4vp::types::{
     ClientIdPrefix, RequestObject, RequestObjectType, RequestUriRequest, ResponseType,
     Verifier,
 };
-use credibil_vc::verify_key;
+use credibil_openid::verify_key;
 use insta::assert_yaml_snapshot as assert_snapshot;
 use test_verifier::VERIFIER_ID;
 

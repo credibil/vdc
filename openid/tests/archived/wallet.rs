@@ -4,13 +4,13 @@
 use base64ct::{Base64UrlUnpadded, Encoding};
 use chrono::Utc;
 use credibil_jose::JwsBuilder;
-use credibil_vc::oid4vci::proof::{self, Payload, Type, Verify};
-use credibil_vc::oid4vci::types::{
+use credibil_openid::oid4vci::proof::{self, Payload, Type, Verify};
+use credibil_openid::oid4vci::types::{
     AuthorizationRequest, AuthorizationResponse, Credential, CredentialOfferRequest,
     CredentialRequest, DeferredCredentialRequest, DeferredCredentialResponse, FormatProfile,
     OfferType, ProofClaims, ResponseType, TokenGrantType, TokenRequest, TokenResponse,
 };
-use credibil_vc::oid4vci::{Error, Result, endpoint};
+use credibil_openid::oid4vci::{Error, Result, endpoint};
 use insta::assert_yaml_snapshot as assert_snapshot;
 use serde_json::json;
 use sha2::{Digest, Sha256};

@@ -5,8 +5,8 @@
 mod utils;
 mod wallet;
 
-use credibil_vc::oid4vci::endpoint;
-use credibil_vc::oid4vci::types::{CreateOfferRequest, FormatProfile, ProfileW3c, SendType};
+use credibil_openid::oid4vci::endpoint;
+use credibil_openid::oid4vci::types::{CreateOfferRequest, FormatProfile, ProfileW3c, SendType};
 use rstest::rstest;
 use serde_json::json;
 use test_issuer::{BOB_ID, CAROL_ID, CREDENTIAL_ISSUER, ProviderImpl};

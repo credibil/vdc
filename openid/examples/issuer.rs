@@ -16,13 +16,13 @@ use axum_extra::headers::authorization::Bearer;
 use axum_extra::headers::{Authorization, Host};
 use credibil_core::blockstore::BlockStore;
 use credibil_status::StatusListRequest;
-use credibil_vc::http::IntoHttp;
-use credibil_vc::oid4vci::{
+use credibil_openid::http::IntoHttp;
+use credibil_openid::oid4vci::{
     self, AuthorizationRequest, CreateOfferRequest, CredentialHeaders, CredentialOfferRequest,
     CredentialRequest, DeferredCredentialRequest, IssuerRequest, NotificationHeaders,
     NotificationRequest, PushedAuthorizationRequest, ServerRequest, TokenRequest,
 };
-use credibil_vc::urlencode;
+use credibil_openid::urlencode;
 use oauth2::CsrfToken;
 use serde::Deserialize;
 use serde_json::json;

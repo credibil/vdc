@@ -569,6 +569,44 @@ dependencies = [
 ]
 
 [[package]]
+name = "credibil-openid"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "axum-extra",
+ "base64ct",
+ "bytes",
+ "chrono",
+ "credibil-core",
+ "credibil-identity",
+ "credibil-jose",
+ "credibil-se",
+ "credibil-status",
+ "credibil-vdc",
+ "fastrand",
+ "hex",
+ "http",
+ "http-body",
+ "http-body-util",
+ "image",
+ "oauth2",
+ "percent-encoding",
+ "qrcode",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "sha2",
+ "test-providers",
+ "thiserror 2.0.12",
+ "tokio",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
 name = "credibil-se"
 version = "0.1.2"
 source = "git+https://github.com/credibil/se.git#56302fc547b9425aac383cc90a5cd3c165fd6236"
@@ -610,44 +648,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_repr",
-]
-
-[[package]]
-name = "credibil-vc"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "axum",
- "axum-extra",
- "base64ct",
- "bytes",
- "chrono",
- "credibil-core",
- "credibil-identity",
- "credibil-jose",
- "credibil-se",
- "credibil-status",
- "credibil-vdc",
- "fastrand",
- "hex",
- "http",
- "http-body",
- "http-body-util",
- "image",
- "oauth2",
- "percent-encoding",
- "qrcode",
- "serde",
- "serde_json",
- "serde_urlencoded",
- "sha2",
- "test-providers",
- "thiserror 2.0.12",
- "tokio",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "uuid",
 ]
 
 [[package]]

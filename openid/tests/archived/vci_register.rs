@@ -3,10 +3,10 @@
 mod utils;
 
 use chrono::Utc;
-use credibil_vc::oid4vci::endpoint;
-use credibil_vc::oid4vci::provider::StateStore;
-use credibil_vc::oid4vci::state::{Expire, Stage, State, Token};
-use credibil_vc::oid4vci::types::RegistrationRequest;
+use credibil_openid::oid4vci::endpoint;
+use credibil_openid::oid4vci::provider::StateStore;
+use credibil_openid::oid4vci::state::{Expire, Stage, State, Token};
+use credibil_openid::oid4vci::types::RegistrationRequest;
 use insta::assert_yaml_snapshot as assert_snapshot;
 use serde_json::json;
 use test_issuer::{CLIENT_ID, CREDENTIAL_ISSUER};

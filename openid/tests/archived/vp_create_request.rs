@@ -3,10 +3,10 @@
 mod utils;
 
 use assert_let_bind::assert_let;
-use credibil_vc::oid4vp::endpoint;
-use credibil_vc::oid4vp::provider::StateStore;
-use credibil_vc::oid4vp::state::State;
-use credibil_vc::oid4vp::types::GenerateRequest;
+use credibil_openid::oid4vp::endpoint;
+use credibil_openid::oid4vp::provider::StateStore;
+use credibil_openid::oid4vp::state::State;
+use credibil_openid::oid4vp::types::GenerateRequest;
 use insta::assert_yaml_snapshot as assert_snapshot;
 use serde_json::json;
 

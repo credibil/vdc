@@ -5,14 +5,14 @@ mod utils;
 use assert_let_bind::assert_let;
 use chrono::Utc;
 use credibil_jose::JwsBuilder;
-use credibil_vc::oid4vci::endpoint;
-use credibil_vc::oid4vci::provider::StateStore;
-use credibil_vc::oid4vci::state::{Expire, Stage, State, Token};
-use credibil_vc::oid4vci::types::{
+use credibil_openid::oid4vci::endpoint;
+use credibil_openid::oid4vci::provider::StateStore;
+use credibil_openid::oid4vci::state::{Expire, Stage, State, Token};
+use credibil_openid::oid4vci::types::{
     AuthorizationCredential, AuthorizationDetail, AuthorizedDetail, Credential, CredentialRequest,
     ProofClaims, ResponseType,
 };
-use credibil_vc::w3c_vc::proof::{self, Payload, Type, Verify};
+use credibil_openid::w3c_vc::proof::{self, Payload, Type, Verify};
 use insta::assert_yaml_snapshot as assert_snapshot;
 use serde_json::json;
 use test_issuer::{CLIENT_ID, CREDENTIAL_ISSUER, BOB_ID};
@@ -184,7 +184,7 @@ async fn format() {
     let Credential { credential } = credentials.first().expect("should have credential");
 
     let Payload::Vc { vc, .. } =
-        credibil_vc::w3c_vc::proof::verify(Verify::Vc(&credential), provider.clone())
+        credibil_openid::w3c_vc::proof::verify(Verify::Vc(&credential), provider.clone())
             .await
             .expect("should decode")
     else {

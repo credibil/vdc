@@ -3,11 +3,11 @@
 mod utils;
 
 use base64ct::{Base64UrlUnpadded, Encoding};
-use credibil_vc::core::pkce;
-use credibil_vc::oid4vci::client::{AuthorizationDetailBuilder, AuthorizationRequestBuilder};
-use credibil_vc::oid4vci::provider::StateStore;
-use credibil_vc::oid4vci::state::State;
-use credibil_vc::oid4vci::{AuthorizationRequest, Error, endpoint};
+use credibil_openid::core::pkce;
+use credibil_openid::oid4vci::client::{AuthorizationDetailBuilder, AuthorizationRequestBuilder};
+use credibil_openid::oid4vci::provider::StateStore;
+use credibil_openid::oid4vci::state::State;
+use credibil_openid::oid4vci::{AuthorizationRequest, Error, endpoint};
 use insta::assert_yaml_snapshot as assert_snapshot;
 use serde_json::json;
 use sha2::{Digest, Sha256};

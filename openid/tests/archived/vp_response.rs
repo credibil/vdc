@@ -5,12 +5,12 @@ mod utils;
 use std::sync::LazyLock;
 
 use chrono::Utc;
-use credibil_vc::core::Kind;
-use credibil_vc::dif_exch::PresentationDefinition;
-use credibil_vc::oid4vp::endpoint;
-use credibil_vc::oid4vp::provider::StateStore;
-use credibil_vc::oid4vp::state::{Expire, State};
-use credibil_vc::oid4vp::types::{
+use credibil_openid::core::Kind;
+use credibil_openid::dif_exch::PresentationDefinition;
+use credibil_openid::oid4vp::endpoint;
+use credibil_openid::oid4vp::provider::StateStore;
+use credibil_openid::oid4vp::state::{Expire, State};
+use credibil_openid::oid4vp::types::{
     AuthorzationResponse, ClientIdPrefix, RequestObject, ResponseType, Verifier,
 };
 use serde_json::{Value, json};

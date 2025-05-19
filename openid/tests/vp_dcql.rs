@@ -4,11 +4,11 @@ use credibil_core::blockstore::BlockStore;
 use credibil_core::did_jwk;
 use credibil_identity::{Key, SignerExt};
 use credibil_jose::PublicKeyJwk;
-use credibil_status::{StatusClaim, StatusList, TokenBuilder};
-use credibil_vc::oid4vp::verifier::ResponseMode;
-use credibil_vc::oid4vp::{
+use credibil_openid::oid4vp::verifier::ResponseMode;
+use credibil_openid::oid4vp::{
     self, AuthorzationResponse, DeviceFlow, GenerateRequest, GenerateResponse, wallet,
 };
+use credibil_status::{StatusClaim, StatusList, TokenBuilder};
 use credibil_vdc::dcql::DcqlQuery;
 use credibil_vdc::mso_mdoc::MdocBuilder;
 use credibil_vdc::sd_jwt::SdJwtVcBuilder;

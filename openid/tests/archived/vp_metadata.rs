@@ -3,8 +3,8 @@
 mod utils;
 
 // use providers::wallet_provider::holder_provider::CLIENT_ID;
-use credibil_vc::oid4vp::endpoint;
-use credibil_vc::oid4vp::types::IssuerRequest;
+use credibil_openid::oid4vp::endpoint;
+use credibil_openid::oid4vp::types::IssuerRequest;
 use insta::assert_yaml_snapshot as assert_snapshot;
 
 #[tokio::test]

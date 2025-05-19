@@ -3,11 +3,11 @@
 mod utils;
 
 use chrono::Utc;
-use credibil_vc::core::pkce;
-use credibil_vc::oid4vci::endpoint;
-use credibil_vc::oid4vci::provider::StateStore;
-use credibil_vc::oid4vci::state::{Authorization, Expire, Offer, Stage, State};
-use credibil_vc::oid4vci::types::{
+use credibil_openid::core::pkce;
+use credibil_openid::oid4vci::endpoint;
+use credibil_openid::oid4vci::provider::StateStore;
+use credibil_openid::oid4vci::state::{Authorization, Expire, Offer, Stage, State};
+use credibil_openid::oid4vci::types::{
     AuthorizationCredential, AuthorizationDetail, AuthorizationDetailType, AuthorizedDetail,
     TokenRequest, TokenResponse,
 };

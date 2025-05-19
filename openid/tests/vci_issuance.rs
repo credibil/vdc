@@ -7,11 +7,11 @@ use credibil_core::blockstore::BlockStore;
 use credibil_core::{OneMany, did_jwk};
 use credibil_identity::{Key, SignerExt};
 use credibil_jose::{JwsBuilder, Jwt, decode_jws};
-use credibil_vc::oid4vci::issuer::{
+use credibil_openid::oid4vci::issuer::{
     CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, CredentialResponse,
     NonceRequest, ProofClaims, TokenGrantType, TokenRequest, W3cVcClaims,
 };
-use credibil_vc::oid4vci::{self, JwtType};
+use credibil_openid::oid4vci::{self, JwtType};
 use credibil_vdc::sd_jwt::SdJwtClaims;
 use serde_json::json;
 use sha2::{Digest, Sha256};
