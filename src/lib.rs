@@ -10,27 +10,20 @@
 //! * `issuer` - Enables the issuer API.
 //! * `verifier` - Enables the verifier API.
 
+pub mod oauth;
 #[cfg(feature = "issuer")]
 pub mod oid4vci;
-
 #[cfg(feature = "verifier")]
 pub mod oid4vp;
 
-pub mod oauth;
-pub mod vdc;
-
 mod common;
 
-/// Re-export DID resolution
+/// Re-export `credibil_identity` modules for convenience.
 pub mod identity {
     pub use credibil_identity::*;
 }
-
-/// Re-export cryptographic types and functions
+/// Re-export `credibil_jose` modules for convenience.
 pub mod jose {
     pub use credibil_jose::*;
 }
-
-// /// Re-export basic types
-// pub use crate::core::{Kind, OneMany, blockstore, did_jwk, generate, http, serde_cbor, urlencode};
 pub use crate::common::*;

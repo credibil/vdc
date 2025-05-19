@@ -10,11 +10,11 @@ use rand::{Rng, rng};
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 
-use crate::common::serde_cbor;
-use crate::vdc::mso_mdoc::cose;
-pub use crate::vdc::mso_mdoc::{
+use crate::mso_mdoc::cose;
+pub use crate::mso_mdoc::{
     CoseKey, DigestIdGenerator, IssuerAuth, IssuerSigned, IssuerSignedItem, MobileSecurityObject,
 };
+use crate::serde_cbor;
 
 /// Generate an ISO mDL `mso_mdoc` format credential.
 #[derive(Debug)]
@@ -174,14 +174,14 @@ impl<S: SignerExt> MdocBuilder<HasDocType, HasDeviceKey, HasClaims, HasSigner<'_
 
 #[cfg(test)]
 mod tests {
+    use credibil_core::did_jwk;
     use credibil_jose::KeyBinding;
     use serde_json::json;
     use test_providers::issuer::Issuer;
     use test_providers::wallet::Wallet;
 
     use super::*;
-    use crate::common::did_jwk;
-    use crate::vdc::mso_mdoc::{DataItem, DigestAlgorithm, KeyType, serde_cbor};
+    use crate::mso_mdoc::{DataItem, DigestAlgorithm, KeyType, serde_cbor};
 
     #[tokio::test]
     async fn build_vc() {

@@ -13,11 +13,16 @@ use std::fmt::Debug;
 
 use anyhow::Context as _;
 use chrono::Utc;
+use credibil_core::did_jwk;
 use credibil_jose::{Jwt, KeyBinding, decode_jws};
 use credibil_status::{StatusList, StatusStore, TokenBuilder};
+use credibil_vdc::FormatProfile;
+use credibil_vdc::mso_mdoc::MdocBuilder;
+use credibil_vdc::sd_jwt::SdJwtVcBuilder;
+use credibil_vdc::w3c_vc::W3cVcBuilder;
 
+use crate::common::generate;
 use crate::common::state::State;
-use crate::common::{did_jwk, generate};
 use crate::oid4vci::JwtType;
 use crate::oid4vci::error::server;
 use crate::oid4vci::handlers::{Body, Error, Handler, Request, Response, Result};
@@ -28,10 +33,6 @@ use crate::oid4vci::issuer::{
 };
 use crate::oid4vci::provider::{Metadata, Provider, StateStore, Subject};
 use crate::oid4vci::state::{Deferred, Expire, Token};
-use crate::vdc::FormatProfile;
-use crate::vdc::mso_mdoc::MdocBuilder;
-use crate::vdc::sd_jwt::SdJwtVcBuilder;
-use crate::vdc::w3c_vc::W3cVcBuilder;
 
 /// Credential request handler.
 ///

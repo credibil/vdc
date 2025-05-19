@@ -23,13 +23,14 @@
 
 use anyhow::Context;
 use credibil_core::Kind;
+use credibil_vdc::dcql::{Queryable, RequestedFormat};
+use credibil_vdc::{mso_mdoc, sd_jwt, w3c_vc};
 
 use crate::oid4vp::error::invalid;
 use crate::oid4vp::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::oid4vp::provider::{Provider, StateStore};
-use crate::oid4vp::verifier::{Queryable, RequestObject, RequestedFormat};
+use crate::oid4vp::verifier::RequestObject;
 use crate::oid4vp::wallet::{AuthorzationResponse, RedirectResponse};
-use crate::vdc::{mso_mdoc, sd_jwt, w3c_vc};
 
 /// Endpoint for the Wallet to respond Verifier's Authorization Request.
 ///
@@ -101,23 +102,24 @@ async fn verify(provider: &impl Provider, request: &AuthorzationResponse) -> Res
         let Some(meta) = &query.meta else {
             return Err(invalid!("meta not found: {query_id}"));
         };
+        let nonce = &request_object.nonce;
+        let client_id = &request_object.client_id.to_string();
 
         for vp in presentations {
-            let claims =
-                match query.format {
-                    RequestedFormat::DcSdJwt => sd_jwt::verify_vp(vp, request_object, provider)
-                        .await
-                        .map_err(|e| invalid!("failed to verify presentation: {e}"))?,
-                    RequestedFormat::MsoMdoc => mso_mdoc::verify_vp(vp, request_object, provider)
-                        .await
-                        .map_err(|e| invalid!("failed to verify presentation: {e}"))?,
-                    RequestedFormat::JwtVcJson => w3c_vc::verify_vp(vp, request_object, provider)
-                        .await
-                        .map_err(|e| invalid!("failed to verify presentation: {e}"))?,
-                    _ => {
-                        return Err(invalid!("unsupported format: {}", query.format));
-                    }
-                };
+            let claims = match query.format {
+                RequestedFormat::DcSdJwt => sd_jwt::verify_vp(vp, nonce, client_id, provider)
+                    .await
+                    .map_err(|e| invalid!("failed to verify presentation: {e}"))?,
+                RequestedFormat::MsoMdoc => mso_mdoc::verify_vp(vp, provider)
+                    .await
+                    .map_err(|e| invalid!("failed to verify presentation: {e}"))?,
+                RequestedFormat::JwtVcJson => w3c_vc::verify_vp(vp, nonce, client_id, provider)
+                    .await
+                    .map_err(|e| invalid!("failed to verify presentation: {e}"))?,
+                _ => {
+                    return Err(invalid!("unsupported format: {}", query.format));
+                }
+            };
 
             found.push(Queryable {
                 meta: meta.into(),

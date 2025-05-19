@@ -1,31 +1,13 @@
 //! # W3C Verification
 
 use anyhow::{Result, anyhow};
+use credibil_core::did_jwk;
 use credibil_identity::IdentityResolver;
 use credibil_jose::{Jwt, decode_jws};
 
 use super::W3cVpClaims;
-use crate::common::did_jwk;
-use crate::oid4vp::verifier::{Claim, RequestObject};
-use crate::vdc::w3c_vc::store;
-
-// /// Verifies an SD-JWT credential.
-// ///
-// ///  1. It should be signed by the issuer (`iss` claim).
-// ///  2. It should contain a hash of the disclosures.
-// ///
-// /// # Errors
-// ///
-// /// Returns an error if the SD-JWT credential is invalid.
-// pub async fn verify_vc(_vc: &str, _resolver: &impl IdentityResolver) -> Result<Jwt<SdJwtClaims>> {
-//     // let jwk = async |kid: String| did_jwk(&kid, resolver).await;
-//     // let sd_jwt: Jwt<SdJwtClaims> = decode_jws(vc, jwk).await?;
-
-//     // // FIXME: verify issuer ('iss' claim)
-
-//     // Ok(sd_jwt)
-//     todo!()
-// }
+use crate::dcql::Claim;
+use crate::w3c_vc::store;
 
 /// Verifies an SD-JWT presentation (KB-JWT, and associated disclosures).
 ///
@@ -34,7 +16,7 @@ use crate::vdc::w3c_vc::store;
 /// Returns an error if the SD-JWT presentation is invalid or if verification
 /// fails.
 pub async fn verify_vp(
-    vp: &str, request_object: &RequestObject, resolver: &impl IdentityResolver,
+    vp: &str, nonce: &str, client_id: &str, resolver: &impl IdentityResolver,
 ) -> Result<Vec<Claim>> {
     // verify and unpack jwt:
     //  1. it should be signed by the holder
@@ -44,10 +26,10 @@ pub async fn verify_vp(
     let vp_jwt: Jwt<W3cVpClaims> = decode_jws(vp, jwk).await?;
 
     // verify claims
-    if vp_jwt.claims.aud != request_object.client_id.to_string() {
+    if vp_jwt.claims.aud != client_id {
         return Err(anyhow!("`aud` claim does not match verification request"));
     }
-    if vp_jwt.claims.nonce != request_object.nonce {
+    if vp_jwt.claims.nonce != nonce {
         return Err(anyhow!("`nonce` claim does not match verification request"));
     }
     // FIXME: verify `iss` claim

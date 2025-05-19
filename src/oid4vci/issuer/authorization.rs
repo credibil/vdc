@@ -1,13 +1,13 @@
 use std::fmt::{self, Display};
 use std::str::FromStr;
 
+use credibil_vdc::FormatProfile;
 use serde::de::{self, Deserializer, Visitor};
 use serde::{Deserialize, Serialize};
 
 use super::ClaimsDescription;
 use crate::common::urlencode;
 use crate::oauth;
-use crate::vdc::FormatProfile;
 
 /// An Authorization Request type.
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]

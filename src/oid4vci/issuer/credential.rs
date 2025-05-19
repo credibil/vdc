@@ -4,10 +4,9 @@ use chrono::serde::ts_seconds;
 use chrono::{DateTime, Utc};
 use credibil_core::Kind;
 use credibil_jose::PublicKeyJwk;
+use credibil_vdc::w3c_vc::VerifiableCredential;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-
-use crate::vdc::w3c_vc::VerifiableCredential;
 
 /// The user information returned by the Subject trait.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]

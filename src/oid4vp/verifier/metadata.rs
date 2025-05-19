@@ -3,10 +3,10 @@
 use std::fmt::Debug;
 
 use credibil_se::{Algorithm, EncAlgorithm};
+use credibil_vdc::mso_mdoc::cose;
 use serde::{Deserialize, Serialize};
 
 use crate::oauth::OAuthClient;
-use crate::vdc::mso_mdoc::cose;
 
 /// Response containing the Verifier's client metadata.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]

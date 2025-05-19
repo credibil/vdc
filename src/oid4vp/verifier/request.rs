@@ -6,13 +6,14 @@ use base64ct::{Base64, Encoding};
 use credibil_core::Kind;
 pub use credibil_identity::SignerExt;
 use credibil_jose::{JwsBuilder, PublicKeyJwk};
+use credibil_vdc::dcql::DcqlQuery;
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
 use qrcode::QrCode;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::oid4vp::JwtType;
-use crate::oid4vp::verifier::{DcqlQuery, VerifierMetadata};
+use crate::oid4vp::verifier::VerifierMetadata;
 use crate::oid4vp::wallet::Wallet;
 
 const UNRESERVED: &AsciiSet =

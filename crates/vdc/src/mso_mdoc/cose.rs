@@ -18,7 +18,7 @@ use credibil_se::PublicKey;
 use serde::{Deserialize, Serialize, de, ser};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
-use crate::vdc::mso_mdoc::DataItem;
+use crate::mso_mdoc::DataItem;
 
 const KTY: i64 = 1;
 const CRV: i64 = -1;

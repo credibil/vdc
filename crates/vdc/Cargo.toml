@@ -1,5 +1,5 @@
 [package]
-name = "credibil-status"
+name = "credibil-vdc"
 description = "Verifiable digital credential status"
 readme = "README.md"
 authors.workspace = true
@@ -19,13 +19,23 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 anyhow.workspace = true
 base64ct.workspace = true
-bitvec = "1.0.1"
-blockstore = "0.7.1"
 chrono.workspace = true
 credibil-core.workspace = true
 credibil-identity.workspace = true
 credibil-jose.workspace = true
-flate2 = "1.1.1"
 serde.workspace = true
 serde_json.workspace = true
 serde_repr.workspace = true
+ciborium.workspace = true
+coset = "0.3.8"
+credibil-se.workspace = true
+credibil-status.workspace = true
+fastrand = "2.3.0"
+rand = "0.9.1"
+sha2.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+hex = "0.4.3"
+test-providers.workspace = true
+tokio.workspace=true

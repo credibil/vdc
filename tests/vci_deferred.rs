@@ -2,11 +2,10 @@
 
 use std::collections::HashMap;
 
-use credibil_core::OneMany;
 use credibil_core::blockstore::BlockStore;
+use credibil_core::{OneMany, did_jwk};
 use credibil_identity::{Key, SignerExt};
 use credibil_jose::{JwsBuilder, Jwt, decode_jws};
-use credibil_vc::did_jwk;
 use credibil_vc::oid4vci::issuer::{
     CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, CredentialResponse,
     Dataset, DeferredCredentialRequest, DeferredHeaders, NonceRequest, ProofClaims, TokenGrantType,

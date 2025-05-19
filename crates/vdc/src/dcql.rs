@@ -7,9 +7,8 @@ use credibil_core::Kind;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::oid4vci::issuer::CredentialDefinition;
-use crate::vdc::FormatProfile;
-use crate::vdc::w3c_vc::VerifiableCredential;
+use crate::w3c_vc::VerifiableCredential;
+use crate::{CredentialDefinition, FormatProfile};
 
 /// DCQL query for requesting Verifiable Presentations.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]

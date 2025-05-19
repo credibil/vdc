@@ -99,7 +99,7 @@ mod state;
 
 /// Proofs
 pub mod proof {
-    pub use crate::vdc::w3c_vc::{Payload, Verify, W3cVcClaims};
+    pub use credibil_vdc::w3c_vc::{Payload, Verify, W3cVcClaims};
 }
 
 use serde::{Deserialize, Serialize};

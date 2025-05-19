@@ -1,13 +1,13 @@
 //! # sd-jwt Verification
 
 use anyhow::{Result, anyhow};
+use credibil_core::did_jwk;
 use credibil_identity::IdentityResolver;
 use credibil_jose::{Jwt, decode_jws};
 use credibil_status::{StatusListClaims, StatusToken};
 
-use crate::common::did_jwk;
-use crate::oid4vp::verifier::{Claim, RequestObject};
-use crate::vdc::sd_jwt::{Disclosure, KbJwtClaims, KeyBinding, SdJwtClaims};
+use crate::dcql::Claim;
+use crate::sd_jwt::{Disclosure, KbJwtClaims, KeyBinding, SdJwtClaims};
 
 /// Verifies an SD-JWT credential.
 ///
@@ -33,7 +33,7 @@ pub async fn verify_vc(vc: &str, resolver: &impl IdentityResolver) -> Result<Jwt
 /// Returns an error if the SD-JWT presentation is invalid or if verification
 /// fails.
 pub async fn verify_vp<R>(
-    vp: &str, request_object: &RequestObject, resolver: &R,
+    vp: &str, nonce: &str, client_id: &str, resolver: &R,
 ) -> Result<Vec<Claim>>
 where
     R: IdentityResolver + StatusToken,
@@ -80,11 +80,11 @@ where
         return Err(anyhow!("kb-jwt `sd_hash` claim is invalid"));
     }
     // ..verify `nonce` claim
-    if kb_jwt.claims.nonce != request_object.nonce {
+    if kb_jwt.claims.nonce != nonce {
         return Err(anyhow!("kb-jwt `nonce` claim is invalid"));
     }
     // ..verify `aud` claim
-    if kb_jwt.claims.aud != request_object.client_id.to_string() {
+    if kb_jwt.claims.aud != client_id {
         return Err(anyhow!("kb-jwt `aud` claim is invalid"));
     }
 

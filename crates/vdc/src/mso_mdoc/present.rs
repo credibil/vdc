@@ -8,13 +8,13 @@ use credibil_core::Kind;
 use credibil_identity::SignerExt;
 use sha2::{Digest, Sha256};
 
-use crate::common::{generate, serde_cbor};
-use crate::oid4vp::verifier::Matched;
-use crate::vdc::mso_mdoc::{
+use crate::dcql::Matched;
+use crate::mso_mdoc::{
     DataItem, DeviceAuth, DeviceAuthentication, DeviceNameSpaces, DeviceResponse, DeviceSigned,
     Document, Handover, IssuerSigned, MobileSecurityObject, OID4VPHandover, ResponseStatus,
     SessionTranscript, VersionString, cose,
 };
+use crate::{generate, serde_cbor};
 
 /// Generate an IETF `dc+sd-jwt` format credential.
 #[derive(Debug)]
@@ -253,15 +253,15 @@ impl<S: SignerExt>
 
 #[cfg(test)]
 mod tests {
+    use credibil_core::did_jwk;
     use credibil_jose::KeyBinding;
     use serde_json::{Value, json};
     use test_providers::issuer::Issuer;
     use test_providers::wallet::Wallet;
 
     use super::*;
-    use crate::common::did_jwk;
-    use crate::oid4vp::verifier::Claim;
-    use crate::vdc::mso_mdoc::MdocBuilder;
+    use crate::dcql::Claim;
+    use crate::mso_mdoc::MdocBuilder;
 
     #[tokio::test]
     async fn build_vp() {

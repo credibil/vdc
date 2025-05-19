@@ -1,18 +1,19 @@
 //! Tests for the Verifier API
 
 use credibil_core::blockstore::BlockStore;
+use credibil_core::did_jwk;
 use credibil_identity::{Key, SignerExt};
 use credibil_jose::PublicKeyJwk;
 use credibil_status::{StatusClaim, StatusList, TokenBuilder};
-use credibil_vc::did_jwk;
-use credibil_vc::oid4vp::verifier::{DcqlQuery, ResponseMode};
+use credibil_vc::oid4vp::verifier::ResponseMode;
 use credibil_vc::oid4vp::{
     self, AuthorzationResponse, DeviceFlow, GenerateRequest, GenerateResponse, wallet,
 };
-use credibil_vc::vdc::mso_mdoc::MdocBuilder;
-use credibil_vc::vdc::sd_jwt::SdJwtVcBuilder;
-use credibil_vc::vdc::w3c_vc::W3cVcBuilder;
-use credibil_vc::vdc::{mso_mdoc, sd_jwt, w3c_vc};
+use credibil_vdc::dcql::DcqlQuery;
+use credibil_vdc::mso_mdoc::MdocBuilder;
+use credibil_vdc::sd_jwt::SdJwtVcBuilder;
+use credibil_vdc::w3c_vc::W3cVcBuilder;
+use credibil_vdc::{mso_mdoc, sd_jwt, w3c_vc};
 use serde_json::{Value, json};
 use test_providers::issuer::{ISSUER_ID, Issuer};
 use test_providers::verifier::{VERIFIER_ID, Verifier, data};

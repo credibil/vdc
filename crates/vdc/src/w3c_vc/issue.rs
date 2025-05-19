@@ -14,7 +14,7 @@ use credibil_jose::encode_jws;
 use credibil_status::StatusClaim;
 use serde_json::{Map, Value};
 
-use crate::vdc::w3c_vc::{
+use crate::w3c_vc::{
     CredentialStatus, CredentialStatusType, CredentialSubject, VerifiableCredential, W3cVcClaims,
 };
 

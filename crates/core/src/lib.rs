@@ -1,7 +1,9 @@
 //! # Core
 
 pub mod blockstore;
+mod did;
 
+pub use did::*;
 use serde::{Deserialize, Serialize};
 
 /// `Kind` allows serde to serialize/deserialize a string or an object.
