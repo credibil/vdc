@@ -1,0 +1,33 @@
+[package]
+name = "credibil-status"
+description = "Verifiable digital credential status"
+readme = "README.md"
+authors.workspace = true
+categories.workspace = true
+edition.workspace = true
+exclude.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+anyhow.workspace = true
+base64ct.workspace = true
+bitvec = "1.0.1"
+blockstore = "0.7.1"
+chrono.workspace = true
+credibil-core.workspace = true
+credibil-identity.workspace = true
+credibil-jose.workspace = true
+flate2 = "1.1.1"
+serde.workspace = true
+serde_json.workspace = true
+serde_repr.workspace = true
+thiserror.workspace = true
+tracing.workspace = true

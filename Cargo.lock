@@ -355,9 +355,9 @@ checksum = "d71b6127be86fdcfddb610f7182ac57211d4b18a3e9c82eb2d17662f2227ad6a"
 
 [[package]]
 name = "cc"
-version = "1.2.22"
+version = "1.2.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32db95edf998450acc7881c932f94cd9b05c87b4b2599e8bab064753da4acfd1"
+checksum = "5f4ac86a9e5bc1e2b3449ab9d7d3a6a405e3d1bb28d7b9be8614f55846ae3766"
 dependencies = [
  "shlex",
 ]
@@ -519,6 +519,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "credibil-core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytes",
+ "ciborium",
+ "cid",
+ "credibil-identity",
+ "credibil-jose",
+ "http",
+ "http-body",
+ "http-body-util",
+ "multihash-codetable",
+ "percent-encoding",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "credibil-identity"
 version = "0.1.2"
 source = "git+https://github.com/credibil/identity.git#bbc82f91512f212ce9ca035ac2011c4979481987"
@@ -556,6 +575,72 @@ dependencies = [
 ]
 
 [[package]]
+name = "credibil-openid4vci"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "axum-extra",
+ "base64ct",
+ "chrono",
+ "credibil-core",
+ "credibil-identity",
+ "credibil-jose",
+ "credibil-se",
+ "credibil-status",
+ "credibil-vdc",
+ "fastrand",
+ "hex",
+ "http",
+ "image",
+ "oauth2",
+ "qrcode",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "sha2",
+ "test-utils",
+ "thiserror 2.0.12",
+ "tokio",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
+name = "credibil-openid4vp"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "axum-extra",
+ "base64ct",
+ "chrono",
+ "credibil-core",
+ "credibil-identity",
+ "credibil-jose",
+ "credibil-se",
+ "credibil-status",
+ "credibil-vdc",
+ "fastrand",
+ "hex",
+ "image",
+ "oauth2",
+ "qrcode",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "test-utils",
+ "thiserror 2.0.12",
+ "tokio",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
 name = "credibil-se"
 version = "0.1.2"
 source = "git+https://github.com/credibil/se.git#56302fc547b9425aac383cc90a5cd3c165fd6236"
@@ -582,48 +667,48 @@ dependencies = [
 ]
 
 [[package]]
-name = "credibil-vc"
+name = "credibil-status"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "axum",
- "axum-extra",
  "base64ct",
  "bitvec",
- "bytes",
+ "blockstore",
  "chrono",
- "ciborium",
- "cid",
- "coset",
+ "credibil-core",
  "credibil-identity",
  "credibil-jose",
- "credibil-se",
- "fastrand",
  "flate2",
- "futures",
- "hex",
- "http",
- "http-body",
- "http-body-util",
- "image",
- "multihash-codetable",
- "oauth2",
- "percent-encoding",
- "provider",
- "qrcode",
- "rand 0.9.1",
- "rand_core 0.6.4",
  "serde",
  "serde_json",
  "serde_repr",
- "serde_urlencoded",
- "sha2",
- "test-kms",
  "thiserror 2.0.12",
- "tokio",
- "tower-http",
  "tracing",
- "tracing-subscriber",
+]
+
+[[package]]
+name = "credibil-vdc"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64ct",
+ "chrono",
+ "ciborium",
+ "coset",
+ "credibil-core",
+ "credibil-identity",
+ "credibil-jose",
+ "credibil-se",
+ "credibil-status",
+ "fastrand",
+ "hex",
+ "rand 0.9.1",
+ "serde",
+ "serde_json",
+ "serde_repr",
+ "sha2",
+ "test-utils",
+ "tokio",
  "uuid",
 ]
 
@@ -936,28 +1021,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6d5a32815ae3f33302d95fdcb2ce17862f8c65363dcfd29360480ba1001fc9c"
 
 [[package]]
-name = "futures"
-version = "0.3.31"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "65bc07b1a8bc7c85c5f2e110c476c7389b4554ba72af57d8445ea63a576b0876"
-dependencies = [
- "futures-channel",
- "futures-core",
- "futures-executor",
- "futures-io",
- "futures-sink",
- "futures-task",
- "futures-util",
-]
-
-[[package]]
 name = "futures-channel"
 version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2dff15bf788c671c1934e366d07e30c1814a8ef514e1af724a602e8a2fbe1b10"
 dependencies = [
  "futures-core",
- "futures-sink",
 ]
 
 [[package]]
@@ -965,40 +1034,6 @@ name = "futures-core"
 version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "05f29059c0c2090612e8d742178b0580d2dc940c837851ad723096f87af6663e"
-
-[[package]]
-name = "futures-executor"
-version = "0.3.31"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e28d1d997f585e54aebc3f97d39e72338912123a67330d723fdbb564d646c9f"
-dependencies = [
- "futures-core",
- "futures-task",
- "futures-util",
-]
-
-[[package]]
-name = "futures-io"
-version = "0.3.31"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e5c1b78ca4aae1ac06c48a526a655760685149f0d465d21f37abfe57ce075c6"
-
-[[package]]
-name = "futures-macro"
-version = "0.3.31"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "162ee34ebcb7c64a8abebc059ce0fee27c2262618d7b60ed8faf72fef13c3650"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "futures-sink"
-version = "0.3.31"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e575fab7d1e0dcb8d0c7bcf9a63ee213816ab51902e6d244a95819acacf1d4f7"
 
 [[package]]
 name = "futures-task"
@@ -1012,16 +1047,10 @@ version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9fa08315bb612088cc391249efdc3bc77536f16c91f6cf495e6fbe85b20a4a81"
 dependencies = [
- "futures-channel",
  "futures-core",
- "futures-io",
- "futures-macro",
- "futures-sink",
  "futures-task",
- "memchr",
  "pin-project-lite",
  "pin-utils",
- "slab",
 ]
 
 [[package]]
@@ -1245,9 +1274,9 @@ dependencies = [
 
 [[package]]
 name = "hyper-util"
-version = "0.1.11"
+version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "497bbc33a26fdd4af9ed9c70d63f61cf56a938375fbb32df34db9b1cd6d643f2"
+checksum = "cf9f1e950e0d9d1d3c47184416723cf29c0d1f93bd8cccf37e4beb6b44f31710"
 dependencies = [
  "bytes",
  "futures-channel",
@@ -1336,9 +1365,9 @@ checksum = "00210d6893afc98edb752b664b8890f0ef174c8adbb8d0be9710fa66fbbf72d3"
 
 [[package]]
 name = "icu_properties"
-version = "2.0.0"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2549ca8c7241c82f59c80ba2a6f415d931c5b58d24fb8412caa1a1f02c49139a"
+checksum = "016c619c1eeb94efb86809b015c58f479963de65bdb6253345c1a1276f22e32b"
 dependencies = [
  "displaydoc",
  "icu_collections",
@@ -1352,9 +1381,9 @@ dependencies = [
 
 [[package]]
 name = "icu_properties_data"
-version = "2.0.0"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8197e866e47b68f8f7d95249e172903bec06004b18b2937f1095d40a0c57de04"
+checksum = "298459143998310acd25ffe6810ed544932242d3f07083eee1084d83a71bd632"
 
 [[package]]
 name = "icu_provider"
@@ -1701,7 +1730,7 @@ version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51e219e79014df21a225b1860a479e2dcd7cbd9130f4defd4bd0e191ea31d67d"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.21.7",
  "chrono",
  "getrandom 0.2.16",
  "http",
@@ -1903,22 +1932,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02b3e5e68a3a1a02aad3ec490a98007cbc13c37cbe84a3cd7b8e406d76e7f778"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "provider"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "base64ct",
- "blockstore",
- "credibil-identity",
- "credibil-jose",
- "credibil-se",
- "credibil-vc",
- "rand_core 0.6.4",
- "serde_json",
- "test-kms",
 ]
 
 [[package]]
@@ -2559,6 +2572,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "test-utils"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "blockstore",
+ "credibil-core",
+ "credibil-identity",
+ "credibil-jose",
+ "credibil-se",
+ "credibil-status",
+ "credibil-vdc",
+ "serde_json",
+ "test-kms",
+ "uuid",
+]
+
+[[package]]
 name = "thiserror"
 version = "1.0.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3030,15 +3060,15 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "windows-core"
-version = "0.61.1"
+version = "0.61.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46ec44dc15085cea82cf9c78f85a9114c463a369786585ad2882d1ff0b0acf40"
+checksum = "c0fdd3ddb90610c7638aa2b3a3ab2904fb9e5cdbecc643ddb3647212781c4ae3"
 dependencies = [
  "windows-implement",
  "windows-interface",
  "windows-link",
  "windows-result",
- "windows-strings 0.4.1",
+ "windows-strings 0.4.2",
 ]
 
 [[package]]
@@ -3082,9 +3112,9 @@ dependencies = [
 
 [[package]]
 name = "windows-result"
-version = "0.3.3"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b895b5356fc36103d0f64dd1e94dfa7ac5633f1c9dd6e80fe9ec4adef69e09d"
+checksum = "56f42bd332cc6c8eac5af113fc0c1fd6a8fd2aa08a0119358686e5160d0586c6"
 dependencies = [
  "windows-link",
 ]
@@ -3100,9 +3130,9 @@ dependencies = [
 
 [[package]]
 name = "windows-strings"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a7ab927b2637c19b3dbe0965e75d8f2d30bdd697a1516191cad2ec4df8fb28a"
+checksum = "56e6c93f3a0c3b36176cb1327a4958a0353d5d166c2a35cb268ace15e91d3b57"
 dependencies = [
  "windows-link",
 ]

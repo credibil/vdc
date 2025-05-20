@@ -1,0 +1,41 @@
+[package]
+name = "credibil-vdc"
+description = "Verifiable digital credential status"
+readme = "README.md"
+authors.workspace = true
+categories.workspace = true
+edition.workspace = true
+exclude.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+anyhow.workspace = true
+base64ct.workspace = true
+chrono.workspace = true
+ciborium.workspace = true
+coset = "0.3.8"
+credibil-core.workspace = true
+credibil-identity.workspace = true
+credibil-jose.workspace = true
+credibil-se.workspace = true
+credibil-status.workspace = true
+fastrand = "2.3.0"
+rand = "0.9.1"
+serde.workspace = true
+serde_json.workspace = true
+serde_repr.workspace = true
+sha2.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+hex = "0.4.3"
+test-utils.workspace = true
+tokio.workspace = true
