@@ -575,7 +575,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "credibil-openid"
+name = "credibil-openid4vci"
 version = "0.1.0"
 dependencies = [
  "anyhow",
