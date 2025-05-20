@@ -45,7 +45,7 @@ impl Signer for Verifier {
     }
 
     async fn algorithm(&self) -> Result<Algorithm> {
-        Ok(self.identity.algorithm())
+        self.identity.algorithm().await
     }
 }
 

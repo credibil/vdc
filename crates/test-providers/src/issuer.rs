@@ -50,7 +50,7 @@ impl Signer for Issuer {
     }
 
     async fn algorithm(&self) -> Result<Algorithm> {
-        Ok(self.identity.algorithm())
+        self.identity.algorithm().await
     }
 }
 
