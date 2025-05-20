@@ -7,11 +7,11 @@ use credibil_core::blockstore::BlockStore;
 use credibil_core::{OneMany, did_jwk};
 use credibil_identity::{Key, SignerExt};
 use credibil_jose::{JwsBuilder, Jwt, decode_jws};
-use credibil_openid4vci::issuer::{
+use credibil_oid4vci::issuer::{
     CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, CredentialResponse,
     NonceRequest, ProofClaims, TokenGrantType, TokenRequest, W3cVcClaims,
 };
-use credibil_openid4vci::{self, JwtType};
+use credibil_oid4vci::{self, JwtType};
 use credibil_vdc::sd_jwt::SdJwtClaims;
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -42,7 +42,7 @@ async fn two_proofs() {
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
-        credibil_openid4vci::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
+        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -57,13 +57,15 @@ async fn two_proofs() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token = credibil_openid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+    let token =
+        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares 2 proofs for the credential request
     // --------------------------------------------------
-    let nonce =
-        credibil_openid4vci::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
+    let nonce = credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider)
+        .await
+        .expect("should return nonce");
 
     // proof of possession of key material
     let bob_key = bob
@@ -109,15 +111,16 @@ async fn two_proofs() {
         .with_proof(jws_2.encode().expect("should encode JWS"))
         .build();
 
-    let request = credibil_openid4vci::Request {
+    let request = credibil_oid4vci::Request {
         body: request,
         headers: CredentialHeaders {
             authorization: token.access_token.clone(),
         },
     };
 
-    let response =
-        credibil_openid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
+    let response = credibil_oid4vci::handle(ISSUER_ID, request, &provider)
+        .await
+        .expect("should return credential");
 
     // --------------------------------------------------
     // Bob extracts and verifies the received credentials
@@ -175,7 +178,7 @@ async fn sd_jwt() {
     let request =
         CreateOfferRequest::builder().subject_id(BOB_ID).with_credential("Identity_SD_JWT").build();
     let response =
-        credibil_openid4vci::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
+        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -190,13 +193,15 @@ async fn sd_jwt() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token = credibil_openid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+    let token =
+        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares 2 proofs for the credential request
     // --------------------------------------------------
-    let nonce =
-        credibil_openid4vci::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
+    let nonce = credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider)
+        .await
+        .expect("should return nonce");
 
     // proof of possession of key material
     let bob_key = bob
@@ -224,15 +229,16 @@ async fn sd_jwt() {
         .with_proof(jws.encode().expect("should encode JWS"))
         .build();
 
-    let request = credibil_openid4vci::Request {
+    let request = credibil_oid4vci::Request {
         body: request,
         headers: CredentialHeaders {
             authorization: token.access_token.clone(),
         },
     };
 
-    let response =
-        credibil_openid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
+    let response = credibil_oid4vci::handle(ISSUER_ID, request, &provider)
+        .await
+        .expect("should return credential");
 
     // --------------------------------------------------
     // Bob extracts and verifies the received credentials

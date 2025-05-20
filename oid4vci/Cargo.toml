@@ -1,5 +1,5 @@
 [package]
-name = "credibil-openid4vci"
+name = "credibil-oid4vci"
 description = "OpenID for Verifiable Credential Issuance and Verifiable Presentation"
 readme = "README.md"
 authors.workspace = true

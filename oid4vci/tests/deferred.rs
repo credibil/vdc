@@ -6,12 +6,12 @@ use credibil_core::blockstore::BlockStore;
 use credibil_core::{OneMany, did_jwk};
 use credibil_identity::{Key, SignerExt};
 use credibil_jose::{JwsBuilder, Jwt, decode_jws};
-use credibil_openid4vci::issuer::{
+use credibil_oid4vci::issuer::{
     CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, CredentialResponse,
     Dataset, DeferredCredentialRequest, DeferredHeaders, NonceRequest, ProofClaims, TokenGrantType,
     TokenRequest, W3cVcClaims,
 };
-use credibil_openid4vci::{self, JwtType};
+use credibil_oid4vci::{self, JwtType};
 use serde_json::json;
 use test_utils::issuer::{CAROL_ID, ISSUER_ID, Issuer, data};
 use test_utils::wallet::Wallet;
@@ -40,9 +40,8 @@ async fn deferred() {
         .subject_id(CAROL_ID)
         .with_credential("EmployeeID_W3C_VC")
         .build();
-    let response = credibil_openid4vci::handle(ISSUER_ID, request, &provider)
-        .await
-        .expect("should create offer");
+    let response =
+        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -57,14 +56,13 @@ async fn deferred() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token = credibil_openid4vci::handle(ISSUER_ID, request, &provider)
-        .await
-        .expect("should return token");
+    let token =
+        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a proof for a credential request
     // --------------------------------------------------
-    let nonce = credibil_openid4vci::handle(ISSUER_ID, NonceRequest, &provider)
+    let nonce = credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider)
         .await
         .expect("should return nonce");
 
@@ -95,14 +93,14 @@ async fn deferred() {
         .with_proof(jwt)
         .build();
 
-    let request = credibil_openid4vci::Request {
+    let request = credibil_oid4vci::Request {
         body: request,
         headers: CredentialHeaders {
             authorization: token.access_token.clone(),
         },
     };
 
-    let response = credibil_openid4vci::handle(ISSUER_ID, request, &provider)
+    let response = credibil_oid4vci::handle(ISSUER_ID, request, &provider)
         .await
         .expect("should return credential");
 
@@ -128,7 +126,7 @@ async fn deferred() {
         panic!("expected transaction_id");
     };
 
-    let request = credibil_openid4vci::Request {
+    let request = credibil_oid4vci::Request {
         body: DeferredCredentialRequest {
             transaction_id: transaction_id.clone(),
         },
@@ -136,7 +134,7 @@ async fn deferred() {
             authorization: token.access_token.clone(),
         },
     };
-    let response = credibil_openid4vci::handle(ISSUER_ID, request, &provider)
+    let response = credibil_oid4vci::handle(ISSUER_ID, request, &provider)
         .await
         .expect("should return credential");
 

@@ -17,7 +17,7 @@ use axum_extra::headers::{Authorization, Host};
 use credibil_core::blockstore::BlockStore;
 use credibil_core::http::IntoHttp;
 use credibil_core::urlencode;
-use credibil_openid4vci::{
+use credibil_oid4vci::{
     AuthorizationRequest, CreateOfferRequest, CredentialHeaders, CredentialOfferRequest,
     CredentialRequest, DeferredCredentialRequest, IssuerRequest, NotificationHeaders,
     NotificationRequest, PushedAuthorizationRequest, ServerRequest, TokenRequest,
@@ -90,7 +90,7 @@ async fn create_offer(
     State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
     Json(req): Json<CreateOfferRequest>,
 ) -> impl IntoResponse {
-    credibil_openid4vci::handle(&format!("http://{host}"), req, &provider).await.into_http()
+    credibil_oid4vci::handle(&format!("http://{host}"), req, &provider).await.into_http()
 }
 
 // Retrieve Credential Offer endpoint
@@ -100,7 +100,7 @@ async fn credential_offer(
     Path(offer_id): Path<String>,
 ) -> impl IntoResponse {
     let request = CredentialOfferRequest { id: offer_id };
-    credibil_openid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
+    credibil_oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }
 
 // Metadata endpoint
@@ -109,11 +109,11 @@ async fn credential_offer(
 async fn metadata(
     headers: HeaderMap, State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
 ) -> impl IntoResponse {
-    let request = credibil_openid4vci::Request {
+    let request = credibil_oid4vci::Request {
         body: IssuerRequest,
         headers: headers.try_into().expect("should find language header"),
     };
-    credibil_openid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
+    credibil_oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }
 
 // OAuth Server metadata endpoint
@@ -125,7 +125,7 @@ async fn oauth_server(
         // Issuer should be derived from path component if necessary
         issuer: None,
     };
-    credibil_openid4vci::handle(&format!("http://{host}"), req, &provider).await.into_http()
+    credibil_oid4vci::handle(&format!("http://{host}"), req, &provider).await.into_http()
 }
 
 /// Authorize endpoint
@@ -177,7 +177,7 @@ async fn authorize(
             .into_response();
     };
 
-    match credibil_openid4vci::handle(&format!("http://{host}"), req, &provider).await {
+    match credibil_oid4vci::handle(&format!("http://{host}"), req, &provider).await {
         Ok(v) => (StatusCode::FOUND, Redirect::to(&format!("{redirect_uri}?code={}", v.body.code)))
             .into_response(),
         Err(e) => {
@@ -230,7 +230,7 @@ async fn par(
     }
 
     // process request
-    credibil_openid4vci::handle(&format!("http://{host}"), req, &provider)
+    credibil_oid4vci::handle(&format!("http://{host}"), req, &provider)
         .await
         .into_http()
         .into_response()
@@ -290,7 +290,7 @@ async fn token(
         return (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid request"})))
             .into_response();
     };
-    credibil_openid4vci::handle(&format!("http://{host}"), tr, &provider)
+    credibil_oid4vci::handle(&format!("http://{host}"), tr, &provider)
         .await
         .into_http()
         .into_response()
@@ -302,13 +302,13 @@ async fn credential(
     State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>, Json(request): Json<CredentialRequest>,
 ) -> impl IntoResponse {
-    let request = credibil_openid4vci::Request {
+    let request = credibil_oid4vci::Request {
         body: request,
         headers: CredentialHeaders {
             authorization: auth.token().to_string(),
         },
     };
-    credibil_openid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
+    credibil_oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }
 
 // Deferred endpoint
@@ -318,13 +318,13 @@ async fn deferred_credential(
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     Json(request): Json<DeferredCredentialRequest>,
 ) -> impl IntoResponse {
-    let request = credibil_openid4vci::Request {
+    let request = credibil_oid4vci::Request {
         body: request,
         headers: CredentialHeaders {
             authorization: auth.token().to_string(),
         },
     };
-    credibil_openid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
+    credibil_oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }
 
 /// Notification endpoint
@@ -336,13 +336,13 @@ async fn notification(
 ) -> impl IntoResponse {
     let mut headers = HeaderMap::new();
     headers.insert(AUTHORIZATION, auth.token().parse().unwrap());
-    let request = credibil_openid4vci::Request {
+    let request = credibil_oid4vci::Request {
         body: request,
         headers: NotificationHeaders {
             authorization: auth.token().to_string(),
         },
     };
-    credibil_openid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
+    credibil_oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }
 
 // Status Lists endpoint

@@ -1,5 +1,5 @@
 [package]
-name = "credibil-openid4vp"
+name = "credibil-oid4vp"
 description = "OpenID for Verifiable Presentations"
 readme = "README.md"
 authors.workspace = true

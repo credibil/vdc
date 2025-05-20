@@ -4,8 +4,8 @@ use credibil_core::blockstore::BlockStore;
 use credibil_core::did_jwk;
 use credibil_identity::{Key, SignerExt};
 use credibil_jose::PublicKeyJwk;
-use credibil_openid4vp::verifier::ResponseMode;
-use credibil_openid4vp::{
+use credibil_oid4vp::verifier::ResponseMode;
+use credibil_oid4vp::{
     self, AuthorzationResponse, DeviceFlow, GenerateRequest, GenerateResponse, wallet,
 };
 use credibil_status::{StatusClaim, StatusList, TokenBuilder};
@@ -67,7 +67,7 @@ async fn multiple_claims() {
             response_uri: "http://localhost:3000/cb".to_string(),
         },
     };
-    let response = credibil_openid4vp::handle(VERIFIER_ID, request, verifier)
+    let response = credibil_oid4vp::handle(VERIFIER_ID, request, verifier)
         .await
         .expect("should create request");
 
@@ -97,7 +97,7 @@ async fn multiple_claims() {
     // --------------------------------------------------
     // Verifier processes the Wallets's Authorization Response.
     // --------------------------------------------------
-    let response = credibil_openid4vp::handle(VERIFIER_ID, request, verifier)
+    let response = credibil_oid4vp::handle(VERIFIER_ID, request, verifier)
         .await
         .expect("should create request");
 
@@ -166,7 +166,7 @@ async fn multiple_credentials() {
             response_uri: "http://localhost:3000/cb".to_string(),
         },
     };
-    let response = credibil_openid4vp::handle(VERIFIER_ID, request, verifier)
+    let response = credibil_oid4vp::handle(VERIFIER_ID, request, verifier)
         .await
         .expect("should create request");
 
@@ -194,7 +194,7 @@ async fn multiple_credentials() {
         vp_token,
         state: request_object.state,
     };
-    let response = credibil_openid4vp::handle(VERIFIER_ID, request, verifier)
+    let response = credibil_oid4vp::handle(VERIFIER_ID, request, verifier)
         .await
         .expect("should create request");
 

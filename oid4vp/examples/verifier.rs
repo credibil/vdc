@@ -13,7 +13,7 @@ use axum_extra::TypedHeader;
 use axum_extra::headers::Host;
 use credibil_core::blockstore::BlockStore;
 use credibil_core::http::IntoHttp;
-use credibil_openid4vp::{AuthorzationResponse, GenerateRequest, RequestUriRequest};
+use credibil_oid4vp::{AuthorzationResponse, GenerateRequest, RequestUriRequest};
 use test_utils::verifier::data::VERIFIER;
 use test_utils::verifier::{VERIFIER_ID, Verifier};
 use tokio::net::TcpListener;
@@ -55,7 +55,7 @@ async fn create_request(
     State(provider): State<Verifier>, TypedHeader(host): TypedHeader<Host>,
     Json(request): Json<GenerateRequest>,
 ) -> impl IntoResponse {
-    credibil_openid4vp::handle(&format!("http://{host}"), request, &provider).await.into_http()
+    credibil_oid4vp::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }
 
 // Retrieve Authorization Request Object endpoint
@@ -69,7 +69,7 @@ async fn request_uri(
         wallet_metadata: None, // Some(wallet_metadata),
         wallet_nonce: None,    // Some(wallet_nonce)
     };
-    credibil_openid4vp::handle(&format!("http://{host}"), request, &provider).await.into_http()
+    credibil_oid4vp::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }
 
 // Wallet Authorization response endpoint
@@ -83,7 +83,7 @@ async fn response(
         return (StatusCode::BAD_REQUEST, "unable to turn request into AuthorzationResponse")
             .into_response();
     };
-    credibil_openid4vp::handle(&format!("http://{host}"), req, &provider)
+    credibil_oid4vp::handle(&format!("http://{host}"), req, &provider)
         .await
         .into_http()
         .into_response()
