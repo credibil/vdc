@@ -21,13 +21,13 @@ use tokio::sync::OnceCell;
 
 static BOB: OnceCell<Wallet> = OnceCell::const_new();
 async fn bob() -> &'static Wallet {
-    BOB.get_or_init(|| async { Wallet::new("tests_vci_issuance_bob").await }).await
+    BOB.get_or_init(|| async { Wallet::new("vci_issuance_bob").await }).await
 }
 
 // Should allow the Wallet to provide 2 JWT proofs when requesting a credential.
 #[tokio::test]
 async fn two_proofs() {
-    let provider = Issuer::new("tests_vci_issuance_two_proofs_issuer").await;
+    let provider = Issuer::new("vci_issuance_two_proofs").await;
     let bob = bob().await;
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
@@ -82,7 +82,7 @@ async fn two_proofs() {
         .await
         .expect("builds JWS");
 
-    let dan = Wallet::new("tests_vci_issuance_two_proofs_dan").await;
+    let dan = Wallet::new("vci_issuance_two_proofs_dan").await;
     let dan_key = dan
         .verification_method()
         .await
@@ -162,7 +162,7 @@ async fn two_proofs() {
 // Should issue a SD-JWT credential.
 #[tokio::test]
 async fn sd_jwt() {
-    let provider = Issuer::new("tests_vci_issuance_sd_jwt_issuer").await;
+    let provider = Issuer::new("vci_issuance_sd_jwt").await;
     let bob = bob().await;
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();

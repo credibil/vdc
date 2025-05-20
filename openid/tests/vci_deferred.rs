@@ -19,14 +19,14 @@ use tokio::sync::OnceCell;
 
 static CAROL: OnceCell<Wallet> = OnceCell::const_new();
 async fn carol() -> &'static Wallet {
-    CAROL.get_or_init(|| async { Wallet::new("tests_vci_deferred_carol").await }).await
+    CAROL.get_or_init(|| async { Wallet::new("vci_deferred_carol").await }).await
 }
 
 // Should return a credential when using the pre-authorized code flow and the
 // credential offer to the Wallet is made by value.
 #[tokio::test]
 async fn deferred() {
-    let provider = Issuer::new("tests_vci_deferred_deferred_issuer").await;
+    let provider = Issuer::new("vci_deferred_deferred").await;
     let carol = carol().await;
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
