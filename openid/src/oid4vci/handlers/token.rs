@@ -94,14 +94,12 @@ async fn token(
     })
 }
 
-impl<P: Provider> Handler<P> for Request<TokenRequest> {
+impl<P: Provider> Handler<TokenResponse, P> for Request<TokenRequest> {
     type Error = Error;
-    type Provider = P;
-    type Response = TokenResponse;
 
     async fn handle(
-        self, issuer: &str, provider: &Self::Provider,
-    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        self, issuer: &str, provider: &P,
+    ) -> Result<impl Into<Response<TokenResponse>>, Self::Error> {
         token(issuer, provider, self.body).await
     }
 }

@@ -35,14 +35,12 @@ async fn nonce(_issuer: &str, provider: &impl Provider, _: NonceRequest) -> Resu
     Ok(NonceResponse { c_nonce })
 }
 
-impl<P: Provider> Handler<P> for Request<NonceRequest> {
+impl<P: Provider> Handler<NonceResponse, P> for Request<NonceRequest> {
     type Error = Error;
-    type Provider = P;
-    type Response = NonceResponse;
 
     async fn handle(
-        self, issuer: &str, provider: &Self::Provider,
-    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        self, issuer: &str, provider: &P,
+    ) -> Result<impl Into<Response<NonceResponse>>, Self::Error> {
         nonce(issuer, provider, self.body).await
     }
 }

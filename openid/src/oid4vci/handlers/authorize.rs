@@ -173,14 +173,12 @@ async fn authorize(
     })
 }
 
-impl<P: Provider> Handler<P> for Request<AuthorizationRequest> {
+impl<P: Provider> Handler<AuthorizationResponse, P> for Request<AuthorizationRequest> {
     type Error = Error;
-    type Provider = P;
-    type Response = AuthorizationResponse;
 
     async fn handle(
-        self, issuer: &str, provider: &Self::Provider,
-    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        self, issuer: &str, provider: &P,
+    ) -> Result<impl Into<Response<AuthorizationResponse>>, Self::Error> {
         authorize(issuer, provider, self.body).await
     }
 }

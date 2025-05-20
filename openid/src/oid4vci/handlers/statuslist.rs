@@ -27,14 +27,12 @@ async fn statuslist(
     Ok(StatusListResponse(token))
 }
 
-impl<P: Provider> Handler<P> for Request<StatusListRequest> {
+impl<P: Provider> Handler<StatusListResponse, P> for Request<StatusListRequest> {
     type Error = Error;
-    type Provider = P;
-    type Response = StatusListResponse;
 
     async fn handle(
-        self, issuer: &str, provider: &Self::Provider,
-    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        self, issuer: &str, provider: &P,
+    ) -> Result<impl Into<Response<StatusListResponse>>, Self::Error> {
         statuslist(issuer, provider, self.body).await
     }
 }

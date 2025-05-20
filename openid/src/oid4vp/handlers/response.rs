@@ -59,14 +59,12 @@ async fn response(
     })
 }
 
-impl<P: Provider> Handler<P> for Request<AuthorzationResponse> {
+impl<P: Provider> Handler<RedirectResponse, P> for Request<AuthorzationResponse> {
     type Error = Error;
-    type Provider = P;
-    type Response = RedirectResponse;
 
     async fn handle(
-        self, verifier: &str, provider: &Self::Provider,
-    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        self, verifier: &str, provider: &P,
+    ) -> Result<impl Into<Response<RedirectResponse>>, Self::Error> {
         response(verifier, provider, self.body).await
     }
 }

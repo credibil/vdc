@@ -40,14 +40,12 @@ async fn metadata(
     })
 }
 
-impl<P: Provider> Handler<P> for Request<ServerRequest> {
+impl<P: Provider> Handler<ServerResponse, P> for Request<ServerRequest> {
     type Error = Error;
-    type Provider = P;
-    type Response = ServerResponse;
 
     async fn handle(
-        self, issuer: &str, provider: &Self::Provider,
-    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        self, issuer: &str, provider: &P,
+    ) -> Result<impl Into<Response<ServerResponse>>, Self::Error> {
         metadata(issuer, provider, self.body).await
     }
 }

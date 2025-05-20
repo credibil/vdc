@@ -49,14 +49,14 @@ async fn notification(
     Ok(NotificationResponse)
 }
 
-impl<P: Provider> Handler<P> for Request<NotificationRequest, NotificationHeaders> {
+impl<P: Provider> Handler<NotificationResponse, P>
+    for Request<NotificationRequest, NotificationHeaders>
+{
     type Error = Error;
-    type Provider = P;
-    type Response = NotificationResponse;
 
     async fn handle(
-        self, issuer: &str, provider: &Self::Provider,
-    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        self, issuer: &str, provider: &P,
+    ) -> Result<impl Into<Response<NotificationResponse>>, Self::Error> {
         notification(issuer, provider, self).await
     }
 }

@@ -45,14 +45,12 @@ async fn credential_offer(
     })
 }
 
-impl<P: Provider> Handler<P> for Request<CredentialOfferRequest> {
+impl<P: Provider> Handler<CredentialOfferResponse, P> for Request<CredentialOfferRequest> {
     type Error = Error;
-    type Provider = P;
-    type Response = CredentialOfferResponse;
 
     async fn handle(
-        self, issuer: &str, provider: &Self::Provider,
-    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        self, issuer: &str, provider: &P,
+    ) -> Result<impl Into<Response<CredentialOfferResponse>>, Self::Error> {
         credential_offer(issuer, provider, self.body).await
     }
 }

@@ -30,14 +30,14 @@ async fn register(
     Ok(RegistrationResponse { client_metadata })
 }
 
-impl<P: Provider> Handler<P> for Request<RegistrationRequest, RegistrationHeaders> {
+impl<P: Provider> Handler<RegistrationResponse, P>
+    for Request<RegistrationRequest, RegistrationHeaders>
+{
     type Error = Error;
-    type Provider = P;
-    type Response = RegistrationResponse;
 
     async fn handle(
-        self, issuer: &str, provider: &Self::Provider,
-    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        self, issuer: &str, provider: &P,
+    ) -> Result<impl Into<Response<RegistrationResponse>>, Self::Error> {
         register(issuer, provider, self).await
     }
 }

@@ -77,14 +77,12 @@ pub async fn credential(
     ctx.issue(provider, dataset).await
 }
 
-impl<P: Provider> Handler<P> for Request<CredentialRequest, CredentialHeaders> {
+impl<P: Provider> Handler<CredentialResponse, P> for Request<CredentialRequest, CredentialHeaders> {
     type Error = Error;
-    type Provider = P;
-    type Response = CredentialResponse;
 
     async fn handle(
-        self, issuer: &str, provider: &Self::Provider,
-    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        self, issuer: &str, provider: &P,
+    ) -> Result<impl Into<Response<CredentialResponse>>, Self::Error> {
         credential(issuer, provider, self).await
     }
 }

@@ -54,14 +54,12 @@ async fn par(
     })
 }
 
-impl<P: Provider> Handler<P> for Request<PushedAuthorizationRequest> {
+impl<P: Provider> Handler<PushedAuthorizationResponse, P> for Request<PushedAuthorizationRequest> {
     type Error = Error;
-    type Provider = P;
-    type Response = PushedAuthorizationResponse;
 
     async fn handle(
-        self, issuer: &str, provider: &Self::Provider,
-    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        self, issuer: &str, provider: &P,
+    ) -> Result<impl Into<Response<PushedAuthorizationResponse>>, Self::Error> {
         par(issuer, provider, self.body).await
     }
 }

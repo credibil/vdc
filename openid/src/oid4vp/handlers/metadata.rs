@@ -28,14 +28,12 @@ async fn metadata(
     })
 }
 
-impl<P: Provider> Handler<P> for Request<MetadataRequest> {
+impl<P: Provider> Handler<MetadataResponse, P> for Request<MetadataRequest> {
     type Error = Error;
-    type Provider = P;
-    type Response = MetadataResponse;
 
     async fn handle(
-        self, verifier: &str, provider: &Self::Provider,
-    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        self, verifier: &str, provider: &P,
+    ) -> Result<impl Into<Response<MetadataResponse>>, Self::Error> {
         metadata(verifier, provider, self.body).await
     }
 }

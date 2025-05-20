@@ -72,14 +72,12 @@ pub async fn request_uri(
     Ok(RequestUriResponse::Jwt(jws.encode().context("encoding jwt")?))
 }
 
-impl<P: Provider> Handler<P> for Request<RequestUriRequest> {
+impl<P: Provider> Handler<RequestUriResponse, P> for Request<RequestUriRequest> {
     type Error = Error;
-    type Provider = P;
-    type Response = RequestUriResponse;
 
     async fn handle(
-        self, verifier: &str, provider: &Self::Provider,
-    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        self, verifier: &str, provider: &P,
+    ) -> Result<impl Into<Response<RequestUriResponse>>, Self::Error> {
         request_uri(verifier, provider, self.body).await
     }
 }

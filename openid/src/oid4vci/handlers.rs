@@ -15,16 +15,16 @@ mod notification;
 mod par;
 mod register;
 mod server;
-mod statuslist;
+// mod statuslist;
 mod token;
 
 use std::fmt::Debug;
 
+pub use credibil_core::api::{Body, Handler, Headers, NoHeaders, Request, Response};
 use http::HeaderMap;
 use http::header::ACCEPT_LANGUAGE;
 use tracing::instrument;
 
-pub use crate::common::api::{Body, Handler, Headers, NoHeaders, Request, Response};
 pub use crate::oid4vci::error::Error;
 use crate::oid4vci::error::invalid;
 use crate::oid4vci::provider::Provider;
@@ -50,7 +50,7 @@ where
     B: Body,
     H: Headers,
     P: Provider,
-    Request<B, H>: Handler<P, Provider = P, Response = U, Error = Error>,
+    Request<B, H>: Handler<U, P, Error = Error>,
 {
     let request: Request<B, H> = request.into();
     Ok(request.handle(issuer, provider).await?.into())

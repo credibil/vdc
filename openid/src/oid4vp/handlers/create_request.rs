@@ -63,14 +63,12 @@ async fn create_request(
     Ok(response)
 }
 
-impl<P: Provider> Handler<P> for Request<GenerateRequest> {
+impl<P: Provider> Handler<GenerateResponse, P> for Request<GenerateRequest> {
     type Error = Error;
-    type Provider = P;
-    type Response = GenerateResponse;
 
     async fn handle(
-        self, verifier: &str, provider: &Self::Provider,
-    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        self, verifier: &str, provider: &P,
+    ) -> Result<impl Into<Response<GenerateResponse>>, Self::Error> {
         create_request(verifier, provider, self.body).await
     }
 }

@@ -61,14 +61,14 @@ async fn deferred(
     Ok(response)
 }
 
-impl<P: Provider> Handler<P> for Request<DeferredCredentialRequest, DeferredHeaders> {
+impl<P: Provider> Handler<DeferredCredentialResponse, P>
+    for Request<DeferredCredentialRequest, DeferredHeaders>
+{
     type Error = Error;
-    type Provider = P;
-    type Response = DeferredCredentialResponse;
 
     async fn handle(
-        self, issuer: &str, provider: &Self::Provider,
-    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        self, issuer: &str, provider: &P,
+    ) -> Result<impl Into<Response<DeferredCredentialResponse>>, Self::Error> {
         deferred(issuer, provider, self).await
     }
 }

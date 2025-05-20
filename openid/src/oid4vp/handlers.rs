@@ -12,9 +12,9 @@ mod response;
 
 use std::fmt::Debug;
 
+pub use credibil_core::api::{Body, Handler, Headers, NoHeaders, Request, Response};
 use tracing::instrument;
 
-pub use crate::common::api::{Body, Handler, Headers, NoHeaders, Request, Response};
 pub use crate::oid4vp::error::Error;
 use crate::oid4vp::provider::Provider;
 
@@ -39,7 +39,7 @@ where
     B: Body,
     H: Headers,
     P: Provider,
-    Request<B, H>: Handler<P, Response = U, Provider = P, Error = Error>,
+    Request<B, H>: Handler<U, P, Error = Error>,
 {
     let request: Request<B, H> = request.into();
     Ok(request.handle(verifier, provider).await?.into())

@@ -44,14 +44,12 @@ async fn metadata(
     Ok(IssuerResponse(credential_issuer))
 }
 
-impl<P: Provider> Handler<P> for Request<IssuerRequest, MetadataHeaders> {
+impl<P: Provider> Handler<IssuerResponse, P> for Request<IssuerRequest, MetadataHeaders> {
     type Error = Error;
-    type Provider = P;
-    type Response = IssuerResponse;
 
     async fn handle(
-        self, issuer: &str, provider: &Self::Provider,
-    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        self, issuer: &str, provider: &P,
+    ) -> Result<impl Into<Response<IssuerResponse>>, Self::Error> {
         metadata(issuer, provider, self).await
     }
 }

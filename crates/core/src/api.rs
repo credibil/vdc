@@ -9,24 +9,6 @@ use std::ops::Deref;
 
 use http::StatusCode;
 
-// /// Methods common to all messages.
-// ///
-// /// The primary role of this trait is to provide a common interface for
-// /// messages so they can be handled by [`handle`] method.
-// pub trait Handler<P> {
-//     /// The provider type used to access the implementer's capability provider.
-//     type Provider;
-//     /// The inner reply type specific to the implementing message.
-//     type Response;
-//     /// The error type returned by the handler.
-//     type Error;
-
-//     /// Routes the message to the concrete handler used to process the message.
-//     fn handle(
-//         self, issuer: &str, provider: &Self::Provider,
-//     ) -> impl Future<Output = Result<impl Into<Response<Self::Response>>, Self::Error>> + Send;
-// }
-
 /// A request to process.
 #[derive(Clone, Debug)]
 pub struct Request<B, H = NoHeaders>
@@ -82,6 +64,20 @@ impl<T> Deref for Response<T> {
     fn deref(&self) -> &Self::Target {
         &self.body
     }
+}
+
+/// Request handler.
+///
+/// The primary role of this trait is to provide a common interface for
+/// requests so they can be handled by [`handle`] method.
+pub trait Handler<U, P> {
+    /// The error type returned by the handler.
+    type Error;
+
+    /// Routes the message to the concrete handler used to process the message.
+    fn handle(
+        self, issuer: &str, provider: &P,
+    ) -> impl Future<Output = Result<impl Into<Response<U>>, Self::Error>> + Send;
 }
 
 /// The `Body` trait is used to restrict the types able to implement

@@ -106,14 +106,12 @@ async fn create_offer(
     })
 }
 
-impl<P: Provider> Handler<P> for Request<CreateOfferRequest> {
+impl<P: Provider> Handler<CreateOfferResponse, P> for Request<CreateOfferRequest> {
     type Error = Error;
-    type Provider = P;
-    type Response = CreateOfferResponse;
 
     async fn handle(
-        self, issuer: &str, provider: &Self::Provider,
-    ) -> Result<impl Into<Response<Self::Response>>, Self::Error> {
+        self, issuer: &str, provider: &P,
+    ) -> Result<impl Into<Response<CreateOfferResponse>>, Self::Error> {
         create_offer(issuer, provider, self.body).await
     }
 }
