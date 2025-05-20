@@ -532,6 +532,7 @@ dependencies = [
  "http-body",
  "http-body-util",
  "multihash-codetable",
+ "percent-encoding",
  "serde",
  "serde_json",
 ]
@@ -594,6 +595,40 @@ dependencies = [
  "image",
  "oauth2",
  "percent-encoding",
+ "qrcode",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "sha2",
+ "test-providers",
+ "thiserror 2.0.12",
+ "tokio",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
+name = "credibil-openid4vp"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "axum-extra",
+ "base64ct",
+ "chrono",
+ "credibil-core",
+ "credibil-identity",
+ "credibil-jose",
+ "credibil-se",
+ "credibil-status",
+ "credibil-vdc",
+ "fastrand",
+ "hex",
+ "http",
+ "image",
+ "oauth2",
  "qrcode",
  "serde",
  "serde_json",

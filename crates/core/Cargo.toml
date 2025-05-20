@@ -27,5 +27,6 @@ http.workspace = true
 http-body = "1.0.1"
 http-body-util = "0.1"
 multihash-codetable = { version = "0.1.4", features = ["sha2"] }
+percent-encoding = "2.3.1"
 serde.workspace = true
 serde_json.workspace = true

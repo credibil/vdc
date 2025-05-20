@@ -2,8 +2,10 @@
 
 pub mod api;
 pub mod blockstore;
-mod did;
 pub mod http;
+pub mod urlencode;
+
+mod did;
 
 pub use did::*;
 use serde::{Deserialize, Serialize};

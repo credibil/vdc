@@ -1,5 +1,5 @@
 [workspace]
-members = ["openid", "crates/*"]
+members = ["openid", "openid4vp", "crates/*"]
 resolver = "3"
 
 [workspace.package]
