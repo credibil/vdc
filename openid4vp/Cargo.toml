@@ -36,14 +36,11 @@ credibil-se.workspace = true
 credibil-status.workspace = true
 credibil-vdc.workspace = true
 fastrand = "2.3.0"
-http.workspace = true
 image = { version = "0.25.6", default-features = false, features = ["png"] }
-# percent-encoding = "2.3.1"
 qrcode = { version = "0.14.1", default-features = false, features = ["image"] }
 serde.workspace = true
 serde_json.workspace = true
 serde_urlencoded = "0.7.1"
-sha2.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 uuid.workspace = true
@@ -55,7 +52,7 @@ hex = "0.4.3"
 oauth2 = { version = "5.0.0" }
 test-providers.workspace = true
 tokio.workspace = true
-tower-http = { version = "0.6.2", features = ["cors", "set-header", "trace"] }
+tower-http = { version = "0.6.4", features = ["cors", "set-header", "trace"] }
 tracing-subscriber = { version = "0.3.19", features = ["env-filter", "fmt"] }
 
 [[example]]

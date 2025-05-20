@@ -1,12 +1,12 @@
 use std::fmt::{self, Display};
 use std::str::FromStr;
 
+use credibil_core::urlencode;
 use credibil_vdc::FormatProfile;
 use serde::de::{self, Deserializer, Visitor};
 use serde::{Deserialize, Serialize};
 
 use super::ClaimsDescription;
-use crate::common::urlencode;
 use crate::oauth;
 
 /// An Authorization Request type.
