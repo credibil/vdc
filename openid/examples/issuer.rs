@@ -22,7 +22,7 @@ use credibil_openid::oid4vci::{
     NotificationRequest, PushedAuthorizationRequest, ServerRequest, TokenRequest,
 };
 use credibil_openid::urlencode;
-// use credibil_status::StatusListRequest;
+use credibil_status::StatusListRequest;
 use oauth2::CsrfToken;
 use serde::Deserialize;
 use serde_json::json;
@@ -70,7 +70,7 @@ async fn main() {
         .route("/credential", post(credential))
         .route("/deferred_credential", post(deferred_credential))
         .route("/notification", post(notification))
-        // .route("/statuslists/{id}", get(statuslists))
+        .route("/statuslists/{id}", get(statuslists))
         .layer(TraceLayer::new_for_http())
         .layer(cors)
         .layer(SetResponseHeaderLayer::if_not_present(
@@ -339,11 +339,11 @@ async fn notification(
     oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }
 
-// // Status Lists endpoint
-// #[axum::debug_handler]
-// async fn statuslists(
-//     State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>, Path(id): Path<String>,
-// ) -> impl IntoResponse {
-//     let request = StatusListRequest { id: Some(id) };
-//     oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
-// }
+// Status Lists endpoint
+#[axum::debug_handler]
+async fn statuslists(
+    State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>, Path(id): Path<String>,
+) -> impl IntoResponse {
+    let request = StatusListRequest { id: Some(id) };
+    credibil_status::handle(&format!("http://{host}"), request, &provider).await.into_http()
+}

@@ -10,7 +10,6 @@ use bitvec::slice::BitSlice;
 use bitvec::vec::BitVec;
 use bitvec::view::BitView;
 use chrono::{DateTime, Utc};
-use credibil_core::blockstore::BlockStore;
 use credibil_identity::SignerExt;
 use credibil_jose::Jws;
 use flate2::Compression;
@@ -19,33 +18,6 @@ use flate2::write::ZlibEncoder;
 use serde::{Deserialize, Serialize};
 
 use crate::{BitsPerToken, StatusClaim, StatusList, StatusListClaims, StatusListEntry};
-
-/// `StatusStore` is used to store and retrieve Status Tokens.
-pub trait StatusStore: Send + Sync {
-    /// Store the Status Token using the provided key.
-    fn put(&self, uri: &str, token: &str) -> impl Future<Output = Result<()>> + Send;
-
-    /// Retrieve the specified Status Token.
-    fn get(&self, uri: &str) -> impl Future<Output = Result<Option<String>>> + Send;
-}
-
-const STATUSTOKEN: &str = "STATUSTOKEN";
-
-impl<T: BlockStore> StatusStore for T {
-    #[allow(unused)]
-    async fn put(&self, uri: &str, token: &str) -> Result<()> {
-        let data = serde_json::to_vec(token)?;
-        BlockStore::delete(self, "owner", STATUSTOKEN, uri).await?;
-        BlockStore::put(self, "owner", STATUSTOKEN, uri, &data).await
-    }
-
-    async fn get(&self, uri: &str) -> Result<Option<String>> {
-        let Some(block) = BlockStore::get(self, "owner", STATUSTOKEN, uri).await? else {
-            return Ok(None);
-        };
-        Ok(Some(serde_json::from_slice(&block)?))
-    }
-}
 
 impl StatusList {
     /// Create a new Status List with one bit per referenced token and all

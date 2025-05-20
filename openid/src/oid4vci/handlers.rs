@@ -15,7 +15,6 @@ mod notification;
 mod par;
 mod register;
 mod server;
-// mod statuslist;
 mod token;
 
 use std::fmt::Debug;

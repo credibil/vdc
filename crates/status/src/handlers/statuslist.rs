@@ -1,11 +1,11 @@
 //! # Status List Endpoint
 
-use anyhow::Context as _;
-use credibil_status::{StatusListRequest, StatusListResponse, StatusStore};
+use anyhow::Context;
 
-use crate::oid4vci::error::invalid;
-use crate::oid4vci::handlers::{Error, Handler, Request, Response, Result};
-use crate::oid4vci::provider::Provider;
+use crate::error::invalid;
+use crate::handlers::{Body, Error, Handler, Request, Response, Result};
+use crate::provider::{Provider, StatusStore};
+use crate::{StatusListRequest, StatusListResponse};
 
 /// Status List request handler.
 ///
@@ -37,4 +37,4 @@ impl<P: Provider> Handler<StatusListResponse, P> for Request<StatusListRequest> 
     }
 }
 
-// impl Body for StatusListRequest {}
+impl Body for StatusListRequest {}

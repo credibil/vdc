@@ -7,18 +7,23 @@
 //! issuer and/or verifier implementations, and helper functions for dealing
 //! with supported status endpoint formats.
 
+mod error;
+mod handlers;
 mod issue;
+mod provider;
 mod verify;
 
 use std::fmt::Debug;
 
 use chrono::serde::{ts_seconds, ts_seconds_option};
 use chrono::{DateTime, Utc};
-use credibil_core::api::Body;
+pub use handlers::*;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
+pub use self::error::*;
 pub use self::issue::*;
+pub use self::provider::*;
 pub use self::verify::*;
 
 // `typ` statuslist+jwt
@@ -144,8 +149,6 @@ pub struct StatusListRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
 }
-
-impl Body for StatusListRequest {}
 
 /// Used to query the Status List endpoint in order to return Status List
 /// Token(s).
