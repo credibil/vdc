@@ -76,7 +76,7 @@ pub trait Handler<U, P> {
 
     /// Routes the message to the concrete handler used to process the message.
     fn handle(
-        self, issuer: &str, provider: &P,
+        self, tenant: &str, provider: &P,
     ) -> impl Future<Output = Result<impl Into<Response<U>>, Self::Error>> + Send;
 }
 
