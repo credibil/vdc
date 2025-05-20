@@ -16,18 +16,18 @@ use axum_extra::headers::authorization::Bearer;
 use axum_extra::headers::{Authorization, Host};
 use credibil_core::blockstore::BlockStore;
 use credibil_core::http::IntoHttp;
+use credibil_core::urlencode;
 use credibil_openid4vci::{
-     AuthorizationRequest, CreateOfferRequest, CredentialHeaders, CredentialOfferRequest,
+    AuthorizationRequest, CreateOfferRequest, CredentialHeaders, CredentialOfferRequest,
     CredentialRequest, DeferredCredentialRequest, IssuerRequest, NotificationHeaders,
     NotificationRequest, PushedAuthorizationRequest, ServerRequest, TokenRequest,
 };
-use credibil_core::urlencode;
 use credibil_status::StatusListRequest;
 use oauth2::CsrfToken;
 use serde::Deserialize;
 use serde_json::json;
-use test_providers::issuer::data::{CLIENT, ISSUER, NORMAL_USER as USER, SERVER};
-use test_providers::issuer::{BOB_ID, ISSUER_ID, Issuer};
+use test_utils::issuer::data::{CLIENT, ISSUER, NORMAL_USER as USER, SERVER};
+use test_utils::issuer::{BOB_ID, ISSUER_ID, Issuer};
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
@@ -230,7 +230,10 @@ async fn par(
     }
 
     // process request
-    credibil_openid4vci::handle(&format!("http://{host}"), req, &provider).await.into_http().into_response()
+    credibil_openid4vci::handle(&format!("http://{host}"), req, &provider)
+        .await
+        .into_http()
+        .into_response()
 }
 
 #[derive(Deserialize)]
@@ -287,7 +290,10 @@ async fn token(
         return (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid request"})))
             .into_response();
     };
-    credibil_openid4vci::handle(&format!("http://{host}"), tr, &provider).await.into_http().into_response()
+    credibil_openid4vci::handle(&format!("http://{host}"), tr, &provider)
+        .await
+        .into_http()
+        .into_response()
 }
 
 // Credential endpoint

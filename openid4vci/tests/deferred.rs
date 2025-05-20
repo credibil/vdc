@@ -13,8 +13,8 @@ use credibil_openid4vci::issuer::{
 };
 use credibil_openid4vci::{self, JwtType};
 use serde_json::json;
-use test_providers::issuer::{CAROL_ID, ISSUER_ID, Issuer, data};
-use test_providers::wallet::Wallet;
+use test_utils::issuer::{CAROL_ID, ISSUER_ID, Issuer, data};
+use test_utils::wallet::Wallet;
 use tokio::sync::OnceCell;
 
 static CAROL: OnceCell<Wallet> = OnceCell::const_new();
@@ -40,8 +40,9 @@ async fn deferred() {
         .subject_id(CAROL_ID)
         .with_credential("EmployeeID_W3C_VC")
         .build();
-    let response =
-        credibil_openid4vci::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
+    let response = credibil_openid4vci::handle(ISSUER_ID, request, &provider)
+        .await
+        .expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -56,13 +57,16 @@ async fn deferred() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token = credibil_openid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+    let token = credibil_openid4vci::handle(ISSUER_ID, request, &provider)
+        .await
+        .expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a proof for a credential request
     // --------------------------------------------------
-    let nonce =
-        credibil_openid4vci::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
+    let nonce = credibil_openid4vci::handle(ISSUER_ID, NonceRequest, &provider)
+        .await
+        .expect("should return nonce");
 
     // proof of possession of key material
     let key = carol
@@ -98,8 +102,9 @@ async fn deferred() {
         },
     };
 
-    let response =
-        credibil_openid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
+    let response = credibil_openid4vci::handle(ISSUER_ID, request, &provider)
+        .await
+        .expect("should return credential");
 
     // --------------------------------------------------
     // Alice approves issuance of the credential
@@ -131,8 +136,9 @@ async fn deferred() {
             authorization: token.access_token.clone(),
         },
     };
-    let response =
-        credibil_openid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
+    let response = credibil_openid4vci::handle(ISSUER_ID, request, &provider)
+        .await
+        .expect("should return credential");
 
     // --------------------------------------------------
     // Bob extracts and verifies the received credential

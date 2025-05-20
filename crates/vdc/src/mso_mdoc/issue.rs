@@ -177,8 +177,8 @@ mod tests {
     use credibil_core::did_jwk;
     use credibil_jose::KeyBinding;
     use serde_json::json;
-    use test_providers::issuer::Issuer;
-    use test_providers::wallet::Wallet;
+    use test_utils::issuer::Issuer;
+    use test_utils::wallet::Wallet;
 
     use super::*;
     use crate::mso_mdoc::{DataItem, DigestAlgorithm, KeyType, serde_cbor};

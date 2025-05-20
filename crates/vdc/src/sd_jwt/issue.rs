@@ -248,7 +248,7 @@ mod tests {
     use credibil_jose::PublicKeyJwk;
     use credibil_se::{Curve, KeyType};
     use serde_json::json;
-    use test_providers::issuer::Issuer;
+    use test_utils::issuer::Issuer;
 
     use super::SdJwtVcBuilder;
 

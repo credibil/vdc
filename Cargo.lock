@@ -599,7 +599,7 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "sha2",
- "test-providers",
+ "test-utils",
  "thiserror 2.0.12",
  "tokio",
  "tower-http",
@@ -631,7 +631,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
- "test-providers",
+ "test-utils",
  "thiserror 2.0.12",
  "tokio",
  "tower-http",
@@ -707,7 +707,7 @@ dependencies = [
  "serde_json",
  "serde_repr",
  "sha2",
- "test-providers",
+ "test-utils",
  "tokio",
  "uuid",
 ]
@@ -2572,7 +2572,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "test-providers"
+name = "test-utils"
 version = "0.0.0"
 dependencies = [
  "anyhow",

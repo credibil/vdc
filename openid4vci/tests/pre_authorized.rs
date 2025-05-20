@@ -13,8 +13,8 @@ use credibil_openid4vci::issuer::{
 };
 use credibil_openid4vci::{self, JwtType};
 use serde_json::json;
-use test_providers::issuer::{BOB_ID, ISSUER_ID, Issuer, data};
-use test_providers::wallet::Wallet;
+use test_utils::issuer::{BOB_ID, ISSUER_ID, Issuer, data};
+use test_utils::wallet::Wallet;
 use tokio::sync::OnceCell;
 
 static BOB: OnceCell<Wallet> = OnceCell::const_new();

@@ -15,9 +15,9 @@ use credibil_vdc::sd_jwt::SdJwtVcBuilder;
 use credibil_vdc::w3c_vc::W3cVcBuilder;
 use credibil_vdc::{mso_mdoc, sd_jwt, w3c_vc};
 use serde_json::{Value, json};
-use test_providers::issuer::{ISSUER_ID, Issuer};
-use test_providers::verifier::{VERIFIER_ID, Verifier, data};
-use test_providers::wallet::Wallet;
+use test_utils::issuer::{ISSUER_ID, Issuer};
+use test_utils::verifier::{VERIFIER_ID, Verifier, data};
+use test_utils::wallet::Wallet;
 use tokio::sync::OnceCell;
 
 static VERIFIER: OnceCell<Verifier> = OnceCell::const_new();

@@ -15,8 +15,8 @@ use credibil_openid4vci::{self, JwtType};
 use credibil_vdc::sd_jwt::SdJwtClaims;
 use serde_json::json;
 use sha2::{Digest, Sha256};
-use test_providers::issuer::{BOB_ID, ISSUER_ID, Issuer, data};
-use test_providers::wallet::Wallet;
+use test_utils::issuer::{BOB_ID, ISSUER_ID, Issuer, data};
+use test_utils::wallet::Wallet;
 use tokio::sync::OnceCell;
 
 static BOB: OnceCell<Wallet> = OnceCell::const_new();

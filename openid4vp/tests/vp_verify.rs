@@ -4,7 +4,7 @@
 // use credibil_openid::oid4vp::types::GenerateRequest;
 // use insta::assert_yaml_snapshot as assert_snapshot;
 // use serde_json::json;
-use test_providers::verifier::Verifier;
+use test_utils::verifier::Verifier;
 // use utils::wallet::{self, Keyring};
 
 #[tokio::test]
