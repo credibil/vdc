@@ -12,8 +12,8 @@
 
 pub mod oauth;
 pub mod provider;
-pub mod verifier;
-pub mod wallet;
+pub mod types;
+pub mod vp_token;
 
 mod common;
 mod error;
@@ -26,9 +26,7 @@ use serde::{Deserialize, Serialize};
 
 pub use self::error::Error;
 pub use self::handlers::*;
-pub use self::verifier::*;
-pub use self::wallet::*;
-// pub use self::common::*;
+pub use self::types::*;
 
 /// Re-export `credibil_identity` modules for convenience.
 pub mod identity {
@@ -38,9 +36,6 @@ pub mod identity {
 pub mod jose {
     pub use credibil_jose::*;
 }
-
-
-
 
 /// The JWS `typ` header parameter.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]

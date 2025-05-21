@@ -9,7 +9,7 @@ pub use credibil_identity::SignerExt;
 use credibil_status::StatusToken;
 
 pub use crate::common::state::StateStore;
-use crate::verifier::Verifier;
+use crate::types::Verifier;
 
 /// Verifier Provider trait.
 pub trait Provider:

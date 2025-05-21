@@ -13,7 +13,7 @@ use axum_extra::TypedHeader;
 use axum_extra::headers::Host;
 use credibil_core::blockstore::BlockStore;
 use credibil_core::http::IntoHttp;
-use credibil_oid4vp::{AuthorzationResponse, GenerateRequest, RequestUriRequest};
+use credibil_oid4vp::{AuthorizationResponse, GenerateRequest, RequestUriRequest};
 use test_utils::verifier::data::VERIFIER;
 use test_utils::verifier::{VERIFIER_ID, Verifier};
 use tokio::net::TcpListener;
@@ -78,9 +78,9 @@ async fn response(
     State(provider): State<Verifier>, TypedHeader(host): TypedHeader<Host>,
     Form(request): Form<String>,
 ) -> impl IntoResponse {
-    let Ok(req) = AuthorzationResponse::form_decode(&request) else {
-        tracing::error!("unable to turn HashMap {request:?} into AuthorzationResponse");
-        return (StatusCode::BAD_REQUEST, "unable to turn request into AuthorzationResponse")
+    let Ok(req) = AuthorizationResponse::form_decode(&request) else {
+        tracing::error!("unable to turn HashMap {request:?} into AuthorizationResponse");
+        return (StatusCode::BAD_REQUEST, "unable to turn request into AuthorizationResponse")
             .into_response();
     };
     credibil_oid4vp::handle(&format!("http://{host}"), req, &provider)

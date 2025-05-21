@@ -10,7 +10,7 @@ use credibil_vdc::sd_jwt::SdJwtVpBuilder;
 use credibil_vdc::w3c_vc::W3cVpBuilder;
 
 use crate::ResponseMode;
-use crate::verifier::RequestObject;
+use crate::types::RequestObject;
 
 /// Generate a Verifiable Presentation (VP) token.
 ///

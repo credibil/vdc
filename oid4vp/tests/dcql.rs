@@ -4,9 +4,9 @@ use credibil_core::blockstore::BlockStore;
 use credibil_core::did_jwk;
 use credibil_identity::{Key, SignerExt};
 use credibil_jose::PublicKeyJwk;
-use credibil_oid4vp::verifier::ResponseMode;
+use credibil_oid4vp::types::ResponseMode;
 use credibil_oid4vp::{
-    self, AuthorzationResponse, DeviceFlow, GenerateRequest, GenerateResponse, wallet,
+    AuthorizationResponse, DeviceFlow, GenerateRequest, GenerateResponse, vp_token,
 };
 use credibil_status::{StatusClaim, StatusList, TokenBuilder};
 use credibil_vdc::dcql::DcqlQuery;
@@ -86,10 +86,10 @@ async fn multiple_claims() {
     // assert_eq!(results.len(), 2);
 
     let vp_token =
-        wallet::generate(&request_object, &results, wallet).await.expect("should get token");
+        vp_token::generate(&request_object, &results, wallet).await.expect("should get token");
     // assert_eq!(vp_token.len(), 1);
 
-    let request = AuthorzationResponse {
+    let request = AuthorizationResponse {
         vp_token,
         state: request_object.state,
     };
@@ -187,10 +187,10 @@ async fn multiple_credentials() {
     // return a single `vp_token` for the query
     // each credential query will result in a separate presentation
     let vp_token =
-        wallet::generate(&request_object, &results, wallet).await.expect("should get token");
+        vp_token::generate(&request_object, &results, wallet).await.expect("should get token");
     assert_eq!(vp_token.len(), 3);
 
-    let request = AuthorzationResponse {
+    let request = AuthorizationResponse {
         vp_token,
         state: request_object.state,
     };
