@@ -287,7 +287,7 @@ impl AuthorizedDetail {
 mod tests {
 
     use super::*;
-    use crate::types::{ AuthorizationDetailType, ClaimsDescription};
+    use crate::types::{AuthorizationDetailType, ClaimsDescription};
 
     #[test]
     fn form_encoding() {

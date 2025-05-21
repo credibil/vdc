@@ -13,16 +13,16 @@ use http::StatusCode;
 
 use crate::common::generate;
 use crate::common::state::State;
-use crate::oauth::GrantType;
 use crate::error::{invalid, server};
 use crate::handlers::{Body, Error, Handler, Request, Response, Result};
+use crate::oauth::GrantType;
+use crate::provider::{Metadata, Provider, StateStore, Subject};
+use crate::state::{Expire, Offered};
 use crate::types::{
     AuthorizationCodeGrant, AuthorizationCredential, AuthorizationDetail, AuthorizationDetailType,
     AuthorizedDetail, CreateOfferRequest, CreateOfferResponse, CredentialOffer, Grants, Issuer,
     OfferType, PreAuthorizedCodeGrant, SendType, Server, TxCode,
 };
-use crate::provider::{Metadata, Provider, StateStore, Subject};
-use crate::state::{Expire, Offered};
 
 #[derive(Debug, Default)]
 struct Context {
