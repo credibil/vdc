@@ -8,7 +8,7 @@ use crate::oauth::{OAuthClient, OAuthServer};
 
 /// Request to retrieve the Credential Issuer's configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct IssuerRequest;
+pub struct MetadataRequest;
 
 /// Response containing the Credential Issuer's configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]

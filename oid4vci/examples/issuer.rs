@@ -19,7 +19,7 @@ use credibil_core::http::IntoHttp;
 use credibil_core::urlencode;
 use credibil_oid4vci::{
     AuthorizationRequest, CreateOfferRequest, CredentialHeaders, CredentialOfferRequest,
-    CredentialRequest, DeferredCredentialRequest, IssuerRequest, NotificationHeaders,
+    CredentialRequest, DeferredCredentialRequest, MetadataRequest, NotificationHeaders,
     NotificationRequest, PushedAuthorizationRequest, ServerRequest, TokenRequest,
 };
 use credibil_status::StatusListRequest;
@@ -110,7 +110,7 @@ async fn metadata(
     headers: HeaderMap, State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
 ) -> impl IntoResponse {
     let request = credibil_oid4vci::Request {
-        body: IssuerRequest,
+        body: MetadataRequest,
         headers: headers.try_into().expect("should find language header"),
     };
     credibil_oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
