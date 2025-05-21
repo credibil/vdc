@@ -7,62 +7,6 @@
 //! Wallets can request authorization for issuance of a Credential using
 //! `authorization_details` (as defined in [RFC9396]) or `scope` parameters (or
 //! both).
-//!
-//! ## Authorization Requests
-//!
-//! - One (and only one) of `credential_configuration_id` or `format` is
-//!   REQUIRED.
-//! - `credential_definition` is OPTIONAL.
-
-//! ## Example
-//!
-//! with `credential_configuration_id`:
-//!
-//! ```json
-//! "authorization_details":[
-//!    {
-//!       "type": "openid_credential",
-//!       "credential_configuration_id": "UniversityDegreeCredential"
-//!    }
-//! ]
-//! ```
-//!
-//! with `format`:
-//!
-//! ```json
-//! "authorization_details":[
-//!     {
-//!         "type": "openid_credential",
-//!         "format": "dc+sd-jwt",
-//!         "vct": "SD_JWT_VC_example_in_OpenID4VCI"
-//!     }
-//! ]
-//! ```
-//!
-//! **VC Signed as a JWT, Not Using JSON-LD**
-//!
-//! - `credential_definition` is OPTIONAL.
-//!   - `type` is OPTIONAL.
-//!   - `credentialSubject` is OPTIONAL.
-//!
-//! ```json
-// ! "authorization_details":[
-// !     {
-// !         "type": "openid_credential",
-// !         "credential_configuration_id": "UniversityDegreeCredential",
-// !         "credential_definition": {
-// !             "credentialSubject": {
-// !                 "given_name": {},
-// !                 "family_name": {},
-// !                 "degree": {}
-// !             }
-// !         }
-// !     }
-// ! ]
-//! ```
-//! 
-//! [RFC6749]: (https://www.rfc-editor.org/rfc/rfc6749.html)
-//! [RFC9396]: (https://www.rfc-editor.org/rfc/rfc9396)
 
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -72,13 +16,13 @@ use chrono::Utc;
 
 use crate::common::generate;
 use crate::common::state::State;
-use crate::oauth::GrantType;
 use crate::error::{invalid, server};
 use crate::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::issuer::{
     AuthorizationCredential, AuthorizationDetail, AuthorizationDetailType, AuthorizationRequest,
     AuthorizationResponse, AuthorizedDetail, Issuer, RequestObject,
 };
+use crate::oauth::GrantType;
 use crate::provider::{Metadata, Provider, StateStore, Subject};
 use crate::state::{Authorized, Expire, Offered};
 

@@ -9,7 +9,7 @@ mod create_offer;
 mod credential;
 mod credential_offer;
 mod deferred;
-mod issuer;
+mod metadata;
 mod nonce;
 mod notification;
 mod par;

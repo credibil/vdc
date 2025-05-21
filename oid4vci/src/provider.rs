@@ -19,6 +19,11 @@ use credibil_status::StatusStore;
 pub use crate::common::state::StateStore;
 use crate::issuer::{Client, Dataset, Issuer, Server};
 
+const ISSUER: &str = "ISSUER";
+const SERVER: &str = "SERVER";
+const CLIENT: &str = "CLIENT";
+const SUBJECT: &str = "SUBJECT";
+
 /// Issuer Provider trait.
 pub trait Provider:
     Metadata + Subject + StateStore + SignerExt + IdentityResolver + StatusStore + Clone
@@ -66,11 +71,6 @@ pub trait Subject: Send + Sync {
         &self, subject_id: &str, credential_identifier: &str,
     ) -> impl Future<Output = Result<Dataset>> + Send;
 }
-
-const ISSUER: &str = "ISSUER";
-const SERVER: &str = "SERVER";
-const CLIENT: &str = "CLIENT";
-const SUBJECT: &str = "SUBJECT";
 
 impl<T: BlockStore> Metadata for T {
     async fn client(&self, client_id: &str) -> Result<Client> {
