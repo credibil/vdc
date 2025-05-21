@@ -18,7 +18,7 @@ use anyhow::Context as _;
 
 use crate::error::invalid;
 use crate::handlers::{Body, Error, Handler, Request, Response, Result};
-use crate::issuer::{CredentialOffer, CredentialOfferRequest, CredentialOfferResponse};
+use crate::types::{CredentialOffer, CredentialOfferRequest, CredentialOfferResponse};
 use crate::provider::{Provider, StateStore};
 
 /// Endpoint for the Wallet to request the Issuer's Credential Offer when

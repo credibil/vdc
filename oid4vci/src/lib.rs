@@ -10,11 +10,10 @@
 //! * `issuer` - Enables the issuer API.
 //! * `verifier` - Enables the verifier API.
 
-pub mod issuer;
 pub mod oauth;
 pub mod pkce;
 pub mod provider;
-pub mod wallet;
+pub mod types;
 
 mod common;
 mod error;
@@ -39,7 +38,7 @@ use serde::{Deserialize, Serialize};
 
 pub use self::error::Error;
 pub use self::handlers::*;
-pub use self::issuer::*;
+pub use self::types::*;
 
 /// The JWT `typ` header parameter.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]

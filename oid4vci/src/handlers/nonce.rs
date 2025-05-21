@@ -13,7 +13,7 @@ use chrono::Utc;
 use crate::common::generate;
 use crate::common::state::State;
 use crate::handlers::{Body, Error, Handler, Request, Response, Result};
-use crate::issuer::{NonceRequest, NonceResponse};
+use crate::types::{NonceRequest, NonceResponse};
 use crate::provider::{Provider, StateStore};
 use crate::state::Expire;
 

@@ -12,7 +12,7 @@ use chrono::{Duration, Utc};
 use crate::common::generate;
 use crate::common::state::State;
 use crate::handlers::{Body, Error, Handler, Request, Response, Result, authorize};
-use crate::issuer::{PushedAuthorizationRequest, PushedAuthorizationResponse};
+use crate::types::{PushedAuthorizationRequest, PushedAuthorizationResponse};
 use crate::provider::{Metadata, Provider, StateStore};
 
 /// Endpoint for the Wallet to push an Authorization Request when using Pushed

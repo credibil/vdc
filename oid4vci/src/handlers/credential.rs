@@ -21,24 +21,23 @@ use credibil_vdc::mso_mdoc::MdocBuilder;
 use credibil_vdc::sd_jwt::SdJwtVcBuilder;
 use credibil_vdc::w3c_vc::W3cVcBuilder;
 
+use crate::JwtType;
 use crate::common::generate;
 use crate::common::state::State;
-use crate::JwtType;
 use crate::error::server;
-use crate::handlers::{Body, Error, Handler, Request, Response, Result};
-use crate::issuer::{
-    AuthorizedDetail, Credential, CredentialConfiguration, CredentialHeaders, CredentialRequest,
-    CredentialResponse, Dataset, Issuer, MultipleProofs, Proof, ProofClaims, RequestBy,
-    SingleProof,
-};
+use crate::handlers::{Body, CredentialHeaders, Error, Handler, Request, Response, Result};
 use crate::provider::{Metadata, Provider, StateStore, Subject};
 use crate::state::{Deferred, Expire, Token};
+use crate::types::{
+    AuthorizedDetail, Credential, CredentialConfiguration, CredentialRequest, CredentialResponse,
+    Dataset, Issuer, MultipleProofs, Proof, ProofClaims, RequestBy, SingleProof,
+};
 
 /// Credential request handler.
 ///
 /// # Errors
 ///
-/// Returns an `OpenID4VP` error if the request is invalid or if the provider is
+/// Returns an `OpenID4VCI` error if the request is invalid or if the provider is
 /// not available.
 pub async fn credential(
     issuer: &str, provider: &impl Provider, request: Request<CredentialRequest, CredentialHeaders>,

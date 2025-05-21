@@ -55,6 +55,21 @@ where
     Ok(request.handle(issuer, provider).await?.into())
 }
 
+/// Credential request headers.
+pub type CredentialHeaders = AuthorizationHeader;
+
+/// Deferred Credential request headers.
+pub type DeferredHeaders = AuthorizationHeader;
+
+/// Registration request headers.
+pub type MetadataHeaders = LanguageHeader;
+
+/// Notification request headers.
+pub type NotificationHeaders = AuthorizationHeader;
+
+/// Registration request headers.
+pub type RegistrationHeaders = AuthorizationHeader;
+
 /// An authorization-only header for use by handlers that soley require
 /// authorization.
 #[derive(Clone, Debug)]

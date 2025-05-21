@@ -25,9 +25,9 @@
 
 use anyhow::Context as _;
 
-use crate::handlers::{Body, Error, Handler, Headers, Request, Response, Result};
-use crate::issuer::{IssuerResponse, MetadataHeaders, MetadataRequest};
+use crate::handlers::{Body, Error, Handler, Headers, MetadataHeaders, Request, Response, Result};
 use crate::provider::{Metadata, Provider};
+use crate::types::{IssuerResponse, MetadataRequest};
 
 /// Metadata request handler.
 ///

@@ -6,21 +6,129 @@ use credibil_core::Kind;
 use credibil_jose::PublicKeyJwk;
 use credibil_vdc::w3c_vc::VerifiableCredential;
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value};
 
-/// The user information returned by the Subject trait.
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-#[serde(default)]
-pub struct Dataset {
-    /// The credential configuration ID of the credential this dataset is for.
-    pub credential_configuration_id: String,
+/// Build a Credential Offer for a Credential Issuer.
+#[derive(Debug)]
+pub struct CredentialRequestBuilder<C, P> {
+    credential: C,
+    proofs: P,
+    response_encryption: Option<CredentialResponseEncryption>,
+}
 
-    /// The credential subject populated for the user.
-    pub claims: Map<String, Value>,
+impl Default for CredentialRequestBuilder<NoCredential, NoProofs> {
+    fn default() -> Self {
+        Self {
+            credential: NoCredential,
+            proofs: NoProofs,
+            response_encryption: None,
+        }
+    }
+}
 
-    /// Specifies whether user information required for the credential subject
-    /// is pending.
-    pub pending: bool,
+/// No credential configuration id is set.
+#[doc(hidden)]
+pub struct NoCredential;
+/// A credential identifier id is set.
+#[doc(hidden)]
+pub struct HasCredential(RequestBy);
+
+/// No proof of possession of key material is set.
+#[doc(hidden)]
+pub struct NoProofs;
+/// Proof of possession of key material is set.
+#[doc(hidden)]
+pub struct Proofs(Vec<String>);
+
+impl CredentialRequestBuilder<NoCredential, NoProofs> {
+    /// Create a new `CreateOfferRequestBuilder`.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl<P> CredentialRequestBuilder<NoCredential, P> {
+    /// Specify only when credential Authorization Details was returned in the
+    /// Token Response.
+    #[must_use]
+    pub fn credential_identifier(
+        self, credential_identifier: impl Into<String>,
+    ) -> CredentialRequestBuilder<HasCredential, P> {
+        CredentialRequestBuilder {
+            credential: HasCredential(RequestBy::Identifier(credential_identifier.into())),
+            proofs: self.proofs,
+            response_encryption: self.response_encryption,
+        }
+    }
+
+    /// Specify only when credential Authorization Details was not returned in the
+    /// Token Response.
+    #[must_use]
+    pub fn credential_configuration_id(
+        self, credential_configuration_id: impl Into<String>,
+    ) -> CredentialRequestBuilder<HasCredential, P> {
+        CredentialRequestBuilder {
+            credential: HasCredential(RequestBy::ConfigurationId(
+                credential_configuration_id.into(),
+            )),
+            proofs: self.proofs,
+            response_encryption: self.response_encryption,
+        }
+    }
+}
+
+impl<C> CredentialRequestBuilder<C, NoProofs> {
+    /// Specify the (previously authenticated) Holder for the Issuer to use
+    /// when authorizing credential issuance.
+    #[must_use]
+    pub fn with_proof(self, proof_jwt: impl Into<String>) -> CredentialRequestBuilder<C, Proofs> {
+        CredentialRequestBuilder {
+            credential: self.credential,
+            proofs: Proofs(vec![proof_jwt.into()]),
+            response_encryption: self.response_encryption,
+        }
+    }
+}
+
+impl<C> CredentialRequestBuilder<C, Proofs> {
+    /// Specify the (previously authenticated) Holder for the Issuer to use
+    /// when authorizing credential issuance.
+    #[must_use]
+    pub fn with_proof(mut self, proof_jwt: impl Into<String>) -> Self {
+        self.proofs.0.push(proof_jwt.into());
+        self
+    }
+}
+
+impl<C, P> CredentialRequestBuilder<C, P> {
+    /// Specify when the credential response is to be encrypted.
+    #[must_use]
+    pub fn response_encryption(
+        mut self, response_encryption: CredentialResponseEncryption,
+    ) -> Self {
+        self.response_encryption = Some(response_encryption);
+        self
+    }
+}
+
+impl CredentialRequestBuilder<HasCredential, Proofs> {
+    /// Build the Create Offer request.
+    #[must_use]
+    pub fn build(self) -> CredentialRequest {
+        let proof = if self.proofs.0.len() == 1 {
+            Some(Proof::Single(SingleProof::Jwt {
+                jwt: self.proofs.0[0].clone(),
+            }))
+        } else {
+            Some(Proof::Multiple(MultipleProofs::Jwt(self.proofs.0)))
+        };
+
+        CredentialRequest {
+            credential: self.credential.0,
+            proof,
+            credential_response_encryption: self.response_encryption,
+        }
+    }
 }
 
 /// `CredentialRequest` is used by the Client to make a Credential Request to
@@ -49,6 +157,14 @@ pub struct CredentialRequest {
     /// If not present.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub credential_response_encryption: Option<CredentialResponseEncryption>,
+}
+
+impl CredentialRequest {
+    /// Create a new `CredentialRequestBuilder`.
+    #[must_use]
+    pub fn builder() -> CredentialRequestBuilder<NoCredential, NoProofs> {
+        CredentialRequestBuilder::new()
+    }
 }
 
 /// Means used to identifiy Credential type and format when requesting a
@@ -358,7 +474,7 @@ pub type DeferredCredentialResponse = CredentialResponse;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::issuer::CredentialConfiguration;
+    use crate::types::CredentialConfiguration;
 
     #[test]
     fn credential_identifier() {

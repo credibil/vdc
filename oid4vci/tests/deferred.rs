@@ -6,12 +6,12 @@ use credibil_core::blockstore::BlockStore;
 use credibil_core::{OneMany, did_jwk};
 use credibil_identity::{Key, SignerExt};
 use credibil_jose::{JwsBuilder, Jwt, decode_jws};
-use credibil_oid4vci::issuer::{
-    CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, CredentialResponse,
-    Dataset, DeferredCredentialRequest, DeferredHeaders, NonceRequest, ProofClaims, TokenGrantType,
-    TokenRequest, W3cVcClaims,
+use credibil_oid4vci::proof::W3cVcClaims;
+use credibil_oid4vci::types::{
+    CreateOfferRequest, Credential, CredentialRequest, CredentialResponse, Dataset,
+    DeferredCredentialRequest, NonceRequest, ProofClaims, TokenGrantType, TokenRequest,
 };
-use credibil_oid4vci::{self, JwtType};
+use credibil_oid4vci::{self, CredentialHeaders, DeferredHeaders, JwtType};
 use serde_json::json;
 use test_utils::issuer::{CAROL_ID, ISSUER_ID, Issuer, data};
 use test_utils::wallet::Wallet;
