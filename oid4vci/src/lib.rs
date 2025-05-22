@@ -20,7 +20,7 @@ mod error;
 mod handlers;
 mod state;
 
-/// Re-export proofs
+/// Re-export key dependencies.
 pub mod proof {
     pub use credibil_vdc::w3c_vc::{Payload, Verify, W3cVcClaims};
 }
