@@ -540,7 +540,7 @@ dependencies = [
 [[package]]
 name = "credibil-identity"
 version = "0.1.2"
-source = "git+https://github.com/credibil/identity.git#bbc82f91512f212ce9ca035ac2011c4979481987"
+source = "git+https://github.com/credibil/identity.git#0215b7ae09a0e29c730bebe916c7d7317b227055"
 dependencies = [
  "anyhow",
  "base64ct",

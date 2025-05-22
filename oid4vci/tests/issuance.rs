@@ -3,17 +3,16 @@
 //! Pre-Authorized Code Flow Tests
 
 use base64ct::{Base64UrlUnpadded, Encoding};
-use credibil_core::blockstore::BlockStore;
-use credibil_core::{OneMany, did_jwk};
-use credibil_identity::{Key, SignerExt};
 use credibil_jose::{JwsBuilder, Jwt, decode_jws};
+use credibil_oid4vci::blockstore::BlockStore;
+use credibil_oid4vci::identity::{Key, SignerExt};
 use credibil_oid4vci::proof::W3cVcClaims;
 use credibil_oid4vci::types::{
     CreateOfferRequest, Credential, CredentialRequest, CredentialResponse, NonceRequest,
     ProofClaims, TokenGrantType, TokenRequest,
 };
-use credibil_oid4vci::{CredentialHeaders, JwtType};
-use credibil_vdc::sd_jwt::SdJwtClaims;
+use credibil_oid4vci::vdc::sd_jwt::SdJwtClaims;
+use credibil_oid4vci::{CredentialHeaders, JwtType, OneMany, did_jwk};
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use test_utils::issuer::{BOB_ID, ISSUER_ID, Issuer, data};

@@ -16,7 +16,7 @@ use credibil_core::blockstore::BlockStore;
 use credibil_identity::{IdentityResolver, SignerExt};
 use credibil_status::StatusStore;
 
-pub use crate::common::state::StateStore;
+pub(crate) use crate::common::state::StateStore;
 use crate::types::{Client, Dataset, Issuer, Server};
 
 const ISSUER: &str = "ISSUER";

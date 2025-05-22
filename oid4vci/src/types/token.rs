@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use credibil_core::urlencode;
 use serde::{Deserialize, Serialize};
 
-use crate::types::{AuthorizationCredential, AuthorizationDetail, ClientAssertion};
+use crate::types::{AuthorizationDefinition, AuthorizationDetail, ClientAssertion};
 
 impl TokenRequest {
     /// Create a new `TokenRequestBuilder`.
@@ -275,10 +275,10 @@ impl AuthorizedDetail {
     #[must_use]
     pub const fn credential_configuration_id(&self) -> Option<&str> {
         match &self.authorization_detail.credential {
-            AuthorizationCredential::ConfigurationId {
+            AuthorizationDefinition::ConfigurationId {
                 credential_configuration_id,
             } => Some(credential_configuration_id.as_str()),
-            AuthorizationCredential::FormatProfile(_) => None,
+            AuthorizationDefinition::FormatProfile(_) => None,
         }
     }
 }
@@ -299,7 +299,7 @@ mod tests {
             },
             authorization_details: Some(vec![AuthorizationDetail {
                 r#type: AuthorizationDetailType::OpenIdCredential,
-                credential: AuthorizationCredential::ConfigurationId {
+                credential: AuthorizationDefinition::ConfigurationId {
                     credential_configuration_id: "EmployeeID_W3C_VC".to_string(),
                 },
                 claims: Some(vec![

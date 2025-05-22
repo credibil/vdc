@@ -22,7 +22,7 @@ use crate::oauth::GrantType;
 use crate::provider::{Metadata, Provider, StateStore, Subject};
 use crate::state::{Authorized, Expire, Offered};
 use crate::types::{
-    AuthorizationCredential, AuthorizationDetail, AuthorizationDetailType, AuthorizationRequest,
+    AuthorizationDefinition, AuthorizationDetail, AuthorizationDetailType, AuthorizationRequest,
     AuthorizationResponse, AuthorizedDetail, Issuer, RequestObject,
 };
 
@@ -72,7 +72,7 @@ async fn authorize(
             .await
             .map_err(|e| Error::AccessDenied(format!("issue authorizing subject: {e}")))?;
 
-        auth_det.credential = AuthorizationCredential::ConfigurationId {
+        auth_det.credential = AuthorizationDefinition::ConfigurationId {
             credential_configuration_id: config_id.clone(),
         };
 
@@ -275,15 +275,15 @@ impl Context {
 
             // verify requested claims
             let config_id = match &detail.credential {
-                AuthorizationCredential::ConfigurationId {
+                AuthorizationDefinition::ConfigurationId {
                     credential_configuration_id,
                 } => credential_configuration_id,
-                AuthorizationCredential::FormatProfile(fmt) => {
+                AuthorizationDefinition::FormatProfile(fmt) => {
                     let config_id = self
                         .issuer
                         .credential_configuration_id(fmt)
                         .context("getting `credential_configuration_id`")?;
-                    detail.credential = AuthorizationCredential::ConfigurationId {
+                    detail.credential = AuthorizationDefinition::ConfigurationId {
                         credential_configuration_id: config_id.clone(),
                     };
                     config_id
@@ -323,7 +323,7 @@ impl Context {
                 if cred_cfg.scope == Some(scope_item.to_string()) {
                     let detail = AuthorizationDetail {
                         r#type: AuthorizationDetailType::OpenIdCredential,
-                        credential: AuthorizationCredential::ConfigurationId {
+                        credential: AuthorizationDefinition::ConfigurationId {
                             credential_configuration_id: config_id.clone(),
                         },
                         claims: None,

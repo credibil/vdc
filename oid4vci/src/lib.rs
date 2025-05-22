@@ -24,17 +24,12 @@ mod state;
 pub mod proof {
     pub use credibil_vdc::w3c_vc::{Payload, Verify, W3cVcClaims};
 }
-
-/// Re-export `credibil_identity` modules for convenience.
-pub mod identity {
-    pub use credibil_identity::*;
-}
-/// Re-export `credibil_jose` modules for convenience.
-pub mod jose {
-    pub use credibil_jose::*;
-}
-
+pub use credibil_core::{OneMany, blockstore, did_jwk, http};
 use serde::{Deserialize, Serialize};
+pub use {
+    credibil_identity as identity, credibil_jose as jose, credibil_status as status,
+    credibil_vdc as vdc,
+};
 
 pub use self::error::Error;
 pub use self::handlers::*;

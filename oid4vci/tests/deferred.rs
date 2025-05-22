@@ -2,16 +2,15 @@
 
 use std::collections::HashMap;
 
-use credibil_core::blockstore::BlockStore;
-use credibil_core::{OneMany, did_jwk};
-use credibil_identity::{Key, SignerExt};
-use credibil_jose::{JwsBuilder, Jwt, decode_jws};
+use credibil_oid4vci::blockstore::BlockStore;
+use credibil_oid4vci::identity::{Key, SignerExt};
+use credibil_oid4vci::jose::{JwsBuilder, Jwt, decode_jws};
 use credibil_oid4vci::proof::W3cVcClaims;
 use credibil_oid4vci::types::{
     CreateOfferRequest, Credential, CredentialRequest, CredentialResponse, Dataset,
     DeferredCredentialRequest, NonceRequest, ProofClaims, TokenGrantType, TokenRequest,
 };
-use credibil_oid4vci::{self, CredentialHeaders, DeferredHeaders, JwtType};
+use credibil_oid4vci::{CredentialHeaders, DeferredHeaders, JwtType, OneMany, did_jwk};
 use serde_json::json;
 use test_utils::issuer::{CAROL_ID, ISSUER_ID, Issuer, data};
 use test_utils::wallet::Wallet;

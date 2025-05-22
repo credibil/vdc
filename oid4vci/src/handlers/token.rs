@@ -28,7 +28,7 @@ use crate::pkce;
 use crate::provider::{Metadata, Provider, StateStore};
 use crate::state::{Authorized, Expire, Offered, Token};
 use crate::types::{
-    AuthorizationCredential, AuthorizationDetail, AuthorizedDetail, Issuer, TokenGrantType,
+    AuthorizationDefinition, AuthorizationDetail, AuthorizedDetail, Issuer, TokenGrantType,
     TokenRequest, TokenResponse, TokenType,
 };
 
@@ -290,10 +290,10 @@ fn verify_claims(issuer: &Issuer, detail: &AuthorizationDetail) -> Result<()> {
 
     // get credential configuration with claim metadata
     let config_id = match &detail.credential {
-        AuthorizationCredential::ConfigurationId {
+        AuthorizationDefinition::ConfigurationId {
             credential_configuration_id,
         } => credential_configuration_id,
-        AuthorizationCredential::FormatProfile(fmt) => {
+        AuthorizationDefinition::FormatProfile(fmt) => {
             issuer.credential_configuration_id(fmt).context("issuer issue")?
         }
     };

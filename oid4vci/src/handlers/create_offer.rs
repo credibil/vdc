@@ -19,7 +19,7 @@ use crate::oauth::GrantType;
 use crate::provider::{Metadata, Provider, StateStore, Subject};
 use crate::state::{Expire, Offered};
 use crate::types::{
-    AuthorizationCodeGrant, AuthorizationCredential, AuthorizationDetail, AuthorizationDetailType,
+    AuthorizationCodeGrant, AuthorizationDefinition, AuthorizationDetail, AuthorizationDetailType,
     AuthorizedDetail, CreateOfferRequest, CreateOfferResponse, CredentialOffer, Grants, Issuer,
     OfferType, PreAuthorizedCodeGrant, SendType, Server, TxCode,
 };
@@ -231,7 +231,7 @@ async fn authorize(
         authorized.push(AuthorizedDetail {
             authorization_detail: AuthorizationDetail {
                 r#type: AuthorizationDetailType::OpenIdCredential,
-                credential: AuthorizationCredential::ConfigurationId {
+                credential: AuthorizationDefinition::ConfigurationId {
                     credential_configuration_id: config_id.clone(),
                 },
                 claims: None,

@@ -14,15 +14,15 @@ use axum::{Form, Json, Router};
 use axum_extra::TypedHeader;
 use axum_extra::headers::authorization::Bearer;
 use axum_extra::headers::{Authorization, Host};
-use credibil_core::blockstore::BlockStore;
-use credibil_core::http::IntoHttp;
 use credibil_core::urlencode;
+use credibil_oid4vci::blockstore::BlockStore;
+use credibil_oid4vci::http::IntoHttp;
+use credibil_oid4vci::status::StatusListRequest;
 use credibil_oid4vci::{
     AuthorizationRequest, CreateOfferRequest, CredentialHeaders, CredentialOfferRequest,
     CredentialRequest, DeferredCredentialRequest, MetadataRequest, NotificationHeaders,
     NotificationRequest, PushedAuthorizationRequest, ServerRequest, TokenRequest,
 };
-use credibil_status::StatusListRequest;
 use oauth2::CsrfToken;
 use serde::Deserialize;
 use serde_json::json;

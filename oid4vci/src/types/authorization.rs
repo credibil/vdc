@@ -178,7 +178,7 @@ impl Default for AuthorizationDetailBuilder<NoDefinition> {
 pub struct NoDefinition;
 /// A credential identifier id is set.
 #[doc(hidden)]
-pub struct HasDefinition(AuthorizationCredential);
+pub struct HasDefinition(AuthorizationDefinition);
 
 impl AuthorizationDetailBuilder<NoDefinition> {
     /// Create a new `AuthorizationDetailBuilder` with sensible defaults.
@@ -193,7 +193,7 @@ impl AuthorizationDetailBuilder<NoDefinition> {
         self, configuration_id: impl Into<String>,
     ) -> AuthorizationDetailBuilder<HasDefinition> {
         AuthorizationDetailBuilder {
-            credential: HasDefinition(AuthorizationCredential::ConfigurationId {
+            credential: HasDefinition(AuthorizationDefinition::ConfigurationId {
                 credential_configuration_id: configuration_id.into(),
             }),
             claims: self.claims,
@@ -204,7 +204,7 @@ impl AuthorizationDetailBuilder<NoDefinition> {
     #[must_use]
     pub fn format(self, format: FormatProfile) -> AuthorizationDetailBuilder<HasDefinition> {
         AuthorizationDetailBuilder {
-            credential: HasDefinition(AuthorizationCredential::FormatProfile(format)),
+            credential: HasDefinition(AuthorizationDefinition::FormatProfile(format)),
             claims: self.claims,
         }
     }
@@ -588,7 +588,7 @@ pub struct AuthorizationDetail {
     /// Identifies credential to authorize for issuance using either
     /// `credential_configuration_id` or a supported credential `format`.
     #[serde(flatten)]
-    pub credential: AuthorizationCredential,
+    pub credential: AuthorizationDefinition,
 
     // TODO: integrate locations
     /// If the Credential Issuer metadata contains an `authorization_servers`
@@ -631,7 +631,7 @@ pub enum AuthorizationDetailType {
 /// Means used to identifiy a Credential's type when requesting a Credential.
 #[derive(Clone, Debug, Deserialize, Serialize, Eq)]
 #[serde(untagged)]
-pub enum AuthorizationCredential {
+pub enum AuthorizationDefinition {
     /// Identifes the credential to authorize by `credential_configuration_id`.
     ConfigurationId {
         /// The unique identifier of the Credential being requested in the
@@ -645,7 +645,7 @@ pub enum AuthorizationCredential {
     FormatProfile(FormatProfile),
 }
 
-impl Default for AuthorizationCredential {
+impl Default for AuthorizationDefinition {
     fn default() -> Self {
         Self::ConfigurationId {
             credential_configuration_id: String::new(),
@@ -653,9 +653,9 @@ impl Default for AuthorizationCredential {
     }
 }
 
-/// `PartialEq` for `AuthorizationCredential` checks for equivalence using
+/// `PartialEq` for `AuthorizationDefinition` checks for equivalence using
 /// `credential_configuration_id` or `format`, ecluding claims.
-impl PartialEq for AuthorizationCredential {
+impl PartialEq for AuthorizationDefinition {
     fn eq(&self, other: &Self) -> bool {
         match self {
             Self::ConfigurationId {
@@ -794,7 +794,7 @@ mod tests {
             code_challenge_method: oauth::CodeChallengeMethod::S256,
             authorization_details: Some(vec![AuthorizationDetail {
                 r#type: AuthorizationDetailType::OpenIdCredential,
-                credential: AuthorizationCredential::ConfigurationId {
+                credential: AuthorizationDefinition::ConfigurationId {
                     credential_configuration_id: "EmployeeID_W3C_VC".to_string(),
                 },
                 claims: Some(vec![
