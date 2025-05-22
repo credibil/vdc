@@ -24,7 +24,7 @@ mod state;
 pub mod proof {
     pub use credibil_vdc::w3c_vc::{Payload, Verify, W3cVcClaims};
 }
-pub use credibil_core::{OneMany, blockstore, did_jwk, http};
+pub use credibil_core::{OneMany, urlencode,blockstore, did_jwk, http};
 use serde::{Deserialize, Serialize};
 pub use {
     credibil_identity as identity, credibil_jose as jose, credibil_status as status,

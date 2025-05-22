@@ -4,14 +4,12 @@ use credibil_oid4vp::blockstore::BlockStore;
 use credibil_oid4vp::identity::{Key, SignerExt};
 use credibil_oid4vp::jose::PublicKeyJwk;
 use credibil_oid4vp::status::{StatusClaim, StatusList, TokenBuilder};
-use credibil_oid4vp::types::ResponseMode;
-use credibil_oid4vp::vdc::dcql::DcqlQuery;
-use credibil_oid4vp::vdc::mso_mdoc::MdocBuilder;
-use credibil_oid4vp::vdc::sd_jwt::SdJwtVcBuilder;
-use credibil_oid4vp::vdc::w3c_vc::W3cVcBuilder;
-use credibil_oid4vp::vdc::{mso_mdoc, sd_jwt, w3c_vc};
+use credibil_oid4vp::vdc::{
+    DcqlQuery, MdocBuilder, SdJwtVcBuilder, W3cVcBuilder, mso_mdoc, sd_jwt, w3c_vc,
+};
 use credibil_oid4vp::{
-    AuthorizationResponse, DeviceFlow, GenerateRequest, GenerateResponse, did_jwk, vp_token,
+    AuthorizationResponse, DeviceFlow, GenerateRequest, GenerateResponse, ResponseMode, did_jwk,
+    vp_token,
 };
 use serde_json::{Value, json};
 use test_utils::issuer::{ISSUER_ID, Issuer};
