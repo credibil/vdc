@@ -14,7 +14,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-pub use self::dcql::DcqlQuery;
+pub use self::dcql::{DcqlQuery, Queryable};
 pub use self::mso_mdoc::MdocBuilder;
 pub use self::sd_jwt::SdJwtVcBuilder;
 pub use self::w3c_vc::W3cVcBuilder;

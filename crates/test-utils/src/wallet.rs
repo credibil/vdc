@@ -1,7 +1,6 @@
 use anyhow::Result;
-use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
-use credibil_se::{Algorithm, Signer};
-use credibil_vdc::dcql::Queryable;
+use credibil_identity::{Algorithm, Identity, IdentityResolver, Key, Signer, SignerExt};
+use credibil_vdc::Queryable;
 
 use crate::identity::DidIdentity;
 
