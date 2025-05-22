@@ -540,7 +540,7 @@ dependencies = [
 [[package]]
 name = "credibil-identity"
 version = "0.1.2"
-source = "git+https://github.com/credibil/identity.git#0215b7ae09a0e29c730bebe916c7d7317b227055"
+source = "git+https://github.com/credibil/identity.git#8b98c0a12fe02c05376be05dc88ba101d4cad19c"
 dependencies = [
  "anyhow",
  "base64ct",
@@ -1730,7 +1730,7 @@ version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51e219e79014df21a225b1860a479e2dcd7cbd9130f4defd4bd0e191ea31d67d"
 dependencies = [
- "base64 0.21.7",
+ "base64 0.22.1",
  "chrono",
  "getrandom 0.2.16",
  "http",
@@ -2274,9 +2274,9 @@ dependencies = [
 
 [[package]]
 name = "rustversion"
-version = "1.0.20"
+version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eded382c5f5f786b989652c49544c4877d9f015cc22e145a5ea8ea66c2921cd2"
+checksum = "8a0d197bd2c9dc6e53b84da9556a69ba4cdfab8619eb41a8bd1cc2027a0f6b1d"
 
 [[package]]
 name = "ryu"
