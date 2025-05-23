@@ -27,7 +27,7 @@ use anyhow::Context as _;
 
 use crate::handlers::{Body, Error, Handler, Headers, MetadataHeaders, Request, Response, Result};
 use crate::provider::{Metadata, Provider};
-use crate::types::{IssuerResponse, MetadataRequest};
+use crate::types::{MetadataRequest, MetadataResponse};
 
 /// Metadata request handler.
 ///
@@ -37,19 +37,18 @@ use crate::types::{IssuerResponse, MetadataRequest};
 /// not available.
 async fn metadata(
     issuer: &str, provider: &impl Provider, _: Request<MetadataRequest, MetadataHeaders>,
-) -> Result<IssuerResponse> {
+) -> Result<MetadataResponse> {
     // FIXME: use language header in request
     let credential_issuer = Metadata::issuer(provider, issuer).await.context("getting metadata")?;
-
-    Ok(IssuerResponse(credential_issuer))
+    Ok(MetadataResponse(credential_issuer))
 }
 
-impl<P: Provider> Handler<IssuerResponse, P> for Request<MetadataRequest, MetadataHeaders> {
+impl<P: Provider> Handler<MetadataResponse, P> for Request<MetadataRequest, MetadataHeaders> {
     type Error = Error;
 
     async fn handle(
         self, issuer: &str, provider: &P,
-    ) -> Result<impl Into<Response<IssuerResponse>>, Self::Error> {
+    ) -> Result<impl Into<Response<MetadataResponse>>, Self::Error> {
         metadata(issuer, provider, self).await
     }
 }

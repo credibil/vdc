@@ -8,7 +8,6 @@ use crate::identity::DidIdentity;
 #[derive(Clone)]
 pub struct Wallet {
     identity: DidIdentity,
-    // blockstore: Mockstore,
     store: Vec<Queryable>,
 }
 

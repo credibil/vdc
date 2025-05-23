@@ -164,7 +164,7 @@ async fn offer_ref() {
         credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should fetch offer");
 
     // validate offer
-    let offer = response.credential_offer.clone();
+    let offer = response.0.clone();
     assert_eq!(offer.credential_configuration_ids, vec!["EmployeeID_W3C_VC".to_string()]);
 
     let grants = offer.grants.expect("should have grant");

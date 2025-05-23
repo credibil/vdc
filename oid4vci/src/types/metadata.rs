@@ -12,7 +12,8 @@ pub struct MetadataRequest;
 
 /// Response containing the Credential Issuer's configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct IssuerResponse(pub Issuer);
+#[serde(transparent)]
+pub struct MetadataResponse(pub Issuer);
 
 /// Request to retrieve the Credential Issuer's authorization server
 /// configuration.
@@ -30,10 +31,8 @@ pub struct ServerRequest {
 /// Response containing the Credential Issuer's authorization server
 /// configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct ServerResponse {
-    /// The OAuth 2.0 Authorization Server metadata for the Issuer.
-    pub authorization_server: Server,
-}
+#[serde(transparent)]
+pub struct ServerResponse(pub Server);
 
 /// The registration request.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]

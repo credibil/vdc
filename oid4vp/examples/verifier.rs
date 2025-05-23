@@ -66,8 +66,8 @@ async fn request_uri(
     // TODO: add wallet_metadata and wallet_nonce
     let request = RequestUriRequest {
         id,
-        wallet_metadata: None, // Some(wallet_metadata),
-        wallet_nonce: None,    // Some(wallet_nonce)
+        wallet_metadata: None,
+        wallet_nonce: None,
     };
     credibil_oid4vp::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }
@@ -79,8 +79,7 @@ async fn authorization(
     Form(request): Form<String>,
 ) -> impl IntoResponse {
     let Ok(req) = AuthorizationResponse::form_decode(&request) else {
-        tracing::error!("unable to turn HashMap {request:?} into AuthorizationResponse");
-        return (StatusCode::BAD_REQUEST, "unable to turn request into AuthorizationResponse")
+        return (StatusCode::BAD_REQUEST, "issue deserializing `AuthorizationResponse`")
             .into_response();
     };
     credibil_oid4vp::handle(&format!("http://{host}"), req, &provider)
