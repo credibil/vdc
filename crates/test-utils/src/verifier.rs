@@ -2,7 +2,6 @@ use anyhow::Result;
 use credibil_core::blockstore::BlockStore;
 use credibil_identity::se::{Algorithm, PublicKey, Receiver, SharedSecret, Signer};
 use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
-use credibil_status::StatusToken;
 
 use crate::blockstore::Mockstore;
 use crate::identity::DidIdentity;
@@ -24,7 +23,7 @@ impl Verifier {
     pub async fn new(owner: &str) -> Self {
         Self {
             identity: DidIdentity::new(owner).await,
-            blockstore: Mockstore::new(),
+            blockstore: Mockstore::open(),
         }
     }
 }
@@ -80,14 +79,5 @@ impl BlockStore for Verifier {
 
     async fn purge(&self, _owner: &str, _partition: &str) -> Result<()> {
         unimplemented!()
-    }
-}
-
-impl StatusToken for Verifier {
-    async fn fetch(&self, uri: &str) -> Result<String> {
-        let Some(block) = BlockStore::get(self, "owner", "STATUSTOKEN", uri).await? else {
-            return Err(anyhow::anyhow!("could not find status token"));
-        };
-        Ok(serde_json::from_slice(&block)?)
     }
 }

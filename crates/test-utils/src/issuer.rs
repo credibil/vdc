@@ -1,5 +1,3 @@
-
-
 use anyhow::Result;
 use credibil_core::blockstore::BlockStore;
 use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
@@ -22,17 +20,16 @@ pub mod data {
 
 #[derive(Clone)]
 pub struct Issuer {
-    identity: DidIdentity,
     blockstore: Mockstore,
+    identity: DidIdentity,
 }
 
 impl Issuer {
     #[must_use]
     pub async fn new(owner: &str) -> Self {
-
         Self {
+            blockstore: Mockstore::open(),
             identity: DidIdentity::new(owner).await,
-            blockstore: Mockstore::new(),
         }
     }
 }

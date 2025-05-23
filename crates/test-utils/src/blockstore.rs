@@ -13,7 +13,7 @@ static BLOCKSTORE: LazyLock<InMemoryBlockstore<64>> = LazyLock::new(InMemoryBloc
 pub struct Mockstore;
 
 impl Mockstore {
-    pub fn new() -> Self {
+    pub fn open() -> Self {
         Self {}
     }
 

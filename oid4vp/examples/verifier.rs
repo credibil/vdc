@@ -38,8 +38,8 @@ async fn main() {
     let router = Router::new()
         .route("/create_request", post(create_request))
         .route("/request/{id}", get(request_uri))
-        .route("/callback", get(response))
-        .route("/post", post(response))
+        .route("/callback", get(authorization))
+        .route("/post", post(authorization))
         .layer(TraceLayer::new_for_http())
         .layer(cors)
         .with_state(provider);
@@ -74,7 +74,7 @@ async fn request_uri(
 
 // Wallet Authorization response endpoint
 #[axum::debug_handler]
-async fn response(
+async fn authorization(
     State(provider): State<Verifier>, TypedHeader(host): TypedHeader<Host>,
     Form(request): Form<String>,
 ) -> impl IntoResponse {
