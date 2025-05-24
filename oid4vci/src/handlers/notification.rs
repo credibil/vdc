@@ -19,10 +19,12 @@
 //! no guarantees that a Credential Issuer will receive a notification within a
 //! certain time period or at all.
 
-use crate::handlers::{Body, Error, Handler, Headers, Request, Response, Result};
-use crate::issuer::{NotificationHeaders, NotificationRequest, NotificationResponse};
+use crate::handlers::{
+    Body, Error, Handler, Headers, NotificationHeaders, Request, Response, Result,
+};
 use crate::provider::{Provider, StateStore};
 use crate::state::Token;
+use crate::types::{NotificationRequest, NotificationResponse};
 
 /// Notification request handler.
 ///

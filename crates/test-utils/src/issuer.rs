@@ -12,7 +12,7 @@ pub const CAROL_ID: &str = "carol";
 
 pub mod data {
     pub const CLIENT: &[u8] = include_bytes!("../data/issuer/client.json");
-    pub const ISSUER: &[u8] = include_bytes!("../data/issuer/issuer.json");
+    pub const ISSUER: &[u8] = include_bytes!("../data/issuer/credibil-issuer.json");
     pub const SERVER: &[u8] = include_bytes!("../data/issuer/server.json");
     pub const NORMAL_USER: &[u8] = include_bytes!("../data/issuer/normal-user.json");
     pub const PENDING_USER: &[u8] = include_bytes!("../data/issuer/pending-user.json");
@@ -20,22 +20,22 @@ pub mod data {
 
 #[derive(Clone)]
 pub struct Issuer {
-    identity: DidIdentity,
     blockstore: Mockstore,
+    identity: DidIdentity,
 }
 
 impl Issuer {
     #[must_use]
     pub async fn new(owner: &str) -> Self {
         Self {
+            blockstore: Mockstore::open(),
             identity: DidIdentity::new(owner).await,
-            blockstore: Mockstore::new(),
         }
     }
 }
 
 impl IdentityResolver for Issuer {
-    async fn resolve(&self, url: &str) -> anyhow::Result<Identity> {
+    async fn resolve(&self, url: &str) -> Result<Identity> {
         self.identity.resolve(url).await
     }
 }

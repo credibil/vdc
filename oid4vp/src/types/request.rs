@@ -12,8 +12,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::JwtType;
-use crate::verifier::VerifierMetadata;
-use crate::wallet::Wallet;
+use crate::types::VerifierMetadata;
+use crate::types::metadata::Wallet;
 
 /// The Request Object Request is created by the Verifier to generate an
 /// Authorization Request Object.

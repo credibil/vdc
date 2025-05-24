@@ -21,7 +21,7 @@ use crate::JwtType;
 use crate::error::invalid;
 use crate::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::provider::{Provider, StateStore};
-use crate::verifier::{ClientId, RequestObject, RequestUriRequest, RequestUriResponse};
+use crate::types::{ClientId, RequestObject, RequestUriRequest, RequestUriResponse};
 
 /// Endpoint for the Wallet to request the Verifier's Request Object when
 /// engaged in a cross-device flow.

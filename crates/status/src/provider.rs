@@ -23,6 +23,12 @@ pub trait StatusStore: Send + Sync {
     fn get(&self, uri: &str) -> impl Future<Output = Result<Option<String>>> + Send;
 }
 
+/// `StatusToken` is used to store and retrieve Status Tokens.
+pub trait StatusToken: Send + Sync {
+    /// Fetch the specified status list.
+    fn fetch(&self, uri: &str) -> impl Future<Output = Result<String>> + Send;
+}
+
 impl<T: BlockStore> StatusStore for T {
     #[allow(unused)]
     async fn put(&self, uri: &str, token: &str) -> Result<()> {
@@ -36,5 +42,14 @@ impl<T: BlockStore> StatusStore for T {
             return Ok(None);
         };
         Ok(Some(serde_json::from_slice(&block)?))
+    }
+}
+
+impl<T: BlockStore> StatusToken for T {
+    async fn fetch(&self, uri: &str) -> Result<String> {
+        let Some(block) = BlockStore::get(self, "owner", STATUSTOKEN, uri).await? else {
+            return Err(anyhow::anyhow!("could not find status token"));
+        };
+        Ok(serde_json::from_slice(&block)?)
     }
 }

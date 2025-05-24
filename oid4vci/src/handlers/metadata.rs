@@ -25,9 +25,9 @@
 
 use anyhow::Context as _;
 
-use crate::handlers::{Body, Error, Handler, Headers, Request, Response, Result};
-use crate::issuer::{IssuerRequest, IssuerResponse, MetadataHeaders};
+use crate::handlers::{Body, Error, Handler, Headers, MetadataHeaders, Request, Response, Result};
 use crate::provider::{Metadata, Provider};
+use crate::types::{MetadataRequest, MetadataResponse};
 
 /// Metadata request handler.
 ///
@@ -36,23 +36,22 @@ use crate::provider::{Metadata, Provider};
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
 async fn metadata(
-    issuer: &str, provider: &impl Provider, _: Request<IssuerRequest, MetadataHeaders>,
-) -> Result<IssuerResponse> {
+    issuer: &str, provider: &impl Provider, _: Request<MetadataRequest, MetadataHeaders>,
+) -> Result<MetadataResponse> {
     // FIXME: use language header in request
     let credential_issuer = Metadata::issuer(provider, issuer).await.context("getting metadata")?;
-
-    Ok(IssuerResponse(credential_issuer))
+    Ok(MetadataResponse(credential_issuer))
 }
 
-impl<P: Provider> Handler<IssuerResponse, P> for Request<IssuerRequest, MetadataHeaders> {
+impl<P: Provider> Handler<MetadataResponse, P> for Request<MetadataRequest, MetadataHeaders> {
     type Error = Error;
 
     async fn handle(
         self, issuer: &str, provider: &P,
-    ) -> Result<impl Into<Response<IssuerResponse>>, Self::Error> {
+    ) -> Result<impl Into<Response<MetadataResponse>>, Self::Error> {
         metadata(issuer, provider, self).await
     }
 }
 
-impl Body for IssuerRequest {}
+impl Body for MetadataRequest {}
 impl Headers for MetadataHeaders {}

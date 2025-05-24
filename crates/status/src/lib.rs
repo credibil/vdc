@@ -24,7 +24,6 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 pub use self::error::*;
 pub use self::issue::*;
 pub use self::provider::*;
-pub use self::verify::*;
 
 // `typ` statuslist+jwt
 // https://example.com/statuslists/1

@@ -12,11 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::StatusList;
 
-/// `StatusToken` is used to store and retrieve Status Tokens.
-pub trait StatusToken: Send + Sync {
-    /// Fetch the specified status list.
-    fn fetch(&self, uri: &str) -> impl Future<Output = Result<String>> + Send;
-}
+
 
 impl StatusList {
     /// Check if the status list contains a valid status for the given index.

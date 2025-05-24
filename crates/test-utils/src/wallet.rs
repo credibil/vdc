@@ -1,14 +1,13 @@
 use anyhow::Result;
+use credibil_identity::se::{Algorithm, Signer};
 use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
-use credibil_se::{Algorithm, Signer};
-use credibil_vdc::dcql::Queryable;
+use credibil_vdc::Queryable;
 
 use crate::identity::DidIdentity;
 
 #[derive(Clone)]
 pub struct Wallet {
     identity: DidIdentity,
-    // blockstore: Mockstore,
     store: Vec<Queryable>,
 }
 

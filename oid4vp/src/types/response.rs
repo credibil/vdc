@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 /// Authorization Response request object is used by Wallets to send a VP Token
 /// and Presentation Submission to the Verifier who initiated the verification.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct AuthorzationResponse {
+pub struct AuthorizationResponse {
     /// The VP Token returned by the Wallet.
     pub vp_token: HashMap<String, Vec<String>>,
 
@@ -18,9 +18,9 @@ pub struct AuthorzationResponse {
 }
 
 // FIXME: align serialization/deserialization with spec
-impl AuthorzationResponse {
+impl AuthorizationResponse {
     /// Create a `application/x-www-form-urlencoded` string of the
-    /// `AuthorzationResponse` suitable for use in an HTML form post.
+    /// `AuthorizationResponse` suitable for use in an HTML form post.
     ///
     /// # Errors
     ///
@@ -30,12 +30,12 @@ impl AuthorzationResponse {
         Ok(self.to_string())
     }
 
-    /// Create a `AuthorzationResponse` from a
+    /// Create a `AuthorizationResponse` from a
     /// `application/x-www-form-urlencoded` string.
     ///
     /// Suitable for
     /// use in a verifier's response endpoint that receives a form post before
-    /// passing the `AuthorzationResponse` to the `response` handler.
+    /// passing the `AuthorizationResponse` to the `response` handler.
     ///
     ///
     /// # Errors
@@ -46,14 +46,14 @@ impl AuthorzationResponse {
     }
 }
 
-impl Display for AuthorzationResponse {
+impl Display for AuthorizationResponse {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = urlencode::to_string(self).map_err(|_| fmt::Error)?;
         write!(f, "{s}")
     }
 }
 
-impl FromStr for AuthorzationResponse {
+impl FromStr for AuthorizationResponse {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -102,7 +102,7 @@ mod tests {
 
     #[test]
     fn form_encode() {
-        let request = AuthorzationResponse {
+        let request = AuthorizationResponse {
             vp_token: HashMap::from([("my_credential".to_string(), vec!["eyJ.etc".to_string()])]),
             state: None,
         };
@@ -110,7 +110,7 @@ mod tests {
         let encoded = request.form_encode().expect("should encode");
         assert_eq!(encoded, "vp_token=%7B%22my_credential%22%3A%5B%22eyJ.etc%22%5D%7D");
 
-        let decoded = AuthorzationResponse::form_decode(&encoded).expect("should decode");
+        let decoded = AuthorizationResponse::form_decode(&encoded).expect("should decode");
         assert_eq!(request, decoded);
     }
 }

@@ -1,19 +1,16 @@
 //! Tests for the Verifier API
 
-use credibil_core::blockstore::BlockStore;
-use credibil_core::did_jwk;
-use credibil_identity::{Key, SignerExt};
-use credibil_jose::PublicKeyJwk;
-use credibil_oid4vp::verifier::ResponseMode;
-use credibil_oid4vp::{
-    self, AuthorzationResponse, DeviceFlow, GenerateRequest, GenerateResponse, wallet,
+use credibil_oid4vp::blockstore::BlockStore;
+use credibil_oid4vp::identity::{Key, SignerExt};
+use credibil_oid4vp::jose::PublicKeyJwk;
+use credibil_oid4vp::status::{StatusClaim, StatusList, TokenBuilder};
+use credibil_oid4vp::vdc::{
+    DcqlQuery, MdocBuilder, SdJwtVcBuilder, W3cVcBuilder, mso_mdoc, sd_jwt, w3c_vc,
 };
-use credibil_status::{StatusClaim, StatusList, TokenBuilder};
-use credibil_vdc::dcql::DcqlQuery;
-use credibil_vdc::mso_mdoc::MdocBuilder;
-use credibil_vdc::sd_jwt::SdJwtVcBuilder;
-use credibil_vdc::w3c_vc::W3cVcBuilder;
-use credibil_vdc::{mso_mdoc, sd_jwt, w3c_vc};
+use credibil_oid4vp::{
+    AuthorizationResponse, DeviceFlow, GenerateRequest, GenerateResponse, ResponseMode, did_jwk,
+    vp_token,
+};
 use serde_json::{Value, json};
 use test_utils::issuer::{ISSUER_ID, Issuer};
 use test_utils::verifier::{VERIFIER_ID, Verifier, data};
@@ -86,10 +83,10 @@ async fn multiple_claims() {
     // assert_eq!(results.len(), 2);
 
     let vp_token =
-        wallet::generate(&request_object, &results, wallet).await.expect("should get token");
+        vp_token::generate(&request_object, &results, wallet).await.expect("should get token");
     // assert_eq!(vp_token.len(), 1);
 
-    let request = AuthorzationResponse {
+    let request = AuthorizationResponse {
         vp_token,
         state: request_object.state,
     };
@@ -187,10 +184,10 @@ async fn multiple_credentials() {
     // return a single `vp_token` for the query
     // each credential query will result in a separate presentation
     let vp_token =
-        wallet::generate(&request_object, &results, wallet).await.expect("should get token");
+        vp_token::generate(&request_object, &results, wallet).await.expect("should get token");
     assert_eq!(vp_token.len(), 3);
 
-    let request = AuthorzationResponse {
+    let request = AuthorizationResponse {
         vp_token,
         state: request_object.state,
     };

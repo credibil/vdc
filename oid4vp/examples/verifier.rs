@@ -11,9 +11,9 @@ use axum::routing::{get, post};
 use axum::{Form, Json, Router};
 use axum_extra::TypedHeader;
 use axum_extra::headers::Host;
-use credibil_core::blockstore::BlockStore;
-use credibil_core::http::IntoHttp;
-use credibil_oid4vp::{AuthorzationResponse, GenerateRequest, RequestUriRequest};
+use credibil_oid4vp::blockstore::BlockStore;
+use credibil_oid4vp::http::IntoHttp;
+use credibil_oid4vp::{AuthorizationResponse, GenerateRequest, RequestUriRequest};
 use test_utils::verifier::data::VERIFIER;
 use test_utils::verifier::{VERIFIER_ID, Verifier};
 use tokio::net::TcpListener;
@@ -38,8 +38,8 @@ async fn main() {
     let router = Router::new()
         .route("/create_request", post(create_request))
         .route("/request/{id}", get(request_uri))
-        .route("/callback", get(response))
-        .route("/post", post(response))
+        .route("/callback", get(authorization))
+        .route("/post", post(authorization))
         .layer(TraceLayer::new_for_http())
         .layer(cors)
         .with_state(provider);
@@ -66,21 +66,20 @@ async fn request_uri(
     // TODO: add wallet_metadata and wallet_nonce
     let request = RequestUriRequest {
         id,
-        wallet_metadata: None, // Some(wallet_metadata),
-        wallet_nonce: None,    // Some(wallet_nonce)
+        wallet_metadata: None,
+        wallet_nonce: None,
     };
     credibil_oid4vp::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }
 
 // Wallet Authorization response endpoint
 #[axum::debug_handler]
-async fn response(
+async fn authorization(
     State(provider): State<Verifier>, TypedHeader(host): TypedHeader<Host>,
     Form(request): Form<String>,
 ) -> impl IntoResponse {
-    let Ok(req) = AuthorzationResponse::form_decode(&request) else {
-        tracing::error!("unable to turn HashMap {request:?} into AuthorzationResponse");
-        return (StatusCode::BAD_REQUEST, "unable to turn request into AuthorzationResponse")
+    let Ok(req) = AuthorizationResponse::form_decode(&request) else {
+        return (StatusCode::BAD_REQUEST, "issue deserializing `AuthorizationResponse`")
             .into_response();
     };
     credibil_oid4vp::handle(&format!("http://{host}"), req, &provider)

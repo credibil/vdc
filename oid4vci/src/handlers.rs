@@ -9,7 +9,7 @@ mod create_offer;
 mod credential;
 mod credential_offer;
 mod deferred;
-mod issuer;
+mod metadata;
 mod nonce;
 mod notification;
 mod par;
@@ -25,7 +25,6 @@ use http::header::ACCEPT_LANGUAGE;
 use tracing::instrument;
 
 pub use crate::error::Error;
-use crate::error::invalid;
 use crate::provider::Provider;
 
 /// Result type for `OpenID` for Verifiable Credential Issuance.
@@ -55,6 +54,21 @@ where
     Ok(request.handle(issuer, provider).await?.into())
 }
 
+/// Credential request headers.
+pub type CredentialHeaders = AuthorizationHeader;
+
+/// Deferred Credential request headers.
+pub type DeferredHeaders = AuthorizationHeader;
+
+/// Registration request headers.
+pub type MetadataHeaders = LanguageHeader;
+
+/// Notification request headers.
+pub type NotificationHeaders = AuthorizationHeader;
+
+/// Registration request headers.
+pub type RegistrationHeaders = AuthorizationHeader;
+
 /// An authorization-only header for use by handlers that soley require
 /// authorization.
 #[derive(Clone, Debug)]
@@ -68,19 +82,13 @@ pub struct AuthorizationHeader {
 #[derive(Clone, Debug)]
 pub struct LanguageHeader {
     /// The `accept-language` header.
-    pub accept_language: String,
+    pub accept_language: Option<String>,
 }
 
-impl TryFrom<HeaderMap> for LanguageHeader {
-    type Error = Error;
-
-    fn try_from(headers: HeaderMap) -> Result<Self> {
-        let accept_language = headers
-            .get(ACCEPT_LANGUAGE)
-            .ok_or_else(|| invalid!("missing `accept-language` header"))?
-            .to_str()
-            .map_err(|_| invalid!("invalid `accept-language` header"))?
-            .to_string();
-        Ok(Self { accept_language })
+impl From<HeaderMap> for LanguageHeader {
+    fn from(headers: HeaderMap) -> Self {
+        let accept_language =
+            headers.get(ACCEPT_LANGUAGE).map(|h| h.to_str().ok().unwrap_or("en").to_string());
+        Self { accept_language }
     }
 }

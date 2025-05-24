@@ -18,4 +18,3 @@ credibil-status.workspace = true
 credibil-vdc.workspace = true
 serde_json.workspace = true
 test-kms = { git = "https://github.com/credibil/se.git" }
-uuid.workspace = true

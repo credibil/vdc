@@ -3,10 +3,10 @@
 use anyhow::Context as _;
 
 use crate::error::server;
-use crate::handlers::{Body, Error, Handler, Request, Response, Result};
-use crate::issuer::{RegistrationHeaders, RegistrationRequest, RegistrationResponse};
+use crate::handlers::{Body, Error, Handler, RegistrationHeaders, Request, Response, Result};
 use crate::provider::{Provider, StateStore};
 use crate::state::Token;
+use crate::types::{RegistrationRequest, RegistrationResponse};
 
 /// Registration request handler.
 ///

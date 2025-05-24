@@ -4,15 +4,186 @@ use std::str::FromStr;
 
 use anyhow::Context as _;
 use base64ct::{Base64, Encoding};
+use credibil_core::urlencode;
 use qrcode::QrCode;
 use serde::{Deserialize, Serialize};
 
-use credibil_core::urlencode;
 use crate::oauth::GrantType;
-use crate::issuer::{AuthorizationCodeGrant, Grants, PreAuthorizedCodeGrant};
+use crate::types::{AuthorizationCodeGrant, Grants, PreAuthorizedCodeGrant};
+
+/// Build a Credential Offer for a Credential Issuer.
+#[derive(Default, Debug)]
+pub struct CreateOfferRequestBuilder<C, S, P> {
+    credential_configuration_ids: C,
+    subject_id: S,
+    pre_authorized: P,
+    grant_types: Vec<GrantType>,
+    tx_code: bool,
+    by_ref: bool,
+}
+
+/// No credential configuration id is set.
+#[doc(hidden)]
+pub struct NoIdentifiers;
+/// At least one credential configuration id is set.
+#[doc(hidden)]
+pub struct HasIdentifiers(Vec<String>);
+
+/// No pre-authorized grant is specified.
+#[doc(hidden)]
+pub struct NoPreAuthorized;
+/// Pre-authorized grant is specified.
+#[doc(hidden)]
+pub struct PreAuthorized;
+
+/// No subject id is set.
+#[doc(hidden)]
+pub struct NoSubjectId;
+/// Subject id is set.
+#[doc(hidden)]
+pub struct SubjectId(String);
+
+impl CreateOfferRequestBuilder<NoIdentifiers, NoSubjectId, PreAuthorized> {
+    /// Create a new `CreateOfferRequestBuilder`.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            subject_id: NoSubjectId,
+            credential_configuration_ids: NoIdentifiers,
+            pre_authorized: PreAuthorized,
+            grant_types: vec![GrantType::PreAuthorizedCode],
+            tx_code: true,
+            by_ref: false,
+        }
+    }
+}
+
+impl<S, P> CreateOfferRequestBuilder<NoIdentifiers, S, P> {
+    /// Specify one or more credentials to include in the offer using the
+    /// `credential_configurations_id`.
+    #[must_use]
+    pub fn with_credential(
+        self, configuration_id: impl Into<String>,
+    ) -> CreateOfferRequestBuilder<HasIdentifiers, S, P> {
+        CreateOfferRequestBuilder {
+            subject_id: self.subject_id,
+            credential_configuration_ids: HasIdentifiers(vec![configuration_id.into()]),
+            pre_authorized: self.pre_authorized,
+            grant_types: self.grant_types,
+            tx_code: self.tx_code,
+            by_ref: self.by_ref,
+        }
+    }
+}
+
+impl<C, P> CreateOfferRequestBuilder<C, NoSubjectId, P> {
+    /// Specify the (previously authenticated) Holder for the Issuer to use
+    /// when building Credential Dataset(s) for credential issuance.
+    #[must_use]
+    pub fn subject_id(
+        self, subject_id: impl Into<String>,
+    ) -> CreateOfferRequestBuilder<C, SubjectId, P> {
+        CreateOfferRequestBuilder {
+            subject_id: SubjectId(subject_id.into()),
+            credential_configuration_ids: self.credential_configuration_ids,
+            pre_authorized: self.pre_authorized,
+            grant_types: self.grant_types,
+            tx_code: self.tx_code,
+            by_ref: self.by_ref,
+        }
+    }
+}
+
+impl<C, S> CreateOfferRequestBuilder<C, S, NoPreAuthorized> {
+    /// Specify the (previously authenticated) Holder for the Issuer to use
+    /// when building Credential Dataset(s) for credential issuance.
+    #[must_use]
+    pub fn with_grant(self, grant: GrantType) -> CreateOfferRequestBuilder<C, S, PreAuthorized> {
+        CreateOfferRequestBuilder {
+            subject_id: self.subject_id,
+            credential_configuration_ids: self.credential_configuration_ids,
+            pre_authorized: PreAuthorized,
+            grant_types: vec![grant],
+            tx_code: self.tx_code,
+            by_ref: self.by_ref,
+        }
+    }
+}
+
+impl<C, S, P> CreateOfferRequestBuilder<C, S, P> {
+    /// Specify whether a Transaction Code (PIN) will be required by the token
+    /// endpoint.
+    #[must_use]
+    pub const fn use_tx_code(mut self, tx_code_required: bool) -> Self {
+        self.tx_code = tx_code_required;
+        self
+    }
+
+    /// Specify whether Credential Offer should be an object or a URI.
+    #[must_use]
+    pub const fn by_ref(mut self, by_ref: bool) -> Self {
+        self.by_ref = by_ref;
+        self
+    }
+}
+
+impl<S, P> CreateOfferRequestBuilder<HasIdentifiers, S, P> {
+    /// Specify one or more credentials to include in the offer using the
+    /// `credential_configurations_id`.
+    #[must_use]
+    pub fn with_credential(mut self, configuration_id: impl Into<String>) -> Self {
+        self.credential_configuration_ids.0.push(configuration_id.into());
+        self
+    }
+}
+
+impl CreateOfferRequestBuilder<HasIdentifiers, SubjectId, PreAuthorized> {
+    /// Build the Create Offer request with a pre-authorized code grant.
+    #[must_use]
+    pub fn build(self) -> CreateOfferRequest {
+        let send_by = if self.by_ref { SendBy::ByRef } else { SendBy::ByVal };
+
+        CreateOfferRequest {
+            subject_id: Some(self.subject_id.0),
+            credential_configuration_ids: self.credential_configuration_ids.0,
+            grant_types: Some(self.grant_types),
+            tx_code_required: self.tx_code,
+            send_by,
+        }
+    }
+}
+
+impl<P> CreateOfferRequestBuilder<HasIdentifiers, NoSubjectId, P> {
+    /// Build the Create Offer request without a pre-authorized code grant.
+    #[must_use]
+    pub fn build(self) -> CreateOfferRequest {
+        let send_by = if self.by_ref { SendBy::ByRef } else { SendBy::ByVal };
+
+        let mut request = CreateOfferRequest {
+            subject_id: None,
+            credential_configuration_ids: self.credential_configuration_ids.0,
+            grant_types: None,
+            tx_code_required: self.tx_code,
+            send_by,
+        };
+
+        // only use Authorization Code grant type
+        if !self.grant_types.is_empty() {
+            for i in 0..self.grant_types.len() {
+                if self.grant_types[i] == GrantType::AuthorizationCode {
+                    request.grant_types = Some(vec![self.grant_types[i].clone()]);
+                    break;
+                }
+            }
+        }
+
+        request
+    }
+}
 
 /// Request a Credential Offer for a Credential Issuer.
 #[derive(Clone, Default, Debug, Deserialize, Serialize)]
+#[serde(default)]
 pub struct CreateOfferRequest {
     /// Identifies the (previously authenticated) Holder in order that Issuer
     /// can authorize credential issuance.
@@ -28,7 +199,7 @@ pub struct CreateOfferRequest {
     /// the Authorization Request.
     pub credential_configuration_ids: Vec<String>,
 
-    /// The Grant Types to include in the Offer.
+    /// The Grant Types to include in the offer.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub grant_types: Option<Vec<GrantType>>,
 
@@ -36,25 +207,34 @@ pub struct CreateOfferRequest {
     /// endpoint during the Pre-Authorized Code Flow.
     pub tx_code_required: bool,
 
-    /// The Issuer can specify whether Credential Offer is an object or a URI.
-    pub send_type: SendType,
+    /// The Issuer can specify whether Credential Offer is sent as an object or
+    /// a URI.
+    pub send_by: SendBy,
+}
+
+impl CreateOfferRequest {
+    /// Create a new `CreateOfferRequestBuilder`.
+    #[must_use]
+    pub fn builder() -> CreateOfferRequestBuilder<NoIdentifiers, NoSubjectId, PreAuthorized> {
+        CreateOfferRequestBuilder::new()
+    }
 }
 
 /// Determines how the Credential Offer is sent to the Wallet.
 #[derive(Clone, Default, Debug, Deserialize, Serialize, PartialEq, Eq)]
-pub enum SendType {
+pub enum SendBy {
     /// The Credential Offer is sent to the Wallet by value — as an object
     /// containing the Credential Offer parameters.
-    #[default]
     ByVal,
 
     /// The Credential Offer is sent to the Wallet by reference — as a string
     /// containing a URL pointing to a location where the offer can be
     /// retrieved.
+    #[default]
     ByRef,
 }
 
-impl Display for SendType {
+impl Display for SendBy {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::ByVal => write!(f, "by_val"),
@@ -63,7 +243,7 @@ impl Display for SendType {
     }
 }
 
-impl From<String> for SendType {
+impl From<String> for SendBy {
     fn from(s: String) -> Self {
         match s.as_str() {
             "by_ref" => Self::ByRef,
@@ -249,10 +429,8 @@ pub struct CredentialOfferRequest {
 /// The Credential Offer Response is used to return a previously generated
 /// Credential Offer.
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
-pub struct CredentialOfferResponse {
-    /// The Credential Offer generated by the `create_offer` endpoint.
-    pub credential_offer: CredentialOffer,
-}
+#[serde(transparent)]
+pub struct CredentialOfferResponse(pub CredentialOffer);
 
 #[cfg(test)]
 mod tests {
@@ -289,26 +467,4 @@ mod tests {
 
         assert_eq!(offer, &offer2);
     }
-
-    // #[test]
-    // fn querystring2() {
-    //     let offer = &CredentialOffer {
-    //         credential_issuer: "https://issuer.example.com".to_string(),
-    //         credential_configuration_ids: vec!["UniversityDegree_JWT".to_string()],
-    //         grants: None,
-    //     };
-
-    //     // let qs: String = form_urlencoded::Serializer::new(String::new())
-    //     //     .append_pair("credential_offer", &offer.to_string())
-    //     //     .finish();
-
-    //     let bytes = serde_json::to_vec(&offer).expect("should serialize to string");
-    //     let enc = form_urlencoded::byte_serialize(&bytes).collect::<String>();
-    //     println!("enc: {:?}", enc);
-
-    //     let dec = form_urlencoded::parse(enc.as_bytes()).into_owned().collect::<String>();
-
-    //     let offer2: CredentialOffer = enc.parse().expect("should deserialize from string");
-    //     assert_eq!(offer, &offer2);
-    // }
 }

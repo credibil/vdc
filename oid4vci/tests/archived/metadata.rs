@@ -3,7 +3,7 @@
 mod utils;
 
 use credibil_openid::oid4vci::endpoint;
-use credibil_openid::oid4vci::types::IssuerRequest;
+use credibil_openid::oid4vci::types::MetadataRequest;
 use insta::assert_yaml_snapshot as assert_snapshot;
 use test_issuer::CREDENTIAL_ISSUER;
 
@@ -13,7 +13,7 @@ async fn metadata_ok() {
     snapshot!("");
     let provider = test_issuer::ProviderImpl::new();
 
-    let request = IssuerRequest {
+    let request = MetadataRequest {
         credential_issuer: CREDENTIAL_ISSUER.to_string(),
         languages: None,
     };

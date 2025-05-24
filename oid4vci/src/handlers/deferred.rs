@@ -12,13 +12,12 @@ use anyhow::Context as _;
 
 use crate::error::invalid;
 use crate::handlers::credential::credential;
-use crate::handlers::{Body, Error, Handler, Request, Response, Result};
-use crate::issuer::{
-    CredentialHeaders, CredentialResponse, DeferredCredentialRequest, DeferredCredentialResponse,
-    DeferredHeaders,
+use crate::handlers::{
+    Body, CredentialHeaders, DeferredHeaders, Error, Handler, Request, Response, Result,
 };
 use crate::provider::{Provider, StateStore};
 use crate::state::Deferred;
+use crate::types::{CredentialResponse, DeferredCredentialRequest, DeferredCredentialResponse};
 
 /// Deferred credential request handler.
 ///

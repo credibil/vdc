@@ -1,7 +1,7 @@
 {
-    "issuer": "http://credibil.io",
-    "authorization_endpoint": "/auth",
-    "token_endpoint": "/token",
+    "issuer": "http://localhost:8080",
+    "authorization_endpoint": "http://localhost:8080/auth",
+    "token_endpoint": "http://localhost:8080/token",
     "scopes_supported": [
         "openid",
         "credential"

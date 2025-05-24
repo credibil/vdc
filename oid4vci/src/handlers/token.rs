@@ -21,16 +21,16 @@ use serde::de::DeserializeOwned;
 
 use crate::common::generate;
 use crate::common::state::State;
-use crate::oauth::GrantType;
 use crate::error::{invalid, server};
 use crate::handlers::{Body, Error, Handler, Request, Response, Result};
-use crate::issuer::{
-    AuthorizationCredential, AuthorizationDetail, AuthorizedDetail, Issuer, TokenGrantType,
-    TokenRequest, TokenResponse, TokenType,
-};
+use crate::oauth::GrantType;
 use crate::pkce;
 use crate::provider::{Metadata, Provider, StateStore};
 use crate::state::{Authorized, Expire, Offered, Token};
+use crate::types::{
+    AuthorizationDefinition, AuthorizationDetail, AuthorizedDetail, Issuer, TokenGrantType,
+    TokenRequest, TokenResponse, TokenType,
+};
 
 /// Token request handler.
 ///
@@ -290,10 +290,10 @@ fn verify_claims(issuer: &Issuer, detail: &AuthorizationDetail) -> Result<()> {
 
     // get credential configuration with claim metadata
     let config_id = match &detail.credential {
-        AuthorizationCredential::ConfigurationId {
+        AuthorizationDefinition::ConfigurationId {
             credential_configuration_id,
         } => credential_configuration_id,
-        AuthorizationCredential::FormatProfile(fmt) => {
+        AuthorizationDefinition::FormatProfile(fmt) => {
             issuer.credential_configuration_id(fmt).context("issuer issue")?
         }
     };

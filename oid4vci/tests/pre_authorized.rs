@@ -2,16 +2,16 @@
 
 use std::collections::HashMap;
 
-use credibil_core::blockstore::BlockStore;
-use credibil_core::{OneMany, did_jwk};
-use credibil_identity::{Key, SignerExt};
-use credibil_jose::{JwsBuilder, Jwt, decode_jws};
-use credibil_oid4vci::issuer::{
-    AuthorizationDetail, CreateOfferRequest, Credential, CredentialHeaders, CredentialOfferRequest,
-    CredentialRequest, CredentialResponse, NonceRequest, NotificationEvent, NotificationHeaders,
-    NotificationRequest, ProofClaims, TokenGrantType, TokenRequest, W3cVcClaims,
+use credibil_oid4vci::blockstore::BlockStore;
+use credibil_oid4vci::identity::{Key, SignerExt};
+use credibil_oid4vci::jose::{JwsBuilder, Jwt, decode_jws};
+use credibil_oid4vci::proof::W3cVcClaims;
+use credibil_oid4vci::types::{
+    AuthorizationDetail, CreateOfferRequest, Credential, CredentialOfferRequest, CredentialRequest,
+    CredentialResponse, NonceRequest, NotificationEvent, NotificationRequest, ProofClaims,
+    TokenGrantType, TokenRequest,
 };
-use credibil_oid4vci::{self, JwtType};
+use credibil_oid4vci::{CredentialHeaders, JwtType, NotificationHeaders, OneMany, did_jwk};
 use serde_json::json;
 use test_utils::issuer::{BOB_ID, ISSUER_ID, Issuer, data};
 use test_utils::wallet::Wallet;
@@ -56,13 +56,15 @@ async fn offer_val() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token = credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+    let token =
+        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a proof for a credential request
     // --------------------------------------------------
-    let nonce =
-        credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
+    let nonce = credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider)
+        .await
+        .expect("should return nonce");
 
     // proof of possession of key material
     let bob_key = bob
@@ -97,8 +99,9 @@ async fn offer_val() {
             authorization: token.access_token.clone(),
         },
     };
-    let response =
-        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
+    let response = credibil_oid4vci::handle(ISSUER_ID, request, &provider)
+        .await
+        .expect("should return credential");
 
     // --------------------------------------------------
     // Bob extracts and verifies the received credential
@@ -161,7 +164,7 @@ async fn offer_ref() {
         credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should fetch offer");
 
     // validate offer
-    let offer = response.credential_offer.clone();
+    let offer = response.0.clone();
     assert_eq!(offer.credential_configuration_ids, vec!["EmployeeID_W3C_VC".to_string()]);
 
     let grants = offer.grants.expect("should have grant");
@@ -203,7 +206,8 @@ async fn two_datasets() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token = credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+    let token =
+        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares 2 credential requests
@@ -215,8 +219,9 @@ async fn two_datasets() {
     ]);
 
     for identifier in &details[0].credential_identifiers {
-        let nonce =
-            credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
+        let nonce = credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider)
+            .await
+            .expect("should return nonce");
 
         // proof of possession of key material
         let bob_key = bob
@@ -249,8 +254,9 @@ async fn two_datasets() {
             },
         };
 
-        let response =
-            credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
+        let response = credibil_oid4vci::handle(ISSUER_ID, request, &provider)
+            .await
+            .expect("should return credential");
 
         // --------------------------------------------------
         // Bob extracts and verifies the received credential
@@ -317,7 +323,8 @@ async fn reduce_credentials() {
             AuthorizationDetail::builder().configuration_id("EmployeeID_W3C_VC").build(),
         )
         .build();
-    let token = credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+    let token =
+        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a credential request
@@ -327,8 +334,9 @@ async fn reduce_credentials() {
 
     let identifier = &details[0].credential_identifiers[0];
 
-    let nonce =
-        credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
+    let nonce = credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider)
+        .await
+        .expect("should return nonce");
 
     // proof of possession of key material
     let bob_key = bob
@@ -361,8 +369,9 @@ async fn reduce_credentials() {
         },
     };
 
-    let response =
-        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
+    let response = credibil_oid4vci::handle(ISSUER_ID, request, &provider)
+        .await
+        .expect("should return credential");
 
     // --------------------------------------------------
     // Bob extracts and verifies the received credential
@@ -425,13 +434,15 @@ async fn reduce_claims() {
                 .build(),
         )
         .build();
-    let token = credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+    let token =
+        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a proof for a credential request
     // --------------------------------------------------
-    let nonce =
-        credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
+    let nonce = credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider)
+        .await
+        .expect("should return nonce");
 
     // proof of possession of key material
     let bob_key = bob
@@ -467,8 +478,9 @@ async fn reduce_claims() {
         },
     };
 
-    let response =
-        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
+    let response = credibil_oid4vci::handle(ISSUER_ID, request, &provider)
+        .await
+        .expect("should return credential");
 
     // --------------------------------------------------
     // Bob extracts and verifies the received credential
@@ -532,13 +544,15 @@ async fn notify_accepted() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token = credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+    let token =
+        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a proof for a credential request
     // --------------------------------------------------
-    let nonce =
-        credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
+    let nonce = credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider)
+        .await
+        .expect("should return nonce");
 
     // proof of possession of key material
     let bob_key = bob
@@ -574,8 +588,9 @@ async fn notify_accepted() {
         },
     };
 
-    let response =
-        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
+    let response = credibil_oid4vci::handle(ISSUER_ID, request, &provider)
+        .await
+        .expect("should return credential");
 
     // --------------------------------------------------
     // Bob send a notication advising the credential was accepted

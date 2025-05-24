@@ -19,8 +19,8 @@
 use anyhow::Context as _;
 
 use crate::handlers::{Body, Error, Handler, Request, Response, Result};
-use crate::issuer::{ServerRequest, ServerResponse};
 use crate::provider::{Metadata, Provider};
+use crate::types::{ServerRequest, ServerResponse};
 
 /// OAuth server metadata request handler.
 ///
@@ -31,13 +31,11 @@ use crate::provider::{Metadata, Provider};
 async fn metadata(
     issuer: &str, provider: &impl Provider, _request: ServerRequest,
 ) -> Result<ServerResponse> {
-    let auth_server = Metadata::server(provider, issuer)
+    let server = Metadata::server(provider, issuer)
         .await
         .context("getting authorization server metadata")?;
 
-    Ok(ServerResponse {
-        authorization_server: auth_server,
-    })
+    Ok(ServerResponse(server))
 }
 
 impl<P: Provider> Handler<ServerResponse, P> for Request<ServerRequest> {

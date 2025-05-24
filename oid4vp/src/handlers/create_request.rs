@@ -13,7 +13,7 @@ use crate::error::invalid;
 use crate::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::provider::{Metadata, Provider, StateStore};
 use crate::state::Expire;
-use crate::verifier::{
+use crate::types::{
     ClientId, DeviceFlow, GenerateRequest, GenerateResponse, RequestObject, ResponseType,
 };
 
