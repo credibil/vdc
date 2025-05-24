@@ -1,6 +1,6 @@
-//! # HTTP Server Example
+//! # Issuance API
 //!
-//! This example demonstrates how to use the Verifiable Credential Issuer (VCI)
+//! A (naive) HTTP server for verifiable credential issuance.
 
 use std::collections::HashMap;
 use std::sync::LazyLock;
@@ -20,14 +20,15 @@ use credibil_oid4vci::http::IntoHttp;
 use credibil_oid4vci::status::StatusListRequest;
 use credibil_oid4vci::{
     AuthorizationRequest, CreateOfferRequest, CredentialHeaders, CredentialOfferRequest,
-    CredentialRequest, DeferredCredentialRequest, MetadataRequest, NotificationHeaders,
-    NotificationRequest, PushedAuthorizationRequest, ServerRequest, TokenRequest,
+    CredentialRequest, DeferredCredentialRequest, MetadataRequest, NonceRequest,
+    NotificationHeaders, NotificationRequest, PushedAuthorizationRequest, ServerRequest,
+    TokenRequest,
 };
 use oauth2::CsrfToken;
 use serde::Deserialize;
 use serde_json::json;
-use test_utils::issuer::data::{CLIENT, ISSUER, NORMAL_USER as USER, SERVER};
-use test_utils::issuer::{BOB_ID, ISSUER_ID, Issuer};
+use test_utils::issuer::Issuer;
+use test_utils::issuer::data::{CLIENT, NORMAL_USER, SERVER};
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
@@ -37,6 +38,8 @@ use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
 
 const CLIENT_ID: &str = "96bfb9cb-0513-7d64-5532-bed74c48f9ab";
+const ISSUER: &[u8] = include_bytes!("../../crates/test-utils/data/issuer/local-issuer.json");
+const ISSUER_ID: &str = "http://localhost:8080";
 
 static AUTH_REQUESTS: LazyLock<RwLock<HashMap<String, AuthorizationRequest>>> =
     LazyLock::new(|| RwLock::new(HashMap::new()));
@@ -50,7 +53,7 @@ async fn main() {
     // add some data
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", "normal_user", NORMAL_USER).await.unwrap();
     BlockStore::put(&provider, "owner", "CLIENT", CLIENT_ID, CLIENT).await.unwrap();
 
     let subscriber = FmtSubscriber::builder().with_max_level(Level::DEBUG).finish();
@@ -67,6 +70,7 @@ async fn main() {
         .route("/par", get(par))
         .route("/login", post(handle_login))
         .route("/token", post(token))
+        .route("/nonce", post(nonce))
         .route("/credential", post(credential))
         .route("/deferred_credential", post(deferred_credential))
         .route("/notification", post(notification))
@@ -84,7 +88,6 @@ async fn main() {
     axum::serve(listener, router).await.expect("server should run");
 }
 
-// Credential Offer endpoint
 #[axum::debug_handler]
 async fn create_offer(
     State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
@@ -93,7 +96,6 @@ async fn create_offer(
     credibil_oid4vci::handle(&format!("http://{host}"), req, &provider).await.into_http()
 }
 
-// Retrieve Credential Offer endpoint
 #[axum::debug_handler]
 async fn credential_offer(
     State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
@@ -103,7 +105,6 @@ async fn credential_offer(
     credibil_oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }
 
-// Metadata endpoint
 // TODO: override default  Cache-Control header to allow caching
 #[axum::debug_handler]
 async fn metadata(
@@ -269,24 +270,11 @@ async fn handle_login(
     (StatusCode::FOUND, Redirect::to(&format!("http://{host}/auth?{qs}"))).into_response()
 }
 
-/// Token endpoint
-/// RFC 6749: https://tools.ietf.org/html/rfc6749#section-5.1
-///
-/// The parameters are included in the entity-body of the HTTP response using
-/// the "application/json" media type as defined by [RFC4627].  The parameters
-/// are serialized into JSON
-///
-/// The authorization server MUST include the HTTP "Cache-Control" response
-/// header field [RFC2616] with a value of "no-store" in any response containing
-/// tokens, credentials, or other sensitive information, as well as the "Pragma"
-/// response header field [RFC2616] with a value of "no-cache".
-///
-/// [RFC2616]: (https://www.rfc-editor.org/rfc/rfc2616)
 #[axum::debug_handler]
 async fn token(
-    State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>, Form(req): Form<String>,
+    State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>, body: String,
 ) -> impl IntoResponse {
-    let Ok(tr) = TokenRequest::form_decode(&req) else {
+    let Ok(tr) = TokenRequest::form_decode(&body) else {
         return (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid request"})))
             .into_response();
     };
@@ -296,7 +284,14 @@ async fn token(
         .into_response()
 }
 
-// Credential endpoint
+#[axum::debug_handler]
+async fn nonce(
+    State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
+) -> impl IntoResponse {
+    let request = NonceRequest;
+    credibil_oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
+}
+
 #[axum::debug_handler]
 async fn credential(
     State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
@@ -311,7 +306,6 @@ async fn credential(
     credibil_oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }
 
-// Deferred endpoint
 #[axum::debug_handler]
 async fn deferred_credential(
     State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,

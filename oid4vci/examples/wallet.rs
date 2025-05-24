@@ -1,11 +1,13 @@
+//! # Web Wallet
+//!
+//! A (naive) HTTP server for a web wallet.
+
 use anyhow::{Result, anyhow};
 use axum::Router;
 use axum::extract::{Query, State};
 use axum::http::{HeaderValue, header};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
-use axum_extra::TypedHeader;
-use axum_extra::headers::Host;
 use credibil_oid4vci::identity::SignerExt;
 use credibil_oid4vci::jose::JwsBuilder;
 use credibil_oid4vci::{
@@ -14,6 +16,7 @@ use credibil_oid4vci::{
 };
 use http::StatusCode;
 use serde::Deserialize;
+use test_utils::wallet::Wallet;
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::set_header::SetResponseHeaderLayer;
@@ -21,9 +24,11 @@ use tower_http::trace::TraceLayer;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
 
+const CLIENT_ID: &str = "96bfb9cb-0513-7d64-5532-bed74c48f9ab";
+
 #[tokio::main]
 async fn main() {
-    let provider = Issuer::new("examples_issuer").await;
+    let provider = Wallet::new("oid4vci_example").await;
 
     let subscriber = FmtSubscriber::builder().with_max_level(Level::DEBUG).finish();
     tracing::subscriber::set_global_default(subscriber).expect("set subscriber");
@@ -49,29 +54,34 @@ async fn main() {
 #[derive(Deserialize)]
 struct OfferUri {
     credential_offer_uri: String,
+    tx_code: Option<String>,
 }
 
+// extract the credential offer URI from the query string
+//   e.g. https://credibil.io?credential_offer_uri=https://server.example.com/credential-offer/GkurKxf5T0Y-mnPFCHqWOMiZi4VS138cQO_V7PZHAdM
 #[axum::debug_handler]
 async fn credential_offer(
-    State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
-    Query(offer_uri): Query<OfferUri>,
+    State(provider): State<Wallet>, Query(offer_uri): Query<OfferUri>,
 ) -> Result<(), AppError> {
-    // let provider = Provider::new(&holder).await;
     let client = reqwest::Client::new();
 
     // --------------------------------------------------
     // fetch offer
     // --------------------------------------------------
-    let offer: CredentialOffer =
-        client.get(&offer_uri.credential_offer_uri).send().await?.json().await?;
+    let http_resp = client.get(&offer_uri.credential_offer_uri).send().await?;
+    if http_resp.status() != StatusCode::OK {
+        let body = http_resp.text().await?;
+        return Err(anyhow!("offer: {body}").into());
+    }
+    let offer = http_resp.json::<CredentialOffer>().await?;
     let issuer_uri = &offer.credential_issuer;
 
     // fetch metadata
     let meta_uri = format!("{issuer_uri}/.well-known/openid-credential-issuer");
-    let issuer: Issuer = client.get(&meta_uri).send().await?.json().await?;
+    let issuer = client.get(&meta_uri).send().await?.json::<Issuer>().await?;
 
     let server_uri = format!("{issuer_uri}/.well-known/oauth-authorization-server");
-    let server: Server = client.get(&server_uri).send().await?.json().await?;
+    let server = client.get(&server_uri).send().await?.json::<Server>().await?;
 
     // --------------------------------------------------
     // fetch token
@@ -84,57 +94,71 @@ async fn credential_offer(
     };
     let grant_type = TokenGrantType::PreAuthorizedCode {
         pre_authorized_code: pre_auth_grant.pre_authorized_code,
-        tx_code: Some("tx_code".to_string()),
+        tx_code: offer_uri.tx_code.clone(),
     };
 
-    let token_req = TokenRequest::builder().client_id("client_id").grant_type(grant_type).build();
-    let token_uri = format!("{issuer_uri}/{}", server.oauth.token_endpoint);
-    let token_resp =
-        client.post(&token_uri).form(&token_req).send().await?.json::<TokenResponse>().await?;
+    let token_req = TokenRequest::builder().client_id(CLIENT_ID).grant_type(grant_type).build();
+    let token_uri = server.oauth.token_endpoint;
+    let http_resp = client.post(&token_uri).form(&token_req).send().await?;
+    if http_resp.status() != StatusCode::OK {
+        let body = http_resp.text().await?;
+        return Err(anyhow!("token: {body}").into());
+    }
+    let token_resp = http_resp.json::<TokenResponse>().await?;
 
     // --------------------------------------------------
     // prepare a proof for a credential request
     // --------------------------------------------------
-    let nonce_uri =
-        format!("{issuer_uri}/{}", issuer.nonce_endpoint.unwrap_or("nonce".to_string()));
-    let nonce_resp = client.post(&nonce_uri).send().await?.json::<NonceResponse>().await?;
+    let Some(nonce_uri) = issuer.nonce_endpoint else {
+        return Err(anyhow!("issuer does not support nonce endpoint").into());
+    };
+    let http_resp = client.post(&nonce_uri).send().await?;
+    if http_resp.status() != StatusCode::OK {
+        let body = http_resp.text().await?;
+        return Err(anyhow!("nonce: {body}").into());
+    }
+    let nonce_resp = http_resp.json::<NonceResponse>().await?;
 
     // proof of possession of key material
+    let key = provider.verification_method().await?.try_into()?;
 
-    // let key = provider.verification_method().await?;
-    // let jws = JwsBuilder::new()
-    //     .typ(JwtType::ProofJwt)
-    //     .payload(
-    //         ProofClaims::new()
-    //             .credential_issuer(&offer.credential_issuer)
-    //             .nonce(&nonce_resp.c_nonce),
-    //     )
-    //     .key_ref(&key.try_into()?)
-    //     .add_signer(&provider)
-    //     .build()
-    //     .await?;
-    // let jwt = jws.encode()?;
-    let jwt = String::new();
+    let jws = JwsBuilder::new()
+        .typ(JwtType::ProofJwt)
+        .payload(
+            ProofClaims::new()
+                .credential_issuer(&offer.credential_issuer)
+                .nonce(&nonce_resp.c_nonce),
+        )
+        .key_ref(&key)
+        .add_signer(&provider)
+        .build()
+        .await?;
+    let jwt = jws.encode()?;
 
     // --------------------------------------------------
     // fetch credential
     // --------------------------------------------------
-    let Some(auth_details) = &token_resp.authorization_details.as_ref() else {
+    let Some(auth_details) = token_resp.authorization_details.as_ref() else {
         return Err(anyhow::anyhow!("missing authorization details").into());
     };
     let request = CredentialRequest::builder()
         .credential_identifier(&auth_details[0].credential_identifiers[0])
         .with_proof(jwt)
         .build();
-    let credential_uri = format!("{issuer_uri}/{}", issuer.credential_endpoint);
 
-    let credential_resp = client
-        .post(&credential_uri)
+    let http_resp = client
+        .post(&issuer.credential_endpoint)
+        .bearer_auth(token_resp.access_token)
         .json(&request)
         .send()
-        .await?
-        .json::<CredentialResponse>()
         .await?;
+    if http_resp.status() != StatusCode::OK {
+        let body = http_resp.text().await?;
+        return Err(anyhow!("credential: {body}").into());
+    }
+    let credential_resp = http_resp.json::<CredentialResponse>().await?;
+
+    println!("Credential Response: {credential_resp:?}");
 
     Ok(())
 }
@@ -167,7 +191,6 @@ impl<E: Into<anyhow::Error>> From<E> for AppError {
 // Tell axum how to convert `AppError` into a response.
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
-        (StatusCode::INTERNAL_SERVER_ERROR, format!("Something went wrong: {}", self.0))
-            .into_response()
+        (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", self.0)).into_response()
     }
 }

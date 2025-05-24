@@ -135,7 +135,7 @@ impl CredentialRequest {
                 },
             };
 
-            // the same c_nonce should be used for all proofs
+            // the same `c_nonce` should be used for all proofs
             let mut nonces = HashSet::new();
             let resolver = async |kid: String| did_jwk(&kid, provider).await;
 

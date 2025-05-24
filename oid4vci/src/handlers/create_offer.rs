@@ -21,7 +21,7 @@ use crate::state::{Expire, Offered};
 use crate::types::{
     AuthorizationCodeGrant, AuthorizationDefinition, AuthorizationDetail, AuthorizationDetailType,
     AuthorizedDetail, CreateOfferRequest, CreateOfferResponse, CredentialOffer, Grants, Issuer,
-    OfferType, PreAuthorizedCodeGrant, SendType, Server, TxCode,
+    OfferType, PreAuthorizedCodeGrant, SendBy, Server, TxCode,
 };
 
 #[derive(Debug, Default)]
@@ -76,7 +76,7 @@ async fn create_offer(
     }
 
     // respond with Offer object or uri?
-    if request.send_type == SendType::ByVal {
+    if request.send_by == SendBy::ByVal {
         return Ok(Response {
             status: StatusCode::CREATED,
             headers: None,

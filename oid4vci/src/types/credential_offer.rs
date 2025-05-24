@@ -141,14 +141,14 @@ impl CreateOfferRequestBuilder<HasIdentifiers, SubjectId, PreAuthorized> {
     /// Build the Create Offer request with a pre-authorized code grant.
     #[must_use]
     pub fn build(self) -> CreateOfferRequest {
-        let send_type = if self.by_ref { SendType::ByRef } else { SendType::ByVal };
+        let send_by = if self.by_ref { SendBy::ByRef } else { SendBy::ByVal };
 
         CreateOfferRequest {
             subject_id: Some(self.subject_id.0),
             credential_configuration_ids: self.credential_configuration_ids.0,
             grant_types: Some(self.grant_types),
             tx_code_required: self.tx_code,
-            send_type,
+            send_by,
         }
     }
 }
@@ -157,14 +157,14 @@ impl<P> CreateOfferRequestBuilder<HasIdentifiers, NoSubjectId, P> {
     /// Build the Create Offer request without a pre-authorized code grant.
     #[must_use]
     pub fn build(self) -> CreateOfferRequest {
-        let send_type = if self.by_ref { SendType::ByRef } else { SendType::ByVal };
+        let send_by = if self.by_ref { SendBy::ByRef } else { SendBy::ByVal };
 
         let mut request = CreateOfferRequest {
             subject_id: None,
             credential_configuration_ids: self.credential_configuration_ids.0,
             grant_types: None,
             tx_code_required: self.tx_code,
-            send_type,
+            send_by,
         };
 
         // only use Authorization Code grant type
@@ -183,6 +183,7 @@ impl<P> CreateOfferRequestBuilder<HasIdentifiers, NoSubjectId, P> {
 
 /// Request a Credential Offer for a Credential Issuer.
 #[derive(Clone, Default, Debug, Deserialize, Serialize)]
+#[serde(default)]
 pub struct CreateOfferRequest {
     /// Identifies the (previously authenticated) Holder in order that Issuer
     /// can authorize credential issuance.
@@ -198,7 +199,7 @@ pub struct CreateOfferRequest {
     /// the Authorization Request.
     pub credential_configuration_ids: Vec<String>,
 
-    /// The Grant Types to include in the Offer.
+    /// The Grant Types to include in the offer.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub grant_types: Option<Vec<GrantType>>,
 
@@ -206,8 +207,9 @@ pub struct CreateOfferRequest {
     /// endpoint during the Pre-Authorized Code Flow.
     pub tx_code_required: bool,
 
-    /// The Issuer can specify whether Credential Offer is an object or a URI.
-    pub send_type: SendType,
+    /// The Issuer can specify whether Credential Offer is sent as an object or
+    /// a URI.
+    pub send_by: SendBy,
 }
 
 impl CreateOfferRequest {
@@ -220,19 +222,19 @@ impl CreateOfferRequest {
 
 /// Determines how the Credential Offer is sent to the Wallet.
 #[derive(Clone, Default, Debug, Deserialize, Serialize, PartialEq, Eq)]
-pub enum SendType {
+pub enum SendBy {
     /// The Credential Offer is sent to the Wallet by value — as an object
     /// containing the Credential Offer parameters.
-    #[default]
     ByVal,
 
     /// The Credential Offer is sent to the Wallet by reference — as a string
     /// containing a URL pointing to a location where the offer can be
     /// retrieved.
+    #[default]
     ByRef,
 }
 
-impl Display for SendType {
+impl Display for SendBy {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::ByVal => write!(f, "by_val"),
@@ -241,7 +243,7 @@ impl Display for SendType {
     }
 }
 
-impl From<String> for SendType {
+impl From<String> for SendBy {
     fn from(s: String) -> Self {
         match s.as_str() {
             "by_ref" => Self::ByRef,
@@ -465,26 +467,4 @@ mod tests {
 
         assert_eq!(offer, &offer2);
     }
-
-    // #[test]
-    // fn querystring2() {
-    //     let offer = &CredentialOffer {
-    //         credential_issuer: "https://issuer.example.com".to_string(),
-    //         credential_configuration_ids: vec!["UniversityDegree_JWT".to_string()],
-    //         grants: None,
-    //     };
-
-    //     // let qs: String = form_urlencoded::Serializer::new(String::new())
-    //     //     .append_pair("credential_offer", &offer.to_string())
-    //     //     .finish();
-
-    //     let bytes = serde_json::to_vec(&offer).expect("should serialize to string");
-    //     let enc = form_urlencoded::byte_serialize(&bytes).collect::<String>();
-    //     println!("enc: {:?}", enc);
-
-    //     let dec = form_urlencoded::parse(enc.as_bytes()).into_owned().collect::<String>();
-
-    //     let offer2: CredentialOffer = enc.parse().expect("should deserialize from string");
-    //     assert_eq!(offer, &offer2);
-    // }
 }

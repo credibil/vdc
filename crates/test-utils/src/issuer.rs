@@ -12,7 +12,7 @@ pub const CAROL_ID: &str = "carol";
 
 pub mod data {
     pub const CLIENT: &[u8] = include_bytes!("../data/issuer/client.json");
-    pub const ISSUER: &[u8] = include_bytes!("../data/issuer/issuer.json");
+    pub const ISSUER: &[u8] = include_bytes!("../data/issuer/credibil-issuer.json");
     pub const SERVER: &[u8] = include_bytes!("../data/issuer/server.json");
     pub const NORMAL_USER: &[u8] = include_bytes!("../data/issuer/normal-user.json");
     pub const PENDING_USER: &[u8] = include_bytes!("../data/issuer/pending-user.json");
@@ -35,7 +35,7 @@ impl Issuer {
 }
 
 impl IdentityResolver for Issuer {
-    async fn resolve(&self, url: &str) -> anyhow::Result<Identity> {
+    async fn resolve(&self, url: &str) -> Result<Identity> {
         self.identity.resolve(url).await
     }
 }

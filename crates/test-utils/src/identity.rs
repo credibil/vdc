@@ -44,6 +44,7 @@ impl DidIdentity {
         let Some(doc_bytes) = Mockstore::open().get(owner, "DID", url).await? else {
             bail!("document not found");
         };
+
         let doc: Document = serde_json::from_slice(&doc_bytes).expect("should deserialize");
         Ok(doc)
     }

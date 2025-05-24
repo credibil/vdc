@@ -18,7 +18,7 @@ const UNRESERVED: &AsciiSet = &NON_ALPHANUMERIC.remove(b'.').remove(b'_').remove
 ///
 /// Will return an error if any of the object-type fields cannot be
 /// serialized to JSON and URL-encoded.
-pub fn encode<T: Serialize>(value: &T) -> anyhow::Result<String> {
+pub fn encode<T: Serialize>(value: &T) -> Result<String> {
     let encoded = match serde_json::to_value(value)? {
         Value::Object(map) => map
             .iter()
@@ -96,6 +96,26 @@ pub fn decode<T: DeserializeOwned>(s: &str) -> Result<T> {
 /// Will return an error if the value cannot be serialized to JSON.
 pub fn to_string<T: Serialize>(value: &T) -> Result<String> {
     encode(value)
+}
+
+/// Create an `application/x-www-form-urlencoded` representation of the
+/// provided value suitable for use in an HTML query strings or form post.
+///
+/// # Errors
+///
+/// Will return an error if any of the object-type fields cannot be
+/// serialized to JSON and URL-encoded.
+pub fn to_map<T: Serialize>(value: &T) -> Result<Vec<(String, String)>> {
+    let val = serde_json::to_value(value)?;
+    let map = val.as_object().ok_or_else(|| anyhow!("expected an object"))?;
+    let encoded = map
+        .iter()
+        .map(|(k, v)| {
+            let s = if let Value::String(s) = v { s } else { &v.to_string() };
+            (k.to_string(), utf8_percent_encode(s, UNRESERVED).to_string())
+        })
+        .collect::<Vec<(String, String)>>();
+    Ok(encoded)
 }
 
 /// Deserializes a url-encoded string to a value.

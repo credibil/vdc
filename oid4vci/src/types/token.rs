@@ -3,7 +3,6 @@ use std::fmt::Debug;
 use credibil_core::urlencode;
 use serde::{Deserialize, Serialize};
 
-use super::PreAuthorized;
 use crate::types::{AuthorizationDefinition, AuthorizationDetail, ClientAssertion};
 
 impl TokenRequest {
@@ -53,7 +52,7 @@ impl TokenRequestBuilder<NoGrant> {
     pub fn grant_type(self, grant_type: TokenGrantType) -> TokenRequestBuilder<Grant> {
         TokenRequestBuilder {
             client_id: self.client_id,
-            grant_type: Grant(grant_type.into()),
+            grant_type: Grant(grant_type),
             authorization_details: self.authorization_details,
             client_assertion: self.client_assertion,
         }
