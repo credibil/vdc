@@ -1,4 +1,5 @@
-use anyhow::Result;
+use anyhow::{Result};
+use credibil_identity::did::Document;
 use credibil_identity::se::{Algorithm, Signer};
 use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
 use credibil_vdc::Queryable;
@@ -27,10 +28,14 @@ impl Wallet {
     pub fn fetch(&self) -> &[Queryable] {
         &self.store
     }
+
+    pub async fn did(&self) -> Result<Document> {
+        self.identity.document(&self.identity.owner).await
+    }
 }
 
 impl IdentityResolver for Wallet {
-    async fn resolve(&self, url: &str) -> anyhow::Result<Identity> {
+    async fn resolve(&self, url: &str) -> Result<Identity> {
         self.identity.resolve(url).await
     }
 }

@@ -19,14 +19,14 @@ use tokio::sync::OnceCell;
 
 static BOB: OnceCell<Wallet> = OnceCell::const_new();
 async fn bob() -> &'static Wallet {
-    BOB.get_or_init(|| async { Wallet::new("vci_pre_auth_bob").await }).await
+    BOB.get_or_init(|| async { Wallet::new("https://pre_auth.io/bob").await }).await
 }
 
 // Should return a credential when using the pre-authorized code flow and the
 // credential offer to the Wallet is made by value.
 #[tokio::test]
 async fn offer_val() {
-    let provider = Issuer::new("vci_pre_auth_offer_val").await;
+    let provider = Issuer::new("https://pre_auth.io/offer_val").await;
     let bob = bob().await;
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
@@ -134,7 +134,7 @@ async fn offer_val() {
 // credential offer to the Wallet is made by reference.
 #[tokio::test]
 async fn offer_ref() {
-    let provider = Issuer::new("vci_pre_auth_offer_ref").await;
+    let provider = Issuer::new("https://pre_auth.io/offer_ref").await;
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
@@ -176,7 +176,7 @@ async fn offer_ref() {
 // configuration id.
 #[tokio::test]
 async fn two_datasets() {
-    let provider = Issuer::new("vci_pre_auth_two_datasets").await;
+    let provider = Issuer::new("https://pre_auth.io/two_datasets").await;
     let bob = bob().await;
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
@@ -284,7 +284,7 @@ async fn two_datasets() {
 // requested in the token request.
 #[tokio::test]
 async fn reduce_credentials() {
-    let provider = Issuer::new("vci_pre_auth_reduce_credentials").await;
+    let provider = Issuer::new("https://pre_auth.io/reduce_credentials").await;
     let bob = bob().await;
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
@@ -397,7 +397,7 @@ async fn reduce_credentials() {
 // Should return fewer claims when requested in token request.
 #[tokio::test]
 async fn reduce_claims() {
-    let provider = Issuer::new("vci_pre_auth_reduce_claims").await;
+    let provider = Issuer::new("https://pre_auth.io/reduce_claims").await;
     let bob = bob().await;
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
@@ -514,7 +514,7 @@ async fn reduce_claims() {
 // Should handle an acceptance notication from the wallet.
 #[tokio::test]
 async fn notify_accepted() {
-    let provider = Issuer::new("vci_pre_auth_notify_accepted").await;
+    let provider = Issuer::new("https://pre_auth.io/notify_accepted").await;
     let bob = bob().await;
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();

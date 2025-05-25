@@ -1,4 +1,4 @@
-use anyhow::{Result, bail};
+use anyhow::{Result, anyhow, bail};
 use credibil_identity::Identity::DidDocument;
 use credibil_identity::did::{self, Document, DocumentBuilder};
 use credibil_identity::jose::PublicKeyJwk;
@@ -10,7 +10,7 @@ use crate::blockstore::Mockstore;
 
 #[derive(Clone)]
 pub struct DidIdentity {
-    pub url: String,
+    pub owner: String,
     keyring: Keyring,
 }
 
@@ -23,9 +23,7 @@ impl DidIdentity {
         let verifying_key = PublicKeyJwk::from_bytes(&key_bytes).expect("verifying key");
 
         // generate a did:web document
-        let url = format!("https://credibil.io/{owner}");
-        let did = did::web::default_did(&url).expect("should construct DID");
-
+        let did = did::web::default_did(owner).expect("should construct DID");
         let document = DocumentBuilder::new(&did)
             .add_verifying_key(&verifying_key, true)
             .expect("should add verifying key")
@@ -33,26 +31,37 @@ impl DidIdentity {
         let doc_bytes = serde_json::to_vec(&document).expect("should serialize");
 
         // save to global blockstore
-        Mockstore::open().put(owner, "DID", &url, &doc_bytes).await.expect("should put");
+        Mockstore::open().put(owner, "DID", owner, &doc_bytes).await.expect("should put");
 
-        Self { url, keyring }
+        Self {
+            owner: owner.to_string(),
+            keyring,
+        }
     }
 
-    async fn get_doc(&self, url: &str) -> Result<Document> {
+    pub async fn document(&self, url: &str) -> Result<Document> {
         let url = url.trim_end_matches("/did.json");
-        let owner = url.strip_prefix("https://credibil.io/").expect("should strip prefix");
+        let owner = url;
         let Some(doc_bytes) = Mockstore::open().get(owner, "DID", url).await? else {
             bail!("document not found");
         };
-
-        let doc: Document = serde_json::from_slice(&doc_bytes).expect("should deserialize");
-        Ok(doc)
+        serde_json::from_slice(&doc_bytes).map_err(Into::into)
     }
 }
 
 impl IdentityResolver for DidIdentity {
-    async fn resolve(&self, url: &str) -> anyhow::Result<credibil_identity::Identity> {
-        let doc = self.get_doc(url).await?;
+    async fn resolve(&self, url: &str) -> Result<credibil_identity::Identity> {
+        println!("Resolving DID: {url}");
+
+        let doc = match self.document(url).await {
+            Ok(doc) => doc,
+            Err(_) => {
+                let url = url.replace("https", "http");
+                let resp = reqwest::get(url).await.map_err(|e| anyhow!("{e}"))?;
+                resp.json::<Document>().await.map_err(|e| anyhow!("{e}"))?
+            }
+        };
+
         Ok(DidDocument(doc))
     }
 }
@@ -73,7 +82,7 @@ impl Signer for DidIdentity {
 
 impl SignerExt for DidIdentity {
     async fn verification_method(&self) -> Result<Key> {
-        let doc = self.get_doc(&self.url).await?;
+        let doc = self.document(&self.owner).await?;
         let vm = &doc.verification_method.as_ref().unwrap()[0];
         Ok(Key::KeyId(vm.id.clone()))
     }

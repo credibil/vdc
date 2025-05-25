@@ -48,7 +48,7 @@ static PAR_REQUESTS: LazyLock<RwLock<HashMap<String, PushedAuthorizationRequest>
 
 #[tokio::main]
 async fn main() {
-    let provider = Issuer::new("examples_issuer").await;
+    let provider = Issuer::new("http://localhost:8080").await;
 
     // add some data
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, ISSUER).await.unwrap();
@@ -58,7 +58,6 @@ async fn main() {
 
     let subscriber = FmtSubscriber::builder().with_max_level(Level::DEBUG).finish();
     tracing::subscriber::set_global_default(subscriber).expect("set subscriber");
-
     let cors = CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any);
 
     let router = Router::new()
@@ -66,6 +65,7 @@ async fn main() {
         .route("/credential_offer/{offer_id}", get(credential_offer))
         .route("/.well-known/openid-credential-issuer", get(metadata))
         .route("/.well-known/oauth-authorization-server", get(oauth_server))
+        .route("/.well-known/did.json", get(did_json))
         .route("/auth", get(authorize))
         .route("/par", get(par))
         .route("/login", post(handle_login))
@@ -346,4 +346,10 @@ async fn statuslists(
 ) -> impl IntoResponse {
     let request = StatusListRequest { id: Some(id) };
     credibil_status::handle(&format!("http://{host}"), request, &provider).await.into_http()
+}
+
+#[axum::debug_handler]
+async fn did_json(State(provider): State<Issuer>) -> impl IntoResponse {
+    let doc = provider.did().await.expect("should fetch DID document");
+    Json(doc).into_response()
 }

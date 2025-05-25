@@ -3,12 +3,13 @@
 //! A (naive) HTTP server for a web wallet.
 
 use anyhow::{Result, anyhow};
-use axum::Router;
 use axum::extract::{Query, State};
 use axum::http::{HeaderValue, header};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
+use axum::{Json, Router};
 use credibil_oid4vci::identity::SignerExt;
+use credibil_oid4vci::identity::did::Document;
 use credibil_oid4vci::jose::JwsBuilder;
 use credibil_oid4vci::{
     CredentialOffer, CredentialRequest, CredentialResponse, Issuer, JwtType, NonceResponse,
@@ -28,16 +29,16 @@ const CLIENT_ID: &str = "96bfb9cb-0513-7d64-5532-bed74c48f9ab";
 
 #[tokio::main]
 async fn main() {
-    let provider = Wallet::new("oid4vci_example").await;
+    let provider = Wallet::new("http://localhost:8081").await;
 
     let subscriber = FmtSubscriber::builder().with_max_level(Level::DEBUG).finish();
     tracing::subscriber::set_global_default(subscriber).expect("set subscriber");
-
     let cors = CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any);
 
     let router = Router::new()
         .route("/credential_offer", get(credential_offer))
         // .route("/authorize/", post(authorize))
+        .route("/.well-known/did.json", get(did_json))
         .layer(TraceLayer::new_for_http())
         .layer(cors)
         .layer(SetResponseHeaderLayer::if_not_present(
@@ -175,11 +176,13 @@ async fn credential_offer(
 //     todo!()
 // }
 
-// async fn handle_error(e: anyhow::Error) -> (StatusCode, String) {
-//     (StatusCode::INTERNAL_SERVER_ERROR, format!("Something went wrong: {e}"))
-// }
+#[axum::debug_handler]
+async fn did_json(State(provider): State<Wallet>) -> Result<Json<Document>, AppError> {
+    let doc = provider.did().await.map_err(AppError::from)?;
+    Ok(Json(doc))
+}
 
-// Make our own error that wraps `anyhow::Error`.
+// Wrap anyhow::Error.
 struct AppError(anyhow::Error);
 
 impl<E: Into<anyhow::Error>> From<E> for AppError {

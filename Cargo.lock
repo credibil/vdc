@@ -2834,6 +2834,7 @@ dependencies = [
  "credibil-se",
  "credibil-status",
  "credibil-vdc",
+ "reqwest",
  "serde_json",
  "test-kms",
 ]

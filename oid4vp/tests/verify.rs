@@ -9,7 +9,7 @@ use test_utils::verifier::Verifier;
 
 #[tokio::test]
 async fn same_device() {
-    let _provider = Verifier::new("tests_vp_verify_same_device_verifier").await;
+    let _provider = Verifier::new("https://verify.io/same_device").await;
 
     // --------------------------------------------------
     // Alice creates a presentation requesto to send to Bob

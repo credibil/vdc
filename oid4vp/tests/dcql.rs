@@ -22,13 +22,13 @@ static ISSUER: OnceCell<Issuer> = OnceCell::const_new();
 static WALLET: OnceCell<Wallet> = OnceCell::const_new();
 
 async fn verifier() -> &'static Verifier {
-    VERIFIER.get_or_init(|| async { Verifier::new("vp_dcql_verifier").await }).await
+    VERIFIER.get_or_init(|| async { Verifier::new("https://dcql.io/verifier").await }).await
 }
 async fn issuer() -> &'static Issuer {
-    ISSUER.get_or_init(|| async { Issuer::new("vp_dcql_issuer").await }).await
+    ISSUER.get_or_init(|| async { Issuer::new("https://dcql.io/issuer").await }).await
 }
 async fn wallet() -> &'static Wallet {
-    WALLET.get_or_init(|| async { populate("vp_dcql_wallet").await }).await
+    WALLET.get_or_init(|| async { populate("https://dcql.io/wallet").await }).await
 }
 
 // Should request a Credential with the claims `vehicle_holder` and `first_name`.

@@ -1,5 +1,6 @@
 use anyhow::Result;
 use credibil_core::blockstore::BlockStore;
+use credibil_identity::did::Document;
 use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
 use credibil_se::{Algorithm, Signer};
 
@@ -31,6 +32,10 @@ impl Issuer {
             blockstore: Mockstore::open(),
             identity: DidIdentity::new(owner).await,
         }
+    }
+
+    pub async fn did(&self) -> Result<Document> {
+        self.identity.document(&self.identity.owner).await
     }
 }
 
