@@ -17,10 +17,10 @@ pub struct DidIdentity {
 impl DidIdentity {
     pub async fn new(owner: &str) -> Self {
         // create a new keyring and add a signing key.
-        let mut keyring = Keyring::new(owner).await.expect("keyring created");
-        keyring.add(&Curve::Ed25519, "signer").await.expect("keyring created");
-        let key_bytes = keyring.verifying_key("signer").await.expect("key bytes");
-        let verifying_key = PublicKeyJwk::from_bytes(&key_bytes).expect("verifying key");
+        let mut keyring = Keyring::new(owner).await.expect("should create keyring");
+        keyring.add(&Curve::Ed25519, "signer").await.expect("should add key");
+        let key_bytes = keyring.verifying_key("signer").await.expect("should get verifying key");
+        let verifying_key = PublicKeyJwk::from_bytes(&key_bytes).expect("should convert to JWK");
 
         // generate a did:web document
         let did = did::web::default_did(owner).expect("should create DID");
@@ -59,7 +59,6 @@ impl IdentityResolver for DidIdentity {
                 resp.json::<Document>().await.map_err(|e| anyhow!("{e}"))?
             }
         };
-
         Ok(DidDocument(doc))
     }
 }

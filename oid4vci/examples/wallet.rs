@@ -13,7 +13,7 @@ use credibil_oid4vci::identity::did::Document;
 use credibil_oid4vci::jose::JwsBuilder;
 use credibil_oid4vci::{
     CredentialOffer, CredentialRequest, CredentialResponse, Issuer, JwtType, NonceResponse,
-    ProofClaims, Server, TokenGrantType, TokenRequest, TokenResponse,
+    ProofClaims, Server, TokenGrantType, TokenRequest, TokenResponse, sd_jwt,
 };
 use http::StatusCode;
 use serde::Deserialize;
@@ -63,7 +63,7 @@ struct OfferUri {
 //  https://server.example.com/credential-offer/GkurKxf5T0Y-mnPFCHqWOMiZi4VS138cQO_V7PZHAdM
 #[axum::debug_handler]
 async fn credential_offer(
-    State(provider): State<Wallet>, Query(offer_uri): Query<OfferUri>,
+    State(mut provider): State<Wallet>, Query(offer_uri): Query<OfferUri>,
 ) -> Result<(), AppError> {
     let client = reqwest::Client::new();
 
@@ -109,7 +109,7 @@ async fn credential_offer(
     let token_resp = http_resp.json::<TokenResponse>().await?;
 
     // --------------------------------------------------
-    // prepare a proof for a credential request
+    // proof for credential request
     // --------------------------------------------------
     let Some(nonce_uri) = issuer.nonce_endpoint else {
         return Err(anyhow!("issuer does not support nonce endpoint").into());
@@ -160,7 +160,19 @@ async fn credential_offer(
     }
     let credential_resp = http_resp.json::<CredentialResponse>().await?;
 
-    println!("Credential Response: {credential_resp:?}");
+    // --------------------------------------------------
+    // store credential
+    // --------------------------------------------------
+    let CredentialResponse::Credentials { credentials, .. } = credential_resp else {
+        return Err(anyhow!("expected credentials in response").into());
+    };
+    let credential = credentials.first().ok_or_else(|| anyhow!("no credentials"))?;
+    let Some(jwt) = credential.credential.as_str() else {
+        return Err(anyhow!("credential is not an SD-JWT").into());
+    };
+
+    let q = sd_jwt::to_queryable(jwt, &provider).await?;
+    provider.add(q);
 
     Ok(())
 }
