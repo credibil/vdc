@@ -59,7 +59,8 @@ struct OfferUri {
 }
 
 // extract the credential offer URI from the query string
-//   e.g. https://credibil.io?credential_offer_uri=https://server.example.com/credential-offer/GkurKxf5T0Y-mnPFCHqWOMiZi4VS138cQO_V7PZHAdM
+// e.g. https://credibil.io?credential_offer_uri=
+//  https://server.example.com/credential-offer/GkurKxf5T0Y-mnPFCHqWOMiZi4VS138cQO_V7PZHAdM
 #[axum::debug_handler]
 async fn credential_offer(
     State(provider): State<Wallet>, Query(offer_uri): Query<OfferUri>,

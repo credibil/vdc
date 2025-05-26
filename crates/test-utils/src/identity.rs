@@ -23,7 +23,7 @@ impl DidIdentity {
         let verifying_key = PublicKeyJwk::from_bytes(&key_bytes).expect("verifying key");
 
         // generate a did:web document
-        let did = did::web::default_did(owner).expect("should construct DID");
+        let did = did::web::default_did(owner).expect("should create DID");
         let document = DocumentBuilder::new(&did)
             .add_verifying_key(&verifying_key, true)
             .expect("should add verifying key")
@@ -51,8 +51,6 @@ impl DidIdentity {
 
 impl IdentityResolver for DidIdentity {
     async fn resolve(&self, url: &str) -> Result<credibil_identity::Identity> {
-        println!("Resolving DID: {url}");
-
         let doc = match self.document(url).await {
             Ok(doc) => doc,
             Err(_) => {
