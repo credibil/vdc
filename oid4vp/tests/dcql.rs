@@ -20,7 +20,6 @@ use tokio::sync::OnceCell;
 static VERIFIER: OnceCell<Verifier> = OnceCell::const_new();
 static ISSUER: OnceCell<Issuer> = OnceCell::const_new();
 static WALLET: OnceCell<Wallet> = OnceCell::const_new();
-
 async fn verifier() -> &'static Verifier {
     VERIFIER.get_or_init(|| async { Verifier::new("https://dcql.io/verifier").await }).await
 }
@@ -64,6 +63,7 @@ async fn multiple_claims() {
             response_uri: "http://localhost:3000/cb".to_string(),
         },
     };
+
     let response = credibil_oid4vp::handle(VERIFIER_ID, request, verifier)
         .await
         .expect("should create request");
@@ -84,8 +84,6 @@ async fn multiple_claims() {
 
     let vp_token =
         vp_token::generate(&request_object, &results, wallet).await.expect("should get token");
-    // assert_eq!(vp_token.len(), 1);
-
     let request = AuthorizationResponse {
         vp_token,
         state: request_object.state,

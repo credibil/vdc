@@ -265,7 +265,7 @@ impl Default for AuthorizationRequest {
 
 impl Display for AuthorizationRequest {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = urlencode::to_string(self).map_err(|_| fmt::Error)?;
+        let s = urlencode::encode(self).map_err(|_| fmt::Error)?;
         write!(f, "{s}")
     }
 }
@@ -275,7 +275,7 @@ impl FromStr for AuthorizationRequest {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.contains('=') && s.contains('&') {
-            Ok(urlencode::from_str(s)?)
+            Ok(urlencode::decode(s)?)
         } else {
             Ok(Self::Object(serde_json::from_str(s)?))
         }

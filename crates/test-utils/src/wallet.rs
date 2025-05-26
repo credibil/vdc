@@ -1,4 +1,4 @@
-use anyhow::{Result};
+use anyhow::Result;
 use credibil_identity::did::Document;
 use credibil_identity::se::{Algorithm, Signer};
 use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};

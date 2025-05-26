@@ -356,7 +356,7 @@ impl CredentialOffer {
     /// Returns an `Error::ServerError` error if error if the Credential Offer
     /// cannot be serialized.
     pub fn to_qrcode(&self, endpoint: &str) -> anyhow::Result<String> {
-        let qs = self.to_querystring();
+        let qs = self.encode();
 
         // generate qr code
         let qr_code =
@@ -381,7 +381,7 @@ impl CredentialOffer {
     /// Returns an `Error::ServerError` error if error if the Credential Offer
     /// cannot be serialized.
     #[must_use]
-    pub fn to_querystring(&self) -> String {
+    pub fn encode(&self) -> String {
         format!("credential_offer={self}")
     }
 
@@ -402,7 +402,7 @@ impl CredentialOffer {
 
 impl Display for CredentialOffer {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = urlencode::to_string(self).map_err(|_| fmt::Error)?;
+        let s = urlencode::encode(self).map_err(|_| fmt::Error)?;
         write!(f, "{s}")
     }
 }
@@ -411,7 +411,7 @@ impl FromStr for CredentialOffer {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        urlencode::from_str(s)
+        urlencode::decode(s)
     }
 }
 

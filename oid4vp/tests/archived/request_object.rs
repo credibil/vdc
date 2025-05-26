@@ -9,8 +9,7 @@ use credibil_openid::oid4vp::endpoint;
 use credibil_openid::oid4vp::provider::StateStore;
 use credibil_openid::oid4vp::state::{Expire, State};
 use credibil_openid::oid4vp::types::{
-    ClientIdPrefix, RequestObject, RequestObjectType, RequestUriRequest, ResponseType,
-    Verifier,
+    ClientIdPrefix, RequestObject, RequestObjectType, RequestUriRequest, ResponseType, Verifier,
 };
 use credibil_openid::verify_key;
 use insta::assert_yaml_snapshot as assert_snapshot;

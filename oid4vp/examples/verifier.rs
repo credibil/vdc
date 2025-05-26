@@ -14,6 +14,7 @@ use axum_extra::headers::Host;
 use credibil_oid4vp::blockstore::BlockStore;
 use credibil_oid4vp::http::IntoHttp;
 use credibil_oid4vp::{AuthorizationResponse, GenerateRequest, RequestUriRequest};
+use serde_json::json;
 use test_utils::verifier::data::VERIFIER;
 use test_utils::verifier::{VERIFIER_ID, Verifier};
 use tokio::net::TcpListener;
@@ -22,17 +23,15 @@ use tower_http::trace::TraceLayer;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
 
-#[allow(clippy::needless_return)]
 #[tokio::main]
 async fn main() {
-    let provider = Verifier::new("examples_verifier").await;
+    let provider = Verifier::new(VERIFIER_ID).await;
 
     // add some data
     BlockStore::put(&provider, "owner", "VERIFIER", VERIFIER_ID, VERIFIER).await.unwrap();
 
     let subscriber = FmtSubscriber::builder().with_max_level(Level::DEBUG).finish();
-    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
-
+    tracing::subscriber::set_global_default(subscriber).expect("should set subscriber");
     let cors = CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any);
 
     let router = Router::new()
@@ -49,7 +48,6 @@ async fn main() {
     axum::serve(listener, router).await.expect("should run");
 }
 
-// Generate Authorization Request endpoint
 #[axum::debug_handler]
 async fn create_request(
     State(provider): State<Verifier>, TypedHeader(host): TypedHeader<Host>,
@@ -58,25 +56,26 @@ async fn create_request(
     credibil_oid4vp::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }
 
-// Retrieve Authorization Request Object endpoint
 #[axum::debug_handler]
 async fn request_uri(
     State(provider): State<Verifier>, TypedHeader(host): TypedHeader<Host>, Path(id): Path<String>,
+    body: Form<Vec<(String, String)>>,
 ) -> impl IntoResponse {
-    // TODO: add wallet_metadata and wallet_nonce
-    let request = RequestUriRequest {
-        id,
-        wallet_metadata: None,
-        wallet_nonce: None,
+    let Ok(mut request) = RequestUriRequest::form_decode(&body) else {
+        return (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid request"})))
+            .into_response();
     };
-    credibil_oid4vp::handle(&format!("http://{host}"), request, &provider).await.into_http()
+    request.id = id;
+    credibil_oid4vp::handle(&format!("http://{host}"), request, &provider)
+        .await
+        .into_http()
+        .into_response()
 }
 
-// Wallet Authorization response endpoint
 #[axum::debug_handler]
 async fn authorization(
     State(provider): State<Verifier>, TypedHeader(host): TypedHeader<Host>,
-    Form(request): Form<String>,
+    Form(request): Form<Vec<(String, String)>>,
 ) -> impl IntoResponse {
     let Ok(req) = AuthorizationResponse::form_decode(&request) else {
         return (StatusCode::BAD_REQUEST, "issue deserializing `AuthorizationResponse`")

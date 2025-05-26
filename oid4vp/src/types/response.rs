@@ -26,8 +26,8 @@ impl AuthorizationResponse {
     ///
     /// Will return an error if any nested objects cannot be serialized and
     /// URL-encoded.
-    pub fn form_encode(&self) -> anyhow::Result<String> {
-        Ok(self.to_string())
+    pub fn form_encode(&self) -> anyhow::Result<Vec<(String, String)>> {
+        urlencode::form_encode(self)
     }
 
     /// Create a `AuthorizationResponse` from a
@@ -41,14 +41,14 @@ impl AuthorizationResponse {
     /// # Errors
     /// Will return an error if any nested objects cannot be deserialized from
     /// URL-encoded JSON strings.
-    pub fn form_decode(form: &str) -> anyhow::Result<Self> {
-        urlencode::from_str(form)
+    pub fn form_decode(form: &[(String, String)]) -> anyhow::Result<Self> {
+        urlencode::form_decode(form)
     }
 }
 
 impl Display for AuthorizationResponse {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = urlencode::to_string(self).map_err(|_| fmt::Error)?;
+        let s = urlencode::encode(self).map_err(|_| fmt::Error)?;
         write!(f, "{s}")
     }
 }
@@ -57,7 +57,7 @@ impl FromStr for AuthorizationResponse {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        urlencode::from_str(s)
+        urlencode::decode(s)
     }
 }
 
@@ -108,7 +108,14 @@ mod tests {
         };
 
         let encoded = request.form_encode().expect("should encode");
-        assert_eq!(encoded, "vp_token=%7B%22my_credential%22%3A%5B%22eyJ.etc%22%5D%7D");
+        println!("encoded: {:?}", encoded);
+        assert_eq!(
+            encoded,
+            vec![(
+                "vp_token".to_string(),
+                "%7B%22my_credential%22%3A%5B%22eyJ.etc%22%5D%7D".to_string()
+            )]
+        );
 
         let decoded = AuthorizationResponse::form_decode(&encoded).expect("should decode");
         assert_eq!(request, decoded);

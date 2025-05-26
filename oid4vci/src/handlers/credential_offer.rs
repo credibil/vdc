@@ -40,7 +40,7 @@ async fn credential_offer(
         return Err(invalid!("state expired"));
     }
 
-    Ok(CredentialOfferResponse( state.body))
+    Ok(CredentialOfferResponse(state.body))
 }
 
 impl<P: Provider> Handler<CredentialOfferResponse, P> for Request<CredentialOfferRequest> {

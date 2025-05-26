@@ -37,7 +37,6 @@ async fn main() {
 
     let router = Router::new()
         .route("/credential_offer", get(credential_offer))
-        // .route("/authorize/", post(authorize))
         .route("/.well-known/did.json", get(did_json))
         .layer(TraceLayer::new_for_http())
         .layer(cors)
@@ -58,19 +57,19 @@ struct OfferUri {
     tx_code: Option<String>,
 }
 
-// extract the credential offer URI from the query string
-// e.g. https://credibil.io?credential_offer_uri=
-//  https://server.example.com/credential-offer/GkurKxf5T0Y-mnPFCHqWOMiZi4VS138cQO_V7PZHAdM
+// extract the credential offer URI from the query string, e.g.
+// GET http://localhost:8081/credential_offer?
+//   credential_offer_uri=http://localhost:8080/credential-offer/GkurKxf5T0Y-mnPFCHqWOMiZi4VS138cQO_V7PZHAdM
 #[axum::debug_handler]
 async fn credential_offer(
     State(mut provider): State<Wallet>, Query(offer_uri): Query<OfferUri>,
 ) -> Result<(), AppError> {
-    let client = reqwest::Client::new();
+    let http = reqwest::Client::new();
 
     // --------------------------------------------------
     // fetch offer
     // --------------------------------------------------
-    let http_resp = client.get(&offer_uri.credential_offer_uri).send().await?;
+    let http_resp = http.get(&offer_uri.credential_offer_uri).send().await?;
     if http_resp.status() != StatusCode::OK {
         let body = http_resp.text().await?;
         return Err(anyhow!("offer: {body}").into());
@@ -80,10 +79,10 @@ async fn credential_offer(
 
     // fetch metadata
     let meta_uri = format!("{issuer_uri}/.well-known/openid-credential-issuer");
-    let issuer = client.get(&meta_uri).send().await?.json::<Issuer>().await?;
+    let issuer = http.get(&meta_uri).send().await?.json::<Issuer>().await?;
 
     let server_uri = format!("{issuer_uri}/.well-known/oauth-authorization-server");
-    let server = client.get(&server_uri).send().await?.json::<Server>().await?;
+    let server = http.get(&server_uri).send().await?.json::<Server>().await?;
 
     // --------------------------------------------------
     // fetch token
@@ -101,7 +100,7 @@ async fn credential_offer(
 
     let token_req = TokenRequest::builder().client_id(CLIENT_ID).grant_type(grant_type).build();
     let token_uri = server.oauth.token_endpoint;
-    let http_resp = client.post(&token_uri).form(&token_req).send().await?;
+    let http_resp = http.post(&token_uri).form(&token_req).send().await?;
     if http_resp.status() != StatusCode::OK {
         let body = http_resp.text().await?;
         return Err(anyhow!("token: {body}").into());
@@ -114,7 +113,7 @@ async fn credential_offer(
     let Some(nonce_uri) = issuer.nonce_endpoint else {
         return Err(anyhow!("issuer does not support nonce endpoint").into());
     };
-    let http_resp = client.post(&nonce_uri).send().await?;
+    let http_resp = http.post(&nonce_uri).send().await?;
     if http_resp.status() != StatusCode::OK {
         let body = http_resp.text().await?;
         return Err(anyhow!("nonce: {body}").into());
@@ -148,7 +147,7 @@ async fn credential_offer(
         .with_proof(jwt)
         .build();
 
-    let http_resp = client
+    let http_resp = http
         .post(&issuer.credential_endpoint)
         .bearer_auth(token_resp.access_token)
         .json(&request)
@@ -176,18 +175,6 @@ async fn credential_offer(
 
     Ok(())
 }
-
-// #[axum::debug_handler]
-// async fn authorize(
-//     headers: HeaderMap, State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
-// ) -> impl IntoResponse {
-//     // let request = credibil_oid4vci::Request {
-//     //     body: MetadataRequest,
-//     //     headers: headers.try_into().expect("should find language header"),
-//     // };
-//     // credibil_oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
-//     todo!()
-// }
 
 #[axum::debug_handler]
 async fn did_json(State(provider): State<Wallet>) -> Result<Json<Document>, AppError> {

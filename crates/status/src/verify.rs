@@ -12,8 +12,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::StatusList;
 
-
-
 impl StatusList {
     /// Check if the status list contains a valid status for the given index.
     ///

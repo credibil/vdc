@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 
+use anyhow::Result;
 use credibil_core::urlencode;
 use serde::{Deserialize, Serialize};
 
@@ -140,19 +141,19 @@ impl TokenRequest {
     /// Will return an error if any of the object-type fields cannot be
     /// serialized to JSON and URL-encoded. (`authorization_details` and
     /// `client_assertion`).
-    pub fn form_encode(&self) -> anyhow::Result<String> {
-        urlencode::to_string(self)
+    pub fn form_encode(&self) -> Result<Vec<(String, String)>> {
+        urlencode::form_encode(self)
     }
 
-    /// Create a `TokenRequest` from a `HashMap` representation. Suitable for
-    /// use in an issuer's token endpoint that receives an HTML form post.
+    /// Create a `TokenRequest` from a `x-www-form-urlencoded` form.
     ///
     /// # Errors
+    ///
     /// Will return an error if any of the object-type fields, assumed to be
     /// URL-encoded JSON, cannot be decoded. (`authorization_details` and
     /// `client_assertion`).
-    pub fn form_decode(form: &str) -> anyhow::Result<Self> {
-        urlencode::from_str(form)
+    pub fn form_decode(form: &[(String, String)]) -> Result<Self> {
+        urlencode::form_decode(form)
     }
 }
 
@@ -360,9 +361,17 @@ mod tests {
         };
 
         let encoded = request.form_encode().expect("should encode");
-        assert!(encoded.contains("client_id=1234"));
-        assert!(encoded.contains("pre-authorized_code=WQHhDmQ3ZygxyOPlBjunlA"));
-        assert!(encoded.contains("authorization_details=%5B%7B%22"));
+        assert!(encoded.contains(&("client_id".to_string(), "1234".to_string())));
+        assert!(
+            encoded.contains(&(
+                "pre-authorized_code".to_string(),
+                "WQHhDmQ3ZygxyOPlBjunlA".to_string()
+            ))
+        );
+        assert!(
+            encoded
+                .contains(&("client_assertion".to_string(), "Ezie91o7DuPsA2PCLOtRUg".to_string()))
+        );
 
         let decoded = TokenRequest::form_decode(&encoded).expect("should decode");
         assert_eq!(request, decoded);

@@ -193,7 +193,7 @@ impl RequestObject {
     /// Returns an `Error::ServerError` error if the Request Object cannot be
     /// serialized.
     pub async fn to_qrcode(&self, endpoint: &str, signer: &impl SignerExt) -> Result<String> {
-        let qs = self.to_querystring(signer).await?;
+        let qs = self.encode(signer).await?;
 
         // generate qr code
         let qr_code = QrCode::new(format!("{endpoint}{qs}")).context("failed to create QR code")?;
@@ -229,7 +229,7 @@ impl RequestObject {
     ///
     /// Returns an `Error::ServerError` error if the Request Object cannot be
     /// serialized.
-    pub async fn to_querystring(&self, signer: &impl SignerExt) -> Result<String> {
+    pub async fn encode(&self, signer: &impl SignerExt) -> Result<String> {
         let payload: RequestObjectClaims = self.clone().into();
 
         let key_ref = signer.verification_method().await?.try_into()?;
@@ -517,6 +517,30 @@ pub struct RequestUriRequest {
     pub wallet_nonce: Option<String>,
 }
 
+impl RequestUriRequest {
+    /// Create an `application/x-www-form-urlencoded` representation of the
+    /// `RequestUriRequest` suitable for use in an HTML form post.
+    ///
+    /// # Errors
+    ///
+    /// Will return an error if any of the object-type fields cannot be
+    /// serialized to JSON and URL-encoded. (`authorization_details` and
+    /// `client_assertion`).
+    pub fn form_encode(&self) -> Result<Vec<(String, String)>> {
+        urlencode::form_encode(self)
+    }
+
+    /// Create a `RequestUriRequest` from a `x-www-form-urlencoded` form.
+    ///
+    /// # Errors
+    ///
+    /// Will return an error if any of the object-type fields, assumed to be
+    /// URL-encoded JSON, cannot be decoded.
+    pub fn form_decode(form: &[(String, String)]) -> Result<Self> {
+        urlencode::form_decode(form)
+    }
+}
+
 /// The Request Object Response returns a previously generated Authorization
 /// Request Object. Will be either an object or a JWT.
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
@@ -620,7 +644,7 @@ mod tests {
         };
 
         let querystring = request_object
-            .to_querystring(&Verifier::new("oid4vp_verifier_request_tests_querystring").await)
+            .encode(&Verifier::new("oid4vp_verifier_request_tests_querystring").await)
             .await
             .unwrap();
 

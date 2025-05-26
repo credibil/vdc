@@ -48,7 +48,7 @@ static PAR_REQUESTS: LazyLock<RwLock<HashMap<String, PushedAuthorizationRequest>
 
 #[tokio::main]
 async fn main() {
-    let provider = Issuer::new("http://localhost:8080").await;
+    let provider = Issuer::new(ISSUER_ID).await;
 
     // add some data
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, ISSUER).await.unwrap();
@@ -57,7 +57,7 @@ async fn main() {
     BlockStore::put(&provider, "owner", "CLIENT", CLIENT_ID, CLIENT).await.unwrap();
 
     let subscriber = FmtSubscriber::builder().with_max_level(Level::DEBUG).finish();
-    tracing::subscriber::set_global_default(subscriber).expect("set subscriber");
+    tracing::subscriber::set_global_default(subscriber).expect("should set subscriber");
     let cors = CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any);
 
     let router = Router::new()
@@ -266,15 +266,16 @@ async fn handle_login(
     AUTH_REQUESTS.write().await.insert(req.username.clone(), auth_req.clone());
 
     // redirect back to authorize endpoint
-    let qs = urlencode::to_string(&auth_req).expect("should serialize");
+    let qs = urlencode::encode(&auth_req).expect("should serialize");
     (StatusCode::FOUND, Redirect::to(&format!("http://{host}/auth?{qs}"))).into_response()
 }
 
 #[axum::debug_handler]
 async fn token(
-    State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>, body: String,
+    State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
+    Form(form): Form<Vec<(String, String)>>,
 ) -> impl IntoResponse {
-    let Ok(tr) = TokenRequest::form_decode(&body) else {
+    let Ok(tr) = TokenRequest::form_decode(&form) else {
         return (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid request"})))
             .into_response();
     };

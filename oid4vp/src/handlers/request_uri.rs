@@ -33,6 +33,8 @@ use crate::types::{ClientId, RequestObject, RequestUriRequest, RequestUriRespons
 pub async fn request_uri(
     verifier: &str, provider: &impl Provider, request: RequestUriRequest,
 ) -> Result<RequestUriResponse> {
+    println!("&request.id: {}", request.id);
+
     // retrieve request object from state
     let state = StateStore::get::<RequestObject>(provider, &request.id)
         .await
