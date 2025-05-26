@@ -31,7 +31,7 @@ impl DidIdentity {
         let doc_bytes = serde_json::to_vec(&document).expect("should serialize");
 
         // save to global blockstore
-        Mockstore::open().put(owner, "DID", owner, &doc_bytes).await.expect("should put");
+        Mockstore::open().put("owner", "DID", &did, &doc_bytes).await.expect("should put");
 
         Self {
             owner: owner.to_string(),
@@ -40,9 +40,9 @@ impl DidIdentity {
     }
 
     pub async fn document(&self, url: &str) -> Result<Document> {
-        let url = url.trim_end_matches("/did.json");
-        let owner = url;
-        let Some(doc_bytes) = Mockstore::open().get(owner, "DID", url).await? else {
+        let url = url.trim_end_matches("/did.json").trim_end_matches("/.well-known");
+        let did = did::web::default_did(url)?;
+        let Some(doc_bytes) = Mockstore::open().get("owner", "DID", &did).await? else {
             bail!("document not found");
         };
         serde_json::from_slice(&doc_bytes).map_err(Into::into)
@@ -55,7 +55,7 @@ impl IdentityResolver for DidIdentity {
             Ok(doc) => doc,
             Err(_) => {
                 let url = url.replace("https", "http");
-                let resp = reqwest::get(url).await.map_err(|e| anyhow!("{e}"))?;
+                let resp = reqwest::get(url).await.map_err(|e| anyhow!("fetching: {e}"))?;
                 resp.json::<Document>().await.map_err(|e| anyhow!("{e}"))?
             }
         };

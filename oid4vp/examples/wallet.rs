@@ -8,11 +8,20 @@ use axum::http::{HeaderValue, header};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::{Json, Router};
+use credibil_oid4vp::blockstore::BlockStore;
 use credibil_oid4vp::identity::did::Document;
 use credibil_oid4vp::identity::se::Algorithm;
-use credibil_oid4vp::{RequestUriRequest, RequestUriResponse, VpFormat, Wallet};
+use credibil_oid4vp::identity::{Key, SignerExt};
+use credibil_oid4vp::jose::{self, Jwt, PublicKeyJwk};
+use credibil_oid4vp::status::{StatusClaim, StatusList, TokenBuilder};
+use credibil_oid4vp::vdc::{SdJwtVcBuilder, sd_jwt};
+use credibil_oid4vp::{
+    RequestObject, RequestUriRequest, RequestUriResponse, VpFormat, Wallet, did_jwk,
+};
 use http::StatusCode;
 use serde::Deserialize;
+use serde_json::{Value, json};
+use test_utils::issuer::{ISSUER_ID, Issuer};
 use test_utils::verifier::VERIFIER_ID;
 use test_utils::wallet;
 use tokio::net::TcpListener;
@@ -22,11 +31,10 @@ use tower_http::trace::TraceLayer;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
 
-// const CLIENT_ID: &str = "96bfb9cb-0513-7d64-5532-bed74c48f9ab";
-
 #[tokio::main]
 async fn main() {
-    let provider = wallet::Wallet::new("http://localhost:8081").await;
+    let mut provider = wallet::Wallet::new("http://localhost:8081").await;
+    populate(&mut provider).await;
 
     let subscriber = FmtSubscriber::builder().with_max_level(Level::DEBUG).finish();
     tracing::subscriber::set_global_default(subscriber).expect("should set subscriber");
@@ -88,12 +96,8 @@ async fn authorize(
     };
     let form = object_req.form_encode().context("encoding request")?;
 
-    // let http_req = http.post(&request.request_uri).form(&form).build();
-    // println!("http_resp: {http_req:?}");
-
     let http_resp = http.get(&request.request_uri).form(&form).send().await?;
     if http_resp.status() != StatusCode::OK {
-        println!("{http_resp:?}");
         let body = http_resp.text().await?;
         return Err(anyhow!("{body}").into());
     }
@@ -101,15 +105,15 @@ async fn authorize(
     let RequestUriResponse::Jwt(jwt) = http_resp.json::<RequestUriResponse>().await? else {
         return Err(anyhow!("expected JWT in response").into());
     };
-
-    println!("Request Object JWT: {jwt}");
+    let jwk = async |kid: String| did_jwk(&kid, &provider).await;
+    let decoded: Jwt<RequestObject> = jose::decode_jws(&jwt, jwk).await?;
+    let request_object = decoded.claims;
 
     // --------------------------------------------------
     // process the Authorization Request
     // --------------------------------------------------
-    // let wallet = wallet().await;
-    // let stored_vcs = wallet.fetch();
-    // let results = request_object.dcql_query.execute(stored_vcs).expect("should execute");
+    let stored_vcs = provider.fetch();
+    let results = request_object.dcql_query.execute(stored_vcs).expect("should execute");
 
     // let vp_token =
     //     vp_token::generate(&request_object, &results, wallet).await.expect("should get token");
@@ -131,131 +135,6 @@ async fn did_json(State(provider): State<wallet::Wallet>) -> Result<Json<Documen
     Ok(Json(doc))
 }
 
-// #[derive(Deserialize)]
-// struct OfferUri {
-//     credential_offer_uri: String,
-//     tx_code: Option<String>,
-// }
-
-// // extract the credential offer URI from the query string
-// // e.g. https://credibil.io/credential_offer?credential_offer_uri=
-// //  http://localhost:8080/credential-offer/GkurKxf5T0Y-mnPFCHqWOMiZi4VS138cQO_V7PZHAdM
-// #[axum::debug_handler]
-// async fn credential_offer(
-//     State(mut provider): State<Wallet>, Query(offer_uri): Query<OfferUri>,
-// ) -> Result<(), AppError> {
-//     let http = reqwest::Client::new();
-
-//     // --------------------------------------------------
-//     // fetch offer
-//     // --------------------------------------------------
-//     let http_resp = http.get(&offer_uri.credential_offer_uri).send().await?;
-//     if http_resp.status() != StatusCode::OK {
-//         let body = http_resp.text().await?;
-//         return Err(anyhow!("offer: {body}").into());
-//     }
-//     let offer = http_resp.json::<CredentialOffer>().await?;
-//     let issuer_uri = &offer.credential_issuer;
-
-//     // fetch metadata
-//     let meta_uri = format!("{issuer_uri}/.well-known/openid-credential-issuer");
-//     let issuer = http.get(&meta_uri).send().await?.json::<Issuer>().await?;
-
-//     let server_uri = format!("{issuer_uri}/.well-known/oauth-authorization-server");
-//     let server = http.get(&server_uri).send().await?.json::<Server>().await?;
-
-//     // --------------------------------------------------
-//     // fetch token
-//     // --------------------------------------------------
-//     let Some(grants) = offer.grants else {
-//         return Err(anyhow!("missing grants").into());
-//     };
-//     let Some(pre_auth_grant) = grants.pre_authorized_code else {
-//         return Err(anyhow!("missing pre-authorized code grant").into());
-//     };
-//     let grant_type = TokenGrantType::PreAuthorizedCode {
-//         pre_authorized_code: pre_auth_grant.pre_authorized_code,
-//         tx_code: offer_uri.tx_code.clone(),
-//     };
-
-//     let token_req = TokenRequest::builder().client_id(CLIENT_ID).grant_type(grant_type).build();
-//     let token_uri = server.oauth.token_endpoint;
-//     let http_resp = http.post(&token_uri).form(&token_req).send().await?;
-//     if http_resp.status() != StatusCode::OK {
-//         let body = http_resp.text().await?;
-//         return Err(anyhow!("token: {body}").into());
-//     }
-//     let token_resp = http_resp.json::<TokenResponse>().await?;
-
-//     // --------------------------------------------------
-//     // proof for credential request
-//     // --------------------------------------------------
-//     let Some(nonce_uri) = issuer.nonce_endpoint else {
-//         return Err(anyhow!("issuer does not support nonce endpoint").into());
-//     };
-//     let http_resp = http.post(&nonce_uri).send().await?;
-//     if http_resp.status() != StatusCode::OK {
-//         let body = http_resp.text().await?;
-//         return Err(anyhow!("nonce: {body}").into());
-//     }
-//     let nonce_resp = http_resp.json::<NonceResponse>().await?;
-
-//     // proof of possession of key material
-//     let key = provider.verification_method().await?.try_into()?;
-
-//     let jws = JwsBuilder::new()
-//         .typ(JwtType::ProofJwt)
-//         .payload(
-//             ProofClaims::new()
-//                 .credential_issuer(&offer.credential_issuer)
-//                 .nonce(&nonce_resp.c_nonce),
-//         )
-//         .key_ref(&key)
-//         .add_signer(&provider)
-//         .build()
-//         .await?;
-//     let jwt = jws.encode()?;
-
-//     // --------------------------------------------------
-//     // fetch credential
-//     // --------------------------------------------------
-//     let Some(auth_details) = token_resp.authorization_details.as_ref() else {
-//         return Err(anyhow::anyhow!("missing authorization details").into());
-//     };
-//     let request = CredentialRequest::builder()
-//         .credential_identifier(&auth_details[0].credential_identifiers[0])
-//         .with_proof(jwt)
-//         .build();
-
-//     let http_resp = http
-//         .post(&issuer.credential_endpoint)
-//         .bearer_auth(token_resp.access_token)
-//         .json(&request)
-//         .send()
-//         .await?;
-//     if http_resp.status() != StatusCode::OK {
-//         let body = http_resp.text().await?;
-//         return Err(anyhow!("credential: {body}").into());
-//     }
-//     let credential_resp = http_resp.json::<CredentialResponse>().await?;
-
-//     // --------------------------------------------------
-//     // store credential
-//     // --------------------------------------------------
-//     let CredentialResponse::Credentials { credentials, .. } = credential_resp else {
-//         return Err(anyhow!("expected credentials in response").into());
-//     };
-//     let credential = credentials.first().ok_or_else(|| anyhow!("no credentials"))?;
-//     let Some(jwt) = credential.credential.as_str() else {
-//         return Err(anyhow!("credential is not an SD-JWT").into());
-//     };
-
-//     let q = sd_jwt::to_queryable(jwt, &provider).await?;
-//     provider.add(q);
-
-//     Ok(())
-// }
-
 // Wrap anyhow::Error.
 struct AppError(anyhow::Error);
 
@@ -270,4 +149,80 @@ impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", self.0)).into_response()
     }
+}
+
+// Initialise a mock "wallet" with test credentials.
+async fn populate(wallet: &mut wallet::Wallet) {
+    let issuer = Issuer::new("https://dcql.io/issuer").await;
+
+    let Key::KeyId(did_url) = wallet.verification_method().await.unwrap() else {
+        panic!("should have did");
+    };
+    let holder_jwk = did_jwk(&did_url, wallet).await.expect("should get key");
+
+    // create a status list token
+    let mut status_list = StatusList::new().expect("should create status list");
+    let status_claim = status_list.add_entry("http://credibil.io/statuslists/1").unwrap();
+    let token = TokenBuilder::new()
+        .status_list(status_list.clone())
+        .uri("https://example.com/statuslists/1")
+        .signer(&issuer)
+        .build()
+        .await
+        .expect("should build status list token");
+    let data = serde_json::to_vec(&token).expect("should serialize");
+    BlockStore::put(&issuer, "owner", "STATUSTOKEN", "http://credibil.io/statuslists/1", &data)
+        .await
+        .unwrap();
+
+    // load credentials
+    let vct = "https://credentials.example.com/identity_credential";
+    let claims = json!({
+        "given_name": "Alice",
+        "family_name": "Holder",
+        "address": {
+            "street_address": "123 Elm St",
+            "locality": "Hollywood",
+            "region": "CA",
+            "postal_code": "90210",
+            "country": "USA"
+        },
+        "birthdate": "2000-01-01"
+    });
+    let jwt = sd_jwt(&issuer, vct, claims, &holder_jwk, &status_claim).await;
+    let q = sd_jwt::to_queryable(&jwt, &issuer).await.expect("should be SD-JWT");
+    wallet.add(q);
+
+    let vct = "https://othercredentials.example/pid";
+    let claims = json!({
+        "given_name": "John",
+        "family_name": "Doe",
+        "address": {
+            "street_address": "34 Drake St",
+            "locality": "Auckland",
+            "region": "Auckland",
+            "postal_code": "1010",
+            "country": "New Zealand"
+        },
+        "birthdate": "2000-01-01"
+    });
+    let jwt = sd_jwt(&issuer, vct, claims, &holder_jwk, &status_claim).await;
+    let q = sd_jwt::to_queryable(&jwt, &issuer).await.expect("should be SD-JWT");
+    wallet.add(q);
+}
+
+async fn sd_jwt(
+    issuer: &Issuer, vct: &str, claims: Value, holder_jwk: &PublicKeyJwk,
+    status_claim: &StatusClaim,
+) -> String {
+    SdJwtVcBuilder::new()
+        .vct(vct)
+        .claims(claims.as_object().unwrap().clone())
+        .issuer(ISSUER_ID)
+        .key_binding(holder_jwk.clone())
+        .status(status_claim.clone())
+        .signer(issuer)
+        .build()
+        .await
+        .expect("should build")
 }

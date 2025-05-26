@@ -108,7 +108,6 @@ mod tests {
         };
 
         let encoded = request.form_encode().expect("should encode");
-        println!("encoded: {:?}", encoded);
         assert_eq!(
             encoded,
             vec![(

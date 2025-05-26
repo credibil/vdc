@@ -6,13 +6,14 @@
 
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::response::IntoResponse;
+use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Form, Json, Router};
 use axum_extra::TypedHeader;
 use axum_extra::headers::Host;
 use credibil_oid4vp::blockstore::BlockStore;
 use credibil_oid4vp::http::IntoHttp;
+use credibil_oid4vp::identity::did::Document;
 use credibil_oid4vp::{AuthorizationResponse, GenerateRequest, RequestUriRequest};
 use serde_json::json;
 use test_utils::verifier::data::VERIFIER;
@@ -39,6 +40,7 @@ async fn main() {
         .route("/request/{id}", get(request_uri))
         .route("/callback", get(authorization))
         .route("/post", post(authorization))
+        .route("/.well-known/did.json", get(did_json))
         .layer(TraceLayer::new_for_http())
         .layer(cors)
         .with_state(provider);
@@ -85,4 +87,27 @@ async fn authorization(
         .await
         .into_http()
         .into_response()
+}
+
+use anyhow::Result;
+
+#[axum::debug_handler]
+async fn did_json(State(provider): State<Verifier>) -> Result<Json<Document>, AppError> {
+    let doc = provider.did().await.map_err(AppError::from)?;
+    Ok(Json(doc))
+}
+
+struct AppError(anyhow::Error);
+
+impl<E: Into<anyhow::Error>> From<E> for AppError {
+    fn from(err: E) -> Self {
+        Self(err.into())
+    }
+}
+
+// Tell axum how to convert `AppError` into a response.
+impl IntoResponse for AppError {
+    fn into_response(self) -> Response {
+        (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", self.0)).into_response()
+    }
 }

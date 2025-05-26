@@ -63,7 +63,6 @@ async fn multiple_claims() {
             response_uri: "http://localhost:3000/cb".to_string(),
         },
     };
-
     let response = credibil_oid4vp::handle(VERIFIER_ID, request, verifier)
         .await
         .expect("should create request");
