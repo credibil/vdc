@@ -38,7 +38,7 @@ async fn create_request(
         response_type: ResponseType::VpToken,
         state: Some(uri_token.clone()),
         nonce: generate::nonce(),
-        dcql_query: request.query,
+        dcql_query: request.dcql_query,
         client_metadata: Some(metadata.client_metadata),
         response_mode: request.response_mode,
         ..RequestObject::default()

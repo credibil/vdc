@@ -16,7 +16,8 @@ use credibil_oid4vp::jose::{self, Jwt, PublicKeyJwk};
 use credibil_oid4vp::status::{StatusClaim, StatusList, TokenBuilder};
 use credibil_oid4vp::vdc::{SdJwtVcBuilder, sd_jwt};
 use credibil_oid4vp::{
-    RequestObject, RequestUriRequest, RequestUriResponse, VpFormat, Wallet, did_jwk,
+    AuthorizationResponse, RequestObject, RequestUriRequest, RequestUriResponse, ResponseMode,
+    VpFormat, Wallet, did_jwk, vp_token,
 };
 use http::StatusCode;
 use serde::Deserialize;
@@ -109,22 +110,41 @@ async fn authorize(
     let decoded: Jwt<RequestObject> = jose::decode_jws(&jwt, jwk).await?;
     let request_object = decoded.claims;
 
+    println!("{request_object:?}");
+
     // --------------------------------------------------
     // process the Authorization Request
     // --------------------------------------------------
     let stored_vcs = provider.fetch();
     let results = request_object.dcql_query.execute(stored_vcs).expect("should execute");
-
-    // let vp_token =
-    //     vp_token::generate(&request_object, &results, wallet).await.expect("should get token");
-    // let request = AuthorizationResponse {
-    //     vp_token,
-    //     state: request_object.state,
-    // };
+    if results.is_empty() {
+        return Err(anyhow!("no matching credentials found").into());
+    }
 
     // --------------------------------------------------
     // return an Authorization Response
     // --------------------------------------------------
+    let vp_token =
+        vp_token::generate(&request_object, &results, &provider).await.expect("should get token");
+    let response = AuthorizationResponse {
+        vp_token,
+        state: request_object.state,
+    };
+
+    let response_uri = match &request_object.response_mode {
+        ResponseMode::DirectPostJwt { response_uri }
+        | ResponseMode::DirectPost { response_uri } => response_uri,
+        ResponseMode::Fragment { redirect_uri: _ } => {
+            return Err(anyhow!("`response_mode` must be 'direct_post'").into());
+        }
+    };
+
+    let form = response.form_encode().context("encoding response")?;
+    let http_resp = http.post(response_uri).form(&form).send().await?;
+    if http_resp.status() != StatusCode::OK {
+        let body = http_resp.text().await?;
+        return Err(anyhow!("{body}").into());
+    }
 
     Ok(())
 }

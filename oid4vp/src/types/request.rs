@@ -21,7 +21,7 @@ use crate::types::metadata::Wallet;
 #[serde(default)]
 pub struct GenerateRequest {
     /// The DCQL query to use to request the Verifiable Presentation.
-    pub query: DcqlQuery,
+    pub dcql_query: DcqlQuery,
 
     /// The Client ID
     pub client_id: String,
@@ -32,6 +32,7 @@ pub struct GenerateRequest {
 
     /// Inform the Wallet of the mechanism to use when returning an
     /// Authorization Response.
+    #[serde(flatten)]
     pub response_mode: ResponseMode,
 }
 

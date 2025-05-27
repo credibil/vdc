@@ -53,10 +53,10 @@ async fn multiple_claims() {
             ]
         }]
     });
-    let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
+    let dcql_query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
 
     let request = GenerateRequest {
-        query,
+        dcql_query,
         client_id: VERIFIER_ID.to_string(),
         device_flow: DeviceFlow::SameDevice,
         response_mode: ResponseMode::DirectPost {
@@ -150,10 +150,10 @@ async fn multiple_credentials() {
             }
         ]
     });
-    let query = serde_json::from_value(query_json).expect("should deserialize");
+    let dcql_query = serde_json::from_value(query_json).expect("should deserialize");
 
     let request = GenerateRequest {
-        query,
+        dcql_query,
         client_id: VERIFIER_ID.to_string(),
         device_flow: DeviceFlow::SameDevice,
         response_mode: ResponseMode::DirectPost {

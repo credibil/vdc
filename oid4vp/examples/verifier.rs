@@ -93,6 +93,7 @@ use anyhow::Result;
 
 #[axum::debug_handler]
 async fn did_json(State(provider): State<Verifier>) -> Result<Json<Document>, AppError> {
+    println!("Fetching DID document...");
     let doc = provider.did().await.map_err(AppError::from)?;
     Ok(Json(doc))
 }
