@@ -213,7 +213,7 @@ impl TokenRequest {
         if let Some(client_id) = &self.client_id {
             // client metadata
             let Ok(client) = Metadata::client(provider, client_id).await else {
-                return Err(Error::InvalidClient("invalid `client_id`".to_string()));
+                return Err(Error::InvalidClient(format!("{client_id} is not a valid client_id")));
             };
             // Client and server must support the same scopes.
             if let Some(client_scope) = &client.oauth.scope {

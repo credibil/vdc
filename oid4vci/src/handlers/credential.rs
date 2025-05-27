@@ -221,7 +221,7 @@ impl Context {
         // create a credential for each proof
         for kid in &self.proof_kids {
             let status_claim = status_list
-                .add_entry("http://credibil.io/statuslists/1")
+                .add_entry("http://localhost:8080/statuslists/1")
                 .context("creating status claim")?;
 
             let credential = match &self.configuration.profile {
@@ -298,12 +298,12 @@ impl Context {
 
         let token = TokenBuilder::new()
             .status_list(status_list.clone())
-            .uri("https://example.com/statuslists/1")
+            .uri("http://localhost:8080/statuslists/1")
             .signer(provider)
             .build()
             .await
             .context("building status list token")?;
-        StatusStore::put(provider, "https://example.com/statuslists/1", &token)
+        StatusStore::put(provider, "http://localhost:8080/statuslists/1", &token)
             .await
             .context("saving status list")?;
 

@@ -1,5 +1,5 @@
 [workspace]
-members = ["oid4vci", "oid4vp", "crates/*"]
+members = ["oid4vci", "oid4vp", "examples", "crates/*"]
 resolver = "3"
 
 [workspace.package]
@@ -26,6 +26,8 @@ nursery = "warn"
 
 [workspace.dependencies]
 anyhow = "1.0.98"
+axum = { version = "0.8.4", features = ["macros"] }
+axum-extra = { version = "0.10.1", features = ["typed-header"] }
 base64ct = { version = "1.7.3", features = ["std"] }
 chrono = { version = "0.4.41", features = ["serde"] }
 ciborium = "0.2.2"
@@ -43,8 +45,10 @@ serde_repr = "0.1"
 sha2 = "0.10.9"
 test-utils = { path = "crates/test-utils" }
 thiserror = "2.0.12"
-tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread", "signal"] }
+tower-http = { version = "0.6.4", features = ["cors", "set-header", "trace"] }
 tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter", "fmt"] }
 uuid = { version = "1.17.0", features = ["fast-rng", "v4"] }
 
 # [patch."https://github.com/credibil/identity"]

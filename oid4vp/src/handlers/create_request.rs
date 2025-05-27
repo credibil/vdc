@@ -29,7 +29,7 @@ async fn create_request(
     let uri_token = generate::uri_token();
 
     let Ok(metadata) = Metadata::verifier(provider, verifier).await else {
-        return Err(invalid!("invalid `client_id`"));
+        return Err(invalid!("{verifier} is not a valid client_id"));
     };
 
     // TODO: Response Mode "direct_post" is RECOMMENDED for cross-device flows.

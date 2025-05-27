@@ -7,7 +7,7 @@ use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
 use crate::blockstore::Mockstore;
 use crate::identity::DidIdentity;
 
-pub const VERIFIER_ID: &str = "http://localhost:8080";
+pub const VERIFIER_ID: &str = "http://localhost:8081";
 
 pub mod data {
     pub const VERIFIER: &[u8] = include_bytes!("../data/verifier/verifier.json");

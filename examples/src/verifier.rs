@@ -19,21 +19,16 @@ use serde_json::json;
 use test_utils::verifier::data::VERIFIER;
 use test_utils::verifier::{VERIFIER_ID, Verifier};
 use tokio::net::TcpListener;
+use tokio::task::JoinHandle;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
-use tracing::Level;
-use tracing_subscriber::FmtSubscriber;
 
-#[tokio::main]
-async fn main() {
-    let provider = Verifier::new(VERIFIER_ID).await;
+pub async fn serve(addr: impl Into<String>) -> Result<JoinHandle<()>> {
+    let addr = addr.into();
+    let provider = Verifier::new(&format!("http://{addr}")).await;
 
     // add some data
-    BlockStore::put(&provider, "owner", "VERIFIER", VERIFIER_ID, VERIFIER).await.unwrap();
-
-    let subscriber = FmtSubscriber::builder().with_max_level(Level::DEBUG).finish();
-    tracing::subscriber::set_global_default(subscriber).expect("should set subscriber");
-    let cors = CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any);
+    BlockStore::put(&provider, "owner", "VERIFIER", VERIFIER_ID, VERIFIER).await?;
 
     let router = Router::new()
         .route("/create_request", post(create_request))
@@ -42,12 +37,16 @@ async fn main() {
         .route("/post", post(authorization))
         .route("/.well-known/did.json", get(did_json))
         .layer(TraceLayer::new_for_http())
-        .layer(cors)
+        .layer(CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any))
         .with_state(provider);
 
-    let listener = TcpListener::bind("0.0.0.0:8080").await.expect("should bind");
-    tracing::info!("listening on {}", listener.local_addr().expect("local_addr should be set"));
-    axum::serve(listener, router).await.expect("should run");
+    let jh = tokio::spawn(async move {
+        let listener = TcpListener::bind(&addr).await.expect("should bind");
+        tracing::info!("listening on {addr}");
+        axum::serve(listener, router).await.expect("server should run");
+    });
+
+    Ok(jh)
 }
 
 #[axum::debug_handler]
@@ -77,9 +76,9 @@ async fn request_uri(
 #[axum::debug_handler]
 async fn authorization(
     State(provider): State<Verifier>, TypedHeader(host): TypedHeader<Host>,
-    Form(request): Form<Vec<(String, String)>>,
+    Form(form): Form<Vec<(String, String)>>,
 ) -> impl IntoResponse {
-    let Ok(req) = AuthorizationResponse::form_decode(&request) else {
+    let Ok(req) = AuthorizationResponse::form_decode(&form) else {
         return (StatusCode::BAD_REQUEST, "issue deserializing `AuthorizationResponse`")
             .into_response();
     };

@@ -34,7 +34,7 @@ use tracing_subscriber::FmtSubscriber;
 
 #[tokio::main]
 async fn main() {
-    let mut provider = wallet::Wallet::new("http://localhost:8081").await;
+    let mut provider = wallet::Wallet::new("http://localhost:8082").await;
     populate(&mut provider).await;
 
     let subscriber = FmtSubscriber::builder().with_max_level(Level::DEBUG).finish();
@@ -110,8 +110,6 @@ async fn authorize(
     let decoded: Jwt<RequestObject> = jose::decode_jws(&jwt, jwk).await?;
     let request_object = decoded.claims;
 
-    println!("{request_object:?}");
-
     // --------------------------------------------------
     // process the Authorization Request
     // --------------------------------------------------
@@ -173,7 +171,7 @@ impl IntoResponse for AppError {
 
 // Initialise a mock "wallet" with test credentials.
 async fn populate(wallet: &mut wallet::Wallet) {
-    let issuer = Issuer::new("https://dcql.io/issuer").await;
+    let issuer = Issuer::new("http://localhost:8080").await;
 
     let Key::KeyId(did_url) = wallet.verification_method().await.unwrap() else {
         panic!("should have did");

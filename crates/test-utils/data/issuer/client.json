@@ -1,5 +1,5 @@
 {
-    "client_id": "96bfb9cb-0513-7d64-5532-bed74c48f9ab",
+    "client_id": "http://localhost:8082",
     "client_name": "Wallet",
     "redirect_uris": [
         "http://localhost:3000/callback"
