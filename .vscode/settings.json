@@ -2,8 +2,8 @@
     "rust-analyzer.linkedProjects": [
         "Cargo.toml",
     ],
-    "rust-analyzer.cargo.features": ["issuer", "verifier"],
-    "rust-analyzer.check.features": ["issuer", "verifier"],
+    // "rust-analyzer.cargo.features": ["issuer", "verifier"],
+    // "rust-analyzer.check.features": ["issuer", "verifier"],
     // "lldb.launch.envFile": "${workspaceFolder}/.env",
     // "lldb.launch.env": {
     //     "INSTA_WORKSPACE_ROOT": "${workspaceFolder}",

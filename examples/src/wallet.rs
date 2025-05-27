@@ -94,7 +94,9 @@ async fn credential_offer(
     let offer = http_resp.json::<CredentialOffer>().await?;
     let issuer_uri = &offer.credential_issuer;
 
+    // --------------------------------------------------
     // fetch metadata
+    // --------------------------------------------------
     let meta_uri = format!("{issuer_uri}/.well-known/openid-credential-issuer");
     let issuer = http.get(&meta_uri).send().await?.json::<Issuer>().await?;
 
@@ -217,7 +219,7 @@ async fn authorize(
     let http = reqwest::Client::new();
 
     // --------------------------------------------------
-    // fetch Request Object
+    // Fetch Authorization Request Object
     // --------------------------------------------------
     if request.client_id != format!("{VERIFIER_ID}/post") {
         return Err(anyhow!("invalid client id").into());
@@ -245,6 +247,9 @@ async fn authorize(
         return Err(anyhow!("{body}").into());
     }
 
+    // --------------------------------------------------
+    // Verify the Authorization Request
+    // --------------------------------------------------
     let RequestUriResponse::Jwt(jwt) = http_resp.json::<RequestUriResponse>().await? else {
         return Err(anyhow!("expected JWT in response").into());
     };
@@ -255,7 +260,7 @@ async fn authorize(
     let request_object = decoded.claims;
 
     // --------------------------------------------------
-    // process the Authorization Request
+    // Process the Authorization Request
     // --------------------------------------------------
     let credentials = provider.fetch();
     let results = request_object.dcql_query.execute(credentials).expect("should execute");
@@ -264,7 +269,7 @@ async fn authorize(
     }
 
     // --------------------------------------------------
-    // return an Authorization Response
+    // Generate a VP token
     // --------------------------------------------------
     let vp_token =
         vp_token::generate(&request_object, &results, &*provider).await.expect("should get token");
@@ -273,6 +278,9 @@ async fn authorize(
         state: request_object.state,
     };
 
+    // --------------------------------------------------
+    // Return an Authorization Response
+    // --------------------------------------------------
     let response_uri = match &request_object.response_mode {
         ResponseMode::DirectPostJwt { response_uri }
         | ResponseMode::DirectPost { response_uri } => response_uri,

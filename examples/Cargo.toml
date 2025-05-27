@@ -8,8 +8,12 @@ rust-version.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [[bin]]
-name = "all"
-path = "src/main.rs"
+name = "interactive"
+path = "src/cmd/interactive.rs"
+
+[[bin]]
+name = "automated"
+path = "src/cmd/automated.rs"
 
 [dependencies]
 anyhow.workspace = true
