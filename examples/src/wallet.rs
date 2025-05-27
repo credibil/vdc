@@ -257,8 +257,8 @@ async fn authorize(
     // --------------------------------------------------
     // process the Authorization Request
     // --------------------------------------------------
-    let stored_vcs = provider.fetch();
-    let results = request_object.dcql_query.execute(stored_vcs).expect("should execute");
+    let credentials = provider.fetch();
+    let results = request_object.dcql_query.execute(credentials).expect("should execute");
     if results.is_empty() {
         return Err(anyhow!("no matching credentials found").into());
     }

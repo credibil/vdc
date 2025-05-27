@@ -4,13 +4,12 @@
 
 use anyhow::Result;
 use examples::{issuer, verifier, wallet};
-// use test_utils::verifier::VERIFIER_ID;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let subscriber = FmtSubscriber::builder().with_max_level(Level::DEBUG).finish();
+    let subscriber = FmtSubscriber::builder().with_max_level(Level::INFO).finish();
     tracing::subscriber::set_global_default(subscriber).expect("should set subscriber");
 
     issuer::serve("localhost:8080").await?;
@@ -20,3 +19,8 @@ async fn main() -> Result<()> {
     // block until `ctrl-c`
     Ok(tokio::signal::ctrl_c().await?)
 }
+
+// TODO:
+// - pre-load wallet with some credentials
+// - load issuer metadata, clients, etc.
+// - replace references to hard-coded IDs with dynamic ones
