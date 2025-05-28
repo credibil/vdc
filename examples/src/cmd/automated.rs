@@ -3,11 +3,18 @@
 //! Example Issuer, Wallet, and Verifier
 
 use anyhow::{Result, anyhow};
+use credibil_oid4vci::blockstore::BlockStore;
 use credibil_oid4vci::{CreateOfferResponse, OfferType};
 use credibil_oid4vp::GenerateResponse;
 use examples::{issuer, verifier, wallet};
 use http::StatusCode;
 use serde_json::json;
+use test_utils::issuer::Issuer;
+use test_utils::issuer::data::{
+    CLIENT, ISSUER as ISSUER_METADATA, NORMAL_USER, SERVER as SERVER_METADATA,
+};
+use test_utils::verifier::Verifier;
+use test_utils::verifier::data::VERIFIER as VERIFIER_METADATA;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
 
@@ -20,9 +27,26 @@ async fn main() -> Result<()> {
     let subscriber = FmtSubscriber::builder().with_max_level(Level::INFO).finish();
     tracing::subscriber::set_global_default(subscriber).expect("should set subscriber");
 
-    issuer::serve(ISSUER).await?;
-    verifier::serve(VERIFIER).await?;
-    wallet::serve(WALLET).await?;
+    let issuer_id = format!("http://{ISSUER}");
+    let verifier_id = format!("http://{VERIFIER}");
+    let wallet_id = format!("http://{WALLET}");
+
+    // initialize issuer
+    let issuer = Issuer::new(&issuer_id).await;
+    BlockStore::put(&issuer, "owner", "ISSUER", &issuer_id, ISSUER_METADATA).await?;
+    BlockStore::put(&issuer, "owner", "SERVER", &issuer_id, SERVER_METADATA).await?;
+    BlockStore::put(&issuer, "owner", "SUBJECT", "normal_user", NORMAL_USER).await?;
+    BlockStore::put(&issuer, "owner", "CLIENT", &format!("http://{WALLET}"), CLIENT).await?;
+    issuer::serve(ISSUER, issuer).await?;
+
+    // initialize verifier
+    let verifier = Verifier::new(&verifier_id).await;
+    BlockStore::put(&verifier, "owner", "VERIFIER", &verifier_id, VERIFIER_METADATA).await?;
+    verifier::serve(VERIFIER, verifier).await?;
+
+    // initialize wallet
+    let wallet = test_utils::wallet::Wallet::new(&wallet_id).await;
+    wallet::serve(WALLET, wallet).await?;
 
     // issue credentials
     let offer = create_offer().await?;
@@ -34,10 +58,6 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
-
-// TODO:
-// - load issuer metadata, clients, etc.
-// - replace references to hard-coded IDs with dynamic ones
 
 async fn create_offer() -> Result<CreateOfferResponse> {
     let client = reqwest::Client::new();
@@ -127,7 +147,7 @@ async fn create_request() -> Result<GenerateResponse> {
 async fn request_authorization(response: &GenerateResponse) -> Result<()> {
     let client = reqwest::Client::new();
 
-    let client_id = format!("http://{VERIFIER}/post");
+    let client_id = format!("redirect_uri:http://{VERIFIER}/post");
     let GenerateResponse::Uri(uri) = response else {
         return Err(anyhow!("expected request URI"));
     };

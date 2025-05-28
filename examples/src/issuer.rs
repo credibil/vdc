@@ -1,6 +1,6 @@
 //! # Issuance API
 //!
-//! A (naive) HTTP server for verifiable credential issuance.
+//! A (naive) HTTP server for OpenID4VCI issuer.
 
 use std::collections::HashMap;
 use std::sync::LazyLock;
@@ -15,21 +15,18 @@ use axum::{Form, Json, Router};
 use axum_extra::TypedHeader;
 use axum_extra::headers::authorization::Bearer;
 use axum_extra::headers::{Authorization, Host};
-use credibil_core::urlencode;
-use credibil_oid4vci::blockstore::BlockStore;
 use credibil_oid4vci::http::IntoHttp;
 use credibil_oid4vci::status::StatusListRequest;
 use credibil_oid4vci::{
     AuthorizationRequest, CreateOfferRequest, CredentialHeaders, CredentialOfferRequest,
     CredentialRequest, DeferredCredentialRequest, MetadataRequest, NonceRequest,
     NotificationHeaders, NotificationRequest, PushedAuthorizationRequest, ServerRequest,
-    TokenRequest,
+    TokenRequest, urlencode,
 };
 use oauth2::CsrfToken;
 use serde::Deserialize;
 use serde_json::json;
 use test_utils::issuer::Issuer;
-use test_utils::issuer::data::{CLIENT, NORMAL_USER, SERVER};
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
@@ -37,25 +34,12 @@ use tower_http::cors::{Any, CorsLayer};
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
-const CLIENT_ID: &str = "http://localhost:8082"; // "96bfb9cb-0513-7d64-5532-bed74c48f9ab";
-const ISSUER: &[u8] = include_bytes!("../../crates/test-utils/data/issuer/local-issuer.json");
-const ISSUER_ID: &str = "http://localhost:8080";
-
 static AUTH_REQUESTS: LazyLock<RwLock<HashMap<String, AuthorizationRequest>>> =
     LazyLock::new(|| RwLock::new(HashMap::new()));
 static PAR_REQUESTS: LazyLock<RwLock<HashMap<String, PushedAuthorizationRequest>>> =
     LazyLock::new(|| RwLock::new(HashMap::new()));
 
-pub async fn serve(addr: impl Into<String>) -> Result<JoinHandle<()>> {
-    let addr = addr.into();
-    let provider = Issuer::new(&format!("http://{addr}")).await;
-
-    // add some data
-    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, ISSUER).await?;
-    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, SERVER).await?;
-    BlockStore::put(&provider, "owner", "SUBJECT", "normal_user", NORMAL_USER).await?;
-    BlockStore::put(&provider, "owner", "CLIENT", CLIENT_ID, CLIENT).await?;
-
+pub async fn serve(addr: impl Into<String>, issuer: Issuer) -> Result<JoinHandle<()>> {
     let router = Router::new()
         .route("/create_offer", post(create_offer))
         .route("/credential_offer/{offer_id}", get(credential_offer))
@@ -77,8 +61,9 @@ pub async fn serve(addr: impl Into<String>) -> Result<JoinHandle<()>> {
             header::CACHE_CONTROL,
             HeaderValue::from_static("no-cache, no-store"),
         ))
-        .with_state(provider);
+        .with_state(issuer);
 
+    let addr = addr.into();
     let jh = tokio::spawn(async move {
         let listener = TcpListener::bind(&addr).await.expect("should bind");
         tracing::info!("listening on {addr}");

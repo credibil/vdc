@@ -6,7 +6,6 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result, anyhow};
 use axum::extract::{Query, State};
-use axum::http::{HeaderValue, header};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::{Json, Router};
@@ -25,14 +24,11 @@ use credibil_oid4vp::{
 };
 use http::StatusCode;
 use serde::Deserialize;
-// use test_utils::issuer::ISSUER_ID;
-use test_utils::verifier::VERIFIER_ID;
 use test_utils::wallet;
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use tower_http::cors::{Any, CorsLayer};
-use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
 #[derive(Clone)]
@@ -40,24 +36,18 @@ struct AppState {
     provider: Arc<Mutex<wallet::Wallet>>,
 }
 
-pub async fn serve(addr: impl Into<String>) -> Result<JoinHandle<()>> {
-    let addr = addr.into();
-    let state = AppState {
-        provider: Arc::new(Mutex::new(wallet::Wallet::new(&format!("http://{addr}")).await)),
-    };
-
+pub async fn serve(addr: impl Into<String>, wallet: wallet::Wallet) -> Result<JoinHandle<()>> {
     let router = Router::new()
         .route("/credential_offer", get(credential_offer))
         .route("/authorize", get(authorize))
         .route("/.well-known/did.json", get(did_json))
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any))
-        .layer(SetResponseHeaderLayer::if_not_present(
-            header::CACHE_CONTROL,
-            HeaderValue::from_static("no-cache, no-store"),
-        ))
-        .with_state(state);
+        .with_state(AppState {
+            provider: Arc::new(Mutex::new(wallet)),
+        });
 
+    let addr = addr.into();
     let jh = tokio::spawn(async move {
         let listener = TcpListener::bind(&addr).await.expect("should bind");
         tracing::info!("listening on {addr}");
@@ -73,9 +63,6 @@ struct OfferUri {
     tx_code: Option<String>,
 }
 
-// extract the credential offer URI from the query string, e.g.
-// GET http://localhost:8082/credential_offer?
-//   credential_offer_uri=http://localhost:8080/credential-offer/GkurKxf5T0Y-mnPFCHqWOMiZi4VS138cQO_V7PZHAdM
 #[axum::debug_handler]
 async fn credential_offer(
     State(state): State<AppState>, Query(offer_uri): Query<OfferUri>,
@@ -208,10 +195,6 @@ struct Request {
     request_uri_method: String,
 }
 
-// GET http://localhost:8081/authorize?
-//   client_id=x509_san_dns%3Aclient.example.org
-//   &request_uri=https%3A%2F%2Fclient.example.org%2Frequest%2Fvapof4ql2i7m41m68uep
-//   &request_uri_method=post
 #[axum::debug_handler]
 async fn authorize(
     State(state): State<AppState>, Query(request): Query<Request>,
@@ -221,9 +204,6 @@ async fn authorize(
     // --------------------------------------------------
     // Fetch Authorization Request Object
     // --------------------------------------------------
-    if request.client_id != format!("{VERIFIER_ID}/post") {
-        return Err(anyhow!("invalid client id").into());
-    }
     if request.request_uri_method != "post" {
         return Err(anyhow!("`request_uri_method` must be 'post'").into());
     }
@@ -288,6 +268,9 @@ async fn authorize(
             return Err(anyhow!("`response_mode` must be 'direct_post'").into());
         }
     };
+    if request.client_id != format!("redirect_uri:{response_uri}") {
+        return Err(anyhow!("invalid client id").into());
+    }
 
     let form = response.form_encode().context("encoding response")?;
     let http_resp = http.post(response_uri).form(&form).send().await?;

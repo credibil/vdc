@@ -1,8 +1,6 @@
 //! # Verifiable Credential Verifier
 //!
-//! This is a simple Verifiable Credential Verifier (VCP) that implements the
-//! [Verifiable Credential HTTP API](
-//! https://identity.foundation/verifiable-credential/spec/#http-api).
+//! A (naive) HTTP server for OpenID4VP verifier.
 
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -11,25 +9,17 @@ use axum::routing::{get, post};
 use axum::{Form, Json, Router};
 use axum_extra::TypedHeader;
 use axum_extra::headers::Host;
-use credibil_oid4vp::blockstore::BlockStore;
 use credibil_oid4vp::http::IntoHttp;
 use credibil_oid4vp::identity::did::Document;
 use credibil_oid4vp::{AuthorizationResponse, GenerateRequest, RequestUriRequest};
 use serde_json::json;
-use test_utils::verifier::data::VERIFIER;
-use test_utils::verifier::{VERIFIER_ID, Verifier};
+use test_utils::verifier::Verifier;
 use tokio::net::TcpListener;
 use tokio::task::JoinHandle;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 
-pub async fn serve(addr: impl Into<String>) -> Result<JoinHandle<()>> {
-    let addr = addr.into();
-    let provider = Verifier::new(&format!("http://{addr}")).await;
-
-    // add some data
-    BlockStore::put(&provider, "owner", "VERIFIER", VERIFIER_ID, VERIFIER).await?;
-
+pub async fn serve(addr: impl Into<String>, verifier: Verifier) -> Result<JoinHandle<()>> {
     let router = Router::new()
         .route("/create_request", post(create_request))
         .route("/request/{id}", get(request_uri))
@@ -38,8 +28,9 @@ pub async fn serve(addr: impl Into<String>) -> Result<JoinHandle<()>> {
         .route("/.well-known/did.json", get(did_json))
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any))
-        .with_state(provider);
+        .with_state(verifier);
 
+    let addr = addr.into();
     let jh = tokio::spawn(async move {
         let listener = TcpListener::bind(&addr).await.expect("should bind");
         tracing::info!("listening on {addr}");

@@ -28,7 +28,7 @@ use oauth2::CsrfToken;
 use serde::Deserialize;
 use serde_json::json;
 use test_utils::issuer::Issuer;
-use test_utils::issuer::data::{CLIENT, NORMAL_USER, SERVER};
+use test_utils::issuer::data::{CLIENT, ISSUER, NORMAL_USER, SERVER};
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
@@ -38,7 +38,6 @@ use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
 
 const CLIENT_ID: &str = "96bfb9cb-0513-7d64-5532-bed74c48f9ab";
-const ISSUER: &[u8] = include_bytes!("../../crates/test-utils/data/issuer/local-issuer.json");
 const ISSUER_ID: &str = "http://localhost:8080";
 
 static AUTH_REQUESTS: LazyLock<RwLock<HashMap<String, AuthorizationRequest>>> =

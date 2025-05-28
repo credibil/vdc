@@ -7,13 +7,13 @@ use credibil_se::{Algorithm, Signer};
 use crate::blockstore::Mockstore;
 use crate::identity::DidIdentity;
 
-pub const ISSUER_ID: &str = "http://credibil.io";
+pub const ISSUER_ID: &str = "http://localhost:8080";
 pub const BOB_ID: &str = "bob";
 pub const CAROL_ID: &str = "carol";
 
 pub mod data {
     pub const CLIENT: &[u8] = include_bytes!("../data/issuer/client.json");
-    pub const ISSUER: &[u8] = include_bytes!("../data/issuer/credibil-issuer.json");
+    pub const ISSUER: &[u8] = include_bytes!("../data/issuer/issuer.json");
     pub const SERVER: &[u8] = include_bytes!("../data/issuer/server.json");
     pub const NORMAL_USER: &[u8] = include_bytes!("../data/issuer/normal-user.json");
     pub const PENDING_USER: &[u8] = include_bytes!("../data/issuer/pending-user.json");

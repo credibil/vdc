@@ -88,12 +88,12 @@ pub enum ClientIdPrefix {
     /// the leaf certificate passed with the request.
     X509SanDns,
 
+    /// A hash of the leaf certificate passed with the request.
+    X509Hash,
+
     /// The audience for a Credential Presentation. Only used with
     /// presentations over the Digital Credentials API.
     Origin,
-
-    /// A hash of the leaf certificate passed with the request.
-    X509Hash,
 
     /// A pre-registered client ID.
     #[default]

@@ -268,12 +268,12 @@ pub enum ClientId {
     /// An Entity Identifier as defined in OpenID Federation.
     ///
     /// For example, `https://federation-verifier.example.com`.
-    Https(String),
+    OpenIdFederation(String),
 
     /// A DID URI as defined in DID Core specification.
     ///
     /// For example, `did:example:123456789abcdefghi`.
-    Did(String),
+    DecentralizedIdentifier(String),
 
     /// The `sub` claim in the Verifier attestation JWT when the Verifier
     /// authenticates using a JWT.
@@ -287,16 +287,16 @@ pub enum ClientId {
     /// For example, `client.example.org`.
     X509SanDns(String),
 
+    /// A hash of the leaf certificate passed with the request.
+    ///
+    /// For example, `Uvo3HtuIxuhC92rShpgqcT3YXwrqRxWEviRiA0OZszk`.
+    X509Hash(String),
+
     /// The audience for a Credential Presentation. Only used with
     /// presentations over the Digital Credentials API.
     ///
     /// For example, `https://verifier.example.com/`
     Origin(String),
-
-    /// A hash of the leaf certificate passed with the request.
-    ///
-    /// For example, `Uvo3HtuIxuhC92rShpgqcT3YXwrqRxWEviRiA0OZszk`.
-    X509Hash(String),
 
     /// A pre-registered client ID.
     ///
@@ -314,8 +314,8 @@ impl Display for ClientId {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::RedirectUri(uri) => write!(f, "redirect_uri:{uri}"),
-            Self::Https(uri) => write!(f, "openid_federation:{uri}"),
-            Self::Did(did) => write!(f, "decentralized_identifier:{did}"),
+            Self::OpenIdFederation(uri) => write!(f, "openid_federation:{uri}"),
+            Self::DecentralizedIdentifier(did) => write!(f, "decentralized_identifier:{did}"),
             Self::VerifierAttestation(sub) => write!(f, "verifier_attestation:{sub}"),
             Self::X509SanDns(fqdn) => write!(f, "x509_san_dns:{fqdn}"),
             Self::Origin(uri) => write!(f, "origin:{uri}"),
@@ -331,9 +331,9 @@ impl From<String> for ClientId {
         if let Some(uri) = value.strip_prefix("redirect_uri:") {
             Self::RedirectUri(uri.to_string())
         } else if let Some(uri) = value.strip_prefix("openid_federation:") {
-            Self::Https(uri.to_string())
+            Self::OpenIdFederation(uri.to_string())
         } else if let Some(did) = value.strip_prefix("decentralized_identifier:") {
-            Self::Did(did.to_string())
+            Self::DecentralizedIdentifier(did.to_string())
         } else if let Some(sub) = value.strip_prefix("verifier_attestation:") {
             Self::VerifierAttestation(sub.to_string())
         } else if let Some(fqdn) = value.strip_prefix("x509_san_dns:") {
