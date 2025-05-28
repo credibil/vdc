@@ -8,7 +8,7 @@ use crate::blockstore::Mockstore;
 use crate::identity::DidIdentity;
 
 pub mod data {
-    pub const VERIFIER: &[u8] = include_bytes!("../data/verifier.json");
+    pub const VERIFIER_METADATA: &[u8] = include_bytes!("../data/verifier-metadata.json");
 }
 
 #[derive(Clone)]

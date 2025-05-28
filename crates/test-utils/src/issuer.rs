@@ -9,11 +9,12 @@ use crate::identity::DidIdentity;
 
 pub mod data {
     pub const CLIENT: &[u8] = include_bytes!("../data/client.json");
-    pub const ISSUER: &[u8] = include_bytes!("../data/issuer.json");
-    pub const SERVER: &[u8] = include_bytes!("../data/server.json");
+    pub const ISSUER_METADATA: &[u8] = include_bytes!("../data/issuer-metadata.json");
+    pub const SERVER_METADATA: &[u8] = include_bytes!("../data/server-metadata.json");
     pub const NORMAL_USER: &[u8] = include_bytes!("../data/normal-user.json");
     pub const PENDING_USER: &[u8] = include_bytes!("../data/pending-user.json");
 }
+use data::*;
 
 #[derive(Clone)]
 pub struct Issuer {
@@ -23,10 +24,18 @@ pub struct Issuer {
 
 impl Issuer {
     #[must_use]
-    pub async fn new(owner: &str) -> Self {
+    pub async fn new(issuer_id: &str) -> Self {
+        let blockstore = Mockstore::open();
+
+        blockstore.put("owner", "ISSUER", issuer_id, ISSUER_METADATA).await.expect("should store");
+        blockstore.put("owner", "SERVER", issuer_id, SERVER_METADATA).await.expect("should store");
+        blockstore.put("owner", "SUBJECT", "normal_user", NORMAL_USER).await.expect("should store");
+        blockstore.put("owner", "SUBJECT", "pending_user", PENDING_USER).await.expect("should store");
+        // blockstore.put("owner", "CLIENT", &format!("http://{WALLET}"),  CLIENT).await?;
+
         Self {
             blockstore: Mockstore::open(),
-            identity: DidIdentity::new(owner).await,
+            identity: DidIdentity::new(issuer_id).await,
         }
     }
 

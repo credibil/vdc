@@ -16,12 +16,12 @@ use test_utils::issuer::{Issuer, data};
 use test_utils::wallet::Wallet;
 use tokio::sync::OnceCell;
 
-const ISSUER_ID: &str = "http://localhost:8080";
 static CAROL: OnceCell<Wallet> = OnceCell::const_new();
 async fn carol() -> &'static Wallet {
     CAROL.get_or_init(|| async { Wallet::new("https://deferred.io/carol").await }).await
 }
-const CAROL_SUBJECT: &str = "carol";
+const CAROL_SUBJECT: &str = "pending_user";
+const ISSUER_ID: &str = "http://localhost:8080";
 
 // Should return a credential when using the pre-authorized code flow and the
 // credential offer to the Wallet is made by value.
@@ -29,12 +29,6 @@ const CAROL_SUBJECT: &str = "carol";
 async fn deferred() {
     let provider = Issuer::new("https://deferred.io/deferred").await;
     let carol = carol().await;
-
-    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", CAROL_SUBJECT, data::PENDING_USER)
-        .await
-        .unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob

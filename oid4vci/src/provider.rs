@@ -138,19 +138,3 @@ impl<T: BlockStore> Subject for T {
         Ok(dataset.clone())
     }
 }
-
-// impl<T: BlockStore> StatusStore for T {
-//     #[allow(unused)]
-//     async fn put(&self, uri: &str, token: &str) -> Result<()> {
-//         let data = serde_json::to_vec(token)?;
-//         BlockStore::delete(self, "owner", STATUSTOKEN, uri).await?;
-//         BlockStore::put(self, "owner", STATUSTOKEN, uri, &data).await
-//     }
-
-//     async fn get(&self, uri: &str) -> Result<Option<String>> {
-//         let Some(block) = BlockStore::get(self, "owner", STATUSTOKEN, uri).await? else {
-//             return Ok(None);
-//         };
-//         Ok(Some(serde_json::from_slice(&block)?))
-//     }
-// }

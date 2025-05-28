@@ -13,7 +13,8 @@ use credibil_oid4vci::types::{
 };
 use credibil_oid4vci::{CredentialHeaders, JwtType, NotificationHeaders, OneMany, did_jwk};
 use serde_json::json;
-use test_utils::issuer::{Issuer, data};
+use test_utils::issuer::Issuer;
+use test_utils::issuer::data::{ISSUER_METADATA, NORMAL_USER, SERVER_METADATA};
 use test_utils::wallet::Wallet;
 use tokio::sync::OnceCell;
 
@@ -21,7 +22,7 @@ static BOB: OnceCell<Wallet> = OnceCell::const_new();
 async fn bob() -> &'static Wallet {
     BOB.get_or_init(|| async { Wallet::new("https://pre_auth.io/bob").await }).await
 }
-const BOB_SUBJECT: &str = "bob";
+const BOB_SUBJECT: &str = "normal_user";
 const ISSUER_ID: &str = "http://localhost:8080";
 
 // Should return a credential when using the pre-authorized code flow and the
@@ -30,10 +31,6 @@ const ISSUER_ID: &str = "http://localhost:8080";
 async fn offer_val() {
     let provider = Issuer::new("https://pre_auth.io/offer_val").await;
     let bob = bob().await;
-
-    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", BOB_SUBJECT, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
@@ -138,10 +135,6 @@ async fn offer_val() {
 async fn offer_ref() {
     let provider = Issuer::new("https://pre_auth.io/offer_ref").await;
 
-    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", BOB_SUBJECT, data::NORMAL_USER).await.unwrap();
-
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
@@ -180,10 +173,6 @@ async fn offer_ref() {
 async fn two_datasets() {
     let provider = Issuer::new("https://pre_auth.io/two_datasets").await;
     let bob = bob().await;
-
-    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", BOB_SUBJECT, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
@@ -288,10 +277,6 @@ async fn two_datasets() {
 async fn reduce_credentials() {
     let provider = Issuer::new("https://pre_auth.io/reduce_credentials").await;
     let bob = bob().await;
-
-    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", BOB_SUBJECT, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob with 2 credentials
@@ -401,10 +386,6 @@ async fn reduce_credentials() {
 async fn reduce_claims() {
     let provider = Issuer::new("https://pre_auth.io/reduce_claims").await;
     let bob = bob().await;
-
-    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", BOB_SUBJECT, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
@@ -518,10 +499,6 @@ async fn reduce_claims() {
 async fn notify_accepted() {
     let provider = Issuer::new("https://pre_auth.io/notify_accepted").await;
     let bob = bob().await;
-
-    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", BOB_SUBJECT, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob

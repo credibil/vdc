@@ -10,11 +10,9 @@ use examples::{issuer, verifier, wallet};
 use http::StatusCode;
 use serde_json::json;
 use test_utils::issuer::Issuer;
-use test_utils::issuer::data::{
-    CLIENT, ISSUER as ISSUER_METADATA, NORMAL_USER, SERVER as SERVER_METADATA,
-};
+use test_utils::issuer::data::CLIENT;
 use test_utils::verifier::Verifier;
-use test_utils::verifier::data::VERIFIER as VERIFIER_METADATA;
+use test_utils::verifier::data::VERIFIER_METADATA;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
 
@@ -33,9 +31,6 @@ async fn main() -> Result<()> {
 
     // initialize issuer
     let issuer = Issuer::new(&issuer_id).await;
-    BlockStore::put(&issuer, "owner", "ISSUER", &issuer_id, ISSUER_METADATA).await?;
-    BlockStore::put(&issuer, "owner", "SERVER", &issuer_id, SERVER_METADATA).await?;
-    BlockStore::put(&issuer, "owner", "SUBJECT", "normal_user", NORMAL_USER).await?;
     BlockStore::put(&issuer, "owner", "CLIENT", &format!("http://{WALLET}"), CLIENT).await?;
     issuer::serve(ISSUER, issuer).await?;
 

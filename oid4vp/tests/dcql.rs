@@ -13,7 +13,8 @@ use credibil_oid4vp::{
 };
 use serde_json::{Value, json};
 use test_utils::issuer::Issuer;
-use test_utils::verifier::{Verifier, data};
+use test_utils::verifier::Verifier;
+use test_utils::verifier::data::VERIFIER_METADATA;
 use test_utils::wallet::Wallet;
 use tokio::sync::OnceCell;
 
@@ -36,7 +37,7 @@ const VERIFIER_ID: &str = "http://localhost:8081";
 #[tokio::test]
 async fn multiple_claims() {
     let verifier = verifier().await;
-    BlockStore::put(verifier, "owner", "VERIFIER", VERIFIER_ID, data::VERIFIER).await.unwrap();
+    BlockStore::put(verifier, "owner", "VERIFIER", VERIFIER_ID, VERIFIER_METADATA).await.unwrap();
 
     // --------------------------------------------------
     // Verifier creates an Authorization Request to request presentation of
@@ -108,7 +109,7 @@ async fn multiple_claims() {
 #[tokio::test]
 async fn multiple_credentials() {
     let verifier = verifier().await;
-    BlockStore::put(verifier, "owner", "VERIFIER", VERIFIER_ID, data::VERIFIER).await.unwrap();
+    BlockStore::put(verifier, "owner", "VERIFIER", VERIFIER_ID, VERIFIER_METADATA).await.unwrap();
 
     // --------------------------------------------------
     // Verifier creates an Authorization Request to request presentation of
@@ -208,7 +209,7 @@ async fn multiple_credentials() {
 #[tokio::test]
 async fn complex_query() {
     let verifier = verifier().await;
-    BlockStore::put(verifier, "owner", "VERIFIER", VERIFIER_ID, data::VERIFIER).await.unwrap();
+    BlockStore::put(verifier, "owner", "VERIFIER", VERIFIER_ID, VERIFIER_METADATA).await.unwrap();
 
     let wallet = wallet().await;
     let all_vcs = wallet.fetch();
@@ -305,7 +306,7 @@ async fn complex_query() {
 #[tokio::test]
 async fn any_credential() {
     let verifier = verifier().await;
-    BlockStore::put(verifier, "owner", "VERIFIER", VERIFIER_ID, data::VERIFIER).await.unwrap();
+    BlockStore::put(verifier, "owner", "VERIFIER", VERIFIER_ID, VERIFIER_METADATA).await.unwrap();
 
     let wallet = wallet().await;
     let all_vcs = wallet.fetch();
