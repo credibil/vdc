@@ -1,51 +1,63 @@
-use std::collections::HashMap;
-use std::sync::{Arc, LazyLock, Mutex};
-
-use anyhow::{Result, bail};
+use anyhow::{Result, anyhow, bail};
 use credibil_identity::Identity::DidDocument;
 use credibil_identity::did::{self, Document, DocumentBuilder};
+use credibil_identity::jose::PublicKeyJwk;
+use credibil_identity::se::{Algorithm, Curve, Signer};
 use credibil_identity::{IdentityResolver, Key, SignerExt};
-use credibil_jose::PublicKeyJwk;
-use credibil_se::{Algorithm, Curve, Signer};
+use test_kms::Keyring;
 
-static DID_STORE: LazyLock<Arc<Mutex<HashMap<String, Document>>>> =
-    LazyLock::new(|| Arc::new(Mutex::new(HashMap::new())));
+use crate::blockstore::Mockstore;
 
 #[derive(Clone)]
 pub struct DidIdentity {
-    pub url: String,
-    keyring: test_kms::Keyring,
+    pub owner: String,
+    keyring: Keyring,
 }
 
 impl DidIdentity {
-    // Generate a DID-based Identity.
     pub async fn new(owner: &str) -> Self {
         // create a new keyring and add a signing key.
-        let mut keyring = test_kms::Keyring::new(owner).await.expect("keyring created");
-        keyring.add(&Curve::Ed25519, "signer").await.expect("keyring created");
-        let key_bytes = keyring.verifying_key("signer").await.expect("key bytes");
-        let verifying_key = PublicKeyJwk::from_bytes(&key_bytes).expect("verifying key");
+        let mut keyring = Keyring::new(owner).await.expect("should create keyring");
+        keyring.add(&Curve::Ed25519, "signer").await.expect("should add key");
+        let key_bytes = keyring.verifying_key("signer").await.expect("should get verifying key");
+        let verifying_key = PublicKeyJwk::from_bytes(&key_bytes).expect("should convert to JWK");
 
         // generate a did:web document
-        let url = format!("https://credibil.io/{}", uuid::Uuid::new_v4());
-        let did = did::web::default_did(&url).expect("should construct DID");
-
+        let did = did::web::default_did(owner).expect("should create DID");
         let document = DocumentBuilder::new(&did)
             .add_verifying_key(&verifying_key, true)
             .expect("should add verifying key")
             .build();
-        DID_STORE.lock().expect("should lock").insert(url.clone(), document);
+        let doc_bytes = serde_json::to_vec(&document).expect("should serialize");
 
-        Self { url, keyring }
+        // save to global blockstore
+        Mockstore::open().put("owner", "DID", &did, &doc_bytes).await.expect("should put");
+
+        Self {
+            owner: owner.to_string(),
+            keyring,
+        }
+    }
+
+    pub async fn document(&self, url: &str) -> Result<Document> {
+        let url = url.trim_end_matches("/did.json").trim_end_matches("/.well-known");
+        let did = did::web::default_did(url)?;
+        let Some(doc_bytes) = Mockstore::open().get("owner", "DID", &did).await? else {
+            bail!("document not found");
+        };
+        serde_json::from_slice(&doc_bytes).map_err(Into::into)
     }
 }
 
 impl IdentityResolver for DidIdentity {
-    async fn resolve(&self, url: &str) -> anyhow::Result<credibil_identity::Identity> {
-        let key = url.trim_end_matches("/did.json");
-        let store = DID_STORE.lock().expect("should lock");
-        let Some(doc) = store.get(key).cloned() else {
-            bail!("document not found");
+    async fn resolve(&self, url: &str) -> Result<credibil_identity::Identity> {
+        let doc = match self.document(url).await {
+            Ok(doc) => doc,
+            Err(_) => {
+                let url = url.replace("https", "http");
+                let resp = reqwest::get(url).await.map_err(|e| anyhow!("fetching: {e}"))?;
+                resp.json::<Document>().await.map_err(|e| anyhow!("{e}"))?
+            }
         };
         Ok(DidDocument(doc))
     }
@@ -67,10 +79,7 @@ impl Signer for DidIdentity {
 
 impl SignerExt for DidIdentity {
     async fn verification_method(&self) -> Result<Key> {
-        let store = DID_STORE.lock().expect("should lock");
-        let Some(doc) = store.get(&self.url).cloned() else {
-            bail!("document not found");
-        };
+        let doc = self.document(&self.owner).await?;
         let vm = &doc.verification_method.as_ref().unwrap()[0];
         Ok(Key::KeyId(vm.id.clone()))
     }

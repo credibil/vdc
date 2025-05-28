@@ -48,16 +48,12 @@ tracing.workspace = true
 uuid.workspace = true
 
 [dev-dependencies]
-axum = { version = "0.8.4", features = ["macros"] }
-axum-extra = { version = "0.10.1", features = ["typed-header"] }
-hex = "0.4.3"
+axum.workspace = true
+axum-extra.workspace = true
 oauth2 = { version = "5.0.0" }
+reqwest.workspace = true
 test-utils.workspace = true
 tokio.workspace = true
-tower-http = { version = "0.6.4", features = ["cors", "set-header", "trace"] }
-tracing-subscriber = { version = "0.3.19", features = ["env-filter", "fmt"] }
+tower-http.workspace = true
+tracing-subscriber.workspace = true
 
-[[example]]
-name = "issuer"
-path = "examples/issuer.rs"
-# required-features = ["client", "server"]

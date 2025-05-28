@@ -10,36 +10,31 @@
 //! * `issuer` - Enables the issuer API.
 //! * `verifier` - Enables the verifier API.
 
-pub mod issuer;
 pub mod oauth;
 pub mod pkce;
 pub mod provider;
-pub mod wallet;
+pub mod types;
 
 mod common;
 mod error;
 mod handlers;
 mod state;
 
-/// Re-export proofs
+/// Re-export key dependencies.
 pub mod proof {
     pub use credibil_vdc::w3c_vc::{Payload, Verify, W3cVcClaims};
 }
-
-/// Re-export `credibil_identity` modules for convenience.
-pub mod identity {
-    pub use credibil_identity::*;
-}
-/// Re-export `credibil_jose` modules for convenience.
-pub mod jose {
-    pub use credibil_jose::*;
-}
-
+pub use credibil_core::{OneMany, blockstore, did_jwk, http, urlencode};
+pub use credibil_vdc::{mso_mdoc, sd_jwt, w3c_vc};
 use serde::{Deserialize, Serialize};
+pub use {
+    credibil_identity as identity, credibil_jose as jose, credibil_status as status,
+    credibil_vdc as vdc,
+};
 
 pub use self::error::Error;
 pub use self::handlers::*;
-pub use self::issuer::*;
+pub use self::types::*;
 
 /// The JWT `typ` header parameter.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]

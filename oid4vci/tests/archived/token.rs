@@ -8,7 +8,7 @@ use credibil_openid::oid4vci::endpoint;
 use credibil_openid::oid4vci::provider::StateStore;
 use credibil_openid::oid4vci::state::{Authorization, Expire, Offer, Stage, State};
 use credibil_openid::oid4vci::types::{
-    AuthorizationCredential, AuthorizationDetail, AuthorizationDetailType, AuthorizedDetail,
+    AuthorizationDefinition, AuthorizationDetail, AuthorizationDetailType, AuthorizedDetail,
     TokenRequest, TokenResponse,
 };
 use insta::assert_yaml_snapshot as assert_snapshot;
@@ -31,7 +31,7 @@ async fn authorized() {
             details: vec![AuthorizedDetail {
                 authorization_detail: AuthorizationDetail {
                     r#type: AuthorizationDetailType::OpenIdCredential,
-                    credential: AuthorizationCredential::ConfigurationId {
+                    credential: AuthorizationDefinition::ConfigurationId {
                         credential_configuration_id: "EmployeeID_W3C_VC".to_string(),
                     },
                     ..AuthorizationDetail::default()
@@ -99,7 +99,7 @@ async fn authorization_details() {
             details: vec![AuthorizedDetail {
                 authorization_detail: AuthorizationDetail {
                     r#type: AuthorizationDetailType::OpenIdCredential,
-                    credential: AuthorizationCredential::ConfigurationId {
+                    credential: AuthorizationDefinition::ConfigurationId {
                         credential_configuration_id: "EmployeeID_W3C_VC".to_string(),
                     },
                     ..AuthorizationDetail::default()

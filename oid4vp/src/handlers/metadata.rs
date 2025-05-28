@@ -9,8 +9,7 @@ use anyhow::Context;
 
 use crate::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::provider::{Metadata, Provider};
-use crate::verifier::MetadataResponse;
-use crate::wallet::MetadataRequest;
+use crate::types::{MetadataRequest, MetadataResponse};
 
 /// Endpoint for Wallets to request Verifier (Client) metadata.
 ///

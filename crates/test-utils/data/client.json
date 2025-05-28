@@ -1,0 +1,16 @@
+{
+    "client_id": "http://localhost:8082",
+    "client_name": "Wallet",
+    "redirect_uris": [
+        "http://localhost:3000/callback"
+    ],
+    "grant_types": [
+        "authorization_code",
+        "urn:ietf:params:oauth:grant-type:pre-authorized_code"
+    ],
+    "response_types": [
+        "code"
+    ],
+    "scope": "openid credential",
+    "credential_offer_endpoint": "openid-credential-offer://"
+}

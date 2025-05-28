@@ -1,44 +1,42 @@
 //! Tests for the Verifier API
 
-use credibil_core::blockstore::BlockStore;
-use credibil_core::did_jwk;
-use credibil_identity::{Key, SignerExt};
-use credibil_jose::PublicKeyJwk;
-use credibil_oid4vp::verifier::ResponseMode;
-use credibil_oid4vp::{
-    self, AuthorzationResponse, DeviceFlow, GenerateRequest, GenerateResponse, wallet,
+use credibil_oid4vp::blockstore::BlockStore;
+use credibil_oid4vp::identity::{Key, SignerExt};
+use credibil_oid4vp::jose::PublicKeyJwk;
+use credibil_oid4vp::status::{StatusClaim, StatusList, TokenBuilder};
+use credibil_oid4vp::vdc::{
+    DcqlQuery, MdocBuilder, SdJwtVcBuilder, W3cVcBuilder, mso_mdoc, sd_jwt, w3c_vc,
 };
-use credibil_status::{StatusClaim, StatusList, TokenBuilder};
-use credibil_vdc::dcql::DcqlQuery;
-use credibil_vdc::mso_mdoc::MdocBuilder;
-use credibil_vdc::sd_jwt::SdJwtVcBuilder;
-use credibil_vdc::w3c_vc::W3cVcBuilder;
-use credibil_vdc::{mso_mdoc, sd_jwt, w3c_vc};
+use credibil_oid4vp::{
+    AuthorizationResponse, DeviceFlow, GenerateRequest, GenerateResponse, ResponseMode, did_jwk,
+    vp_token,
+};
 use serde_json::{Value, json};
-use test_utils::issuer::{ISSUER_ID, Issuer};
-use test_utils::verifier::{VERIFIER_ID, Verifier, data};
+use test_utils::issuer::Issuer;
+use test_utils::verifier::Verifier;
 use test_utils::wallet::Wallet;
 use tokio::sync::OnceCell;
+
+const ISSUER_ID: &str = "http://localhost:8080";
+const VERIFIER_ID: &str = "http://localhost:8081";
 
 static VERIFIER: OnceCell<Verifier> = OnceCell::const_new();
 static ISSUER: OnceCell<Issuer> = OnceCell::const_new();
 static WALLET: OnceCell<Wallet> = OnceCell::const_new();
-
 async fn verifier() -> &'static Verifier {
-    VERIFIER.get_or_init(|| async { Verifier::new("vp_dcql_verifier").await }).await
+    VERIFIER.get_or_init(|| async { Verifier::new(VERIFIER_ID).await }).await
 }
 async fn issuer() -> &'static Issuer {
-    ISSUER.get_or_init(|| async { Issuer::new("vp_dcql_issuer").await }).await
+    ISSUER.get_or_init(|| async { Issuer::new(ISSUER_ID).await }).await
 }
 async fn wallet() -> &'static Wallet {
-    WALLET.get_or_init(|| async { populate("vp_dcql_wallet").await }).await
+    WALLET.get_or_init(|| async { populate("https://dcql.io/wallet").await }).await
 }
 
 // Should request a Credential with the claims `vehicle_holder` and `first_name`.
 #[tokio::test]
 async fn multiple_claims() {
     let verifier = verifier().await;
-    BlockStore::put(verifier, "owner", "VERIFIER", VERIFIER_ID, data::VERIFIER).await.unwrap();
 
     // --------------------------------------------------
     // Verifier creates an Authorization Request to request presentation of
@@ -57,10 +55,10 @@ async fn multiple_claims() {
             ]
         }]
     });
-    let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
+    let dcql_query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
 
     let request = GenerateRequest {
-        query,
+        dcql_query,
         client_id: VERIFIER_ID.to_string(),
         device_flow: DeviceFlow::SameDevice,
         response_mode: ResponseMode::DirectPost {
@@ -86,10 +84,8 @@ async fn multiple_claims() {
     // assert_eq!(results.len(), 2);
 
     let vp_token =
-        wallet::generate(&request_object, &results, wallet).await.expect("should get token");
-    // assert_eq!(vp_token.len(), 1);
-
-    let request = AuthorzationResponse {
+        vp_token::generate(&request_object, &results, wallet).await.expect("should get token");
+    let request = AuthorizationResponse {
         vp_token,
         state: request_object.state,
     };
@@ -112,7 +108,6 @@ async fn multiple_claims() {
 #[tokio::test]
 async fn multiple_credentials() {
     let verifier = verifier().await;
-    BlockStore::put(verifier, "owner", "VERIFIER", VERIFIER_ID, data::VERIFIER).await.unwrap();
 
     // --------------------------------------------------
     // Verifier creates an Authorization Request to request presentation of
@@ -156,10 +151,10 @@ async fn multiple_credentials() {
             }
         ]
     });
-    let query = serde_json::from_value(query_json).expect("should deserialize");
+    let dcql_query = serde_json::from_value(query_json).expect("should deserialize");
 
     let request = GenerateRequest {
-        query,
+        dcql_query,
         client_id: VERIFIER_ID.to_string(),
         device_flow: DeviceFlow::SameDevice,
         response_mode: ResponseMode::DirectPost {
@@ -187,10 +182,10 @@ async fn multiple_credentials() {
     // return a single `vp_token` for the query
     // each credential query will result in a separate presentation
     let vp_token =
-        wallet::generate(&request_object, &results, wallet).await.expect("should get token");
+        vp_token::generate(&request_object, &results, wallet).await.expect("should get token");
     assert_eq!(vp_token.len(), 3);
 
-    let request = AuthorzationResponse {
+    let request = AuthorizationResponse {
         vp_token,
         state: request_object.state,
     };
@@ -211,9 +206,7 @@ async fn multiple_credentials() {
 // Should also optionally return the `nice_to_have` credential.
 #[tokio::test]
 async fn complex_query() {
-    let verifier = verifier().await;
-    BlockStore::put(verifier, "owner", "VERIFIER", VERIFIER_ID, data::VERIFIER).await.unwrap();
-
+    // let verifier = verifier().await;
     let wallet = wallet().await;
     let all_vcs = wallet.fetch();
 
@@ -308,9 +301,7 @@ async fn complex_query() {
 // Should return an ID and address from any credential.
 #[tokio::test]
 async fn any_credential() {
-    let verifier = verifier().await;
-    BlockStore::put(verifier, "owner", "VERIFIER", VERIFIER_ID, data::VERIFIER).await.unwrap();
-
+    // let verifier = verifier().await;
     let wallet = wallet().await;
     let all_vcs = wallet.fetch();
 

@@ -13,16 +13,16 @@ use http::StatusCode;
 
 use crate::common::generate;
 use crate::common::state::State;
-use crate::oauth::GrantType;
 use crate::error::{invalid, server};
 use crate::handlers::{Body, Error, Handler, Request, Response, Result};
-use crate::issuer::{
-    AuthorizationCodeGrant, AuthorizationCredential, AuthorizationDetail, AuthorizationDetailType,
-    AuthorizedDetail, CreateOfferRequest, CreateOfferResponse, CredentialOffer, Grants, Issuer,
-    OfferType, PreAuthorizedCodeGrant, SendType, Server, TxCode,
-};
+use crate::oauth::GrantType;
 use crate::provider::{Metadata, Provider, StateStore, Subject};
 use crate::state::{Expire, Offered};
+use crate::types::{
+    AuthorizationCodeGrant, AuthorizationDefinition, AuthorizationDetail, AuthorizationDetailType,
+    AuthorizedDetail, CreateOfferRequest, CreateOfferResponse, CredentialOffer, Grants, Issuer,
+    OfferType, PreAuthorizedCodeGrant, SendBy, Server, TxCode,
+};
 
 #[derive(Debug, Default)]
 struct Context {
@@ -76,7 +76,7 @@ async fn create_offer(
     }
 
     // respond with Offer object or uri?
-    if request.send_type == SendType::ByVal {
+    if request.send_by == SendBy::ByVal {
         return Ok(Response {
             status: StatusCode::CREATED,
             headers: None,
@@ -231,7 +231,7 @@ async fn authorize(
         authorized.push(AuthorizedDetail {
             authorization_detail: AuthorizationDetail {
                 r#type: AuthorizationDetailType::OpenIdCredential,
-                credential: AuthorizationCredential::ConfigurationId {
+                credential: AuthorizationDefinition::ConfigurationId {
                     credential_configuration_id: config_id.clone(),
                 },
                 claims: None,

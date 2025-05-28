@@ -7,62 +7,6 @@
 //! Wallets can request authorization for issuance of a Credential using
 //! `authorization_details` (as defined in [RFC9396]) or `scope` parameters (or
 //! both).
-//!
-//! ## Authorization Requests
-//!
-//! - One (and only one) of `credential_configuration_id` or `format` is
-//!   REQUIRED.
-//! - `credential_definition` is OPTIONAL.
-
-//! ## Example
-//!
-//! with `credential_configuration_id`:
-//!
-//! ```json
-//! "authorization_details":[
-//!    {
-//!       "type": "openid_credential",
-//!       "credential_configuration_id": "UniversityDegreeCredential"
-//!    }
-//! ]
-//! ```
-//!
-//! with `format`:
-//!
-//! ```json
-//! "authorization_details":[
-//!     {
-//!         "type": "openid_credential",
-//!         "format": "dc+sd-jwt",
-//!         "vct": "SD_JWT_VC_example_in_OpenID4VCI"
-//!     }
-//! ]
-//! ```
-//!
-//! **VC Signed as a JWT, Not Using JSON-LD**
-//!
-//! - `credential_definition` is OPTIONAL.
-//!   - `type` is OPTIONAL.
-//!   - `credentialSubject` is OPTIONAL.
-//!
-//! ```json
-// ! "authorization_details":[
-// !     {
-// !         "type": "openid_credential",
-// !         "credential_configuration_id": "UniversityDegreeCredential",
-// !         "credential_definition": {
-// !             "credentialSubject": {
-// !                 "given_name": {},
-// !                 "family_name": {},
-// !                 "degree": {}
-// !             }
-// !         }
-// !     }
-// ! ]
-//! ```
-//! 
-//! [RFC6749]: (https://www.rfc-editor.org/rfc/rfc6749.html)
-//! [RFC9396]: (https://www.rfc-editor.org/rfc/rfc9396)
 
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -72,15 +16,15 @@ use chrono::Utc;
 
 use crate::common::generate;
 use crate::common::state::State;
-use crate::oauth::GrantType;
 use crate::error::{invalid, server};
 use crate::handlers::{Body, Error, Handler, Request, Response, Result};
-use crate::issuer::{
-    AuthorizationCredential, AuthorizationDetail, AuthorizationDetailType, AuthorizationRequest,
-    AuthorizationResponse, AuthorizedDetail, Issuer, RequestObject,
-};
+use crate::oauth::GrantType;
 use crate::provider::{Metadata, Provider, StateStore, Subject};
 use crate::state::{Authorized, Expire, Offered};
+use crate::types::{
+    AuthorizationDefinition, AuthorizationDetail, AuthorizationDetailType, AuthorizationRequest,
+    AuthorizationResponse, AuthorizedDetail, Issuer, RequestObject,
+};
 
 /// Authorization request handler.
 ///
@@ -128,7 +72,7 @@ async fn authorize(
             .await
             .map_err(|e| Error::AccessDenied(format!("issue authorizing subject: {e}")))?;
 
-        auth_det.credential = AuthorizationCredential::ConfigurationId {
+        auth_det.credential = AuthorizationDefinition::ConfigurationId {
             credential_configuration_id: config_id.clone(),
         };
 
@@ -198,7 +142,10 @@ impl Context {
     ) -> Result<()> {
         // client and server metadata
         let Ok(client) = Metadata::client(provider, &request.client_id).await else {
-            return Err(Error::InvalidClient("invalid `client_id`".to_string()));
+            return Err(Error::InvalidClient(format!(
+                "{} is not a valid client_id",
+                request.client_id
+            )));
         };
         // TODO: support authorization issuers
         let Ok(server) = Metadata::server(provider, &self.issuer.credential_issuer).await else {
@@ -331,19 +278,17 @@ impl Context {
 
             // verify requested claims
             let config_id = match &detail.credential {
-                AuthorizationCredential::ConfigurationId {
+                AuthorizationDefinition::ConfigurationId {
                     credential_configuration_id,
                 } => credential_configuration_id,
-                AuthorizationCredential::FormatProfile(fmt) => {
+                AuthorizationDefinition::FormatProfile(fmt) => {
                     let config_id = self
                         .issuer
                         .credential_configuration_id(fmt)
                         .context("getting `credential_configuration_id`")?;
-
-                    detail.credential = AuthorizationCredential::ConfigurationId {
+                    detail.credential = AuthorizationDefinition::ConfigurationId {
                         credential_configuration_id: config_id.clone(),
                     };
-
                     config_id
                 }
             };
@@ -381,7 +326,7 @@ impl Context {
                 if cred_cfg.scope == Some(scope_item.to_string()) {
                     let detail = AuthorizationDetail {
                         r#type: AuthorizationDetailType::OpenIdCredential,
-                        credential: AuthorizationCredential::ConfigurationId {
+                        credential: AuthorizationDefinition::ConfigurationId {
                             credential_configuration_id: config_id.clone(),
                         },
                         claims: None,

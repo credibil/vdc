@@ -1,0 +1,42 @@
+[package]
+name = "examples"
+edition.workspace = true
+publish = false
+rust-version.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "interactive"
+path = "src/cmd/interactive.rs"
+
+[[bin]]
+name = "automated"
+path = "src/cmd/automated.rs"
+
+[dependencies]
+anyhow.workspace = true
+axum.workspace = true
+axum-extra.workspace = true
+blockstore = "0.7.1"
+credibil-core.workspace = true
+credibil-oid4vci = { path = "../oid4vci" }
+credibil-oid4vp = { path = "../oid4vp" }
+credibil-status.workspace = true
+http.workspace = true
+oauth2 = { version = "5.0.0" }
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+test-utils.workspace = true
+tokio.workspace = true
+tower-http.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+# credibil-identity.workspace = true
+# credibil-jose.workspace = true
+# credibil-se.workspace = true
+# credibil-vdc.workspace = true
+# test-kms = { git = "https://github.com/credibil/se.git" }

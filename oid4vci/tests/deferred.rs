@@ -2,42 +2,39 @@
 
 use std::collections::HashMap;
 
-use credibil_core::blockstore::BlockStore;
-use credibil_core::{OneMany, did_jwk};
-use credibil_identity::{Key, SignerExt};
-use credibil_jose::{JwsBuilder, Jwt, decode_jws};
-use credibil_oid4vci::issuer::{
-    CreateOfferRequest, Credential, CredentialHeaders, CredentialRequest, CredentialResponse,
-    Dataset, DeferredCredentialRequest, DeferredHeaders, NonceRequest, ProofClaims, TokenGrantType,
-    TokenRequest, W3cVcClaims,
+use credibil_oid4vci::blockstore::BlockStore;
+use credibil_oid4vci::identity::{Key, SignerExt};
+use credibil_oid4vci::jose::{JwsBuilder, Jwt, decode_jws};
+use credibil_oid4vci::proof::W3cVcClaims;
+use credibil_oid4vci::types::{
+    CreateOfferRequest, Credential, CredentialRequest, CredentialResponse, Dataset,
+    DeferredCredentialRequest, NonceRequest, ProofClaims, TokenGrantType, TokenRequest,
 };
-use credibil_oid4vci::{self, JwtType};
+use credibil_oid4vci::{CredentialHeaders, DeferredHeaders, JwtType, OneMany, did_jwk};
 use serde_json::json;
-use test_utils::issuer::{CAROL_ID, ISSUER_ID, Issuer, data};
+use test_utils::issuer::Issuer;
 use test_utils::wallet::Wallet;
 use tokio::sync::OnceCell;
 
 static CAROL: OnceCell<Wallet> = OnceCell::const_new();
 async fn carol() -> &'static Wallet {
-    CAROL.get_or_init(|| async { Wallet::new("vci_deferred_carol").await }).await
+    CAROL.get_or_init(|| async { Wallet::new("https://deferred.io/carol").await }).await
 }
+const CAROL_SUBJECT: &str = "pending_user";
+const ISSUER_ID: &str = "http://localhost:8080";
 
 // Should return a credential when using the pre-authorized code flow and the
 // credential offer to the Wallet is made by value.
 #[tokio::test]
 async fn deferred() {
-    let provider = Issuer::new("vci_deferred_deferred").await;
+    let provider = Issuer::new(ISSUER_ID).await;
     let carol = carol().await;
-
-    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", CAROL_ID, data::PENDING_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(CAROL_ID)
+        .subject_id(CAROL_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
@@ -109,15 +106,18 @@ async fn deferred() {
     // HACK: update subject's pending state
     // --------------------------------------------------
     let credential_identifier = &details[0].credential_identifiers[0];
-    let mut subject: HashMap<String, Dataset> = serde_json::from_slice(data::PENDING_USER).unwrap();
+
+    let block =
+        BlockStore::get(&provider, "owner", "SUBJECT", CAROL_SUBJECT).await.unwrap().unwrap();
+    let mut subject: HashMap<String, Dataset> = serde_json::from_slice(&block).unwrap();
+
     let mut credential: Dataset = subject.get(credential_identifier).unwrap().clone();
     credential.pending = false;
-
     subject.insert(credential_identifier.to_string(), credential);
-    let data = serde_json::to_vec(&subject).unwrap();
 
-    BlockStore::delete(&provider, "owner", "SUBJECT", CAROL_ID).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", CAROL_ID, &data).await.unwrap();
+    let block = serde_json::to_vec(&subject).unwrap();
+    BlockStore::delete(&provider, "owner", "SUBJECT", CAROL_SUBJECT).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", CAROL_SUBJECT, &block).await.unwrap();
 
     // --------------------------------------------------
     // After a brief wait Bob retrieves the credential

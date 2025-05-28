@@ -21,24 +21,23 @@ use credibil_vdc::mso_mdoc::MdocBuilder;
 use credibil_vdc::sd_jwt::SdJwtVcBuilder;
 use credibil_vdc::w3c_vc::W3cVcBuilder;
 
+use crate::JwtType;
 use crate::common::generate;
 use crate::common::state::State;
-use crate::JwtType;
 use crate::error::server;
-use crate::handlers::{Body, Error, Handler, Request, Response, Result};
-use crate::issuer::{
-    AuthorizedDetail, Credential, CredentialConfiguration, CredentialHeaders, CredentialRequest,
-    CredentialResponse, Dataset, Issuer, MultipleProofs, Proof, ProofClaims, RequestBy,
-    SingleProof,
-};
+use crate::handlers::{Body, CredentialHeaders, Error, Handler, Request, Response, Result};
 use crate::provider::{Metadata, Provider, StateStore, Subject};
 use crate::state::{Deferred, Expire, Token};
+use crate::types::{
+    AuthorizedDetail, Credential, CredentialConfiguration, CredentialRequest, CredentialResponse,
+    Dataset, Issuer, MultipleProofs, Proof, ProofClaims, RequestBy, SingleProof,
+};
 
 /// Credential request handler.
 ///
 /// # Errors
 ///
-/// Returns an `OpenID4VP` error if the request is invalid or if the provider is
+/// Returns an `OpenID4VCI` error if the request is invalid or if the provider is
 /// not available.
 pub async fn credential(
     issuer: &str, provider: &impl Provider, request: Request<CredentialRequest, CredentialHeaders>,
@@ -136,7 +135,7 @@ impl CredentialRequest {
                 },
             };
 
-            // the same c_nonce should be used for all proofs
+            // the same `c_nonce` should be used for all proofs
             let mut nonces = HashSet::new();
             let resolver = async |kid: String| did_jwk(&kid, provider).await;
 
@@ -222,7 +221,7 @@ impl Context {
         // create a credential for each proof
         for kid in &self.proof_kids {
             let status_claim = status_list
-                .add_entry("http://credibil.io/statuslists/1")
+                .add_entry("http://localhost:8080/statuslists/1")
                 .context("creating status claim")?;
 
             let credential = match &self.configuration.profile {
@@ -299,12 +298,12 @@ impl Context {
 
         let token = TokenBuilder::new()
             .status_list(status_list.clone())
-            .uri("https://example.com/statuslists/1")
+            .uri("http://localhost:8080/statuslists/1")
             .signer(provider)
             .build()
             .await
             .context("building status list token")?;
-        StatusStore::put(provider, "https://example.com/statuslists/1", &token)
+        StatusStore::put(provider, "http://localhost:8080/statuslists/1", &token)
             .await
             .context("saving status list")?;
 

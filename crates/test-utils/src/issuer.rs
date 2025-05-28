@@ -1,41 +1,47 @@
 use anyhow::Result;
 use credibil_core::blockstore::BlockStore;
+use credibil_identity::did::Document;
 use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
 use credibil_se::{Algorithm, Signer};
 
 use crate::blockstore::Mockstore;
 use crate::identity::DidIdentity;
 
-pub const ISSUER_ID: &str = "http://credibil.io";
-pub const BOB_ID: &str = "bob";
-pub const CAROL_ID: &str = "carol";
-
-pub mod data {
-    pub const CLIENT: &[u8] = include_bytes!("../data/issuer/client.json");
-    pub const ISSUER: &[u8] = include_bytes!("../data/issuer/issuer.json");
-    pub const SERVER: &[u8] = include_bytes!("../data/issuer/server.json");
-    pub const NORMAL_USER: &[u8] = include_bytes!("../data/issuer/normal-user.json");
-    pub const PENDING_USER: &[u8] = include_bytes!("../data/issuer/pending-user.json");
-}
+const ISSUER_METADATA: &[u8] = include_bytes!("../data/issuer-metadata.json");
+const SERVER_METADATA: &[u8] = include_bytes!("../data/server-metadata.json");
+const NORMAL_USER: &[u8] = include_bytes!("../data/normal-user.json");
+const PENDING_USER: &[u8] = include_bytes!("../data/pending-user.json");
+const CLIENT: &[u8] = include_bytes!("../data/client.json");
 
 #[derive(Clone)]
 pub struct Issuer {
-    identity: DidIdentity,
     blockstore: Mockstore,
+    identity: DidIdentity,
 }
 
 impl Issuer {
     #[must_use]
-    pub async fn new(owner: &str) -> Self {
+    pub async fn new(issuer_id: &str) -> Self {
+        let blockstore = Mockstore::open();
+        blockstore.put("owner", "ISSUER", issuer_id, ISSUER_METADATA).await.unwrap();
+        blockstore.put("owner", "SERVER", issuer_id, SERVER_METADATA).await.unwrap();
+        blockstore.put("owner", "SUBJECT", "normal_user", NORMAL_USER).await.unwrap();
+        blockstore.put("owner", "SUBJECT", "pending_user", PENDING_USER).await.unwrap();
+        blockstore.put("owner", "CLIENT", "http://localhost:8082", CLIENT).await.unwrap();
+
         Self {
-            identity: DidIdentity::new(owner).await,
-            blockstore: Mockstore::new(),
+            blockstore,
+            identity: DidIdentity::new(issuer_id).await,
         }
+    }
+
+    pub async fn did(&self) -> Result<Document> {
+        self.identity.document(&self.identity.owner).await
     }
 }
 
 impl IdentityResolver for Issuer {
-    async fn resolve(&self, url: &str) -> anyhow::Result<Identity> {
+    async fn resolve(&self, url: &str) -> Result<Identity> {
         self.identity.resolve(url).await
     }
 }

@@ -16,8 +16,13 @@ use credibil_core::blockstore::BlockStore;
 use credibil_identity::{IdentityResolver, SignerExt};
 use credibil_status::StatusStore;
 
-pub use crate::common::state::StateStore;
-use crate::issuer::{Client, Dataset, Issuer, Server};
+pub(crate) use crate::common::state::StateStore;
+use crate::types::{Client, Dataset, Issuer, Server};
+
+const ISSUER: &str = "ISSUER";
+const SERVER: &str = "SERVER";
+const CLIENT: &str = "CLIENT";
+const SUBJECT: &str = "SUBJECT";
 
 /// Issuer Provider trait.
 pub trait Provider:
@@ -66,11 +71,6 @@ pub trait Subject: Send + Sync {
         &self, subject_id: &str, credential_identifier: &str,
     ) -> impl Future<Output = Result<Dataset>> + Send;
 }
-
-const ISSUER: &str = "ISSUER";
-const SERVER: &str = "SERVER";
-const CLIENT: &str = "CLIENT";
-const SUBJECT: &str = "SUBJECT";
 
 impl<T: BlockStore> Metadata for T {
     async fn client(&self, client_id: &str) -> Result<Client> {
@@ -138,19 +138,3 @@ impl<T: BlockStore> Subject for T {
         Ok(dataset.clone())
     }
 }
-
-// impl<T: BlockStore> StatusStore for T {
-//     #[allow(unused)]
-//     async fn put(&self, uri: &str, token: &str) -> Result<()> {
-//         let data = serde_json::to_vec(token)?;
-//         BlockStore::delete(self, "owner", STATUSTOKEN, uri).await?;
-//         BlockStore::put(self, "owner", STATUSTOKEN, uri, &data).await
-//     }
-
-//     async fn get(&self, uri: &str) -> Result<Option<String>> {
-//         let Some(block) = BlockStore::get(self, "owner", STATUSTOKEN, uri).await? else {
-//             return Ok(None);
-//         };
-//         Ok(Some(serde_json::from_slice(&block)?))
-//     }
-// }

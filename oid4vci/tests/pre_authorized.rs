@@ -2,42 +2,40 @@
 
 use std::collections::HashMap;
 
-use credibil_core::blockstore::BlockStore;
-use credibil_core::{OneMany, did_jwk};
-use credibil_identity::{Key, SignerExt};
-use credibil_jose::{JwsBuilder, Jwt, decode_jws};
-use credibil_oid4vci::issuer::{
-    AuthorizationDetail, CreateOfferRequest, Credential, CredentialHeaders, CredentialOfferRequest,
-    CredentialRequest, CredentialResponse, NonceRequest, NotificationEvent, NotificationHeaders,
-    NotificationRequest, ProofClaims, TokenGrantType, TokenRequest, W3cVcClaims,
+use credibil_oid4vci::identity::{Key, SignerExt};
+use credibil_oid4vci::jose::{JwsBuilder, Jwt, decode_jws};
+use credibil_oid4vci::proof::W3cVcClaims;
+use credibil_oid4vci::types::{
+    AuthorizationDetail, CreateOfferRequest, Credential, CredentialOfferRequest, CredentialRequest,
+    CredentialResponse, NonceRequest, NotificationEvent, NotificationRequest, ProofClaims,
+    TokenGrantType, TokenRequest,
 };
-use credibil_oid4vci::{self, JwtType};
+use credibil_oid4vci::{CredentialHeaders, JwtType, NotificationHeaders, OneMany, did_jwk};
 use serde_json::json;
-use test_utils::issuer::{BOB_ID, ISSUER_ID, Issuer, data};
+use test_utils::issuer::Issuer;
 use test_utils::wallet::Wallet;
 use tokio::sync::OnceCell;
 
+const ISSUER_ID: &str = "http://localhost:8080";
+const BOB_SUBJECT: &str = "normal_user";
+
 static BOB: OnceCell<Wallet> = OnceCell::const_new();
 async fn bob() -> &'static Wallet {
-    BOB.get_or_init(|| async { Wallet::new("vci_pre_auth_bob").await }).await
+    BOB.get_or_init(|| async { Wallet::new("https://pre_auth.io/bob").await }).await
 }
 
 // Should return a credential when using the pre-authorized code flow and the
 // credential offer to the Wallet is made by value.
 #[tokio::test]
 async fn offer_val() {
-    let provider = Issuer::new("vci_pre_auth_offer_val").await;
+    let provider = Issuer::new(ISSUER_ID).await;
     let bob = bob().await;
-
-    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(BOB_ID)
+        .subject_id(BOB_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
@@ -56,13 +54,15 @@ async fn offer_val() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token = credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+    let token =
+        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a proof for a credential request
     // --------------------------------------------------
-    let nonce =
-        credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
+    let nonce = credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider)
+        .await
+        .expect("should return nonce");
 
     // proof of possession of key material
     let bob_key = bob
@@ -97,8 +97,9 @@ async fn offer_val() {
             authorization: token.access_token.clone(),
         },
     };
-    let response =
-        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
+    let response = credibil_oid4vci::handle(ISSUER_ID, request, &provider)
+        .await
+        .expect("should return credential");
 
     // --------------------------------------------------
     // Bob extracts and verifies the received credential
@@ -131,17 +132,13 @@ async fn offer_val() {
 // credential offer to the Wallet is made by reference.
 #[tokio::test]
 async fn offer_ref() {
-    let provider = Issuer::new("vci_pre_auth_offer_ref").await;
-
-    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, data::NORMAL_USER).await.unwrap();
+    let provider = Issuer::new(ISSUER_ID).await;
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(BOB_ID)
+        .subject_id(BOB_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .by_ref(true)
         .build();
@@ -161,7 +158,7 @@ async fn offer_ref() {
         credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should fetch offer");
 
     // validate offer
-    let offer = response.credential_offer.clone();
+    let offer = response.0.clone();
     assert_eq!(offer.credential_configuration_ids, vec!["EmployeeID_W3C_VC".to_string()]);
 
     let grants = offer.grants.expect("should have grant");
@@ -173,18 +170,14 @@ async fn offer_ref() {
 // configuration id.
 #[tokio::test]
 async fn two_datasets() {
-    let provider = Issuer::new("vci_pre_auth_two_datasets").await;
+    let provider = Issuer::new(ISSUER_ID).await;
     let bob = bob().await;
-
-    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(BOB_ID)
+        .subject_id(BOB_SUBJECT)
         .with_credential("Developer_W3C_VC")
         .build();
     let response =
@@ -203,7 +196,8 @@ async fn two_datasets() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token = credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+    let token =
+        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares 2 credential requests
@@ -215,8 +209,9 @@ async fn two_datasets() {
     ]);
 
     for identifier in &details[0].credential_identifiers {
-        let nonce =
-            credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
+        let nonce = credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider)
+            .await
+            .expect("should return nonce");
 
         // proof of possession of key material
         let bob_key = bob
@@ -249,8 +244,9 @@ async fn two_datasets() {
             },
         };
 
-        let response =
-            credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
+        let response = credibil_oid4vci::handle(ISSUER_ID, request, &provider)
+            .await
+            .expect("should return credential");
 
         // --------------------------------------------------
         // Bob extracts and verifies the received credential
@@ -278,18 +274,14 @@ async fn two_datasets() {
 // requested in the token request.
 #[tokio::test]
 async fn reduce_credentials() {
-    let provider = Issuer::new("vci_pre_auth_reduce_credentials").await;
+    let provider = Issuer::new(ISSUER_ID).await;
     let bob = bob().await;
-
-    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob with 2 credentials
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(BOB_ID)
+        .subject_id(BOB_SUBJECT)
         .with_credential("Developer_W3C_VC")
         .with_credential("EmployeeID_W3C_VC")
         .build();
@@ -317,7 +309,8 @@ async fn reduce_credentials() {
             AuthorizationDetail::builder().configuration_id("EmployeeID_W3C_VC").build(),
         )
         .build();
-    let token = credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+    let token =
+        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a credential request
@@ -327,8 +320,9 @@ async fn reduce_credentials() {
 
     let identifier = &details[0].credential_identifiers[0];
 
-    let nonce =
-        credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
+    let nonce = credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider)
+        .await
+        .expect("should return nonce");
 
     // proof of possession of key material
     let bob_key = bob
@@ -361,8 +355,9 @@ async fn reduce_credentials() {
         },
     };
 
-    let response =
-        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
+    let response = credibil_oid4vci::handle(ISSUER_ID, request, &provider)
+        .await
+        .expect("should return credential");
 
     // --------------------------------------------------
     // Bob extracts and verifies the received credential
@@ -388,18 +383,14 @@ async fn reduce_credentials() {
 // Should return fewer claims when requested in token request.
 #[tokio::test]
 async fn reduce_claims() {
-    let provider = Issuer::new("vci_pre_auth_reduce_claims").await;
+    let provider = Issuer::new(ISSUER_ID).await;
     let bob = bob().await;
-
-    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(BOB_ID)
+        .subject_id(BOB_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
@@ -425,13 +416,15 @@ async fn reduce_claims() {
                 .build(),
         )
         .build();
-    let token = credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+    let token =
+        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a proof for a credential request
     // --------------------------------------------------
-    let nonce =
-        credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
+    let nonce = credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider)
+        .await
+        .expect("should return nonce");
 
     // proof of possession of key material
     let bob_key = bob
@@ -467,8 +460,9 @@ async fn reduce_claims() {
         },
     };
 
-    let response =
-        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
+    let response = credibil_oid4vci::handle(ISSUER_ID, request, &provider)
+        .await
+        .expect("should return credential");
 
     // --------------------------------------------------
     // Bob extracts and verifies the received credential
@@ -502,18 +496,14 @@ async fn reduce_claims() {
 // Should handle an acceptance notication from the wallet.
 #[tokio::test]
 async fn notify_accepted() {
-    let provider = Issuer::new("vci_pre_auth_notify_accepted").await;
+    let provider = Issuer::new(ISSUER_ID).await;
     let bob = bob().await;
-
-    BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(BOB_ID)
+        .subject_id(BOB_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
@@ -532,13 +522,15 @@ async fn notify_accepted() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token = credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+    let token =
+        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a proof for a credential request
     // --------------------------------------------------
-    let nonce =
-        credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider).await.expect("should return nonce");
+    let nonce = credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider)
+        .await
+        .expect("should return nonce");
 
     // proof of possession of key material
     let bob_key = bob
@@ -574,8 +566,9 @@ async fn notify_accepted() {
         },
     };
 
-    let response =
-        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return credential");
+    let response = credibil_oid4vci::handle(ISSUER_ID, request, &provider)
+        .await
+        .expect("should return credential");
 
     // --------------------------------------------------
     // Bob send a notication advising the credential was accepted

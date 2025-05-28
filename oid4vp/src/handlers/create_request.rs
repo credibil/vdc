@@ -13,7 +13,7 @@ use crate::error::invalid;
 use crate::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::provider::{Metadata, Provider, StateStore};
 use crate::state::Expire;
-use crate::verifier::{
+use crate::types::{
     ClientId, DeviceFlow, GenerateRequest, GenerateResponse, RequestObject, ResponseType,
 };
 
@@ -29,7 +29,7 @@ async fn create_request(
     let uri_token = generate::uri_token();
 
     let Ok(metadata) = Metadata::verifier(provider, verifier).await else {
-        return Err(invalid!("invalid `client_id`"));
+        return Err(invalid!("{verifier} is not a valid client_id"));
     };
 
     // TODO: Response Mode "direct_post" is RECOMMENDED for cross-device flows.
@@ -38,7 +38,7 @@ async fn create_request(
         response_type: ResponseType::VpToken,
         state: Some(uri_token.clone()),
         nonce: generate::nonce(),
-        dcql_query: request.query,
+        dcql_query: request.dcql_query,
         client_metadata: Some(metadata.client_metadata),
         response_mode: request.response_mode,
         ..RequestObject::default()

@@ -12,8 +12,8 @@
 
 pub mod oauth;
 pub mod provider;
-pub mod verifier;
-pub mod wallet;
+pub mod types;
+pub mod vp_token;
 
 mod common;
 mod error;
@@ -22,25 +22,16 @@ mod state;
 
 use std::fmt::Display;
 
+pub use credibil_core::{blockstore, did_jwk, http};
 use serde::{Deserialize, Serialize};
+pub use {
+    credibil_identity as identity, credibil_jose as jose, credibil_status as status,
+    credibil_vdc as vdc,
+};
 
 pub use self::error::Error;
 pub use self::handlers::*;
-pub use self::verifier::*;
-pub use self::wallet::*;
-// pub use self::common::*;
-
-/// Re-export `credibil_identity` modules for convenience.
-pub mod identity {
-    pub use credibil_identity::*;
-}
-/// Re-export `credibil_jose` modules for convenience.
-pub mod jose {
-    pub use credibil_jose::*;
-}
-
-
-
+pub use self::types::*;
 
 /// The JWS `typ` header parameter.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]

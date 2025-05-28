@@ -18,8 +18,8 @@ use anyhow::Context as _;
 
 use crate::error::invalid;
 use crate::handlers::{Body, Error, Handler, Request, Response, Result};
-use crate::issuer::{CredentialOffer, CredentialOfferRequest, CredentialOfferResponse};
 use crate::provider::{Provider, StateStore};
+use crate::types::{CredentialOffer, CredentialOfferRequest, CredentialOfferResponse};
 
 /// Endpoint for the Wallet to request the Issuer's Credential Offer when
 /// engaged in a cross-device flow.
@@ -40,9 +40,7 @@ async fn credential_offer(
         return Err(invalid!("state expired"));
     }
 
-    Ok(CredentialOfferResponse {
-        credential_offer: state.body,
-    })
+    Ok(CredentialOfferResponse(state.body))
 }
 
 impl<P: Provider> Handler<CredentialOfferResponse, P> for Request<CredentialOfferRequest> {

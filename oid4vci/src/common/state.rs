@@ -67,7 +67,7 @@ where
 
     async fn get<T: DeserializeOwned>(&self, key: &str) -> Result<State<T>> {
         let Some(block) = BlockStore::get(self, "owner", STATE, key).await? else {
-            return Err(anyhow!("could not find client"));
+            return Err(anyhow!("no matching item in state store"));
         };
         Ok(serde_json::from_slice(&block)?)
     }

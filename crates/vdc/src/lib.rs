@@ -5,14 +5,19 @@
 pub mod dcql;
 pub mod mso_mdoc;
 pub mod sd_jwt;
+pub mod serde_cbor;
 pub mod w3c_vc;
 
 mod generate;
-mod serde_cbor;
 
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
+
+pub use self::dcql::{DcqlQuery, Queryable};
+pub use self::mso_mdoc::MdocBuilder;
+pub use self::sd_jwt::SdJwtVcBuilder;
+pub use self::w3c_vc::W3cVcBuilder;
 
 /// Format Profile defines supported Credential data models. Each profile
 /// defines a specific set of parameters or claims used to support a particular

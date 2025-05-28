@@ -265,7 +265,8 @@ mod tests {
 
     #[tokio::test]
     async fn build_vp() {
-        let issued = build_vc().await;
+        let issuer = Issuer::new("https://mso_mdoc.io/issuer").await;
+        let issued = build_vc(&issuer).await;
 
         let given_name = &Claim {
             path: vec!["org.iso.18013.5.1".to_string(), "given_name".to_string()],
@@ -287,7 +288,7 @@ mod tests {
             .client_id("client_id")
             .nonce("nonce")
             .response_uri("https://example.com/response")
-            .signer(&Issuer::new("vdc_mso_mdoc_present_tests_build_vp_issuer").await)
+            .signer(&issuer)
             .build()
             .await
             .expect("should build");
@@ -308,8 +309,8 @@ mod tests {
         let _device_response = serde_cbor::from_slice::<DeviceResponse>(&cbor).unwrap();
     }
 
-    async fn build_vc() -> String {
-        let wallet = Wallet::new("vdc_mso_mdoc_present_tests_build_vc_wallet").await;
+    async fn build_vc(issuer: &Issuer) -> String {
+        let wallet = Wallet::new("https://mso_mdoc.io/wallet").await;
         let key_ref = wallet
             .verification_method()
             .await
@@ -335,7 +336,7 @@ mod tests {
             .doctype("org.iso.18013.5.1.mDL")
             .device_key(device_jwk)
             .claims(claims.clone())
-            .signer(&Issuer::new("vdc_mso_mdoc_present_tests_build_vc_issuer").await)
+            .signer(issuer)
             .build()
             .await
             .expect("should build")

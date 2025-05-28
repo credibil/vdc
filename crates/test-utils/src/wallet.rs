@@ -1,24 +1,25 @@
 use anyhow::Result;
+use credibil_identity::did::Document;
+use credibil_identity::se::{Algorithm, Signer};
 use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
-use credibil_se::{Algorithm, Signer};
-use credibil_vdc::dcql::Queryable;
+use credibil_vdc::Queryable;
 
 use crate::identity::DidIdentity;
 
 #[derive(Clone)]
 pub struct Wallet {
     identity: DidIdentity,
-    // blockstore: Mockstore,
     store: Vec<Queryable>,
 }
 
 impl Wallet {
-    pub async fn new(owner: &str) -> Self {
+    pub async fn new(wallet_id: &str) -> Self {
         Self {
-            identity: DidIdentity::new(owner).await,
+            identity: DidIdentity::new(wallet_id).await,
             store: Vec::new(),
         }
     }
+
 
     // Add a credential to the store.
     pub fn add(&mut self, queryable: Queryable) {
@@ -28,10 +29,14 @@ impl Wallet {
     pub fn fetch(&self) -> &[Queryable] {
         &self.store
     }
+
+    pub async fn did(&self) -> Result<Document> {
+        self.identity.document(&self.identity.owner).await
+    }
 }
 
 impl IdentityResolver for Wallet {
-    async fn resolve(&self, url: &str) -> anyhow::Result<Identity> {
+    async fn resolve(&self, url: &str) -> Result<Identity> {
         self.identity.resolve(url).await
     }
 }

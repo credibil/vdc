@@ -1,17 +1,13 @@
 use anyhow::Result;
 use credibil_core::blockstore::BlockStore;
+use credibil_identity::did::Document;
+use credibil_identity::se::{Algorithm, PublicKey, Receiver, SharedSecret, Signer};
 use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
-use credibil_se::{Algorithm, PublicKey, Receiver, SharedSecret, Signer};
-use credibil_status::StatusToken;
 
 use crate::blockstore::Mockstore;
 use crate::identity::DidIdentity;
 
-pub const VERIFIER_ID: &str = "http://localhost:8080";
-
-pub mod data {
-    pub const VERIFIER: &[u8] = include_bytes!("../data/verifier/verifier.json");
-}
+const VERIFIER_METADATA: &[u8] = include_bytes!("../data/verifier-metadata.json");
 
 #[derive(Clone)]
 pub struct Verifier {
@@ -21,11 +17,19 @@ pub struct Verifier {
 
 impl Verifier {
     #[must_use]
-    pub async fn new(owner: &str) -> Self {
+    pub async fn new(verifier_id: &str) -> Self {
+        let blockstore = Mockstore::open();
+        blockstore.put("owner", "VERIFIER", verifier_id, VERIFIER_METADATA).await.unwrap();
+
         Self {
-            identity: DidIdentity::new(owner).await,
-            blockstore: Mockstore::new(),
+            blockstore,
+            identity: DidIdentity::new(verifier_id).await,
         }
+    }
+
+
+    pub async fn did(&self) -> Result<Document> {
+        self.identity.document(&self.identity.owner).await
     }
 }
 
@@ -80,14 +84,5 @@ impl BlockStore for Verifier {
 
     async fn purge(&self, _owner: &str, _partition: &str) -> Result<()> {
         unimplemented!()
-    }
-}
-
-impl StatusToken for Verifier {
-    async fn fetch(&self, uri: &str) -> Result<String> {
-        let Some(block) = BlockStore::get(self, "owner", "STATUSTOKEN", uri).await? else {
-            return Err(anyhow::anyhow!("could not find status token"));
-        };
-        Ok(serde_json::from_slice(&block)?)
     }
 }

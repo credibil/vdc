@@ -9,13 +9,13 @@ use credibil_openid::oid4vci::endpoint;
 use credibil_openid::oid4vci::provider::StateStore;
 use credibil_openid::oid4vci::state::{Expire, Stage, State, Token};
 use credibil_openid::oid4vci::types::{
-    AuthorizationCredential, AuthorizationDetail, AuthorizedDetail, Credential, CredentialRequest,
+    AuthorizationDefinition, AuthorizationDetail, AuthorizedDetail, Credential, CredentialRequest,
     ProofClaims, ResponseType,
 };
 use credibil_openid::w3c_vc::proof::{self, Payload, Type, Verify};
 use insta::assert_yaml_snapshot as assert_snapshot;
 use serde_json::json;
-use test_issuer::{CLIENT_ID, CREDENTIAL_ISSUER, BOB_ID};
+use test_issuer::{BOB_ID, CLIENT_ID, CREDENTIAL_ISSUER};
 
 #[tokio::test]
 async fn identifier() {
@@ -32,7 +32,7 @@ async fn identifier() {
             access_token: access_token.into(),
             details: vec![AuthorizedDetail {
                 authorization_detail: AuthorizationDetail {
-                    credential: AuthorizationCredential::ConfigurationId {
+                    credential: AuthorizationDefinition::ConfigurationId {
                         credential_configuration_id: "EmployeeID_W3C_VC".to_string(),
                     },
                     ..AuthorizationDetail::default()
@@ -123,7 +123,7 @@ async fn format() {
             access_token: access_token.into(),
             details: vec![AuthorizedDetail {
                 authorization_detail: AuthorizationDetail {
-                    credential: AuthorizationCredential::ConfigurationId {
+                    credential: AuthorizationDefinition::ConfigurationId {
                         credential_configuration_id: "EmployeeID_W3C_VC".to_string(),
                     },
                     ..AuthorizationDetail::default()
@@ -221,7 +221,7 @@ async fn iso_mdl() {
             access_token: access_token.into(),
             details: vec![AuthorizedDetail {
                 authorization_detail: AuthorizationDetail {
-                    credential: AuthorizationCredential::ConfigurationId {
+                    credential: AuthorizationDefinition::ConfigurationId {
                         credential_configuration_id: "org.iso.18013.5.1.mDL".to_string(),
                     },
                     ..AuthorizationDetail::default()
