@@ -36,7 +36,9 @@ struct AppState {
     provider: Arc<Mutex<wallet::Wallet>>,
 }
 
-pub async fn serve(addr: impl Into<String>, wallet: wallet::Wallet) -> Result<JoinHandle<()>> {
+pub async fn serve(wallet_id: &'static str) -> Result<JoinHandle<()>> {
+    let wallet = wallet::Wallet::new(wallet_id).await;
+
     let router = Router::new()
         .route("/credential_offer", get(credential_offer))
         .route("/authorize", get(authorize))
@@ -47,9 +49,9 @@ pub async fn serve(addr: impl Into<String>, wallet: wallet::Wallet) -> Result<Jo
             provider: Arc::new(Mutex::new(wallet)),
         });
 
-    let addr = addr.into();
     let jh = tokio::spawn(async move {
-        let listener = TcpListener::bind(&addr).await.expect("should bind");
+        let addr = wallet_id.strip_prefix("http://").unwrap_or(wallet_id);
+        let listener = TcpListener::bind(addr).await.expect("should bind");
         tracing::info!("listening on {addr}");
         axum::serve(listener, router).await.expect("server should run");
     });

@@ -39,7 +39,9 @@ static AUTH_REQUESTS: LazyLock<RwLock<HashMap<String, AuthorizationRequest>>> =
 static PAR_REQUESTS: LazyLock<RwLock<HashMap<String, PushedAuthorizationRequest>>> =
     LazyLock::new(|| RwLock::new(HashMap::new()));
 
-pub async fn serve(addr: impl Into<String>, issuer: Issuer) -> Result<JoinHandle<()>> {
+pub async fn serve(issuer_id: &'static str) -> Result<JoinHandle<()>> {
+    let issuer = Issuer::new(issuer_id).await;
+
     let router = Router::new()
         .route("/create_offer", post(create_offer))
         .route("/credential_offer/{offer_id}", get(credential_offer))
@@ -63,8 +65,8 @@ pub async fn serve(addr: impl Into<String>, issuer: Issuer) -> Result<JoinHandle
         ))
         .with_state(issuer);
 
-    let addr = addr.into();
     let jh = tokio::spawn(async move {
+        let addr = issuer_id.strip_prefix("http://").unwrap_or(issuer_id);
         let listener = TcpListener::bind(&addr).await.expect("should bind");
         tracing::info!("listening on {addr}");
         axum::serve(listener, router).await.expect("server should run");

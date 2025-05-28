@@ -27,6 +27,7 @@ impl Verifier {
         }
     }
 
+
     pub async fn did(&self) -> Result<Document> {
         self.identity.document(&self.identity.owner).await
     }

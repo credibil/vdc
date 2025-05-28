@@ -19,7 +19,9 @@ use tokio::task::JoinHandle;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 
-pub async fn serve(addr: impl Into<String>, verifier: Verifier) -> Result<JoinHandle<()>> {
+pub async fn serve(verifier_id: &'static str) -> Result<JoinHandle<()>> {
+    let verifier = Verifier::new(verifier_id).await;
+
     let router = Router::new()
         .route("/create_request", post(create_request))
         .route("/request/{id}", get(request_uri))
@@ -30,9 +32,9 @@ pub async fn serve(addr: impl Into<String>, verifier: Verifier) -> Result<JoinHa
         .layer(CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any))
         .with_state(verifier);
 
-    let addr = addr.into();
     let jh = tokio::spawn(async move {
-        let listener = TcpListener::bind(&addr).await.expect("should bind");
+        let addr = verifier_id.strip_prefix("http://").unwrap_or(verifier_id);
+        let listener = TcpListener::bind(addr).await.expect("should bind");
         tracing::info!("listening on {addr}");
         axum::serve(listener, router).await.expect("server should run");
     });

@@ -13,12 +13,13 @@ pub struct Wallet {
 }
 
 impl Wallet {
-    pub async fn new(owner: &str) -> Self {
+    pub async fn new(wallet_id: &str) -> Self {
         Self {
-            identity: DidIdentity::new(owner).await,
+            identity: DidIdentity::new(wallet_id).await,
             store: Vec::new(),
         }
     }
+
 
     // Add a credential to the store.
     pub fn add(&mut self, queryable: Queryable) {
