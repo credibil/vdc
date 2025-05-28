@@ -12,7 +12,6 @@ use serde_json::json;
 use test_utils::issuer::Issuer;
 use test_utils::issuer::data::CLIENT;
 use test_utils::verifier::Verifier;
-use test_utils::verifier::data::VERIFIER_METADATA;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
 
@@ -36,7 +35,6 @@ async fn main() -> Result<()> {
 
     // initialize verifier
     let verifier = Verifier::new(&verifier_id).await;
-    BlockStore::put(&verifier, "owner", "VERIFIER", &verifier_id, VERIFIER_METADATA).await?;
     verifier::serve(VERIFIER, verifier).await?;
 
     // initialize wallet

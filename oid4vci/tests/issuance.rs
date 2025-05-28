@@ -4,7 +4,6 @@
 
 use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_jose::{JwsBuilder, Jwt, decode_jws};
-use credibil_oid4vci::blockstore::BlockStore;
 use credibil_oid4vci::identity::{Key, SignerExt};
 use credibil_oid4vci::proof::W3cVcClaims;
 use credibil_oid4vci::types::{
@@ -16,21 +15,21 @@ use credibil_oid4vci::{CredentialHeaders, JwtType, OneMany, did_jwk};
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use test_utils::issuer::Issuer;
-use test_utils::issuer::data::{ISSUER_METADATA, NORMAL_USER, SERVER_METADATA};
 use test_utils::wallet::Wallet;
 use tokio::sync::OnceCell;
+
+const ISSUER_ID: &str = "http://localhost:8080";
+const BOB_SUBJECT: &str = "normal_user";
 
 static BOB: OnceCell<Wallet> = OnceCell::const_new();
 async fn bob() -> &'static Wallet {
     BOB.get_or_init(|| async { Wallet::new("https://issuance.io/bob").await }).await
 }
-const BOB_SUBJECT: &str = "normal_user";
-const ISSUER_ID: &str = "http://localhost:8080";
 
 // Should allow the Wallet to provide 2 JWT proofs when requesting a credential.
 #[tokio::test]
 async fn two_proofs() {
-    let provider = Issuer::new("https://issuance.io/two_proofs").await;
+    let provider = Issuer::new(ISSUER_ID).await;
     let bob = bob().await;
 
     // --------------------------------------------------
@@ -164,7 +163,7 @@ async fn two_proofs() {
 // Should issue a SD-JWT credential.
 #[tokio::test]
 async fn sd_jwt() {
-    let provider = Issuer::new("https://issuance.io/sd_jwt").await;
+    let provider = Issuer::new(ISSUER_ID).await;
     let bob = bob().await;
 
     // --------------------------------------------------

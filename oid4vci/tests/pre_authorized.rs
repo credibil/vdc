@@ -2,7 +2,6 @@
 
 use std::collections::HashMap;
 
-use credibil_oid4vci::blockstore::BlockStore;
 use credibil_oid4vci::identity::{Key, SignerExt};
 use credibil_oid4vci::jose::{JwsBuilder, Jwt, decode_jws};
 use credibil_oid4vci::proof::W3cVcClaims;
@@ -14,22 +13,22 @@ use credibil_oid4vci::types::{
 use credibil_oid4vci::{CredentialHeaders, JwtType, NotificationHeaders, OneMany, did_jwk};
 use serde_json::json;
 use test_utils::issuer::Issuer;
-use test_utils::issuer::data::{ISSUER_METADATA, NORMAL_USER, SERVER_METADATA};
 use test_utils::wallet::Wallet;
 use tokio::sync::OnceCell;
+
+const ISSUER_ID: &str = "http://localhost:8080";
+const BOB_SUBJECT: &str = "normal_user";
 
 static BOB: OnceCell<Wallet> = OnceCell::const_new();
 async fn bob() -> &'static Wallet {
     BOB.get_or_init(|| async { Wallet::new("https://pre_auth.io/bob").await }).await
 }
-const BOB_SUBJECT: &str = "normal_user";
-const ISSUER_ID: &str = "http://localhost:8080";
 
 // Should return a credential when using the pre-authorized code flow and the
 // credential offer to the Wallet is made by value.
 #[tokio::test]
 async fn offer_val() {
-    let provider = Issuer::new("https://pre_auth.io/offer_val").await;
+    let provider = Issuer::new(ISSUER_ID).await;
     let bob = bob().await;
 
     // --------------------------------------------------
@@ -133,7 +132,7 @@ async fn offer_val() {
 // credential offer to the Wallet is made by reference.
 #[tokio::test]
 async fn offer_ref() {
-    let provider = Issuer::new("https://pre_auth.io/offer_ref").await;
+    let provider = Issuer::new(ISSUER_ID).await;
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
@@ -171,7 +170,7 @@ async fn offer_ref() {
 // configuration id.
 #[tokio::test]
 async fn two_datasets() {
-    let provider = Issuer::new("https://pre_auth.io/two_datasets").await;
+    let provider = Issuer::new(ISSUER_ID).await;
     let bob = bob().await;
 
     // --------------------------------------------------
@@ -275,7 +274,7 @@ async fn two_datasets() {
 // requested in the token request.
 #[tokio::test]
 async fn reduce_credentials() {
-    let provider = Issuer::new("https://pre_auth.io/reduce_credentials").await;
+    let provider = Issuer::new(ISSUER_ID).await;
     let bob = bob().await;
 
     // --------------------------------------------------
@@ -384,7 +383,7 @@ async fn reduce_credentials() {
 // Should return fewer claims when requested in token request.
 #[tokio::test]
 async fn reduce_claims() {
-    let provider = Issuer::new("https://pre_auth.io/reduce_claims").await;
+    let provider = Issuer::new(ISSUER_ID).await;
     let bob = bob().await;
 
     // --------------------------------------------------
@@ -497,7 +496,7 @@ async fn reduce_claims() {
 // Should handle an acceptance notication from the wallet.
 #[tokio::test]
 async fn notify_accepted() {
-    let provider = Issuer::new("https://pre_auth.io/notify_accepted").await;
+    let provider = Issuer::new(ISSUER_ID).await;
     let bob = bob().await;
 
     // --------------------------------------------------

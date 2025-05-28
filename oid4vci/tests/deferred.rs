@@ -12,7 +12,7 @@ use credibil_oid4vci::types::{
 };
 use credibil_oid4vci::{CredentialHeaders, DeferredHeaders, JwtType, OneMany, did_jwk};
 use serde_json::json;
-use test_utils::issuer::{Issuer, data};
+use test_utils::issuer::Issuer;
 use test_utils::wallet::Wallet;
 use tokio::sync::OnceCell;
 
@@ -27,7 +27,7 @@ const ISSUER_ID: &str = "http://localhost:8080";
 // credential offer to the Wallet is made by value.
 #[tokio::test]
 async fn deferred() {
-    let provider = Issuer::new("https://deferred.io/deferred").await;
+    let provider = Issuer::new(ISSUER_ID).await;
     let carol = carol().await;
 
     // --------------------------------------------------
@@ -106,15 +106,18 @@ async fn deferred() {
     // HACK: update subject's pending state
     // --------------------------------------------------
     let credential_identifier = &details[0].credential_identifiers[0];
-    let mut subject: HashMap<String, Dataset> = serde_json::from_slice(data::PENDING_USER).unwrap();
+
+    let block =
+        BlockStore::get(&provider, "owner", "SUBJECT", CAROL_SUBJECT).await.unwrap().unwrap();
+    let mut subject: HashMap<String, Dataset> = serde_json::from_slice(&block).unwrap();
+
     let mut credential: Dataset = subject.get(credential_identifier).unwrap().clone();
     credential.pending = false;
-
     subject.insert(credential_identifier.to_string(), credential);
-    let data = serde_json::to_vec(&subject).unwrap();
 
+    let block = serde_json::to_vec(&subject).unwrap();
     BlockStore::delete(&provider, "owner", "SUBJECT", CAROL_SUBJECT).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", CAROL_SUBJECT, &data).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", CAROL_SUBJECT, &block).await.unwrap();
 
     // --------------------------------------------------
     // After a brief wait Bob retrieves the credential

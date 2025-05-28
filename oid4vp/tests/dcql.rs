@@ -14,30 +14,29 @@ use credibil_oid4vp::{
 use serde_json::{Value, json};
 use test_utils::issuer::Issuer;
 use test_utils::verifier::Verifier;
-use test_utils::verifier::data::VERIFIER_METADATA;
 use test_utils::wallet::Wallet;
 use tokio::sync::OnceCell;
+
+const ISSUER_ID: &str = "http://localhost:8080";
+const VERIFIER_ID: &str = "http://localhost:8081";
 
 static VERIFIER: OnceCell<Verifier> = OnceCell::const_new();
 static ISSUER: OnceCell<Issuer> = OnceCell::const_new();
 static WALLET: OnceCell<Wallet> = OnceCell::const_new();
 async fn verifier() -> &'static Verifier {
-    VERIFIER.get_or_init(|| async { Verifier::new("https://dcql.io/verifier").await }).await
+    VERIFIER.get_or_init(|| async { Verifier::new(VERIFIER_ID).await }).await
 }
 async fn issuer() -> &'static Issuer {
-    ISSUER.get_or_init(|| async { Issuer::new("https://dcql.io/issuer").await }).await
+    ISSUER.get_or_init(|| async { Issuer::new(ISSUER_ID).await }).await
 }
 async fn wallet() -> &'static Wallet {
     WALLET.get_or_init(|| async { populate("https://dcql.io/wallet").await }).await
 }
-const ISSUER_ID: &str = "http://localhost:8080";
-const VERIFIER_ID: &str = "http://localhost:8081";
 
 // Should request a Credential with the claims `vehicle_holder` and `first_name`.
 #[tokio::test]
 async fn multiple_claims() {
     let verifier = verifier().await;
-    BlockStore::put(verifier, "owner", "VERIFIER", VERIFIER_ID, VERIFIER_METADATA).await.unwrap();
 
     // --------------------------------------------------
     // Verifier creates an Authorization Request to request presentation of
@@ -109,7 +108,6 @@ async fn multiple_claims() {
 #[tokio::test]
 async fn multiple_credentials() {
     let verifier = verifier().await;
-    BlockStore::put(verifier, "owner", "VERIFIER", VERIFIER_ID, VERIFIER_METADATA).await.unwrap();
 
     // --------------------------------------------------
     // Verifier creates an Authorization Request to request presentation of
@@ -208,9 +206,7 @@ async fn multiple_credentials() {
 // Should also optionally return the `nice_to_have` credential.
 #[tokio::test]
 async fn complex_query() {
-    let verifier = verifier().await;
-    BlockStore::put(verifier, "owner", "VERIFIER", VERIFIER_ID, VERIFIER_METADATA).await.unwrap();
-
+    // let verifier = verifier().await;
     let wallet = wallet().await;
     let all_vcs = wallet.fetch();
 
@@ -305,9 +301,7 @@ async fn complex_query() {
 // Should return an ID and address from any credential.
 #[tokio::test]
 async fn any_credential() {
-    let verifier = verifier().await;
-    BlockStore::put(verifier, "owner", "VERIFIER", VERIFIER_ID, VERIFIER_METADATA).await.unwrap();
-
+    // let verifier = verifier().await;
     let wallet = wallet().await;
     let all_vcs = wallet.fetch();
 

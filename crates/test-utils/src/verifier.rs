@@ -7,9 +7,7 @@ use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
 use crate::blockstore::Mockstore;
 use crate::identity::DidIdentity;
 
-pub mod data {
-    pub const VERIFIER_METADATA: &[u8] = include_bytes!("../data/verifier-metadata.json");
-}
+const VERIFIER_METADATA: &[u8] = include_bytes!("../data/verifier-metadata.json");
 
 #[derive(Clone)]
 pub struct Verifier {
@@ -19,10 +17,13 @@ pub struct Verifier {
 
 impl Verifier {
     #[must_use]
-    pub async fn new(owner: &str) -> Self {
+    pub async fn new(verifier_id: &str) -> Self {
+        let blockstore = Mockstore::open();
+        blockstore.put("owner", "VERIFIER", verifier_id, VERIFIER_METADATA).await.unwrap();
+
         Self {
-            identity: DidIdentity::new(owner).await,
-            blockstore: Mockstore::open(),
+            blockstore,
+            identity: DidIdentity::new(verifier_id).await,
         }
     }
 
