@@ -12,14 +12,16 @@ use credibil_oid4vci::types::{
 };
 use credibil_oid4vci::{CredentialHeaders, DeferredHeaders, JwtType, OneMany, did_jwk};
 use serde_json::json;
-use test_utils::issuer::{CAROL_ID, ISSUER_ID, Issuer, data};
+use test_utils::issuer::{Issuer, data};
 use test_utils::wallet::Wallet;
 use tokio::sync::OnceCell;
 
+const ISSUER_ID: &str = "http://localhost:8080";
 static CAROL: OnceCell<Wallet> = OnceCell::const_new();
 async fn carol() -> &'static Wallet {
     CAROL.get_or_init(|| async { Wallet::new("https://deferred.io/carol").await }).await
 }
+const CAROL_SUBJECT: &str = "carol";
 
 // Should return a credential when using the pre-authorized code flow and the
 // credential offer to the Wallet is made by value.
@@ -30,13 +32,15 @@ async fn deferred() {
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", CAROL_ID, data::PENDING_USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", CAROL_SUBJECT, data::PENDING_USER)
+        .await
+        .unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(CAROL_ID)
+        .subject_id(CAROL_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
@@ -115,8 +119,8 @@ async fn deferred() {
     subject.insert(credential_identifier.to_string(), credential);
     let data = serde_json::to_vec(&subject).unwrap();
 
-    BlockStore::delete(&provider, "owner", "SUBJECT", CAROL_ID).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", CAROL_ID, &data).await.unwrap();
+    BlockStore::delete(&provider, "owner", "SUBJECT", CAROL_SUBJECT).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", CAROL_SUBJECT, &data).await.unwrap();
 
     // --------------------------------------------------
     // After a brief wait Bob retrieves the credential

@@ -15,7 +15,7 @@ use credibil_oid4vci::vdc::sd_jwt::SdJwtClaims;
 use credibil_oid4vci::{CredentialHeaders, JwtType, OneMany, did_jwk};
 use serde_json::json;
 use sha2::{Digest, Sha256};
-use test_utils::issuer::{BOB_ID, ISSUER_ID, Issuer, data};
+use test_utils::issuer::{Issuer, data};
 use test_utils::wallet::Wallet;
 use tokio::sync::OnceCell;
 
@@ -23,6 +23,8 @@ static BOB: OnceCell<Wallet> = OnceCell::const_new();
 async fn bob() -> &'static Wallet {
     BOB.get_or_init(|| async { Wallet::new("https://issuance.io/bob").await }).await
 }
+const BOB_SUBJECT: &str = "bob";
+const ISSUER_ID: &str = "http://localhost:8080";
 
 // Should allow the Wallet to provide 2 JWT proofs when requesting a credential.
 #[tokio::test]
@@ -32,13 +34,13 @@ async fn two_proofs() {
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, data::NORMAL_USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", BOB_SUBJECT, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(BOB_ID)
+        .subject_id(BOB_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
@@ -170,13 +172,15 @@ async fn sd_jwt() {
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, data::NORMAL_USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", BOB_SUBJECT, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
-    let request =
-        CreateOfferRequest::builder().subject_id(BOB_ID).with_credential("Identity_SD_JWT").build();
+    let request = CreateOfferRequest::builder()
+        .subject_id(BOB_SUBJECT)
+        .with_credential("Identity_SD_JWT")
+        .build();
     let response =
         credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
 

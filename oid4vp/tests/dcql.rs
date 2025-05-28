@@ -12,8 +12,8 @@ use credibil_oid4vp::{
     vp_token,
 };
 use serde_json::{Value, json};
-use test_utils::issuer::{ISSUER_ID, Issuer};
-use test_utils::verifier::{VERIFIER_ID, Verifier, data};
+use test_utils::issuer::Issuer;
+use test_utils::verifier::{Verifier, data};
 use test_utils::wallet::Wallet;
 use tokio::sync::OnceCell;
 
@@ -29,6 +29,8 @@ async fn issuer() -> &'static Issuer {
 async fn wallet() -> &'static Wallet {
     WALLET.get_or_init(|| async { populate("https://dcql.io/wallet").await }).await
 }
+const ISSUER_ID: &str = "http://localhost:8080";
+const VERIFIER_ID: &str = "http://localhost:8081";
 
 // Should request a Credential with the claims `vehicle_holder` and `first_name`.
 #[tokio::test]

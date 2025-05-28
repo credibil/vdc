@@ -13,7 +13,7 @@ use credibil_oid4vci::types::{
 };
 use credibil_oid4vci::{CredentialHeaders, JwtType, NotificationHeaders, OneMany, did_jwk};
 use serde_json::json;
-use test_utils::issuer::{BOB_ID, ISSUER_ID, Issuer, data};
+use test_utils::issuer::{Issuer, data};
 use test_utils::wallet::Wallet;
 use tokio::sync::OnceCell;
 
@@ -21,6 +21,8 @@ static BOB: OnceCell<Wallet> = OnceCell::const_new();
 async fn bob() -> &'static Wallet {
     BOB.get_or_init(|| async { Wallet::new("https://pre_auth.io/bob").await }).await
 }
+const BOB_SUBJECT: &str = "bob";
+const ISSUER_ID: &str = "http://localhost:8080";
 
 // Should return a credential when using the pre-authorized code flow and the
 // credential offer to the Wallet is made by value.
@@ -31,13 +33,13 @@ async fn offer_val() {
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, data::NORMAL_USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", BOB_SUBJECT, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(BOB_ID)
+        .subject_id(BOB_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
@@ -138,13 +140,13 @@ async fn offer_ref() {
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, data::NORMAL_USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", BOB_SUBJECT, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(BOB_ID)
+        .subject_id(BOB_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .by_ref(true)
         .build();
@@ -181,13 +183,13 @@ async fn two_datasets() {
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, data::NORMAL_USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", BOB_SUBJECT, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(BOB_ID)
+        .subject_id(BOB_SUBJECT)
         .with_credential("Developer_W3C_VC")
         .build();
     let response =
@@ -289,13 +291,13 @@ async fn reduce_credentials() {
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, data::NORMAL_USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", BOB_SUBJECT, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob with 2 credentials
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(BOB_ID)
+        .subject_id(BOB_SUBJECT)
         .with_credential("Developer_W3C_VC")
         .with_credential("EmployeeID_W3C_VC")
         .build();
@@ -402,13 +404,13 @@ async fn reduce_claims() {
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, data::NORMAL_USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", BOB_SUBJECT, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(BOB_ID)
+        .subject_id(BOB_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
@@ -519,13 +521,13 @@ async fn notify_accepted() {
 
     BlockStore::put(&provider, "owner", "ISSUER", ISSUER_ID, data::ISSUER).await.unwrap();
     BlockStore::put(&provider, "owner", "SERVER", ISSUER_ID, data::SERVER).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", BOB_ID, data::NORMAL_USER).await.unwrap();
+    BlockStore::put(&provider, "owner", "SUBJECT", BOB_SUBJECT, data::NORMAL_USER).await.unwrap();
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(BOB_ID)
+        .subject_id(BOB_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
