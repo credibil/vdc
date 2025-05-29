@@ -83,9 +83,9 @@ async fn create_request() -> Result<GenerateResponse> {
     let client = reqwest::Client::new();
 
     let value = json!({
-        "client_id": "http://localhost:8081",
+        "client_id": VERIFIER_ID,
         "response_mode": "direct_post.jwt",
-        "response_uri": "http://localhost:8081/post",
+        "response_uri": format!("{VERIFIER_ID}/post"),
         "device_flow": "CrossDevice",
         "dcql_query": {
             "credentials": [

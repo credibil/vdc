@@ -1,10 +1,10 @@
 use anyhow::Result;
-use credibil_core::blockstore::BlockStore;
+use credibil_core::datastore::Datastore;
 use credibil_identity::did::Document;
 use credibil_identity::se::{Algorithm, PublicKey, Receiver, SharedSecret, Signer};
 use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
 
-use crate::blockstore::Mockstore;
+use crate::datastore::Mockstore;
 use crate::identity::DidIdentity;
 
 const VERIFIER_METADATA: &[u8] = include_bytes!("../data/verifier-metadata.json");
@@ -19,14 +19,13 @@ impl Verifier {
     #[must_use]
     pub async fn new(verifier_id: &str) -> Self {
         let blockstore = Mockstore::open();
-        blockstore.put("owner", "VERIFIER", verifier_id, VERIFIER_METADATA).await.unwrap();
+        blockstore.put("owner", "VERIFIER", verifier_id, VERIFIER_METADATA.to_vec()).await.unwrap();
 
         Self {
             blockstore,
             identity: DidIdentity::new(verifier_id).await,
         }
     }
-
 
     pub async fn did(&self) -> Result<Document> {
         self.identity.document(&self.identity.owner).await
@@ -69,9 +68,9 @@ impl Receiver for Verifier {
     }
 }
 
-impl BlockStore for Verifier {
-    async fn put(&self, owner: &str, partition: &str, key: &str, block: &[u8]) -> Result<()> {
-        self.blockstore.put(owner, partition, key, block).await
+impl Datastore for Verifier {
+    async fn put(&self, owner: &str, partition: &str, key: &str, data: Vec<u8>) -> Result<()> {
+        self.blockstore.put(owner, partition, key, data).await
     }
 
     async fn get(&self, owner: &str, partition: &str, key: &str) -> Result<Option<Vec<u8>>> {
@@ -82,7 +81,7 @@ impl BlockStore for Verifier {
         self.blockstore.delete(owner, partition, key).await
     }
 
-    async fn purge(&self, _owner: &str, _partition: &str) -> Result<()> {
-        unimplemented!()
+    async fn get_all(&self, owner: &str, partition: &str) -> Result<Vec<(String, Vec<u8>)>> {
+        self.blockstore.get_all(owner, partition).await
     }
 }

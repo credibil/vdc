@@ -4,7 +4,7 @@ pub mod issuer;
 pub mod verifier;
 pub mod wallet;
 
-mod blockstore;
+mod datastore;
 mod identity;
 
 pub use issuer::Issuer;

@@ -540,14 +540,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bytes",
- "ciborium",
- "cid",
  "credibil-identity",
  "credibil-jose",
  "http",
  "http-body",
  "http-body-util",
- "multihash-codetable",
  "percent-encoding",
  "serde",
  "serde_json",
@@ -640,10 +637,8 @@ dependencies = [
  "credibil-status",
  "credibil-vdc",
  "fastrand",
- "http",
  "image",
  "qrcode",
- "reqwest",
  "serde",
  "serde_json",
  "serde_urlencoded",
@@ -689,7 +684,6 @@ dependencies = [
  "anyhow",
  "base64ct",
  "bitvec",
- "blockstore",
  "chrono",
  "credibil-core",
  "credibil-identity",
@@ -997,8 +991,6 @@ dependencies = [
  "anyhow",
  "axum",
  "axum-extra",
- "blockstore",
- "credibil-core",
  "credibil-oid4vci",
  "credibil-oid4vp",
  "credibil-status",
@@ -1868,7 +1860,7 @@ version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51e219e79014df21a225b1860a479e2dcd7cbd9130f4defd4bd0e191ea31d67d"
 dependencies = [
- "base64 0.21.7",
+ "base64 0.22.1",
  "chrono",
  "getrandom 0.2.16",
  "http",
@@ -2858,7 +2850,6 @@ name = "test-utils"
 version = "0.0.0"
 dependencies = [
  "anyhow",
- "blockstore",
  "credibil-core",
  "credibil-identity",
  "credibil-se",

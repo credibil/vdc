@@ -19,8 +19,6 @@ path = "src/cmd/automated.rs"
 anyhow.workspace = true
 axum.workspace = true
 axum-extra.workspace = true
-blockstore = "0.7.1"
-credibil-core.workspace = true
 credibil-oid4vci = { path = "../oid4vci" }
 credibil-oid4vp = { path = "../oid4vp" }
 credibil-status.workspace = true

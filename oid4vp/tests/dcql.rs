@@ -1,6 +1,6 @@
 //! Tests for the Verifier API
 
-use credibil_oid4vp::blockstore::BlockStore;
+use credibil_oid4vp::datastore::Datastore;
 use credibil_oid4vp::identity::{Key, SignerExt};
 use credibil_oid4vp::jose::PublicKeyJwk;
 use credibil_oid4vp::status::{StatusClaim, StatusList, TokenBuilder};
@@ -505,7 +505,7 @@ async fn populate(owner: &str) -> Wallet {
         .await
         .expect("should build status list token");
     let data = serde_json::to_vec(&token).expect("should serialize");
-    BlockStore::put(issuer, "owner", "STATUSTOKEN", "http://credibil.io/statuslists/1", &data)
+    Datastore::put(issuer, "owner", "STATUSTOKEN", "http://credibil.io/statuslists/1", data)
         .await
         .unwrap();
 

@@ -9,7 +9,6 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 anyhow.workspace = true
-blockstore = "0.7.1"
 credibil-core.workspace = true
 credibil-identity.workspace = true
 credibil-se.workspace = true

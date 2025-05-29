@@ -27,7 +27,7 @@ pub async fn serve(verifier_id: &'static str) -> Result<JoinHandle<()>> {
         .route("/request/{id}", get(request_uri))
         .route("/callback", get(authorization))
         .route("/post", post(authorization))
-        .route("/.well-known/did.json", get(did_json))
+        .route("/.well-known/did.json", get(did))
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any))
         .with_state(verifier);
@@ -84,7 +84,7 @@ async fn authorization(
 use anyhow::Result;
 
 #[axum::debug_handler]
-async fn did_json(State(provider): State<Verifier>) -> Result<Json<Document>, AppError> {
+async fn did(State(provider): State<Verifier>) -> Result<Json<Document>, AppError> {
     let doc = provider.did().await.map_err(AppError::from)?;
     Ok(Json(doc))
 }

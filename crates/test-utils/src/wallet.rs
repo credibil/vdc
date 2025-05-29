@@ -8,18 +8,24 @@ use crate::identity::DidIdentity;
 
 #[derive(Clone)]
 pub struct Wallet {
+    id: String,
     identity: DidIdentity,
     store: Vec<Queryable>,
 }
 
 impl Wallet {
-    pub async fn new(wallet_id: &str) -> Self {
+    pub async fn new(wallet_id: impl Into<String>) -> Self {
+        let wallet_id: String = wallet_id.into();
         Self {
-            identity: DidIdentity::new(wallet_id).await,
+            identity: DidIdentity::new(&wallet_id).await,
             store: Vec::new(),
+            id: wallet_id,
         }
     }
 
+    pub fn id(&self) -> &str {
+        &self.id
+    }
 
     // Add a credential to the store.
     pub fn add(&mut self, queryable: Queryable) {

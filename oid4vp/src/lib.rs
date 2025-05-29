@@ -22,7 +22,7 @@ mod state;
 
 use std::fmt::Display;
 
-pub use credibil_core::{blockstore, did_jwk, http};
+pub use credibil_core::{datastore, did_jwk, http};
 use serde::{Deserialize, Serialize};
 pub use {
     credibil_identity as identity, credibil_jose as jose, credibil_status as status,

@@ -3,7 +3,7 @@
 use std::future::Future;
 
 use anyhow::{Result, anyhow};
-use credibil_core::blockstore::BlockStore;
+use credibil_core::datastore::Datastore;
 use credibil_identity::IdentityResolver;
 pub use credibil_identity::SignerExt;
 use credibil_status::StatusToken;
@@ -41,9 +41,9 @@ pub trait Metadata: Send + Sync {
 // const WALLET: &str = "WALLET";
 const VERIFIER: &str = "VERIFIER";
 
-impl<T: BlockStore> Metadata for T {
+impl<T: Datastore> Metadata for T {
     async fn verifier(&self, verifier_id: &str) -> Result<Verifier> {
-        let Some(block) = BlockStore::get(self, "owner", VERIFIER, verifier_id).await? else {
+        let Some(block) = Datastore::get(self, "owner", VERIFIER, verifier_id).await? else {
             return Err(anyhow!("could not find client"));
         };
         Ok(serde_json::from_slice(&block)?)
@@ -53,13 +53,13 @@ impl<T: BlockStore> Metadata for T {
         let mut verifier = verifier.clone();
         verifier.oauth.client_id = uuid::Uuid::new_v4().to_string();
 
-        let block = serde_json::to_vec(&verifier)?;
-        BlockStore::put(self, "owner", VERIFIER, &verifier.oauth.client_id, &block).await?;
+        let data = serde_json::to_vec(&verifier)?;
+        Datastore::put(self, "owner", VERIFIER, &verifier.oauth.client_id, data).await?;
         Ok(verifier)
     }
 
     // async fn wallet(&self, wallet_id: &str) -> Result<Wallet> {
-    //     let Some(block) = BlockStore::get(self, "owner", WALLET, wallet_id).await? else {
+    //     let Some(block) = Datastore::get(self, "owner", WALLET, wallet_id).await? else {
     //         return Err(anyhow!("could not find issuer"));
     //     };
     //     Ok(serde_json::from_slice(&block)?)

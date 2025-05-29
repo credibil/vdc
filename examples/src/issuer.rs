@@ -56,7 +56,7 @@ pub async fn serve(issuer_id: &'static str) -> Result<JoinHandle<()>> {
         .route("/statuslists/{id}", get(statuslists))
         .route("/.well-known/openid-credential-issuer", get(metadata))
         .route("/.well-known/oauth-authorization-server", get(oauth_server))
-        .route("/.well-known/did.json", get(did_json))
+        .route("/.well-known/did.json", get(did))
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any))
         .layer(SetResponseHeaderLayer::if_not_present(
@@ -336,7 +336,7 @@ async fn statuslists(
 }
 
 #[axum::debug_handler]
-async fn did_json(State(provider): State<Issuer>) -> impl IntoResponse {
+async fn did(State(provider): State<Issuer>) -> impl IntoResponse {
     let doc = provider.did().await.expect("should fetch DID document");
     Json(doc).into_response()
 }

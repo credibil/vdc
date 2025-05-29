@@ -1,7 +1,7 @@
 //! # Core
 
 pub mod api;
-pub mod blockstore;
+pub mod datastore;
 pub mod http;
 pub mod urlencode;
 

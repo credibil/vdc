@@ -6,7 +6,7 @@ use credibil_identity::se::{Algorithm, Curve, Signer};
 use credibil_identity::{IdentityResolver, Key, SignerExt};
 use test_kms::Keyring;
 
-use crate::blockstore::Mockstore;
+use crate::datastore::Mockstore;
 
 #[derive(Clone)]
 pub struct DidIdentity {
@@ -31,7 +31,7 @@ impl DidIdentity {
         let doc_bytes = serde_json::to_vec(&document).expect("should serialize");
 
         // save to global blockstore
-        Mockstore::open().put("owner", "DID", &did, &doc_bytes).await.expect("should put");
+        Mockstore::open().put("owner", "DID", &did, doc_bytes).await.expect("should put");
 
         Self {
             owner: owner.to_string(),

@@ -5,14 +5,14 @@
 //! and subject information for the credential issuance process.
 //!
 //! The default implementation only requires library users to implement the
-//! `BlockStore` trait, which is used to store and retrieve data. Users can
+//! `Datastore` trait, which is used to store and retrieve data. Users can
 //! implement the other traits as needed.
 
 use std::collections::HashMap;
 use std::future::Future;
 
 use anyhow::{Result, anyhow};
-use credibil_core::blockstore::BlockStore;
+use credibil_core::datastore::Datastore;
 use credibil_identity::{IdentityResolver, SignerExt};
 use credibil_status::StatusStore;
 
@@ -72,23 +72,23 @@ pub trait Subject: Send + Sync {
     ) -> impl Future<Output = Result<Dataset>> + Send;
 }
 
-impl<T: BlockStore> Metadata for T {
+impl<T: Datastore> Metadata for T {
     async fn client(&self, client_id: &str) -> Result<Client> {
-        let Some(block) = BlockStore::get(self, "owner", CLIENT, client_id).await? else {
+        let Some(block) = Datastore::get(self, "owner", CLIENT, client_id).await? else {
             return Err(anyhow!("could not find client"));
         };
         Ok(serde_json::from_slice(&block)?)
     }
 
     async fn issuer(&self, credential_issuer: &str) -> Result<Issuer> {
-        let Some(block) = BlockStore::get(self, "owner", ISSUER, credential_issuer).await? else {
+        let Some(block) = Datastore::get(self, "owner", ISSUER, credential_issuer).await? else {
             return Err(anyhow!("could not find issuer"));
         };
         Ok(serde_json::from_slice(&block)?)
     }
 
     async fn server(&self, issuer: &str) -> Result<Server> {
-        let Some(block) = BlockStore::get(self, "owner", SERVER, issuer).await? else {
+        let Some(block) = Datastore::get(self, "owner", SERVER, issuer).await? else {
             return Err(anyhow!("could not find server for issuer"));
         };
         Ok(serde_json::from_slice(&block)?)
@@ -98,17 +98,17 @@ impl<T: BlockStore> Metadata for T {
         let mut client = client.clone();
         client.oauth.client_id = uuid::Uuid::new_v4().to_string();
 
-        let block = serde_json::to_vec(&client)?;
-        BlockStore::put(self, "owner", CLIENT, &client.oauth.client_id, &block).await?;
+        let data = serde_json::to_vec(&client)?;
+        Datastore::put(self, "owner", CLIENT, &client.oauth.client_id, data).await?;
         Ok(client)
     }
 }
 
-impl<T: BlockStore> Subject for T {
+impl<T: Datastore> Subject for T {
     async fn authorize(
         &self, subject_id: &str, credential_configuration_id: &str,
     ) -> Result<Vec<String>> {
-        let Some(block) = BlockStore::get(self, "owner", SUBJECT, subject_id).await? else {
+        let Some(block) = Datastore::get(self, "owner", SUBJECT, subject_id).await? else {
             return Err(anyhow!("could not find dataset for subject"));
         };
         let datasets: HashMap<String, Dataset> = serde_json::from_slice(&block)?;
@@ -127,7 +127,7 @@ impl<T: BlockStore> Subject for T {
     }
 
     async fn dataset(&self, subject_id: &str, credential_identifier: &str) -> Result<Dataset> {
-        let Some(block) = BlockStore::get(self, "owner", SUBJECT, subject_id).await? else {
+        let Some(block) = Datastore::get(self, "owner", SUBJECT, subject_id).await? else {
             return Err(anyhow!("could not find dataset for subject"));
         };
         let datasets: HashMap<String, Dataset> = serde_json::from_slice(&block)?;

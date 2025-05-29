@@ -42,7 +42,7 @@ pub async fn serve(wallet_id: &'static str) -> Result<JoinHandle<()>> {
     let router = Router::new()
         .route("/credential_offer", get(credential_offer))
         .route("/authorize", get(authorize))
-        .route("/.well-known/did.json", get(did_json))
+        .route("/.well-known/did.json", get(did))
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any))
         .with_state(AppState {
@@ -72,7 +72,7 @@ async fn credential_offer(
     let http = reqwest::Client::new();
 
     // --------------------------------------------------
-    // fetch offer
+    // Fetch offer
     // --------------------------------------------------
     let http_resp = http.get(&offer_uri.credential_offer_uri).send().await?;
     if http_resp.status() != StatusCode::OK {
@@ -84,7 +84,7 @@ async fn credential_offer(
     let issuer_uri = &offer.credential_issuer;
 
     // --------------------------------------------------
-    // fetch metadata
+    // Fetch metadata
     // --------------------------------------------------
     let meta_uri = format!("{issuer_uri}/.well-known/openid-credential-issuer");
     let issuer = http.get(&meta_uri).send().await?.json::<Issuer>().await?;
@@ -93,7 +93,7 @@ async fn credential_offer(
     let server = http.get(&server_uri).send().await?.json::<Server>().await?;
 
     // --------------------------------------------------
-    // fetch token
+    // Fetch token
     // --------------------------------------------------
     let Some(grants) = offer.grants else {
         return Err(anyhow!("missing grants").into());
@@ -106,8 +106,8 @@ async fn credential_offer(
         tx_code: offer_uri.tx_code.clone(),
     };
 
-    let token_req =
-        TokenRequest::builder().client_id("http://localhost:8082").grant_type(grant_type).build();
+    let provider = state.provider.lock().await;
+    let token_req = TokenRequest::builder().client_id(provider.id()).grant_type(grant_type).build();
     let token_uri = server.oauth.token_endpoint;
     let http_resp = http.post(&token_uri).form(&token_req).send().await?;
     if http_resp.status() != StatusCode::OK {
@@ -115,9 +115,10 @@ async fn credential_offer(
         return Err(anyhow!("token: {body}").into());
     }
     let token_resp = http_resp.json::<TokenResponse>().await?;
+    drop(provider);
 
     // --------------------------------------------------
-    // proof for credential request
+    // Proof for credential request
     // --------------------------------------------------
     let Some(nonce_uri) = issuer.nonce_endpoint else {
         return Err(anyhow!("issuer does not support nonce endpoint").into());
@@ -149,7 +150,7 @@ async fn credential_offer(
     drop(provider);
 
     // --------------------------------------------------
-    // fetch credential
+    // Fetch credential
     // --------------------------------------------------
     let Some(auth_details) = token_resp.authorization_details.as_ref() else {
         return Err(anyhow::anyhow!("missing authorization details").into());
@@ -172,7 +173,7 @@ async fn credential_offer(
     let credential_resp = http_resp.json::<CredentialResponse>().await?;
 
     // --------------------------------------------------
-    // store credential
+    // Store credential
     // --------------------------------------------------
     let CredentialResponse::Credentials { credentials, .. } = credential_resp else {
         return Err(anyhow!("expected credentials in response").into());
@@ -286,7 +287,7 @@ async fn authorize(
 }
 
 #[axum::debug_handler]
-async fn did_json(State(state): State<AppState>) -> Result<Json<Document>, AppError> {
+async fn did(State(state): State<AppState>) -> Result<Json<Document>, AppError> {
     let provider = state.provider.lock().await;
     let doc = provider.did().await.map_err(AppError::from)?;
     Ok(Json(doc))

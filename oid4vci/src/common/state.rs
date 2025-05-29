@@ -4,7 +4,7 @@
 
 use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
-use credibil_core::blockstore::BlockStore;
+use credibil_core::datastore::Datastore;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
@@ -56,23 +56,23 @@ pub trait StateStore: Send + Sync {
 
 impl<B> StateStore for B
 where
-    B: BlockStore,
+    B: Datastore,
 {
     #[allow(unused)]
     async fn put<T: Serialize + Sync>(&self, key: &str, state: &State<T>) -> Result<()> {
         let state = serde_json::to_vec(state)?;
-        BlockStore::delete(self, "owner", STATE, key).await?;
-        BlockStore::put(self, "owner", STATE, key, &state).await
+        Datastore::delete(self, "owner", STATE, key).await?;
+        Datastore::put(self, "owner", STATE, key, state).await
     }
 
     async fn get<T: DeserializeOwned>(&self, key: &str) -> Result<State<T>> {
-        let Some(block) = BlockStore::get(self, "owner", STATE, key).await? else {
+        let Some(block) = Datastore::get(self, "owner", STATE, key).await? else {
             return Err(anyhow!("no matching item in state store"));
         };
         Ok(serde_json::from_slice(&block)?)
     }
 
     async fn purge(&self, key: &str) -> Result<()> {
-        BlockStore::delete(self, "owner", STATE, key).await
+        Datastore::delete(self, "owner", STATE, key).await
     }
 }

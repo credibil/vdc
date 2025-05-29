@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use credibil_oid4vci::blockstore::BlockStore;
+use credibil_oid4vci::datastore::Datastore;
 use credibil_oid4vci::identity::{Key, SignerExt};
 use credibil_oid4vci::jose::{JwsBuilder, Jwt, decode_jws};
 use credibil_oid4vci::proof::W3cVcClaims;
@@ -108,16 +108,16 @@ async fn deferred() {
     let credential_identifier = &details[0].credential_identifiers[0];
 
     let block =
-        BlockStore::get(&provider, "owner", "SUBJECT", CAROL_SUBJECT).await.unwrap().unwrap();
+        Datastore::get(&provider, "owner", "SUBJECT", CAROL_SUBJECT).await.unwrap().unwrap();
     let mut subject: HashMap<String, Dataset> = serde_json::from_slice(&block).unwrap();
 
     let mut credential: Dataset = subject.get(credential_identifier).unwrap().clone();
     credential.pending = false;
     subject.insert(credential_identifier.to_string(), credential);
 
-    let block = serde_json::to_vec(&subject).unwrap();
-    BlockStore::delete(&provider, "owner", "SUBJECT", CAROL_SUBJECT).await.unwrap();
-    BlockStore::put(&provider, "owner", "SUBJECT", CAROL_SUBJECT, &block).await.unwrap();
+    let data = serde_json::to_vec(&subject).unwrap();
+    Datastore::delete(&provider, "owner", "SUBJECT", CAROL_SUBJECT).await.unwrap();
+    Datastore::put(&provider, "owner", "SUBJECT", CAROL_SUBJECT, data).await.unwrap();
 
     // --------------------------------------------------
     // After a brief wait Bob retrieves the credential
