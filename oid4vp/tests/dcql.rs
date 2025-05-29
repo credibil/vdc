@@ -505,7 +505,7 @@ async fn populate(owner: &str) -> Wallet {
         .await
         .expect("should build status list token");
     let data = serde_json::to_vec(&token).expect("should serialize");
-    Datastore::put(issuer, "owner", "STATUSTOKEN", "http://credibil.io/statuslists/1", data)
+    Datastore::put(issuer, "owner", "STATUSTOKEN", "http://credibil.io/statuslists/1", &data)
         .await
         .unwrap();
 

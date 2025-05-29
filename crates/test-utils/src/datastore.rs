@@ -16,9 +16,9 @@ impl Mockstore {
         Self {}
     }
 
-    pub async fn put(&self, owner: &str, partition: &str, key: &str, data: Vec<u8>) -> Result<()> {
+    pub async fn put(&self, owner: &str, partition: &str, key: &str, data: &[u8]) -> Result<()> {
         let key = format!("{owner}-{partition}-{key}");
-        STORE.lock().map_err(|_| anyhow!("issue locking"))?.insert(key, data);
+        STORE.lock().map_err(|_| anyhow!("issue locking"))?.insert(key, data.to_vec());
         Ok(())
     }
 

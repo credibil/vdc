@@ -62,7 +62,7 @@ where
     async fn put<T: Serialize + Sync>(&self, key: &str, state: &State<T>) -> Result<()> {
         let state = serde_json::to_vec(state)?;
         Datastore::delete(self, "owner", STATE, key).await?;
-        Datastore::put(self, "owner", STATE, key, state).await
+        Datastore::put(self, "owner", STATE, key, &state).await
     }
 
     async fn get<T: DeserializeOwned>(&self, key: &str) -> Result<State<T>> {

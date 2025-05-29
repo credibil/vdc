@@ -54,7 +54,7 @@ impl<T: Datastore> Metadata for T {
         verifier.oauth.client_id = uuid::Uuid::new_v4().to_string();
 
         let data = serde_json::to_vec(&verifier)?;
-        Datastore::put(self, "owner", VERIFIER, &verifier.oauth.client_id, data).await?;
+        Datastore::put(self, "owner", VERIFIER, &verifier.oauth.client_id, &data).await?;
         Ok(verifier)
     }
 

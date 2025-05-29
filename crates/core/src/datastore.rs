@@ -7,7 +7,7 @@ use anyhow::Result;
 pub trait Datastore: Sized + Send + Sync {
     /// Store a data item in the underlying item store.
     fn put(
-        &self, owner: &str, partition: &str, key: &str, data: Vec<u8>,
+        &self, owner: &str, partition: &str, key: &str, data: &[u8],
     ) -> impl Future<Output = Result<()>> + Send;
 
     /// Fetches a single item from the underlying store, returning `None` if

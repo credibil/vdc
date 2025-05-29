@@ -117,7 +117,7 @@ async fn deferred() {
 
     let data = serde_json::to_vec(&subject).unwrap();
     Datastore::delete(&provider, "owner", "SUBJECT", CAROL_SUBJECT).await.unwrap();
-    Datastore::put(&provider, "owner", "SUBJECT", CAROL_SUBJECT, data).await.unwrap();
+    Datastore::put(&provider, "owner", "SUBJECT", CAROL_SUBJECT, &data).await.unwrap();
 
     // --------------------------------------------------
     // After a brief wait Bob retrieves the credential

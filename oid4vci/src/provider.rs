@@ -99,7 +99,7 @@ impl<T: Datastore> Metadata for T {
         client.oauth.client_id = uuid::Uuid::new_v4().to_string();
 
         let data = serde_json::to_vec(&client)?;
-        Datastore::put(self, "owner", CLIENT, &client.oauth.client_id, data).await?;
+        Datastore::put(self, "owner", CLIENT, &client.oauth.client_id, &data).await?;
         Ok(client)
     }
 }

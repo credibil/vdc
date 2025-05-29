@@ -19,7 +19,7 @@ impl Verifier {
     #[must_use]
     pub async fn new(verifier_id: &str) -> Self {
         let blockstore = Mockstore::open();
-        blockstore.put("owner", "VERIFIER", verifier_id, VERIFIER_METADATA.to_vec()).await.unwrap();
+        blockstore.put("owner", "VERIFIER", verifier_id, VERIFIER_METADATA).await.unwrap();
 
         Self {
             blockstore,
@@ -69,7 +69,7 @@ impl Receiver for Verifier {
 }
 
 impl Datastore for Verifier {
-    async fn put(&self, owner: &str, partition: &str, key: &str, data: Vec<u8>) -> Result<()> {
+    async fn put(&self, owner: &str, partition: &str, key: &str, data: &[u8]) -> Result<()> {
         self.blockstore.put(owner, partition, key, data).await
     }
 

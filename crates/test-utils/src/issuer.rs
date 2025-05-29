@@ -23,11 +23,11 @@ impl Issuer {
     #[must_use]
     pub async fn new(issuer_id: &str) -> Self {
         let blockstore = Mockstore::open();
-        blockstore.put("owner", "ISSUER", issuer_id, ISSUER_METADATA.to_vec()).await.unwrap();
-        blockstore.put("owner", "SERVER", issuer_id, SERVER_METADATA.to_vec()).await.unwrap();
-        blockstore.put("owner", "SUBJECT", "normal_user", NORMAL_USER.to_vec()).await.unwrap();
-        blockstore.put("owner", "SUBJECT", "pending_user", PENDING_USER.to_vec()).await.unwrap();
-        blockstore.put("owner", "CLIENT", "http://localhost:8082", CLIENT.to_vec()).await.unwrap();
+        blockstore.put("owner", "ISSUER", issuer_id, ISSUER_METADATA).await.unwrap();
+        blockstore.put("owner", "SERVER", issuer_id, SERVER_METADATA).await.unwrap();
+        blockstore.put("owner", "SUBJECT", "normal_user", NORMAL_USER).await.unwrap();
+        blockstore.put("owner", "SUBJECT", "pending_user", PENDING_USER).await.unwrap();
+        blockstore.put("owner", "CLIENT", "http://localhost:8082", CLIENT).await.unwrap();
 
         Self {
             blockstore,
@@ -67,7 +67,7 @@ impl SignerExt for Issuer {
 }
 
 impl Datastore for Issuer {
-    async fn put(&self, owner: &str, partition: &str, key: &str, data: Vec<u8>) -> Result<()> {
+    async fn put(&self, owner: &str, partition: &str, key: &str, data: &[u8]) -> Result<()> {
         self.blockstore.put(owner, partition, key, data).await
     }
 
