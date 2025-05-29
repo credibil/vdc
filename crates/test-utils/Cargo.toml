@@ -9,13 +9,16 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 anyhow.workspace = true
+ciborium = "0.2.2"
+cid = { version = "0.11.1", features = ["alloc"] }
 credibil-core.workspace = true
 credibil-identity.workspace = true
 credibil-se.workspace = true
 credibil-vdc.workspace = true
+multihash-codetable = { version = "0.1.4", features = ["sha2"] }
 reqwest.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 test-kms = { git = "https://github.com/credibil/se.git" }
-
 # credibil-jose.workspace = true
 # credibil-status.workspace = true

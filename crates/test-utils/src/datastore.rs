@@ -1,17 +1,17 @@
-//! # In-Memory Blockstore
+//! # In-Memory Datastore
 
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock, Mutex};
 
 use anyhow::{Result, anyhow};
 
-type Store = Arc<Mutex<HashMap<String, Vec<u8>>>>;
-static STORE: LazyLock<Store> = LazyLock::new(|| Arc::new(Mutex::new(HashMap::new())));
+type Inner = Arc<Mutex<HashMap<String, Vec<u8>>>>;
+static STORE: LazyLock<Inner> = LazyLock::new(|| Arc::new(Mutex::new(HashMap::new())));
 
 #[derive(Clone, Debug)]
-pub struct Mockstore;
+pub struct Store;
 
-impl Mockstore {
+impl Store {
     pub fn open() -> Self {
         Self {}
     }

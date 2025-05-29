@@ -6,7 +6,7 @@ use credibil_identity::se::{Algorithm, Curve, Signer};
 use credibil_identity::{IdentityResolver, Key, SignerExt};
 use test_kms::Keyring;
 
-use crate::datastore::Mockstore;
+use crate::datastore::Store;
 
 #[derive(Clone)]
 pub struct DidIdentity {
@@ -30,8 +30,8 @@ impl DidIdentity {
             .build();
         let doc_bytes = serde_json::to_vec(&document).expect("should serialize");
 
-        // save to global blockstore
-        Mockstore::open().put("owner", "DID", &did, &doc_bytes).await.expect("should put");
+        // save to global datastore
+        Store::open().put("owner", "DID", &did, &doc_bytes).await.expect("should put");
 
         Self {
             owner: owner.to_string(),
@@ -42,7 +42,7 @@ impl DidIdentity {
     pub async fn document(&self, url: &str) -> Result<Document> {
         let url = url.trim_end_matches("/did.json").trim_end_matches("/.well-known");
         let did = did::web::default_did(url)?;
-        let Some(doc_bytes) = Mockstore::open().get("owner", "DID", &did).await? else {
+        let Some(doc_bytes) = Store::open().get("owner", "DID", &did).await? else {
             bail!("document not found");
         };
         serde_json::from_slice(&doc_bytes).map_err(Into::into)

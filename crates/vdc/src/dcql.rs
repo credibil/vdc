@@ -519,7 +519,7 @@ pub enum AuthorityType {
 }
 
 /// Implemented by wallets in order to support DCQL queries.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Queryable {
     /// The credential's queryable metadata.
     pub meta: FormatProfile,
@@ -532,7 +532,7 @@ pub struct Queryable {
 }
 
 /// A generic credential claim to use with DCQL queries.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Claim {
     /// The path to the claim within the credential.
     pub path: Vec<String>,

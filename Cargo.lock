@@ -2850,11 +2850,15 @@ name = "test-utils"
 version = "0.0.0"
 dependencies = [
  "anyhow",
+ "ciborium",
+ "cid",
  "credibil-core",
  "credibil-identity",
  "credibil-se",
  "credibil-vdc",
+ "multihash-codetable",
  "reqwest",
+ "serde",
  "serde_json",
  "test-kms",
 ]

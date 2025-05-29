@@ -4,7 +4,7 @@ use credibil_identity::did::Document;
 use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
 use credibil_se::{Algorithm, Signer};
 
-use crate::datastore::Mockstore;
+use crate::datastore::Store;
 use crate::identity::DidIdentity;
 
 const ISSUER_METADATA: &[u8] = include_bytes!("../data/issuer-metadata.json");
@@ -15,22 +15,22 @@ const CLIENT: &[u8] = include_bytes!("../data/client.json");
 
 #[derive(Clone)]
 pub struct Issuer {
-    blockstore: Mockstore,
+    datastore: Store,
     identity: DidIdentity,
 }
 
 impl Issuer {
     #[must_use]
     pub async fn new(issuer_id: &str) -> Self {
-        let blockstore = Mockstore::open();
-        blockstore.put("owner", "ISSUER", issuer_id, ISSUER_METADATA).await.unwrap();
-        blockstore.put("owner", "SERVER", issuer_id, SERVER_METADATA).await.unwrap();
-        blockstore.put("owner", "SUBJECT", "normal_user", NORMAL_USER).await.unwrap();
-        blockstore.put("owner", "SUBJECT", "pending_user", PENDING_USER).await.unwrap();
-        blockstore.put("owner", "CLIENT", "http://localhost:8082", CLIENT).await.unwrap();
+        let datastore = Store::open();
+        datastore.put("owner", "ISSUER", issuer_id, ISSUER_METADATA).await.unwrap();
+        datastore.put("owner", "SERVER", issuer_id, SERVER_METADATA).await.unwrap();
+        datastore.put("owner", "SUBJECT", "normal_user", NORMAL_USER).await.unwrap();
+        datastore.put("owner", "SUBJECT", "pending_user", PENDING_USER).await.unwrap();
+        datastore.put("owner", "CLIENT", "http://localhost:8082", CLIENT).await.unwrap();
 
         Self {
-            blockstore,
+            datastore,
             identity: DidIdentity::new(issuer_id).await,
         }
     }
@@ -68,18 +68,18 @@ impl SignerExt for Issuer {
 
 impl Datastore for Issuer {
     async fn put(&self, owner: &str, partition: &str, key: &str, data: &[u8]) -> Result<()> {
-        self.blockstore.put(owner, partition, key, data).await
+        self.datastore.put(owner, partition, key, data).await
     }
 
     async fn get(&self, owner: &str, partition: &str, key: &str) -> Result<Option<Vec<u8>>> {
-        self.blockstore.get(owner, partition, key).await
+        self.datastore.get(owner, partition, key).await
     }
 
     async fn delete(&self, owner: &str, partition: &str, key: &str) -> Result<()> {
-        self.blockstore.delete(owner, partition, key).await
+        self.datastore.delete(owner, partition, key).await
     }
 
     async fn get_all(&self, owner: &str, partition: &str) -> Result<Vec<(String, Vec<u8>)>> {
-        self.blockstore.get_all(owner, partition).await
+        self.datastore.get_all(owner, partition).await
     }
 }

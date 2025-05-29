@@ -79,8 +79,8 @@ async fn multiple_claims() {
     // Response with the requested presentations in the VP token.
     // --------------------------------------------------
     let wallet = wallet().await;
-    let stored_vcs = wallet.fetch();
-    let results = request_object.dcql_query.execute(stored_vcs).expect("should execute");
+    let stored_vcs = wallet.fetch().await.expect("should fetch credentials");
+    let results = request_object.dcql_query.execute(&stored_vcs).expect("should execute");
     // assert_eq!(results.len(), 2);
 
     let vp_token =
@@ -175,8 +175,8 @@ async fn multiple_credentials() {
     // Response to the Verifier.
     // --------------------------------------------------
     let wallet = wallet().await;
-    let stored_vcs = wallet.fetch();
-    let results = request_object.dcql_query.execute(stored_vcs).expect("should execute");
+    let stored_vcs = wallet.fetch().await.expect("should fetch credentials");
+    let results = request_object.dcql_query.execute(&stored_vcs).expect("should execute");
     assert_eq!(results.len(), 3);
 
     // return a single `vp_token` for the query
@@ -208,7 +208,7 @@ async fn multiple_credentials() {
 async fn complex_query() {
     // let verifier = verifier().await;
     let wallet = wallet().await;
-    let all_vcs = wallet.fetch();
+    let all_vcs = wallet.fetch().await.expect("should fetch credentials");
 
     // --------------------------------------------------
     // Verifier creates an Authorization Request to request presentation of
@@ -294,7 +294,7 @@ async fn complex_query() {
     });
 
     let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
-    let results = query.execute(all_vcs).expect("should execute");
+    let results = query.execute(&all_vcs).expect("should execute");
     assert_eq!(results.len(), 2);
 }
 
@@ -303,7 +303,7 @@ async fn complex_query() {
 async fn any_credential() {
     // let verifier = verifier().await;
     let wallet = wallet().await;
-    let all_vcs = wallet.fetch();
+    let all_vcs = wallet.fetch().await.expect("should fetch credentials");
 
     // --------------------------------------------------
     // Verifier creates an Authorization Request to request presentation of
@@ -408,7 +408,7 @@ async fn any_credential() {
     });
 
     let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
-    let results = query.execute(all_vcs).expect("should execute");
+    let results = query.execute(&all_vcs).expect("should execute");
     assert_eq!(results.len(), 2);
 }
 
@@ -418,7 +418,7 @@ async fn any_credential() {
 #[tokio::test]
 async fn alt_claims() {
     let wallet = wallet().await;
-    let all_vcs = wallet.fetch();
+    let all_vcs = wallet.fetch().await.expect("should fetch credentials");
 
     let query_json = json!({
         "credentials": [
@@ -444,7 +444,7 @@ async fn alt_claims() {
     });
 
     let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
-    let results = query.execute(all_vcs).expect("should execute");
+    let results = query.execute(&all_vcs).expect("should execute");
     assert_eq!(results.len(), 1);
 }
 
@@ -453,7 +453,7 @@ async fn alt_claims() {
 #[tokio::test]
 async fn specific_values() {
     let wallet = wallet().await;
-    let all_vcs = wallet.fetch();
+    let all_vcs = wallet.fetch().await.expect("should fetch credentials");
 
     let query_json = json!({
         "credentials": [
@@ -480,7 +480,7 @@ async fn specific_values() {
     });
 
     let query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
-    let results = query.execute(all_vcs).expect("should execute");
+    let results = query.execute(&all_vcs).expect("should execute");
     assert_eq!(results.len(), 1);
 }
 
@@ -525,7 +525,7 @@ async fn populate(owner: &str) -> Wallet {
     });
     let jwt = sd_jwt(vct, claims, &holder_jwk, &status_claim).await;
     let q = sd_jwt::to_queryable(&jwt, issuer).await.expect("should be SD-JWT");
-    wallet.add(q);
+    wallet.add(q).await.expect("should add credential");
 
     let vct = "https://othercredentials.example/pid";
     let claims = json!({
@@ -542,7 +542,7 @@ async fn populate(owner: &str) -> Wallet {
     });
     let jwt = sd_jwt(vct, claims, &holder_jwk, &status_claim).await;
     let q = sd_jwt::to_queryable(&jwt, issuer).await.expect("should be SD-JWT");
-    wallet.add(q);
+    wallet.add(q).await.expect("should add credential");
 
     let vct = "https://cred.example/residence_credential";
     let claims = json!({
@@ -554,7 +554,7 @@ async fn populate(owner: &str) -> Wallet {
     });
     let jwt = sd_jwt(vct, claims, &holder_jwk, &status_claim).await;
     let q = sd_jwt::to_queryable(&jwt, issuer).await.expect("should be SD-JWT");
-    wallet.add(q);
+    wallet.add(q).await.expect("should add credential");
 
     let vct = "https://company.example/company_rewards";
     let claims = json!({
@@ -562,7 +562,7 @@ async fn populate(owner: &str) -> Wallet {
     });
     let jwt = sd_jwt(vct, claims, &holder_jwk, &status_claim).await;
     let q = sd_jwt::to_queryable(&jwt, issuer).await.expect("should be SD-JWT");
-    wallet.add(q);
+    wallet.add(q).await.expect("should add credential");
 
     let doctype = "org.iso.18013.5.1.mDL";
     let claims = json!({
@@ -574,7 +574,7 @@ async fn populate(owner: &str) -> Wallet {
     });
     let mdoc = mso_mdoc(doctype, claims, &holder_jwk).await;
     let q = mso_mdoc::to_queryable(&mdoc, &wallet).await.expect("should be mdoc");
-    wallet.add(q);
+    wallet.add(q).await.expect("should add credential");
 
     let doctype = "org.iso.7367.1.mVRC";
     let claims = json!({
@@ -589,7 +589,7 @@ async fn populate(owner: &str) -> Wallet {
     });
     let mdoc = mso_mdoc(doctype, claims, &holder_jwk).await;
     let q = mso_mdoc::to_queryable(&mdoc, &wallet).await.expect("should be mdoc");
-    wallet.add(q);
+    wallet.add(q).await.expect("should add credential");
 
     let r#type = vec!["VerifiableCredential".to_string(), "EmployeeIDCredential".to_string()];
     let claims = json!({
@@ -601,7 +601,7 @@ async fn populate(owner: &str) -> Wallet {
     let did = did_url.split_once('#').unwrap().0;
     let jwt = w3c_vc(r#type, claims, did).await;
     let q = w3c_vc::to_queryable(jwt, &wallet).await.expect("should be mdoc");
-    wallet.add(q);
+    wallet.add(q).await.expect("should add credential");
 
     wallet
 }

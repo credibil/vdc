@@ -185,7 +185,7 @@ async fn credential_offer(
 
     let mut provider = state.provider.lock().await;
     let q = sd_jwt::to_queryable(jwt, &*provider).await?;
-    (*provider).add(q);
+    (*provider).add(q).await?;
     drop(provider);
 
     Ok(())
@@ -245,8 +245,8 @@ async fn authorize(
     // --------------------------------------------------
     // Process the Authorization Request
     // --------------------------------------------------
-    let credentials = provider.fetch();
-    let results = request_object.dcql_query.execute(credentials).expect("should execute");
+    let credentials = provider.fetch().await?;
+    let results = request_object.dcql_query.execute(&credentials).expect("should execute");
     if results.is_empty() {
         return Err(anyhow!("no matching credentials found").into());
     }
