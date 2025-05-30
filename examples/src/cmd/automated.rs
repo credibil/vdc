@@ -114,10 +114,10 @@ async fn create_request() -> Result<CreateResponse> {
 async fn request_authorization(auth_req: &AuthorizationRequest) -> Result<()> {
     let client = reqwest::Client::new();
 
-    let AuthorizationRequest::Uri(req_uri) = auth_req else {
-        return Err(anyhow!("expected request URI"));
-    };
-    let qs = req_uri.url_encode()?;
+    // let AuthorizationRequest::Uri(req_uri) = auth_req else {
+    //     return Err(anyhow!("expected request URI"));
+    // };
+    let qs = auth_req.url_encode()?;
 
     let http_resp = client.get(format!("{WALLET_ID}/authorize?{qs}")).send().await?;
     if http_resp.status() != StatusCode::OK {
