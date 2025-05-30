@@ -1,5 +1,6 @@
 use std::fmt::{Debug, Display, Formatter};
 use std::io::Cursor;
+use std::str::FromStr;
 
 use anyhow::{Context, Result};
 use base64ct::{Base64, Encoding};
@@ -83,6 +84,11 @@ impl AuthorizationRequest {
         html::url_encode(self)
     }
 
+    /// Convert a url-encoded string into an `AuthorizationRequest`.
+    pub fn url_decode(s: &str) -> Result<Self> {
+        html::url_decode(s)
+    }
+
     /// Generate qrcode for the Request Object.
     /// Use the `endpoint` parameter to specify the Wallet's endpoint using deep
     /// link or direct call format.
@@ -120,6 +126,18 @@ impl AuthorizationRequest {
 impl Default for AuthorizationRequest {
     fn default() -> Self {
         Self::Uri(RequestUri::default())
+    }
+}
+
+impl FromStr for AuthorizationRequest {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.contains('=') && s.contains('&') {
+            Ok(html::url_decode(s)?)
+        } else {
+            Ok(Self::Object(serde_json::from_str(s)?))
+        }
     }
 }
 
