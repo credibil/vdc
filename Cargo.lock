@@ -2856,6 +2856,7 @@ dependencies = [
  "credibil-identity",
  "credibil-se",
  "credibil-vdc",
+ "dashmap",
  "multihash-codetable",
  "reqwest",
  "serde",

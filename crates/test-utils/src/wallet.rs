@@ -70,8 +70,8 @@ impl Wallet {
     }
 
     pub async fn fetch(&self) -> Result<Vec<Queryable>> {
-        let all_vcs = self.datastore.get_all(&self.id, "CREDENTIAL").await?;
-        all_vcs.iter().map(|(_, v)| Block::from_slice(v).try_into()).collect()
+        let all_vcs = self.datastore.get_all(&self.id, "CREDENTIAL").await;
+        all_vcs.map(|(_, v)| Block::from_slice(&v).try_into()).collect()
     }
 
     pub async fn did(&self) -> Result<Document> {
@@ -118,7 +118,9 @@ impl Datastore for Wallet {
         self.datastore.delete(owner, partition, key).await
     }
 
-    async fn get_all(&self, owner: &str, partition: &str) -> Result<Vec<(String, Vec<u8>)>> {
+    async fn get_all(
+        &self, owner: &str, partition: &str,
+    ) -> impl Iterator<Item = (String, Vec<u8>)> {
         self.datastore.get_all(owner, partition).await
     }
 }

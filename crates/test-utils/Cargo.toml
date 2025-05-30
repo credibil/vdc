@@ -15,6 +15,7 @@ credibil-core.workspace = true
 credibil-identity.workspace = true
 credibil-se.workspace = true
 credibil-vdc.workspace = true
+dashmap = "6.1.0"
 multihash-codetable = { version = "0.1.4", features = ["sha2"] }
 reqwest.workspace = true
 serde.workspace = true

@@ -79,7 +79,9 @@ impl Datastore for Issuer {
         self.datastore.delete(owner, partition, key).await
     }
 
-    async fn get_all(&self, owner: &str, partition: &str) -> Result<Vec<(String, Vec<u8>)>> {
+    async fn get_all(
+        &self, owner: &str, partition: &str,
+    ) -> impl Iterator<Item = (String, Vec<u8>)> {
         self.datastore.get_all(owner, partition).await
     }
 }
