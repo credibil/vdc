@@ -12,8 +12,6 @@ use serde::de::DeserializeOwned;
 use crate::datastore::Store;
 use crate::identity::DidIdentity;
 
-const RAW_CODEC: u64 = 0x55;
-
 #[derive(Clone)]
 pub struct Wallet {
     id: String,
@@ -21,6 +19,7 @@ pub struct Wallet {
     datastore: Store,
 }
 
+const RAW_CODEC: u64 = 0x55;
 struct Block(Vec<u8>);
 
 impl Block {

@@ -11,7 +11,7 @@ use axum_extra::TypedHeader;
 use axum_extra::headers::Host;
 use credibil_oid4vp::http::IntoHttp;
 use credibil_oid4vp::identity::did::Document;
-use credibil_oid4vp::{AuthorizationResponse, GenerateRequest, RequestUriRequest};
+use credibil_oid4vp::{AuthorizationResponse, CreateRequest, RequestUriRequest};
 use serde_json::json;
 use test_utils::verifier::Verifier;
 use tokio::net::TcpListener;
@@ -45,7 +45,7 @@ pub async fn serve(verifier_id: &'static str) -> Result<JoinHandle<()>> {
 #[axum::debug_handler]
 async fn create_request(
     State(provider): State<Verifier>, TypedHeader(host): TypedHeader<Host>,
-    Json(request): Json<GenerateRequest>,
+    Json(request): Json<CreateRequest>,
 ) -> impl IntoResponse {
     credibil_oid4vp::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }

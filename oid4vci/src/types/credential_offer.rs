@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use anyhow::Context as _;
 use base64ct::{Base64, Encoding};
-use credibil_core::urlencode;
+use credibil_core::html;
 use qrcode::QrCode;
 use serde::{Deserialize, Serialize};
 
@@ -402,7 +402,7 @@ impl CredentialOffer {
 
 impl Display for CredentialOffer {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = urlencode::encode(self).map_err(|_| fmt::Error)?;
+        let s = html::url_encode(self).map_err(|_| fmt::Error)?;
         write!(f, "{s}")
     }
 }
@@ -411,7 +411,7 @@ impl FromStr for CredentialOffer {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        urlencode::decode(s)
+        html::url_decode(s)
     }
 }
 

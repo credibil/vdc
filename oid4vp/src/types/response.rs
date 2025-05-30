@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fmt::{self, Debug, Display};
 use std::str::FromStr;
 
-use credibil_core::urlencode;
+use credibil_core::html;
 use serde::{Deserialize, Serialize};
 
 /// Authorization Response request object is used by Wallets to send a VP Token
@@ -27,7 +27,7 @@ impl AuthorizationResponse {
     /// Will return an error if any nested objects cannot be serialized and
     /// URL-encoded.
     pub fn form_encode(&self) -> anyhow::Result<Vec<(String, String)>> {
-        urlencode::form_encode(self)
+        html::form_encode(self)
     }
 
     /// Create a `AuthorizationResponse` from a
@@ -42,13 +42,13 @@ impl AuthorizationResponse {
     /// Will return an error if any nested objects cannot be deserialized from
     /// URL-encoded JSON strings.
     pub fn form_decode(form: &[(String, String)]) -> anyhow::Result<Self> {
-        urlencode::form_decode(form)
+        html::form_decode(form)
     }
 }
 
 impl Display for AuthorizationResponse {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = urlencode::encode(self).map_err(|_| fmt::Error)?;
+        let s = html::url_encode(self).map_err(|_| fmt::Error)?;
         write!(f, "{s}")
     }
 }
@@ -57,7 +57,7 @@ impl FromStr for AuthorizationResponse {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        urlencode::decode(s)
+        html::url_decode(s)
     }
 }
 

@@ -21,7 +21,7 @@ use credibil_oid4vci::{
     AuthorizationRequest, CreateOfferRequest, CredentialHeaders, CredentialOfferRequest,
     CredentialRequest, DeferredCredentialRequest, MetadataRequest, NonceRequest,
     NotificationHeaders, NotificationRequest, PushedAuthorizationRequest, ServerRequest,
-    TokenRequest, urlencode,
+    TokenRequest, html,
 };
 use oauth2::CsrfToken;
 use serde::Deserialize;
@@ -169,7 +169,7 @@ async fn authorize(
         Ok(v) => (StatusCode::FOUND, Redirect::to(&format!("{redirect_uri}?code={}", v.body.code)))
             .into_response(),
         Err(e) => {
-            let err_params = urlencode::encode(&e).unwrap();
+            let err_params = html::url_encode(&e).unwrap();
             (StatusCode::FOUND, Redirect::to(&format!("{redirect_uri}?{err_params}")))
                 .into_response()
         }
@@ -253,7 +253,7 @@ async fn handle_login(
     AUTH_REQUESTS.write().await.insert(req.username.clone(), auth_req.clone());
 
     // redirect back to authorize endpoint
-    let qs = urlencode::encode(&auth_req).expect("should serialize");
+    let qs = html::url_encode(&auth_req).expect("should serialize");
     (StatusCode::FOUND, Redirect::to(&format!("http://{host}/auth?{qs}"))).into_response()
 }
 

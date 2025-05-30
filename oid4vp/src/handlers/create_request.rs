@@ -14,8 +14,9 @@ use crate::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::provider::{Metadata, Provider, StateStore};
 use crate::state::Expire;
 use crate::types::{
-    ClientId, DeviceFlow, GenerateRequest, GenerateResponse, RequestObject, ResponseType,
+    ClientId, CreateRequest, CreateResponse, DeviceFlow, RequestObject, ResponseType,
 };
+use crate::{AuthorizationRequest, RequestUri, RequestUriMethod};
 
 /// Create an Authorization Request.
 ///
@@ -24,16 +25,15 @@ use crate::types::{
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
 async fn create_request(
-    verifier: &str, provider: &impl Provider, request: GenerateRequest,
-) -> Result<GenerateResponse> {
-    let uri_token = generate::uri_token();
-
+    verifier: &str, provider: &impl Provider, request: CreateRequest,
+) -> Result<CreateResponse> {
     let Ok(metadata) = Metadata::verifier(provider, verifier).await else {
         return Err(invalid!("{verifier} is not a valid client_id"));
     };
 
     // TODO: Response Mode "direct_post" is RECOMMENDED for cross-device flows.
 
+    let uri_token = generate::uri_token();
     let mut req_obj = RequestObject {
         response_type: ResponseType::VpToken,
         state: Some(uri_token.clone()),
@@ -45,32 +45,36 @@ async fn create_request(
     };
 
     // FIXME: replace hard-coded endpoints with Provider-set values
-    let response = if request.device_flow == DeviceFlow::CrossDevice {
+    let auth_req = if request.device_flow == DeviceFlow::CrossDevice {
         req_obj.client_id = ClientId::RedirectUri(format!("{verifier}/post"));
-        GenerateResponse::Uri(format!("{verifier}/request/{uri_token}"))
+        let req_uri = RequestUri {
+            client_id: req_obj.client_id.clone(),
+            request_uri: format!("{verifier}/request/{uri_token}"),
+            request_uri_method: Some(RequestUriMethod::Post),
+        };
+        AuthorizationRequest::Uri(req_uri)
     } else {
         req_obj.client_id = ClientId::RedirectUri(format!("{verifier}/callback"));
-        GenerateResponse::Object(req_obj.clone())
+        AuthorizationRequest::Object(req_obj.clone())
     };
 
-    // save request object in state
     let state = State {
         expires_at: Utc::now() + Expire::Request.duration(),
         body: req_obj,
     };
     StateStore::put(provider, &uri_token, &state).await.context("saving state")?;
 
-    Ok(response)
+    Ok(CreateResponse(auth_req))
 }
 
-impl<P: Provider> Handler<GenerateResponse, P> for Request<GenerateRequest> {
+impl<P: Provider> Handler<CreateResponse, P> for Request<CreateRequest> {
     type Error = Error;
 
     async fn handle(
         self, verifier: &str, provider: &P,
-    ) -> Result<impl Into<Response<GenerateResponse>>, Self::Error> {
+    ) -> Result<impl Into<Response<CreateResponse>>, Self::Error> {
         create_request(verifier, provider, self.body).await
     }
 }
 
-impl Body for GenerateRequest {}
+impl Body for CreateRequest {}

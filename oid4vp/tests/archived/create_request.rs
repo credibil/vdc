@@ -6,7 +6,7 @@ use assert_let_bind::assert_let;
 use credibil_openid::oid4vp::endpoint;
 use credibil_openid::oid4vp::provider::StateStore;
 use credibil_openid::oid4vp::state::State;
-use credibil_openid::oid4vp::types::GenerateRequest;
+use credibil_openid::oid4vp::types::CreateRequest;
 use insta::assert_yaml_snapshot as assert_snapshot;
 use serde_json::json;
 
@@ -33,8 +33,8 @@ async fn same_device() {
         "device_flow": "SameDevice"
     });
 
-    let mut request: GenerateRequest =
-        serde_json::from_value::<GenerateRequest>(body).expect("should deserialize");
+    let mut request: CreateRequest =
+        serde_json::from_value::<CreateRequest>(body).expect("should deserialize");
     request.client_id = "http://localhost:8080".to_string();
 
     let response = endpoint::handle("http://localhost:8080", request, &provider).await.expect("ok");
@@ -81,7 +81,7 @@ async fn cross_device() {
     });
 
     let mut request =
-        serde_json::from_value::<GenerateRequest>(body).expect("should deserialize");
+        serde_json::from_value::<CreateRequest>(body).expect("should deserialize");
     request.client_id = "http://localhost:8080".to_string();
 
     let response = endpoint::handle("http://localhost:8080", request, &provider).await.expect("ok");

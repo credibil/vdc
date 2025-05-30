@@ -8,7 +8,7 @@ use credibil_oid4vp::vdc::{
     DcqlQuery, MdocBuilder, SdJwtVcBuilder, W3cVcBuilder, mso_mdoc, sd_jwt, w3c_vc,
 };
 use credibil_oid4vp::{
-    AuthorizationResponse, DeviceFlow, GenerateRequest, GenerateResponse, ResponseMode, did_jwk,
+    AuthorizationRequest, AuthorizationResponse, CreateRequest, DeviceFlow, ResponseMode, did_jwk,
     vp_token,
 };
 use serde_json::{Value, json};
@@ -57,7 +57,7 @@ async fn multiple_claims() {
     });
     let dcql_query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
 
-    let request = GenerateRequest {
+    let request = CreateRequest {
         dcql_query,
         client_id: VERIFIER_ID.to_string(),
         device_flow: DeviceFlow::SameDevice,
@@ -70,7 +70,7 @@ async fn multiple_claims() {
         .expect("should create request");
 
     // extract request object and send to Wallet
-    let GenerateResponse::Object(request_object) = response.body else {
+    let AuthorizationRequest::Object(req_obj) = response.body.0 else {
         panic!("should be object");
     };
 
@@ -80,14 +80,13 @@ async fn multiple_claims() {
     // --------------------------------------------------
     let wallet = wallet().await;
     let stored_vcs = wallet.fetch().await.expect("should fetch credentials");
-    let results = request_object.dcql_query.execute(&stored_vcs).expect("should execute");
+    let results = req_obj.dcql_query.execute(&stored_vcs).expect("should execute");
     // assert_eq!(results.len(), 2);
 
-    let vp_token =
-        vp_token::generate(&request_object, &results, wallet).await.expect("should get token");
+    let vp_token = vp_token::generate(&req_obj, &results, wallet).await.expect("should get token");
     let request = AuthorizationResponse {
         vp_token,
-        state: request_object.state,
+        state: req_obj.state,
     };
 
     // --------------------------------------------------
@@ -153,7 +152,7 @@ async fn multiple_credentials() {
     });
     let dcql_query = serde_json::from_value(query_json).expect("should deserialize");
 
-    let request = GenerateRequest {
+    let request = CreateRequest {
         dcql_query,
         client_id: VERIFIER_ID.to_string(),
         device_flow: DeviceFlow::SameDevice,
@@ -166,7 +165,7 @@ async fn multiple_credentials() {
         .expect("should create request");
 
     // extract request object and send to Wallet
-    let GenerateResponse::Object(request_object) = response.body else {
+    let AuthorizationRequest::Object(req_obj) = response.body.0 else {
         panic!("should be object");
     };
 
@@ -176,18 +175,17 @@ async fn multiple_credentials() {
     // --------------------------------------------------
     let wallet = wallet().await;
     let stored_vcs = wallet.fetch().await.expect("should fetch credentials");
-    let results = request_object.dcql_query.execute(&stored_vcs).expect("should execute");
+    let results = req_obj.dcql_query.execute(&stored_vcs).expect("should execute");
     assert_eq!(results.len(), 3);
 
     // return a single `vp_token` for the query
     // each credential query will result in a separate presentation
-    let vp_token =
-        vp_token::generate(&request_object, &results, wallet).await.expect("should get token");
+    let vp_token = vp_token::generate(&req_obj, &results, wallet).await.expect("should get token");
     assert_eq!(vp_token.len(), 3);
 
     let request = AuthorizationResponse {
         vp_token,
-        state: request_object.state,
+        state: req_obj.state,
     };
     let response = credibil_oid4vp::handle(VERIFIER_ID, request, verifier)
         .await

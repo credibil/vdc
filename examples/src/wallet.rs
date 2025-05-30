@@ -19,8 +19,8 @@ use credibil_oid4vci::{
 use credibil_oid4vp::identity::se::Algorithm;
 use credibil_oid4vp::jose::{self, Jwt};
 use credibil_oid4vp::{
-    AuthorizationResponse, RequestObject, RequestUriRequest, RequestUriResponse, ResponseMode,
-    VpFormat, Wallet, did_jwk, vp_token,
+    AuthorizationRequest, AuthorizationResponse, ClientId, RequestObject, RequestUriMethod,
+    RequestUriRequest, RequestUriResponse, ResponseMode, VpFormat, Wallet, did_jwk, vp_token,
 };
 use http::StatusCode;
 use serde::Deserialize;
@@ -191,28 +191,25 @@ async fn credential_offer(
     Ok(())
 }
 
-#[derive(Debug, Deserialize)]
-struct Request {
-    client_id: String,
-    request_uri: String,
-    request_uri_method: String,
-}
-
 #[axum::debug_handler]
 async fn authorize(
-    State(state): State<AppState>, Query(request): Query<Request>,
+    State(state): State<AppState>, Query(request): Query<AuthorizationRequest>,
 ) -> Result<(), AppError> {
     let http = reqwest::Client::new();
 
     // --------------------------------------------------
     // Fetch Authorization Request Object
     // --------------------------------------------------
-    if request.request_uri_method != "post" {
+    let req_uri = match &request {
+        AuthorizationRequest::Uri(req_uri) => req_uri,
+        _ => return Err(anyhow!("expected request URI").into()),
+    };
+    if req_uri.request_uri_method != Some(RequestUriMethod::Post) {
         return Err(anyhow!("`request_uri_method` must be 'post'").into());
     }
 
     let object_req = RequestUriRequest {
-        id: request.request_uri.clone(),
+        id: req_uri.request_uri.clone(),
         wallet_metadata: Some(Wallet {
             vp_formats_supported: Some(vec![VpFormat::DcSdJwt {
                 sd_jwt_alg_values: Some(vec![Algorithm::EdDSA]),
@@ -224,7 +221,7 @@ async fn authorize(
     };
     let form = object_req.form_encode().context("encoding request")?;
 
-    let http_resp = http.get(&request.request_uri).form(&form).send().await?;
+    let http_resp = http.get(&req_uri.request_uri).form(&form).send().await?;
     if http_resp.status() != StatusCode::OK {
         let body = http_resp.text().await?;
         return Err(anyhow!("{body}").into());
@@ -271,7 +268,7 @@ async fn authorize(
             return Err(anyhow!("`response_mode` must be 'direct_post'").into());
         }
     };
-    if request.client_id != format!("redirect_uri:{response_uri}") {
+    if req_uri.client_id != ClientId::RedirectUri(response_uri.clone()) {
         return Err(anyhow!("invalid client id").into());
     }
 

@@ -4,7 +4,7 @@
 
 use anyhow::{Result, anyhow};
 use credibil_oid4vci::{CreateOfferResponse, OfferType};
-use credibil_oid4vp::GenerateResponse;
+use credibil_oid4vp::{AuthorizationRequest, CreateResponse};
 use examples::{issuer, verifier, wallet};
 use http::StatusCode;
 use serde_json::json;
@@ -29,8 +29,8 @@ async fn main() -> Result<()> {
     make_offer(&offer).await?;
 
     // verify credentials
-    let request = create_request().await?;
-    request_authorization(&request).await?;
+    let response = create_request().await?;
+    request_authorization(&response.0).await?;
 
     Ok(())
 }
@@ -52,10 +52,7 @@ async fn create_offer() -> Result<CreateOfferResponse> {
         return Err(anyhow!("{body}"));
     }
 
-    http_resp
-        .json::<CreateOfferResponse>()
-        .await
-        .map_err(|e| anyhow!("issue deserializing offer: {e}"))
+    http_resp.json::<CreateOfferResponse>().await.map_err(|e| anyhow!("issue deserializing: {e}"))
 }
 
 async fn make_offer(response: &CreateOfferResponse) -> Result<()> {
@@ -67,7 +64,6 @@ async fn make_offer(response: &CreateOfferResponse) -> Result<()> {
     let Some(tx_code) = &response.tx_code else {
         return Err(anyhow!("expected transaction code"));
     };
-
     let url = format!("{WALLET_ID}/credential_offer?credential_offer_uri={uri}&tx_code={tx_code}");
 
     let http_resp = client.get(url).send().await?;
@@ -79,7 +75,7 @@ async fn make_offer(response: &CreateOfferResponse) -> Result<()> {
     Ok(())
 }
 
-async fn create_request() -> Result<GenerateResponse> {
+async fn create_request() -> Result<CreateResponse> {
     let client = reqwest::Client::new();
 
     let value = json!({
@@ -112,24 +108,18 @@ async fn create_request() -> Result<GenerateResponse> {
         return Err(anyhow!("{body}"));
     }
 
-    http_resp
-        .json::<GenerateResponse>()
-        .await
-        .map_err(|e| anyhow!("issue deserializing offer: {e}"))
+    http_resp.json::<CreateResponse>().await.map_err(|e| anyhow!("issue deserializing: {e}"))
 }
 
-async fn request_authorization(response: &GenerateResponse) -> Result<()> {
+async fn request_authorization(auth_req: &AuthorizationRequest) -> Result<()> {
     let client = reqwest::Client::new();
 
-    let client_id = format!("redirect_uri:{VERIFIER_ID}/post");
-    let GenerateResponse::Uri(uri) = response else {
-        return Err(anyhow!("expected request URI"));
-    };
+    // let AuthorizationRequest::Uri(req_uri) = auth_req else {
+    //     return Err(anyhow!("expected request URI"));
+    // };
+    let qs = auth_req.url_encode()?;
 
-    let url = format!(
-        "{WALLET_ID}/authorize?client_id={client_id}&request_uri={uri}&request_uri_method=post"
-    );
-    let http_resp = client.get(url).send().await?;
+    let http_resp = client.get(format!("{WALLET_ID}/authorize?{qs}")).send().await?;
     if http_resp.status() != StatusCode::OK {
         let body = http_resp.text().await?;
         return Err(anyhow!("{body}"));

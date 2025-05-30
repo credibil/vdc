@@ -1,15 +1,15 @@
 use std::fmt::{Debug, Display, Formatter};
 use std::io::Cursor;
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Context, Result};
 use base64ct::{Base64, Encoding};
-use credibil_core::{Kind, urlencode};
+use credibil_core::{Kind, html};
 pub use credibil_identity::SignerExt;
 use credibil_jose::{JwsBuilder, PublicKeyJwk};
 use credibil_vdc::dcql::DcqlQuery;
 use qrcode::QrCode;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 use crate::JwtType;
 use crate::types::VerifierMetadata;
@@ -19,7 +19,7 @@ use crate::types::metadata::Wallet;
 /// Authorization Request Object.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
-pub struct GenerateRequest {
+pub struct CreateRequest {
     /// The DCQL query to use to request the Verifiable Presentation.
     pub dcql_query: DcqlQuery,
 
@@ -56,69 +56,136 @@ pub enum DeviceFlow {
 
 /// The response to the originator of the Request Object Request.
 #[derive(Clone, Debug, Deserialize, Serialize)]
-#[allow(clippy::large_enum_variant)]
-pub enum GenerateResponse {
-    /// The generated Authorization Request Object, ready to send to the Wallet.
-    #[serde(rename = "request_object")]
-    Object(RequestObject),
+#[serde(transparent)]
+pub struct CreateResponse(pub AuthorizationRequest);
 
+/// Authorization Request for Verifier to send to Wallet.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(untagged)]
+#[allow(clippy::large_enum_variant)]
+pub enum AuthorizationRequest {
     /// A URI pointing to a location where the Authorization Request Object can
     /// be retrieved by the Wallet.
-    #[serde(rename = "request_uri")]
-    Uri(String),
+    Uri(RequestUri),
+
+    /// The generated Authorization Request Object, ready to send to the Wallet.
+    Object(RequestObject),
 }
 
-impl Default for GenerateResponse {
-    fn default() -> Self {
-        Self::Uri(String::new())
-    }
-}
-
-impl GenerateResponse {
-    /// Convenience method to convert the `GenerateResponse` to a QR code.
-    ///
-    /// If the `request_object` is set, the method will generate a QR code for
-    /// that in favour of the `request_uri`.
-    ///
-    /// TODO: Revisit the logic to determine default type if this struct is made
-    /// an enum.
+impl AuthorizationRequest {
+    /// URL-encode the Authorization Request.
     ///
     /// # Errors
-    /// Returns an error if the neither the `request_object` nor `request_uri` is
-    /// set or the respective field cannot be represented as a base64-encoded PNG
-    /// image of a QR code.
-    pub async fn to_qrcode(
-        &self, endpoint: Option<&str>, signer: &impl SignerExt,
-    ) -> anyhow::Result<String> {
-        match self {
-            Self::Object(req_obj) => {
-                let Some(endpoint) = endpoint else {
-                    return Err(anyhow!("no endpoint provided for object-type response"));
-                };
-                req_obj.to_qrcode(endpoint, signer).await
-            }
-            Self::Uri(uri) => {
-                let qr_code = QrCode::new(uri).context("failed to create QR code")?;
-                let img_buf = qr_code.render::<image::Luma<u8>>().build();
-                let mut buffer: Vec<u8> = Vec::new();
-                let mut writer = Cursor::new(&mut buffer);
-                img_buf
-                    .write_to(&mut writer, image::ImageFormat::Png)
-                    .context("failed to create QR code")?;
-                Ok(format!("data:image/png;base64,{}", Base64::encode_string(buffer.as_slice())))
-            }
-        }
+    ///
+    /// Returns an `Error::ServerError` error if the request cannot be
+    /// serialized.
+    pub fn url_encode(&self) -> Result<String> {
+        html::url_encode(self)
+    }
+
+    /// Generate qrcode for the Request Object.
+    /// Use the `endpoint` parameter to specify the Wallet's endpoint using deep
+    /// link or direct call format.
+    ///
+    /// For example,
+    ///
+    /// ```http
+    ///   openid-vc://?request_uri=
+    ///   or GET https://holder.wallet.io/authorize?
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns an `Error::ServerError` error if the Request Object cannot be
+    /// serialized.
+    pub fn to_qrcode(&self, endpoint: &str) -> Result<String> {
+        let qs = self.url_encode()?;
+
+        // generate qr code
+        let qr_code = QrCode::new(format!("{endpoint}{qs}")).context("failed to create QR code")?;
+
+        // write image to buffer
+        let img_buf = qr_code.render::<image::Luma<u8>>().build();
+        let mut buffer: Vec<u8> = Vec::new();
+        let mut writer = Cursor::new(&mut buffer);
+        img_buf
+            .write_to(&mut writer, image::ImageFormat::Png)
+            .context("failed to create QR code")?;
+
+        // base64 encode image
+        Ok(format!("data:image/png;base64,{}", Base64::encode_string(buffer.as_slice())))
     }
 }
 
-/// The Authorization Request follows the definition given in [RFC6749].
-///
-/// The Verifier may send an Authorization Request as Request Object by value or
-/// by reference as defined in JWT-Secured Authorization Request (JAR)
-/// [RFC9101].
-///
-/// [RFC6749]: (https://www.rfc-editor.org/rfc/rfc6749.html)
-/// [RFC9101]:https://www.rfc-editor.org/rfc/rfc9101
+impl Default for AuthorizationRequest {
+    fn default() -> Self {
+        Self::Uri(RequestUri::default())
+    }
+}
+
+/// `RequestUri` is used by the Verifier to send an Authorization Request by
+/// reference to the Wallet.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct RequestUri {
+    /// The Verifier's `client_id`.
+    pub client_id: ClientId,
+
+    /// The unique identifier of the Request Object.
+    pub request_uri: String,
+
+    /// The HTTP method to be used by the Wallet when sending a request to the
+    /// `request_uri` endpoint.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request_uri_method: Option<RequestUriMethod>,
+}
+
+// impl RequestUri {
+//     /// URL-encode the Authorization Request.
+//     ///
+//     /// # Errors
+//     ///
+//     /// Returns an `Error::ServerError` error if the request cannot be
+//     /// serialized.
+//     pub fn url_encode(&self) -> Result<String> {
+//         html::url_encode(&self).context("url_encoding request uri")
+//     }
+
+//     /// Generate qrcode for the Request Object.
+//     /// Use the `endpoint` parameter to specify the Wallet's endpoint using deep
+//     /// link or direct call format.
+//     ///
+//     /// For example,
+//     ///
+//     /// ```http
+//     ///   openid-vc://?request_uri=
+//     ///   or GET https://holder.wallet.io/authorize?
+//     /// ```
+//     ///
+//     /// # Errors
+//     ///
+//     /// Returns an `Error::ServerError` error if the Request Object cannot be
+//     /// serialized.
+//     pub fn to_qrcode(&self, endpoint: &str) -> Result<String> {
+//         let qs = self.url_encode()?;
+
+//         // generate qr code
+//         let qr_code = QrCode::new(format!("{endpoint}{qs}")).context("failed to create QR code")?;
+
+//         // write image to buffer
+//         let img_buf = qr_code.render::<image::Luma<u8>>().build();
+//         let mut buffer: Vec<u8> = Vec::new();
+//         let mut writer = Cursor::new(&mut buffer);
+//         img_buf
+//             .write_to(&mut writer, image::ImageFormat::Png)
+//             .context("failed to create QR code")?;
+
+//         // base64 encode image
+//         Ok(format!("data:image/png;base64,{}", Base64::encode_string(buffer.as_slice())))
+//     }
+// }
+
+/// `RequestObject` is used by the Verifier to send an Authorization Request by
+/// value to the Wallet.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct RequestObject {
     /// The type of response expected from the Wallet (as Authorization Server).
@@ -136,7 +203,7 @@ pub struct RequestObject {
     /// Credentials by utilizing a pre-defined scope value.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scope: Option<String>,
-    //
+
     /// Inform the Wallet of the mechanism to use when returning an
     /// Authorization Response. Defaults to "`fragment`".
     #[serde(flatten)]
@@ -148,11 +215,6 @@ pub struct RequestObject {
     /// Client Metadata contains Verifier metadata values.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub client_metadata: Option<VerifierMetadata>,
-
-    /// The HTTP method to be used by the Wallet when sending a request to the
-    /// `request_uri` endpoint.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub request_uri_method: Option<RequestUriMethod>,
 
     /// An array of base64url-encoded JSON objects, each containing details
     /// about the transaction that the Verifier is requesting the End-User to
@@ -178,60 +240,15 @@ pub struct RequestObject {
 }
 
 impl RequestObject {
-    /// Generate qrcode for Request Object.
-    /// Use the `endpoint` parameter to specify the Wallet's endpoint using deep
-    /// link or direct call format.
-    ///
-    /// For example,
-    ///
-    /// ```http
-    ///   openid-vc://?request_uri=
-    ///   or GET https://holder.wallet.io/authorize?
-    /// ```
+    /// URL-encode the Authorization Request, base64 encoding the Request
+    /// Object.
     ///
     /// # Errors
     ///
     /// Returns an `Error::ServerError` error if the Request Object cannot be
     /// serialized.
-    pub async fn to_qrcode(&self, endpoint: &str, signer: &impl SignerExt) -> Result<String> {
-        let qs = self.encode(signer).await?;
-
-        // generate qr code
-        let qr_code = QrCode::new(format!("{endpoint}{qs}")).context("failed to create QR code")?;
-
-        // write image to buffer
-        let img_buf = qr_code.render::<image::Luma<u8>>().build();
-        let mut buffer: Vec<u8> = Vec::new();
-        let mut writer = Cursor::new(&mut buffer);
-        img_buf
-            .write_to(&mut writer, image::ImageFormat::Png)
-            .context("failed to create QR code")?;
-
-        // base64 encode image
-        Ok(format!("data:image/png;base64,{}", Base64::encode_string(buffer.as_slice())))
-    }
-
-    /// Generate an Authorization Request query string with URL-encoded
-    /// parameters.
-    ///
-    /// # Errors
-    ///
-    /// Returns an `Error::ServerError` error if the Request Object cannot be
-    /// serialized.
-    #[deprecated(since = "0.1.0", note = "please use `url_value` instead")]
-    pub fn url_params(&self) -> Result<String> {
-        serde_urlencoded::to_string(self).context("creating query string")
-    }
-
-    /// Generate an  Authorization Request query string with a base64 encoded
-    /// Request Object.
-    ///
-    /// # Errors
-    ///
-    /// Returns an `Error::ServerError` error if the Request Object cannot be
-    /// serialized.
-    pub async fn encode(&self, signer: &impl SignerExt) -> Result<String> {
-        let payload: RequestObjectClaims = self.clone().into();
+    pub async fn url_encode_jwt(&self, signer: &impl SignerExt) -> Result<String> {
+        let payload: AuthorizationClaims = self.clone().into();
 
         let key_ref = signer.verification_method().await?.try_into()?;
         let jws = JwsBuilder::new()
@@ -244,11 +261,56 @@ impl RequestObject {
             .context("building jwt")?;
 
         let encoded = jws.encode().context("encoding jws")?;
-        let client_id =
-            urlencode::encode(&self.client_id.to_string()).context("encoding `client_id`")?;
 
-        Ok(format!("{client_id}&request={encoded}"))
+        let mut client_id = Map::new();
+        client_id.insert("client_id".to_string(), Value::String(self.client_id.to_string()));
+        let client_param = html::url_encode(&client_id).context("encoding `client_id`")?;
+
+        Ok(format!("{client_param}&request={encoded}"))
     }
+
+    // /// URL-encode the Authorization Request.
+    // ///
+    // /// # Errors
+    // ///
+    // /// Returns an `Error::ServerError` error if the Request Object cannot be
+    // /// serialized.
+    // pub fn url_encode(&self) -> Result<String> {
+    //     html::url_encode(&self).context("url_encoding request object")
+    // }
+
+    // /// Generate qrcode for the Request Object.
+    // /// Use the `endpoint` parameter to specify the Wallet's endpoint using deep
+    // /// link or direct call format.
+    // ///
+    // /// For example,
+    // ///
+    // /// ```http
+    // ///   openid-vc://?request_uri=
+    // ///   or GET https://holder.wallet.io/authorize?
+    // /// ```
+    // ///
+    // /// # Errors
+    // ///
+    // /// Returns an `Error::ServerError` error if the Request Object cannot be
+    // /// serialized.
+    // pub fn to_qrcode(&self, endpoint: &str) -> Result<String> {
+    //     let qs = self.url_encode()?;
+
+    //     // generate qr code
+    //     let qr_code = QrCode::new(format!("{endpoint}{qs}")).context("failed to create QR code")?;
+
+    //     // write image to buffer
+    //     let img_buf = qr_code.render::<image::Luma<u8>>().build();
+    //     let mut buffer: Vec<u8> = Vec::new();
+    //     let mut writer = Cursor::new(&mut buffer);
+    //     img_buf
+    //         .write_to(&mut writer, image::ImageFormat::Png)
+    //         .context("failed to create QR code")?;
+
+    //     // base64 encode image
+    //     Ok(format!("data:image/png;base64,{}", Base64::encode_string(buffer.as_slice())))
+    // }
 }
 
 /// Client Identifier schemes indicate how the Wallet should interpret the
@@ -528,7 +590,7 @@ impl RequestUriRequest {
     /// serialized to JSON and URL-encoded. (`authorization_details` and
     /// `client_assertion`).
     pub fn form_encode(&self) -> Result<Vec<(String, String)>> {
-        urlencode::form_encode(self)
+        html::form_encode(self)
     }
 
     /// Create a `RequestUriRequest` from a `x-www-form-urlencoded` form.
@@ -538,7 +600,7 @@ impl RequestUriRequest {
     /// Will return an error if any of the object-type fields, assumed to be
     /// URL-encoded JSON, cannot be decoded.
     pub fn form_decode(form: &[(String, String)]) -> Result<Self> {
-        urlencode::form_decode(form)
+        html::form_decode(form)
     }
 }
 
@@ -568,7 +630,7 @@ impl Default for RequestUriResponse {
 /// The claims are used to serialize/deserialize the Request Object to/from a
 /// JWT.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct RequestObjectClaims {
+pub struct AuthorizationClaims {
     /// The Verifier's `client_id`.
     pub iss: String,
 
@@ -581,7 +643,7 @@ pub struct RequestObjectClaims {
     pub request_object: RequestObject,
 }
 
-impl From<RequestObject> for RequestObjectClaims {
+impl From<RequestObject> for AuthorizationClaims {
     fn from(request_object: RequestObject) -> Self {
         Self {
             iss: request_object.client_id.to_string(),
@@ -593,9 +655,8 @@ impl From<RequestObject> for RequestObjectClaims {
 
 #[cfg(test)]
 mod tests {
-
     use credibil_jose::Jwt;
-    use test_utils::verifier::Verifier;
+    use test_utils::Verifier;
 
     use super::*;
 
@@ -613,7 +674,6 @@ mod tests {
             },
             state: Some("af0ifjsldkj".to_string()),
             client_metadata: Some(VerifierMetadata::default()),
-            request_uri_method: Some(RequestUriMethod::Get),
             transaction_data: Some(vec![TransactionData::default()]),
             verifier_attestations: Some(vec![VerifierAttestation::default()]),
             wallet_nonce: None,
@@ -638,16 +698,13 @@ mod tests {
             },
             state: Some("af0ifjsldkj".to_string()),
             client_metadata: Some(VerifierMetadata::default()),
-            request_uri_method: Some(RequestUriMethod::Get),
             transaction_data: Some(vec![TransactionData::default()]),
             verifier_attestations: Some(vec![VerifierAttestation::default()]),
             wallet_nonce: None,
         };
 
-        let querystring = request_object
-            .encode(&Verifier::new("oid4vp_verifier_request_tests_querystring").await)
-            .await
-            .unwrap();
+        let verifier = Verifier::new("http://verifier.io").await;
+        let querystring = request_object.url_encode_jwt(&verifier).await.unwrap();
 
         let request = querystring
             .split('&')
@@ -656,7 +713,7 @@ mod tests {
             .strip_prefix("request=")
             .unwrap();
 
-        let jwt: Jwt<RequestObjectClaims> = request.parse().unwrap();
+        let jwt: Jwt<AuthorizationClaims> = request.parse().unwrap();
         assert_eq!(jwt.claims.request_object, request_object);
     }
 }
