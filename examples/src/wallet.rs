@@ -243,7 +243,7 @@ async fn authorize(
     // Process the Authorization Request
     // --------------------------------------------------
     let credentials = provider.fetch().await?;
-    let results = request_object.dcql_query.execute(&credentials).expect("should execute");
+    let results = request_object.dcql_query.execute(&credentials)?;
     if results.is_empty() {
         return Err(anyhow!("no matching credentials found").into());
     }
@@ -251,8 +251,7 @@ async fn authorize(
     // --------------------------------------------------
     // Generate a VP token
     // --------------------------------------------------
-    let vp_token =
-        vp_token::generate(&request_object, &results, &*provider).await.expect("should get token");
+    let vp_token = vp_token::generate(&request_object, &results, &*provider).await?;
     let response = AuthorizationResponse {
         vp_token,
         state: request_object.state,

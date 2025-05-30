@@ -9,13 +9,14 @@ use anyhow::Result;
 use axum::extract::{Path, State};
 use axum::http::header::AUTHORIZATION;
 use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
-use axum::response::{Html, IntoResponse, Redirect};
+use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use axum::{Form, Json, Router};
 use axum_extra::TypedHeader;
 use axum_extra::headers::authorization::Bearer;
 use axum_extra::headers::{Authorization, Host};
 use credibil_oid4vci::http::IntoHttp;
+use credibil_oid4vci::identity::did::Document;
 use credibil_oid4vci::status::StatusListRequest;
 use credibil_oid4vci::{
     AuthorizationRequest, CreateOfferRequest, CredentialHeaders, CredentialOfferRequest,
@@ -336,7 +337,23 @@ async fn statuslists(
 }
 
 #[axum::debug_handler]
-async fn did(State(provider): State<Issuer>) -> impl IntoResponse {
-    let doc = provider.did().await.expect("should fetch DID document");
-    Json(doc).into_response()
+async fn did(State(provider): State<Issuer>) -> Result<Json<Document>, AppError> {
+    let doc = provider.did().await.map_err(AppError::from)?;
+    Ok(Json(doc))
+}
+
+// Wrap anyhow::Error.
+struct AppError(anyhow::Error);
+
+impl<E: Into<anyhow::Error>> From<E> for AppError {
+    fn from(err: E) -> Self {
+        Self(err.into())
+    }
+}
+
+// Tell axum how to convert `AppError` into a response.
+impl IntoResponse for AppError {
+    fn into_response(self) -> Response {
+        (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", self.0)).into_response()
+    }
 }

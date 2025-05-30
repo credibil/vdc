@@ -18,7 +18,7 @@ const WALLET_ID: &str = "http://localhost:8082";
 #[tokio::main]
 async fn main() -> Result<()> {
     let subscriber = FmtSubscriber::builder().with_max_level(Level::INFO).finish();
-    tracing::subscriber::set_global_default(subscriber).expect("should set subscriber");
+    tracing::subscriber::set_global_default(subscriber)?;
 
     issuer::serve(ISSUER_ID).await?;
     verifier::serve(VERIFIER_ID).await?;
