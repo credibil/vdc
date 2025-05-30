@@ -14,8 +14,9 @@ use crate::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::provider::{Metadata, Provider, StateStore};
 use crate::state::Expire;
 use crate::types::{
-    ClientId, CreateRequest, DeviceFlow, CreateResponse, RequestObject, ResponseType,
+    ClientId, CreateRequest, CreateResponse, DeviceFlow, RequestObject, ResponseType,
 };
+use crate::{AuthorizationRequest, RequestUri, RequestUriMethod};
 
 /// Create an Authorization Request.
 ///
@@ -26,14 +27,13 @@ use crate::types::{
 async fn create_request(
     verifier: &str, provider: &impl Provider, request: CreateRequest,
 ) -> Result<CreateResponse> {
-    let uri_token = generate::uri_token();
-
     let Ok(metadata) = Metadata::verifier(provider, verifier).await else {
         return Err(invalid!("{verifier} is not a valid client_id"));
     };
 
     // TODO: Response Mode "direct_post" is RECOMMENDED for cross-device flows.
 
+    let uri_token = generate::uri_token();
     let mut req_obj = RequestObject {
         response_type: ResponseType::VpToken,
         state: Some(uri_token.clone()),
@@ -45,22 +45,26 @@ async fn create_request(
     };
 
     // FIXME: replace hard-coded endpoints with Provider-set values
-    let response = if request.device_flow == DeviceFlow::CrossDevice {
+    let auth_req = if request.device_flow == DeviceFlow::CrossDevice {
         req_obj.client_id = ClientId::RedirectUri(format!("{verifier}/post"));
-        CreateResponse::Uri(format!("{verifier}/request/{uri_token}"))
+        let req_uri = RequestUri {
+            client_id: req_obj.client_id.clone(),
+            request_uri: format!("{verifier}/request/{uri_token}"),
+            request_uri_method: Some(RequestUriMethod::Post),
+        };
+        AuthorizationRequest::Uri(req_uri)
     } else {
         req_obj.client_id = ClientId::RedirectUri(format!("{verifier}/callback"));
-        CreateResponse::Object(req_obj.clone())
+        AuthorizationRequest::Object(req_obj.clone())
     };
 
-    // save request object in state
     let state = State {
         expires_at: Utc::now() + Expire::Request.duration(),
         body: req_obj,
     };
     StateStore::put(provider, &uri_token, &state).await.context("saving state")?;
 
-    Ok(response)
+    Ok(CreateResponse(auth_req))
 }
 
 impl<P: Provider> Handler<CreateResponse, P> for Request<CreateRequest> {

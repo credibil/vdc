@@ -12,8 +12,6 @@ use serde::de::DeserializeOwned;
 use crate::datastore::Store;
 use crate::identity::DidIdentity;
 
-
-
 #[derive(Clone)]
 pub struct Wallet {
     id: String,
