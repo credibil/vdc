@@ -4,7 +4,7 @@
 
 use anyhow::{Result, anyhow};
 use credibil_oid4vci::{CreateOfferResponse, OfferType};
-use credibil_oid4vp::GenerateResponse;
+use credibil_oid4vp::CreateResponse;
 use examples::{issuer, verifier, wallet};
 use http::StatusCode;
 use serde_json::json;
@@ -79,7 +79,7 @@ async fn make_offer(response: &CreateOfferResponse) -> Result<()> {
     Ok(())
 }
 
-async fn create_request() -> Result<GenerateResponse> {
+async fn create_request() -> Result<CreateResponse> {
     let client = reqwest::Client::new();
 
     let value = json!({
@@ -112,17 +112,14 @@ async fn create_request() -> Result<GenerateResponse> {
         return Err(anyhow!("{body}"));
     }
 
-    http_resp
-        .json::<GenerateResponse>()
-        .await
-        .map_err(|e| anyhow!("issue deserializing offer: {e}"))
+    http_resp.json::<CreateResponse>().await.map_err(|e| anyhow!("issue deserializing offer: {e}"))
 }
 
-async fn request_authorization(response: &GenerateResponse) -> Result<()> {
+async fn request_authorization(response: &CreateResponse) -> Result<()> {
     let client = reqwest::Client::new();
 
     let client_id = format!("redirect_uri:{VERIFIER_ID}/post");
-    let GenerateResponse::Uri(uri) = response else {
+    let CreateResponse::Uri(uri) = response else {
         return Err(anyhow!("expected request URI"));
     };
 

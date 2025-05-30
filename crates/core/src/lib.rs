@@ -2,8 +2,8 @@
 
 pub mod api;
 pub mod datastore;
+pub mod html;
 pub mod http;
-pub mod urlencode;
 
 mod did;
 

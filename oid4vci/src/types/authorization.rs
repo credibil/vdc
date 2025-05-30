@@ -1,7 +1,7 @@
 use std::fmt::{self, Display};
 use std::str::FromStr;
 
-use credibil_core::urlencode;
+use credibil_core::html;
 use credibil_vdc::FormatProfile;
 use serde::de::{self, Deserializer, Visitor};
 use serde::{Deserialize, Serialize};
@@ -265,7 +265,7 @@ impl Default for AuthorizationRequest {
 
 impl Display for AuthorizationRequest {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = urlencode::encode(self).map_err(|_| fmt::Error)?;
+        let s = html::url_encode(self).map_err(|_| fmt::Error)?;
         write!(f, "{s}")
     }
 }
@@ -275,7 +275,7 @@ impl FromStr for AuthorizationRequest {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.contains('=') && s.contains('&') {
-            Ok(urlencode::decode(s)?)
+            Ok(html::url_decode(s)?)
         } else {
             Ok(Self::Object(serde_json::from_str(s)?))
         }

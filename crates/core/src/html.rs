@@ -89,7 +89,7 @@ pub fn form_decode<T: DeserializeOwned>(form: &[(String, String)]) -> Result<T> 
 ///
 /// Will return an error if any of the object-type fields cannot be
 /// serialized to JSON and URL-encoded.
-pub fn encode<T: Serialize>(value: &T) -> Result<String> {
+pub fn url_encode<T: Serialize>(value: &T) -> Result<String> {
     let encoded = form_encode(value)?.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>();
     Ok(encoded.join("&"))
 }
@@ -129,7 +129,7 @@ pub fn encode<T: Serialize>(value: &T) -> Result<String> {
 ///
 /// # Errors
 /// // TODO: Add errors
-pub fn decode<T: DeserializeOwned>(qs: &str) -> Result<T> {
+pub fn url_decode<T: DeserializeOwned>(qs: &str) -> Result<T> {
     let form = qs
         .split('&')
         .map(|param| {
@@ -170,7 +170,7 @@ mod tests {
             },
         };
 
-        let serialized = super::encode(&data).expect("should serialize");
+        let serialized = super::url_encode(&data).expect("should serialize");
         let expected = r#"field_1=value1&field_2=value2&nested=%7B%22field_3%22%3A%22value3%22%2C%22field_4%22%3A%22value4%22%7D"#;
         assert_eq!(serialized, expected);
     }
@@ -187,23 +187,23 @@ mod tests {
         }
 
         let u = E::Unit;
-        assert_eq!(super::encode(&u).unwrap(), r#"Unit"#);
+        assert_eq!(super::url_encode(&u).unwrap(), r#"Unit"#);
 
         let n = E::Newtype(1);
-        assert_eq!(super::encode(&n).unwrap(), r#"Newtype=1"#);
+        assert_eq!(super::url_encode(&n).unwrap(), r#"Newtype=1"#);
 
         let t = E::Tuple(1, 2);
-        assert_eq!(super::encode(&t).unwrap(), r#"Tuple=%5B1%2C2%5D"#);
+        assert_eq!(super::url_encode(&t).unwrap(), r#"Tuple=%5B1%2C2%5D"#);
 
         let s = E::Struct { a: 1 };
-        assert_eq!(super::encode(&s).unwrap(), r#"Struct=%7B%22a%22%3A1%7D"#);
+        assert_eq!(super::url_encode(&s).unwrap(), r#"Struct=%7B%22a%22%3A1%7D"#);
     }
 
     #[test]
     fn decode_struct() {
         let url = r#"field_1=value1&field_2=value2&nested=%7B%22field_3%22%3A%22value3%22%2C%22field_4%22%3A%22value4%22%7D"#;
 
-        let deserialized: TopLevel = super::decode(&url).expect("should deserialize");
+        let deserialized: TopLevel = super::url_decode(&url).expect("should deserialize");
         let expected = TopLevel {
             field_1: Some("value1".to_string()),
             field_2: "value2".to_string(),

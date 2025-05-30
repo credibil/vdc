@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use anyhow::Result;
-use credibil_core::urlencode;
+use credibil_core::html;
 use serde::{Deserialize, Serialize};
 
 use crate::types::{AuthorizationDefinition, AuthorizationDetail, ClientAssertion};
@@ -142,7 +142,7 @@ impl TokenRequest {
     /// serialized to JSON and URL-encoded. (`authorization_details` and
     /// `client_assertion`).
     pub fn form_encode(&self) -> Result<Vec<(String, String)>> {
-        urlencode::form_encode(self)
+        html::form_encode(self)
     }
 
     /// Create a `TokenRequest` from a `x-www-form-urlencoded` form.
@@ -153,7 +153,7 @@ impl TokenRequest {
     /// URL-encoded JSON, cannot be decoded. (`authorization_details` and
     /// `client_assertion`).
     pub fn form_decode(form: &[(String, String)]) -> Result<Self> {
-        urlencode::form_decode(form)
+        html::form_decode(form)
     }
 }
 

@@ -14,7 +14,7 @@ use crate::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::provider::{Metadata, Provider, StateStore};
 use crate::state::Expire;
 use crate::types::{
-    ClientId, DeviceFlow, GenerateRequest, GenerateResponse, RequestObject, ResponseType,
+    ClientId, CreateRequest, DeviceFlow, CreateResponse, RequestObject, ResponseType,
 };
 
 /// Create an Authorization Request.
@@ -24,8 +24,8 @@ use crate::types::{
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
 async fn create_request(
-    verifier: &str, provider: &impl Provider, request: GenerateRequest,
-) -> Result<GenerateResponse> {
+    verifier: &str, provider: &impl Provider, request: CreateRequest,
+) -> Result<CreateResponse> {
     let uri_token = generate::uri_token();
 
     let Ok(metadata) = Metadata::verifier(provider, verifier).await else {
@@ -47,10 +47,10 @@ async fn create_request(
     // FIXME: replace hard-coded endpoints with Provider-set values
     let response = if request.device_flow == DeviceFlow::CrossDevice {
         req_obj.client_id = ClientId::RedirectUri(format!("{verifier}/post"));
-        GenerateResponse::Uri(format!("{verifier}/request/{uri_token}"))
+        CreateResponse::Uri(format!("{verifier}/request/{uri_token}"))
     } else {
         req_obj.client_id = ClientId::RedirectUri(format!("{verifier}/callback"));
-        GenerateResponse::Object(req_obj.clone())
+        CreateResponse::Object(req_obj.clone())
     };
 
     // save request object in state
@@ -63,14 +63,14 @@ async fn create_request(
     Ok(response)
 }
 
-impl<P: Provider> Handler<GenerateResponse, P> for Request<GenerateRequest> {
+impl<P: Provider> Handler<CreateResponse, P> for Request<CreateRequest> {
     type Error = Error;
 
     async fn handle(
         self, verifier: &str, provider: &P,
-    ) -> Result<impl Into<Response<GenerateResponse>>, Self::Error> {
+    ) -> Result<impl Into<Response<CreateResponse>>, Self::Error> {
         create_request(verifier, provider, self.body).await
     }
 }
 
-impl Body for GenerateRequest {}
+impl Body for CreateRequest {}

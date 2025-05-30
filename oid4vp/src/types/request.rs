@@ -3,7 +3,7 @@ use std::io::Cursor;
 
 use anyhow::{Context, Result, anyhow};
 use base64ct::{Base64, Encoding};
-use credibil_core::{Kind, urlencode};
+use credibil_core::{Kind, html};
 pub use credibil_identity::SignerExt;
 use credibil_jose::{JwsBuilder, PublicKeyJwk};
 use credibil_vdc::dcql::DcqlQuery;
@@ -19,7 +19,7 @@ use crate::types::metadata::Wallet;
 /// Authorization Request Object.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
-pub struct GenerateRequest {
+pub struct CreateRequest {
     /// The DCQL query to use to request the Verifiable Presentation.
     pub dcql_query: DcqlQuery,
 
@@ -57,7 +57,7 @@ pub enum DeviceFlow {
 /// The response to the originator of the Request Object Request.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[allow(clippy::large_enum_variant)]
-pub enum GenerateResponse {
+pub enum CreateResponse {
     /// The generated Authorization Request Object, ready to send to the Wallet.
     #[serde(rename = "request_object")]
     Object(RequestObject),
@@ -68,14 +68,14 @@ pub enum GenerateResponse {
     Uri(String),
 }
 
-impl Default for GenerateResponse {
+impl Default for CreateResponse {
     fn default() -> Self {
         Self::Uri(String::new())
     }
 }
 
-impl GenerateResponse {
-    /// Convenience method to convert the `GenerateResponse` to a QR code.
+impl CreateResponse {
+    /// Convenience method to convert the `CreateResponse` to a QR code.
     ///
     /// If the `request_object` is set, the method will generate a QR code for
     /// that in favour of the `request_uri`.
@@ -178,6 +178,33 @@ pub struct RequestObject {
 }
 
 impl RequestObject {
+    /// Generate an Authorization Request query string with a base64 encoded
+    /// Request Object.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `Error::ServerError` error if the Request Object cannot be
+    /// serialized.
+    pub async fn url_encode(&self, signer: &impl SignerExt) -> Result<String> {
+        let payload: RequestObjectClaims = self.clone().into();
+
+        let key_ref = signer.verification_method().await?.try_into()?;
+        let jws = JwsBuilder::new()
+            .typ(JwtType::OauthAuthzReqJwt)
+            .payload(payload)
+            .key_ref(&key_ref)
+            .add_signer(signer)
+            .build()
+            .await
+            .context("building jwt")?;
+
+        let encoded = jws.encode().context("encoding jws")?;
+        let client_id =
+            html::url_encode(&self.client_id.to_string()).context("encoding `client_id`")?;
+
+        Ok(format!("{client_id}&request={encoded}"))
+    }
+
     /// Generate qrcode for Request Object.
     /// Use the `endpoint` parameter to specify the Wallet's endpoint using deep
     /// link or direct call format.
@@ -194,7 +221,7 @@ impl RequestObject {
     /// Returns an `Error::ServerError` error if the Request Object cannot be
     /// serialized.
     pub async fn to_qrcode(&self, endpoint: &str, signer: &impl SignerExt) -> Result<String> {
-        let qs = self.encode(signer).await?;
+        let qs = self.url_encode(signer).await?;
 
         // generate qr code
         let qr_code = QrCode::new(format!("{endpoint}{qs}")).context("failed to create QR code")?;
@@ -209,45 +236,6 @@ impl RequestObject {
 
         // base64 encode image
         Ok(format!("data:image/png;base64,{}", Base64::encode_string(buffer.as_slice())))
-    }
-
-    /// Generate an Authorization Request query string with URL-encoded
-    /// parameters.
-    ///
-    /// # Errors
-    ///
-    /// Returns an `Error::ServerError` error if the Request Object cannot be
-    /// serialized.
-    #[deprecated(since = "0.1.0", note = "please use `url_value` instead")]
-    pub fn url_params(&self) -> Result<String> {
-        serde_urlencoded::to_string(self).context("creating query string")
-    }
-
-    /// Generate an  Authorization Request query string with a base64 encoded
-    /// Request Object.
-    ///
-    /// # Errors
-    ///
-    /// Returns an `Error::ServerError` error if the Request Object cannot be
-    /// serialized.
-    pub async fn encode(&self, signer: &impl SignerExt) -> Result<String> {
-        let payload: RequestObjectClaims = self.clone().into();
-
-        let key_ref = signer.verification_method().await?.try_into()?;
-        let jws = JwsBuilder::new()
-            .typ(JwtType::OauthAuthzReqJwt)
-            .payload(payload)
-            .key_ref(&key_ref)
-            .add_signer(signer)
-            .build()
-            .await
-            .context("building jwt")?;
-
-        let encoded = jws.encode().context("encoding jws")?;
-        let client_id =
-            urlencode::encode(&self.client_id.to_string()).context("encoding `client_id`")?;
-
-        Ok(format!("{client_id}&request={encoded}"))
     }
 }
 
@@ -528,7 +516,7 @@ impl RequestUriRequest {
     /// serialized to JSON and URL-encoded. (`authorization_details` and
     /// `client_assertion`).
     pub fn form_encode(&self) -> Result<Vec<(String, String)>> {
-        urlencode::form_encode(self)
+        html::form_encode(self)
     }
 
     /// Create a `RequestUriRequest` from a `x-www-form-urlencoded` form.
@@ -538,7 +526,7 @@ impl RequestUriRequest {
     /// Will return an error if any of the object-type fields, assumed to be
     /// URL-encoded JSON, cannot be decoded.
     pub fn form_decode(form: &[(String, String)]) -> Result<Self> {
-        urlencode::form_decode(form)
+        html::form_decode(form)
     }
 }
 
@@ -645,7 +633,7 @@ mod tests {
         };
 
         let querystring = request_object
-            .encode(&Verifier::new("oid4vp_verifier_request_tests_querystring").await)
+            .url_encode(&Verifier::new("oid4vp_verifier_request_tests_querystring").await)
             .await
             .unwrap();
 

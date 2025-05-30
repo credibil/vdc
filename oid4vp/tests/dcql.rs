@@ -8,7 +8,7 @@ use credibil_oid4vp::vdc::{
     DcqlQuery, MdocBuilder, SdJwtVcBuilder, W3cVcBuilder, mso_mdoc, sd_jwt, w3c_vc,
 };
 use credibil_oid4vp::{
-    AuthorizationResponse, DeviceFlow, GenerateRequest, GenerateResponse, ResponseMode, did_jwk,
+    AuthorizationResponse, CreateRequest, DeviceFlow, CreateResponse, ResponseMode, did_jwk,
     vp_token,
 };
 use serde_json::{Value, json};
@@ -57,7 +57,7 @@ async fn multiple_claims() {
     });
     let dcql_query = serde_json::from_value::<DcqlQuery>(query_json).expect("should deserialize");
 
-    let request = GenerateRequest {
+    let request = CreateRequest {
         dcql_query,
         client_id: VERIFIER_ID.to_string(),
         device_flow: DeviceFlow::SameDevice,
@@ -70,7 +70,7 @@ async fn multiple_claims() {
         .expect("should create request");
 
     // extract request object and send to Wallet
-    let GenerateResponse::Object(request_object) = response.body else {
+    let CreateResponse::Object(request_object) = response.body else {
         panic!("should be object");
     };
 
@@ -153,7 +153,7 @@ async fn multiple_credentials() {
     });
     let dcql_query = serde_json::from_value(query_json).expect("should deserialize");
 
-    let request = GenerateRequest {
+    let request = CreateRequest {
         dcql_query,
         client_id: VERIFIER_ID.to_string(),
         device_flow: DeviceFlow::SameDevice,
@@ -166,7 +166,7 @@ async fn multiple_credentials() {
         .expect("should create request");
 
     // extract request object and send to Wallet
-    let GenerateResponse::Object(request_object) = response.body else {
+    let CreateResponse::Object(request_object) = response.body else {
         panic!("should be object");
     };
 

@@ -1,4 +1,6 @@
-//! # Axum Response
+//! # HTTP
+//!
+//! HTTP helper methods.
 
 use bytes::Bytes;
 use http::{Response, StatusCode, header};
