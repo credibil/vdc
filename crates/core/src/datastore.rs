@@ -24,7 +24,7 @@ pub trait Datastore: Sized + Send + Sync {
     /// Fetches all matching items from the underlying store.
     fn get_all(
         &self, owner: &str, partition: &str,
-    ) -> impl Future<Output = impl Iterator<Item = (String, Vec<u8>)>> + Send;
+    ) -> impl Future<Output = Result<Vec<(String, Vec<u8>)>>> + Send;
 
     // /// Stores data items in the underlying store.
     // fn put_many(

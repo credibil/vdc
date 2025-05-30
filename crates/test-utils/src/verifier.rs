@@ -83,7 +83,7 @@ impl Datastore for Verifier {
 
     async fn get_all(
         &self, owner: &str, partition: &str,
-    ) -> impl Iterator<Item = (String, Vec<u8>)> {
+    ) -> Result<Vec<(String, Vec<u8>)>> {
         self.datastore.get_all(owner, partition).await
     }
 }

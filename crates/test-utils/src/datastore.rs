@@ -35,12 +35,12 @@ impl Store {
         Ok(())
     }
 
-    pub async fn get_all(
-        &self, owner: &str, partition: &str,
-    ) -> impl Iterator<Item = (String, Vec<u8>)> {
-        STORE
+    pub async fn get_all(&self, owner: &str, partition: &str) -> Result<Vec<(String, Vec<u8>)>> {
+        let all = STORE
             .iter()
             .filter(move |r| r.key().starts_with(&format!("{owner}-{partition}-")))
             .map(|r| (r.key().to_string(), r.value().clone()))
+            .collect::<Vec<_>>();
+        Ok(all)
     }
 }
