@@ -11,7 +11,7 @@ const ISSUER_METADATA: &[u8] = include_bytes!("../data/issuer-metadata.json");
 const SERVER_METADATA: &[u8] = include_bytes!("../data/server-metadata.json");
 const NORMAL_USER: &[u8] = include_bytes!("../data/normal-user.json");
 const PENDING_USER: &[u8] = include_bytes!("../data/pending-user.json");
-const CLIENT: &[u8] = include_bytes!("../data/client.json");
+const CLIENT_METADATA: &[u8] = include_bytes!("../data/client.json");
 
 #[derive(Clone)]
 pub struct Issuer {
@@ -25,9 +25,9 @@ impl Issuer {
         let datastore = Store::open();
         datastore.put("owner", "ISSUER", issuer_id, ISSUER_METADATA).await.unwrap();
         datastore.put("owner", "SERVER", issuer_id, SERVER_METADATA).await.unwrap();
+        datastore.put("owner", "CLIENT", "http://localhost:8082", CLIENT_METADATA).await.unwrap();
         datastore.put("owner", "SUBJECT", "normal_user", NORMAL_USER).await.unwrap();
         datastore.put("owner", "SUBJECT", "pending_user", PENDING_USER).await.unwrap();
-        datastore.put("owner", "CLIENT", "http://localhost:8082", CLIENT).await.unwrap();
 
         Self {
             datastore,
@@ -79,9 +79,7 @@ impl Datastore for Issuer {
         self.datastore.delete(owner, partition, key).await
     }
 
-    async fn get_all(
-        &self, owner: &str, partition: &str,
-    ) -> Result<Vec<(String, Vec<u8>)>> {
+    async fn get_all(&self, owner: &str, partition: &str) -> Result<Vec<(String, Vec<u8>)>> {
         self.datastore.get_all(owner, partition).await
     }
 }
