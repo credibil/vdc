@@ -11,7 +11,7 @@ const ISSUER_METADATA: &[u8] = include_bytes!("../data/issuer-metadata.json");
 const SERVER_METADATA: &[u8] = include_bytes!("../data/server-metadata.json");
 const NORMAL_USER: &[u8] = include_bytes!("../data/normal-user.json");
 const PENDING_USER: &[u8] = include_bytes!("../data/pending-user.json");
-const CLIENT_METADATA: &[u8] = include_bytes!("../data/client.json");
+const CLIENT_METADATA: &[u8] = include_bytes!("../data/client-metadata.json");
 
 #[derive(Clone)]
 pub struct Issuer {

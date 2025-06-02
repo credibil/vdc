@@ -196,7 +196,7 @@ pub struct CredentialStatus {
 pub enum CredentialStatusType {
     /// A bitstring credential status list method for checking credential
     /// status.
-    #[serde(rename = "TokenStatusListEntry", rename_all = "camelCase")]
+    #[serde(rename = "tokenStatusListEntry")]
     TokenStatus(StatusClaim),
 }
 
