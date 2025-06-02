@@ -28,7 +28,7 @@ use crate::pkce;
 use crate::provider::{Metadata, Provider, StateStore};
 use crate::state::{Authorized, Expire, Offered, Token};
 use crate::types::{
-    AuthorizationDefinition, AuthorizationDetail, AuthorizedDetail, Issuer, TokenGrantType,
+    AuthorizationDefinition, AuthorizationDetail, AuthorizedDetail, IssuerMetadata, TokenGrantType,
     TokenRequest, TokenResponse, TokenType,
 };
 
@@ -283,7 +283,7 @@ impl TokenRequest {
 
 // Verify requested claims exist as supported claims and all mandatory claims
 // have been requested.
-fn verify_claims(issuer: &Issuer, detail: &AuthorizationDetail) -> Result<()> {
+fn verify_claims(issuer: &IssuerMetadata, detail: &AuthorizationDetail) -> Result<()> {
     let Some(claims) = &detail.claims else {
         return Ok(());
     };

@@ -20,14 +20,14 @@ use crate::provider::{Metadata, Provider, StateStore, Subject};
 use crate::state::{Expire, Offered};
 use crate::types::{
     AuthorizationCodeGrant, AuthorizationDefinition, AuthorizationDetail, AuthorizationDetailType,
-    AuthorizedDetail, CreateOfferRequest, CreateOfferResponse, CredentialOffer, Grants, Issuer,
-    OfferType, PreAuthorizedCodeGrant, SendBy, Server, TxCode,
+    AuthorizedDetail, CreateOfferRequest, CreateOfferResponse, CredentialOffer, Grants,
+    IssuerMetadata, OfferType, PreAuthorizedCodeGrant, SendBy, ServerMetadata, TxCode,
 };
 
 #[derive(Debug, Default)]
 struct Context {
-    issuer: Issuer,
-    server: Server,
+    issuer: IssuerMetadata,
+    server: ServerMetadata,
 }
 
 /// Credential Offer request handler generates and returns a Credential Offer.

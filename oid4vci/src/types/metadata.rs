@@ -13,7 +13,7 @@ pub struct MetadataRequest;
 /// Response containing the Credential Issuer's configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(transparent)]
-pub struct MetadataResponse(pub Issuer);
+pub struct MetadataResponse(pub IssuerMetadata);
 
 /// Request to retrieve the Credential Issuer's authorization server
 /// configuration.
@@ -32,14 +32,14 @@ pub struct ServerRequest {
 /// configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(transparent)]
-pub struct ServerResponse(pub Server);
+pub struct ServerResponse(pub ServerMetadata);
 
 /// The registration request.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct RegistrationRequest {
     /// Metadata provided by the client undertaking registration.
     #[serde(flatten)]
-    pub client_metadata: Client,
+    pub client_metadata: ClientMetadata,
 }
 
 /// The registration response for a successful request.
@@ -47,13 +47,13 @@ pub struct RegistrationRequest {
 pub struct RegistrationResponse {
     /// Registered Client metadata.
     #[serde(flatten)]
-    pub client_metadata: Client,
+    pub client_metadata: ClientMetadata,
 }
 
 /// The Credential Issuer's configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[allow(clippy::struct_field_names)]
-pub struct Issuer {
+pub struct IssuerMetadata {
     /// The Credential Issuer's identifier.
     #[serde(skip_serializing_if = "String::is_empty", default)]
     pub credential_issuer: String,
@@ -140,7 +140,7 @@ pub struct Issuer {
     pub credential_configurations_supported: HashMap<String, CredentialConfiguration>,
 }
 
-impl Issuer {
+impl IssuerMetadata {
     /// Returns the `credential_configuration_id` for a given format.
     ///
     /// # Errors
@@ -523,7 +523,7 @@ pub struct Image {
 /// In the case of Presentation, the Wallet is the Authorization Server and the
 /// Verifier is the Client.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct Client {
+pub struct ClientMetadata {
     /// OAuth 2.0 Client
     #[serde(flatten)]
     pub oauth: OAuthClient,
@@ -538,7 +538,7 @@ pub struct Client {
 /// OAuth 2.0 Authorization Server metadata.
 /// See RFC 8414 - Authorization Server Metadata
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct Server {
+pub struct ServerMetadata {
     /// OAuth 2.0 Server
     #[serde(flatten)]
     pub oauth: OAuthServer,

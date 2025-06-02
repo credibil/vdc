@@ -30,7 +30,7 @@ use crate::provider::{Metadata, Provider, StateStore, Subject};
 use crate::state::{Deferred, Expire, Token};
 use crate::types::{
     AuthorizedDetail, Credential, CredentialConfiguration, CredentialRequest, CredentialResponse,
-    Dataset, Issuer, MultipleProofs, Proof, ProofClaims, RequestBy, SingleProof,
+    Dataset, IssuerMetadata, MultipleProofs, Proof, ProofClaims, RequestBy, SingleProof,
 };
 
 /// Credential request handler.
@@ -91,7 +91,7 @@ impl Body for CredentialRequest {}
 #[derive(Debug)]
 struct Context {
     state: State<Token>,
-    issuer: Issuer,
+    issuer: IssuerMetadata,
     configuration: CredentialConfiguration,
     proof_kids: Vec<String>,
 }

@@ -13,8 +13,8 @@ use credibil_oid4vci::identity::SignerExt;
 use credibil_oid4vci::identity::did::Document;
 use credibil_oid4vci::jose::JwsBuilder;
 use credibil_oid4vci::{
-    CredentialOffer, CredentialRequest, CredentialResponse, Issuer, JwtType, NonceResponse,
-    ProofClaims, Server, TokenGrantType, TokenRequest, TokenResponse, sd_jwt,
+    CredentialOffer, CredentialRequest, CredentialResponse, IssuerMetadata, JwtType, NonceResponse,
+    ProofClaims, ServerMetadata, TokenGrantType, TokenRequest, TokenResponse, sd_jwt,
 };
 use credibil_oid4vp::identity::se::Algorithm;
 use credibil_oid4vp::jose::{self, Jwt};
@@ -87,10 +87,10 @@ async fn credential_offer(
     // Fetch metadata
     // --------------------------------------------------
     let meta_uri = format!("{issuer_uri}/.well-known/openid-credential-issuer");
-    let issuer = http.get(&meta_uri).send().await?.json::<Issuer>().await?;
+    let issuer = http.get(&meta_uri).send().await?.json::<IssuerMetadata>().await?;
 
     let server_uri = format!("{issuer_uri}/.well-known/oauth-authorization-server");
-    let server = http.get(&server_uri).send().await?.json::<Server>().await?;
+    let server = http.get(&server_uri).send().await?.json::<ServerMetadata>().await?;
 
     // --------------------------------------------------
     // Fetch token

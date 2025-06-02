@@ -17,7 +17,7 @@ use credibil_identity::{IdentityResolver, SignerExt};
 use credibil_status::StatusStore;
 
 pub(crate) use crate::common::state::StateStore;
-use crate::types::{Client, Dataset, Issuer, Server};
+use crate::types::{ClientMetadata, Dataset, IssuerMetadata, ServerMetadata};
 
 const ISSUER: &str = "ISSUER";
 const SERVER: &str = "SERVER";
@@ -41,17 +41,23 @@ impl<T> Provider for T where
 /// and `Server` metadata to the library.
 pub trait Metadata: Send + Sync {
     /// Client (wallet) metadata for the specified issuance client.
-    fn client(&self, client_id: &str) -> impl Future<Output = Result<Client>> + Send;
+    fn client(&self, client_id: &str) -> impl Future<Output = Result<ClientMetadata>> + Send;
 
     /// Credential Issuer metadata for the specified issuer.
-    fn issuer(&self, credential_issuer: &str) -> impl Future<Output = Result<Issuer>> + Send;
+    fn issuer(
+        &self, credential_issuer: &str,
+    ) -> impl Future<Output = Result<IssuerMetadata>> + Send;
 
     /// Authorization Server metadata for the specified issuer/server.
-    fn server(&self, credential_issuer: &str) -> impl Future<Output = Result<Server>> + Send;
+    fn server(
+        &self, credential_issuer: &str,
+    ) -> impl Future<Output = Result<ServerMetadata>> + Send;
 
     /// Used to dynamically register OAuth 2.0 clients with the authorization
     /// server.
-    fn register(&self, client: &Client) -> impl Future<Output = Result<Client>> + Send;
+    fn register(
+        &self, client: &ClientMetadata,
+    ) -> impl Future<Output = Result<ClientMetadata>> + Send;
 }
 
 /// The Subject trait specifies how the library expects issuance subject (user)
@@ -73,28 +79,28 @@ pub trait Subject: Send + Sync {
 }
 
 impl<T: Datastore> Metadata for T {
-    async fn client(&self, client_id: &str) -> Result<Client> {
+    async fn client(&self, client_id: &str) -> Result<ClientMetadata> {
         let Some(block) = Datastore::get(self, "owner", CLIENT, client_id).await? else {
             return Err(anyhow!("could not find client"));
         };
         Ok(serde_json::from_slice(&block)?)
     }
 
-    async fn issuer(&self, credential_issuer: &str) -> Result<Issuer> {
+    async fn issuer(&self, credential_issuer: &str) -> Result<IssuerMetadata> {
         let Some(block) = Datastore::get(self, "owner", ISSUER, credential_issuer).await? else {
             return Err(anyhow!("could not find issuer"));
         };
         Ok(serde_json::from_slice(&block)?)
     }
 
-    async fn server(&self, issuer: &str) -> Result<Server> {
+    async fn server(&self, issuer: &str) -> Result<ServerMetadata> {
         let Some(block) = Datastore::get(self, "owner", SERVER, issuer).await? else {
             return Err(anyhow!("could not find server for issuer"));
         };
         Ok(serde_json::from_slice(&block)?)
     }
 
-    async fn register(&self, client: &Client) -> Result<Client> {
+    async fn register(&self, client: &ClientMetadata) -> Result<ClientMetadata> {
         let mut client = client.clone();
         client.oauth.client_id = uuid::Uuid::new_v4().to_string();
 

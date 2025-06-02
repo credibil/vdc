@@ -85,9 +85,9 @@ impl AuthorizationRequest {
     }
 
     /// Convert a url-encoded string into an `AuthorizationRequest`.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Returns an `Error::ServerError` error if the string cannot be decoded
     /// to an `AuthorizationRequest`.
     pub fn url_decode(s: &str) -> Result<Self> {

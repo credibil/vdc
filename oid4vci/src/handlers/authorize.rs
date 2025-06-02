@@ -23,7 +23,7 @@ use crate::provider::{Metadata, Provider, StateStore, Subject};
 use crate::state::{Authorized, Expire, Offered};
 use crate::types::{
     AuthorizationDefinition, AuthorizationDetail, AuthorizationDetailType, AuthorizationRequest,
-    AuthorizationResponse, AuthorizedDetail, Issuer, RequestObject,
+    AuthorizationResponse, AuthorizedDetail, IssuerMetadata, RequestObject,
 };
 
 /// Authorization request handler.
@@ -131,7 +131,7 @@ impl Body for AuthorizationRequest {}
 
 #[derive(Debug, Default)]
 pub struct Context {
-    pub issuer: Issuer,
+    pub issuer: IssuerMetadata,
     pub auth_dets: HashMap<String, AuthorizationDetail>,
     pub is_par: bool,
 }
