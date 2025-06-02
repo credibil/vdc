@@ -6,9 +6,8 @@
 
 use anyhow::Context;
 use chrono::Utc;
+use credibil_core::state::State;
 
-use crate::common::generate;
-use crate::common::state::State;
 use crate::error::invalid;
 use crate::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::provider::{Metadata, Provider, StateStore};
@@ -16,7 +15,7 @@ use crate::state::Expire;
 use crate::types::{
     ClientId, CreateRequest, CreateResponse, DeviceFlow, RequestObject, ResponseType,
 };
-use crate::{AuthorizationRequest, RequestUri, RequestUriMethod};
+use crate::{AuthorizationRequest, RequestUri, RequestUriMethod, generate};
 
 /// Create an Authorization Request.
 ///
@@ -62,7 +61,7 @@ async fn create_request(
         expires_at: Utc::now() + Expire::Request.duration(),
         body: req_obj,
     };
-    StateStore::put(provider, &uri_token, &state).await.context("saving state")?;
+    StateStore::put(provider, verifier, &uri_token, &state).await.context("saving state")?;
 
     Ok(CreateResponse(auth_req))
 }

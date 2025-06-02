@@ -493,8 +493,9 @@ async fn populate(owner: &str) -> Wallet {
     let holder_jwk = did_jwk(&did_url, &wallet).await.expect("should get key");
 
     // create a status list token
+    let statuslist_id = format!("{ISSUER_ID}/statuslists/1");
     let mut status_list = StatusList::new().expect("should create status list");
-    let status_claim = status_list.add_entry("http://credibil.io/statuslists/1").unwrap();
+    let status_claim = status_list.add_entry(&statuslist_id).unwrap();
     let token = TokenBuilder::new()
         .status_list(status_list.clone())
         .uri("https://example.com/statuslists/1")
@@ -503,9 +504,7 @@ async fn populate(owner: &str) -> Wallet {
         .await
         .expect("should build status list token");
     let data = serde_json::to_vec(&token).expect("should serialize");
-    Datastore::put(issuer, "owner", "STATUSTOKEN", "http://credibil.io/statuslists/1", &data)
-        .await
-        .unwrap();
+    Datastore::put(issuer, ISSUER_ID, "STATUSTOKEN", &statuslist_id, &data).await.unwrap();
 
     // load credentials
     let vct = "https://credentials.example.com/identity_credential";

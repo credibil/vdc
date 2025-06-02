@@ -33,16 +33,17 @@ use crate::types::{NotificationRequest, NotificationResponse};
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
 async fn notification(
-    _issuer: &str, provider: &impl Provider,
+    issuer: &str, provider: &impl Provider,
     request: Request<NotificationRequest, NotificationHeaders>,
 ) -> Result<NotificationResponse> {
     // verify access token
-    let _ = StateStore::get::<Token>(provider, &request.headers.authorization)
+    let _ = StateStore::get::<Token>(provider, issuer, &request.headers.authorization)
         .await
         .map_err(|_| Error::AccessDenied("invalid access token".to_string()))?;
 
     let request = request.body;
-    let Ok(_state) = StateStore::get::<Token>(provider, &request.notification_id).await else {
+    let Ok(_state) = StateStore::get::<Token>(provider, issuer, &request.notification_id).await
+    else {
         return Err(Error::AccessDenied("invalid notification id".to_string()));
     };
 

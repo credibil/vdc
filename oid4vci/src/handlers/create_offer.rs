@@ -9,11 +9,11 @@ use std::vec;
 
 use anyhow::Context as _;
 use chrono::Utc;
+use credibil_core::state::State;
 use http::StatusCode;
 
-use crate::common::generate;
-use crate::common::state::State;
 use crate::error::{invalid, server};
+use crate::generate;
 use crate::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::oauth::GrantType;
 use crate::provider::{Metadata, Provider, StateStore, Subject};
@@ -58,7 +58,7 @@ async fn create_offer(
         || grant_types.contains(&GrantType::AuthorizationCode)
     {
         let auth_items = if grant_types.contains(&GrantType::PreAuthorizedCode) {
-            Some(authorize(provider, &request).await?)
+            Some(authorize(issuer, provider, &request).await?)
         } else {
             None
         };
@@ -72,7 +72,7 @@ async fn create_offer(
                 tx_code: tx_code.clone(),
             },
         };
-        StateStore::put(provider, &state_key, &state).await.context("saving state")?;
+        StateStore::put(provider, issuer, &state_key, &state).await.context("saving state")?;
     }
 
     // respond with Offer object or uri?
@@ -94,7 +94,7 @@ async fn create_offer(
         expires_at: Utc::now() + Expire::Authorized.duration(),
         body: credential_offer,
     };
-    StateStore::put(provider, &uri_token, &state).await.context("saving state")?;
+    StateStore::put(provider, issuer, &uri_token, &state).await.context("saving state")?;
 
     Ok(Response {
         status: StatusCode::CREATED,
@@ -216,7 +216,7 @@ impl CreateOfferRequest {
 
 /// Authorize requested credentials for the subject.
 async fn authorize(
-    provider: &impl Provider, request: &CreateOfferRequest,
+    issuer: &str, provider: &impl Provider, request: &CreateOfferRequest,
 ) -> Result<Vec<AuthorizedDetail>> {
     // skip authorization if not pre-authorized
 
@@ -224,7 +224,7 @@ async fn authorize(
     let subject_id = request.subject_id.clone().unwrap_or_default();
 
     for config_id in request.credential_configuration_ids.clone() {
-        let identifiers = Subject::authorize(provider, &subject_id, &config_id)
+        let identifiers = Subject::authorize(provider, issuer, &subject_id, &config_id)
             .await
             .context("authorizing holder")?;
 

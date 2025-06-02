@@ -19,7 +19,7 @@ async fn same_device() {
     //     .with_credential("EmployeeID_W3C_VC")
     //     .build();
     // let response =
-    //     endpoint::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
+    //     endpoint::handle(ISSUER, request, &provider).await.expect("should create offer");
 
     // // create offer to 'send' to the app
     // let body = json!({

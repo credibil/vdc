@@ -12,6 +12,10 @@ const SERVER_METADATA: &[u8] = include_bytes!("../data/server-metadata.json");
 const NORMAL_USER: &[u8] = include_bytes!("../data/normal-user.json");
 const PENDING_USER: &[u8] = include_bytes!("../data/pending-user.json");
 const CLIENT_METADATA: &[u8] = include_bytes!("../data/client-metadata.json");
+const METADATA: &str = "METADATA";
+const ISSUER: &str = "ISSUER";
+const SERVER: &str = "SERVER";
+const SUBJECT: &str = "SUBJECT";
 
 #[derive(Clone)]
 pub struct Issuer {
@@ -21,17 +25,17 @@ pub struct Issuer {
 
 impl Issuer {
     #[must_use]
-    pub async fn new(issuer_id: &str) -> Self {
+    pub async fn new(issuer: &str) -> Self {
         let datastore = Store::open();
-        datastore.put("owner", "ISSUER", issuer_id, ISSUER_METADATA).await.unwrap();
-        datastore.put("owner", "SERVER", issuer_id, SERVER_METADATA).await.unwrap();
-        datastore.put("owner", "CLIENT", "http://localhost:8082", CLIENT_METADATA).await.unwrap();
-        datastore.put("owner", "SUBJECT", "normal_user", NORMAL_USER).await.unwrap();
-        datastore.put("owner", "SUBJECT", "pending_user", PENDING_USER).await.unwrap();
+        datastore.put(issuer, METADATA, ISSUER, ISSUER_METADATA).await.unwrap();
+        datastore.put(issuer, METADATA, SERVER, SERVER_METADATA).await.unwrap();
+        datastore.put(issuer, METADATA, "http://localhost:8082", CLIENT_METADATA).await.unwrap();
+        datastore.put(issuer, SUBJECT, "normal_user", NORMAL_USER).await.unwrap();
+        datastore.put(issuer, SUBJECT, "pending_user", PENDING_USER).await.unwrap();
 
         Self {
             datastore,
-            identity: DidIdentity::new(issuer_id).await,
+            identity: DidIdentity::new(issuer).await,
         }
     }
 

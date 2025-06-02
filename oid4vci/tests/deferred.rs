@@ -21,13 +21,13 @@ async fn carol() -> &'static Wallet {
     CAROL.get_or_init(|| async { Wallet::new("https://deferred.io/carol").await }).await
 }
 const CAROL_SUBJECT: &str = "pending_user";
-const ISSUER_ID: &str = "http://localhost:8080";
+const ISSUER: &str = "http://localhost:8080";
 
 // Should return a credential when using the pre-authorized code flow and the
 // credential offer to the Wallet is made by value.
 #[tokio::test]
 async fn deferred() {
-    let provider = Issuer::new(ISSUER_ID).await;
+    let provider = Issuer::new(ISSUER).await;
     let carol = carol().await;
 
     // --------------------------------------------------
@@ -38,7 +38,7 @@ async fn deferred() {
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
-        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
+        credibil_oid4vci::handle(ISSUER, request, &provider).await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -54,12 +54,12 @@ async fn deferred() {
         })
         .build();
     let token =
-        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+        credibil_oid4vci::handle(ISSUER, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a proof for a credential request
     // --------------------------------------------------
-    let nonce = credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider)
+    let nonce = credibil_oid4vci::handle(ISSUER, NonceRequest, &provider)
         .await
         .expect("should return nonce");
 
@@ -73,7 +73,7 @@ async fn deferred() {
 
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
-        .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
+        .payload(ProofClaims::new().credential_issuer(ISSUER).nonce(&nonce.c_nonce))
         .key_ref(&key)
         .add_signer(carol)
         .build()
@@ -97,7 +97,7 @@ async fn deferred() {
         },
     };
 
-    let response = credibil_oid4vci::handle(ISSUER_ID, request, &provider)
+    let response = credibil_oid4vci::handle(ISSUER, request, &provider)
         .await
         .expect("should return credential");
 
@@ -107,17 +107,16 @@ async fn deferred() {
     // --------------------------------------------------
     let credential_identifier = &details[0].credential_identifiers[0];
 
-    let block =
-        Datastore::get(&provider, "owner", "SUBJECT", CAROL_SUBJECT).await.unwrap().unwrap();
-    let mut subject: HashMap<String, Dataset> = serde_json::from_slice(&block).unwrap();
+    let data = Datastore::get(&provider, ISSUER, "SUBJECT", CAROL_SUBJECT).await.unwrap().unwrap();
+    let mut subject: HashMap<String, Dataset> = serde_json::from_slice(&data).unwrap();
 
     let mut credential: Dataset = subject.get(credential_identifier).unwrap().clone();
     credential.pending = false;
     subject.insert(credential_identifier.to_string(), credential);
 
     let data = serde_json::to_vec(&subject).unwrap();
-    Datastore::delete(&provider, "owner", "SUBJECT", CAROL_SUBJECT).await.unwrap();
-    Datastore::put(&provider, "owner", "SUBJECT", CAROL_SUBJECT, &data).await.unwrap();
+    Datastore::delete(&provider, ISSUER, "SUBJECT", CAROL_SUBJECT).await.unwrap();
+    Datastore::put(&provider, ISSUER, "SUBJECT", CAROL_SUBJECT, &data).await.unwrap();
 
     // --------------------------------------------------
     // After a brief wait Bob retrieves the credential
@@ -134,7 +133,7 @@ async fn deferred() {
             authorization: token.access_token.clone(),
         },
     };
-    let response = credibil_oid4vci::handle(ISSUER_ID, request, &provider)
+    let response = credibil_oid4vci::handle(ISSUER, request, &provider)
         .await
         .expect("should return credential");
 
@@ -158,7 +157,7 @@ async fn deferred() {
     };
     let carol_did = carol_kid.split('#').next().expect("should have did");
 
-    assert_eq!(jwt.claims.iss, ISSUER_ID);
+    assert_eq!(jwt.claims.iss, ISSUER);
     assert_eq!(jwt.claims.sub, carol_did);
 
     let OneMany::One(subject) = jwt.claims.vc.credential_subject else {

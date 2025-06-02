@@ -8,9 +8,9 @@
 
 use anyhow::Context as _;
 use chrono::{Duration, Utc};
+use credibil_core::state::State;
 
-use crate::common::generate;
-use crate::common::state::State;
+use crate::generate;
 use crate::handlers::{Body, Error, Handler, Request, Response, Result, authorize};
 use crate::provider::{Metadata, Provider, StateStore};
 use crate::types::{PushedAuthorizationRequest, PushedAuthorizationResponse};
@@ -28,14 +28,14 @@ async fn par(
     // TODO: authenticate client using client assertion (same as token endpoint)
 
     // verify the pushed RequestObject using `/authorize` endpoint logic
-    let Ok(issuer) = Metadata::issuer(provider, issuer).await else {
+    let Ok(issuer_meta) = Metadata::issuer(provider, issuer).await else {
         return Err(Error::InvalidClient("invalid `credential_issuer`".to_string()));
     };
     let mut ctx = authorize::Context {
-        issuer,
+        issuer: issuer_meta,
         ..authorize::Context::default()
     };
-    ctx.verify(provider, &request.request).await?;
+    ctx.verify(issuer, provider, &request.request).await?;
 
     // generate a request URI and expiry between 5 - 600 secs
     let request_uri = format!("urn:ietf:params:oauth:request_uri:{}", generate::uri_token());
@@ -46,7 +46,7 @@ async fn par(
         body: request.request.clone(),
         expires_at: Utc::now() + expires_in,
     };
-    StateStore::put(provider, &request_uri, &state).await.context("saving state")?;
+    StateStore::put(provider, issuer, &request_uri, &state).await.context("saving state")?;
 
     Ok(PushedAuthorizationResponse {
         request_uri,

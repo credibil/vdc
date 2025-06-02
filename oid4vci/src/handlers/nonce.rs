@@ -9,9 +9,9 @@
 
 use anyhow::Context as _;
 use chrono::Utc;
+use credibil_core::state::State;
 
-use crate::common::generate;
-use crate::common::state::State;
+use crate::generate;
 use crate::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::provider::{Provider, StateStore};
 use crate::state::Expire;
@@ -23,14 +23,14 @@ use crate::types::{NonceRequest, NonceResponse};
 ///
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
-async fn nonce(_issuer: &str, provider: &impl Provider, _: NonceRequest) -> Result<NonceResponse> {
+async fn nonce(issuer: &str, provider: &impl Provider, _: NonceRequest) -> Result<NonceResponse> {
     let c_nonce = generate::nonce();
 
     let state = &State {
         body: c_nonce.clone(),
         expires_at: Utc::now() + Expire::Authorized.duration(),
     };
-    StateStore::put(provider, &c_nonce, state).await.context("failed to purge state")?;
+    StateStore::put(provider, issuer, &c_nonce, state).await.context("failed to purge state")?;
 
     Ok(NonceResponse { c_nonce })
 }

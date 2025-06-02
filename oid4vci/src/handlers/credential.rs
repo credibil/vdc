@@ -14,6 +14,7 @@ use std::fmt::Debug;
 use anyhow::Context as _;
 use chrono::Utc;
 use credibil_core::did_jwk;
+use credibil_core::state::State;
 use credibil_jose::{Jwt, KeyBinding, decode_jws};
 use credibil_status::{StatusList, StatusStore, TokenBuilder};
 use credibil_vdc::FormatProfile;
@@ -21,9 +22,6 @@ use credibil_vdc::mso_mdoc::MdocBuilder;
 use credibil_vdc::sd_jwt::SdJwtVcBuilder;
 use credibil_vdc::w3c_vc::W3cVcBuilder;
 
-use crate::JwtType;
-use crate::common::generate;
-use crate::common::state::State;
 use crate::error::server;
 use crate::handlers::{Body, CredentialHeaders, Error, Handler, Request, Response, Result};
 use crate::provider::{Metadata, Provider, StateStore, Subject};
@@ -32,6 +30,7 @@ use crate::types::{
     AuthorizedDetail, Credential, CredentialConfiguration, CredentialRequest, CredentialResponse,
     Dataset, IssuerMetadata, MultipleProofs, Proof, ProofClaims, RequestBy, SingleProof,
 };
+use crate::{JwtType, generate};
 
 /// Credential request handler.
 ///
@@ -42,7 +41,9 @@ use crate::types::{
 pub async fn credential(
     issuer: &str, provider: &impl Provider, request: Request<CredentialRequest, CredentialHeaders>,
 ) -> Result<CredentialResponse> {
-    let Ok(state) = StateStore::get::<Token>(provider, &request.headers.authorization).await else {
+    let Ok(state) =
+        StateStore::get::<Token>(provider, issuer, &request.headers.authorization).await
+    else {
         return Err(Error::AccessDenied("invalid access token".to_string()));
     };
 
@@ -58,9 +59,9 @@ pub async fn credential(
     let authorized = request.authorized_detail(&ctx)?;
 
     // check whether issuance should be deferred
-    let dataset = ctx.dataset(provider, &request, &authorized).await?;
+    let dataset = ctx.dataset(issuer, provider, &request, &authorized).await?;
     if dataset.pending {
-        return ctx.defer(provider, request).await;
+        return ctx.defer(issuer, provider, request).await;
     }
 
     // credential configuration
@@ -72,8 +73,8 @@ pub async fn credential(
     };
 
     ctx.configuration = config.clone();
-    request.verify(provider, &mut ctx).await?;
-    ctx.issue(provider, dataset).await
+    request.verify(issuer, provider, &mut ctx).await?;
+    ctx.issue(issuer, provider, dataset).await
 }
 
 impl<P: Provider> Handler<CredentialResponse, P> for Request<CredentialRequest, CredentialHeaders> {
@@ -105,7 +106,9 @@ impl CredentialRequest {
     //     acceptable window (see Section 11.5).
 
     // Verify the credential request
-    async fn verify(&self, provider: &impl Provider, ctx: &mut Context) -> Result<()> {
+    async fn verify(
+        &self, issuer: &str, provider: &impl Provider, ctx: &mut Context,
+    ) -> Result<()> {
         tracing::debug!("credential::verify");
 
         if ctx.state.is_expired() {
@@ -175,8 +178,12 @@ impl CredentialRequest {
 
             // should only be a single c_nonce, but just in case...
             for c_nonce in nonces {
-                StateStore::get::<String>(provider, &c_nonce).await.context("proof nonce claim")?;
-                StateStore::purge(provider, &c_nonce).await.context("deleting proof nonce")?;
+                StateStore::get::<String>(provider, issuer, &c_nonce)
+                    .await
+                    .context("proof nonce claim")?;
+                StateStore::purge(provider, issuer, &c_nonce)
+                    .await
+                    .context("deleting proof nonce")?;
             }
         }
 
@@ -212,7 +219,7 @@ impl CredentialRequest {
 impl Context {
     // Issue the requested credential.
     async fn issue(
-        &self, provider: &impl Provider, dataset: Dataset,
+        &self, issuer: &str, provider: &impl Provider, dataset: Dataset,
     ) -> Result<CredentialResponse> {
         let mut credentials = vec![];
 
@@ -296,27 +303,30 @@ impl Context {
             credentials.push(credential);
         }
 
+        let list_id = format!("{issuer}/statuslists/1");
         let token = TokenBuilder::new()
             .status_list(status_list.clone())
-            .uri("http://localhost:8080/statuslists/1")
+            .uri(&list_id)
             .signer(provider)
             .build()
             .await
             .context("building status list token")?;
-        StatusStore::put(provider, "http://localhost:8080/statuslists/1", &token)
-            .await
-            .context("saving status list")?;
+        StatusStore::put(provider, issuer, &list_id, &token).await.context("saving status list")?;
 
         // update token state with new `c_nonce`
         let mut state = self.state.clone();
         state.expires_at = Utc::now() + Expire::Access.duration();
 
         let token = &state.body;
-        StateStore::put(provider, &token.access_token, &state).await.context("saving state")?;
+        StateStore::put(provider, issuer, &token.access_token, &state)
+            .await
+            .context("saving state")?;
 
         // TODO: create issuance state for notification endpoint
         let notification_id = generate::notification_id();
-        StateStore::put(provider, &notification_id, &state).await.context("saving state")?;
+        StateStore::put(provider, issuer, &notification_id, &state)
+            .await
+            .context("saving state")?;
 
         Ok(CredentialResponse::Credentials {
             credentials,
@@ -326,7 +336,7 @@ impl Context {
 
     // Defer issuance of the requested credential.
     async fn defer(
-        &self, provider: &impl Provider, request: CredentialRequest,
+        &self, issuer: &str, provider: &impl Provider, request: CredentialRequest,
     ) -> Result<CredentialResponse> {
         let txn_id = generate::transaction_id();
 
@@ -337,7 +347,7 @@ impl Context {
             },
             expires_at: Utc::now() + Expire::Access.duration(),
         };
-        StateStore::put(provider, &txn_id, &state).await.context("saving state")?;
+        StateStore::put(provider, issuer, &txn_id, &state).await.context("saving state")?;
 
         Ok(CredentialResponse::TransactionId {
             transaction_id: txn_id,
@@ -346,7 +356,8 @@ impl Context {
 
     // Get credential dataset for the request
     async fn dataset(
-        &self, provider: &impl Provider, request: &CredentialRequest, authorized: &AuthorizedDetail,
+        &self, issuer: &str, provider: &impl Provider, request: &CredentialRequest,
+        authorized: &AuthorizedDetail,
     ) -> Result<Dataset> {
         let RequestBy::Identifier(identifier) = &request.credential else {
             return Err(Error::InvalidCredentialRequest(
@@ -357,7 +368,7 @@ impl Context {
 
         // get claims dataset for `credential_identifier`
         let subject_id = &self.state.body.subject_id;
-        let mut dataset = Subject::dataset(provider, subject_id, identifier)
+        let mut dataset = Subject::dataset(provider, issuer, subject_id, identifier)
             .await
             .context("populating claims")?;
 

@@ -14,13 +14,14 @@ use crate::{StatusListRequest, StatusListResponse};
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
 async fn statuslist(
-    _issuer: &str, provider: &impl Provider, request: StatusListRequest,
+    issuer: &str, provider: &impl Provider, request: StatusListRequest,
 ) -> Result<StatusListResponse> {
     let Some(id) = request.id else {
         return Err(invalid!("missing id"));
     };
 
-    let Some(token) = StatusStore::get(provider, &id).await.context("getting metadata")? else {
+    let Some(token) = StatusStore::get(provider, issuer, &id).await.context("getting metadata")?
+    else {
         return Err(invalid!("status token not found"));
     };
 

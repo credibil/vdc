@@ -31,7 +31,7 @@ impl DidIdentity {
         let doc_bytes = serde_json::to_vec(&document).expect("should serialize");
 
         // save to global datastore
-        Store::open().put("owner", "DID", &did, &doc_bytes).await.expect("should put");
+        Store::open().put(&did, "DID", &did, &doc_bytes).await.expect("should put");
 
         Self {
             owner: owner.to_string(),
@@ -42,7 +42,8 @@ impl DidIdentity {
     pub async fn document(&self, url: &str) -> Result<Document> {
         let url = url.trim_end_matches("/did.json").trim_end_matches("/.well-known");
         let did = did::web::default_did(url)?;
-        let Some(doc_bytes) = Store::open().get("owner", "DID", &did).await? else {
+
+        let Some(doc_bytes) = Store::open().get(&did, "DID", &did).await? else {
             bail!("document not found");
         };
         serde_json::from_slice(&doc_bytes).map_err(Into::into)

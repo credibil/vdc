@@ -15,8 +15,8 @@ pub mod provider;
 pub mod types;
 pub mod vp_token;
 
-mod common;
 mod error;
+mod generate;
 mod handlers;
 mod state;
 

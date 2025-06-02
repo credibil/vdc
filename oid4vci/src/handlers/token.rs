@@ -17,20 +17,19 @@ use std::fmt::Debug;
 
 use anyhow::Context as _;
 use chrono::Utc;
+use credibil_core::state::State;
 use serde::de::DeserializeOwned;
 
-use crate::common::generate;
-use crate::common::state::State;
 use crate::error::{invalid, server};
 use crate::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::oauth::GrantType;
-use crate::pkce;
 use crate::provider::{Metadata, Provider, StateStore};
 use crate::state::{Authorized, Expire, Offered, Token};
 use crate::types::{
     AuthorizationDefinition, AuthorizationDetail, AuthorizedDetail, IssuerMetadata, TokenGrantType,
     TokenRequest, TokenResponse, TokenType,
 };
+use crate::{generate, pkce};
 
 /// Token request handler.
 ///
@@ -52,7 +51,7 @@ async fn token(
         TokenGrantType::PreAuthorizedCode {
             pre_authorized_code, ..
         } => {
-            let state = get_state::<Offered>(pre_authorized_code, provider).await?;
+            let state = get_state::<Offered>(issuer, pre_authorized_code, provider).await?;
             ctx.offered = Some(state.body.clone());
             let Some(subject_id) = state.body.subject_id else {
                 return Err(server!("no authorized subject"));
@@ -63,13 +62,13 @@ async fn token(
             (subject_id, authorization_details)
         }
         TokenGrantType::AuthorizationCode { code, .. } => {
-            let state = get_state::<Authorized>(code, provider).await?;
+            let state = get_state::<Authorized>(issuer, code, provider).await?;
             ctx.authorized = Some(state.body.clone());
             (state.body.subject_id, state.body.details)
         }
     };
 
-    request.verify(provider, &ctx).await?;
+    request.verify(issuer, provider, &ctx).await?;
 
     // get the subset of requested credentials from those previously authorized
     let retained_details = request.retain(provider, &ctx, &authorized_details).await?;
@@ -83,7 +82,9 @@ async fn token(
         },
         expires_at: Utc::now() + Expire::Access.duration(),
     };
-    StateStore::put(provider, &state.body.access_token, &state).await.context("saving state")?;
+    StateStore::put(provider, issuer, &state.body.access_token, &state)
+        .await
+        .context("saving state")?;
 
     // return response
     Ok(TokenResponse {
@@ -113,11 +114,13 @@ struct Context<'a> {
     authorized: Option<Authorized>,
 }
 
-async fn get_state<T: DeserializeOwned>(code: &str, provider: &impl Provider) -> Result<State<T>> {
-    let Ok(state) = StateStore::get::<T>(provider, code).await else {
+async fn get_state<T: DeserializeOwned>(
+    issuer: &str, code: &str, provider: &impl Provider,
+) -> Result<State<T>> {
+    let Ok(state) = StateStore::get::<T>(provider, issuer, code).await else {
         return Err(Error::InvalidGrant("invalid authorization code".to_string()));
     };
-    StateStore::purge(provider, code).await.context("purging state")?;
+    StateStore::purge(provider, issuer, code).await.context("purging state")?;
     if state.is_expired() {
         return Err(invalid!("authorization state expired"));
     }
@@ -126,7 +129,9 @@ async fn get_state<T: DeserializeOwned>(code: &str, provider: &impl Provider) ->
 
 impl TokenRequest {
     // Verify the token request.
-    async fn verify(&self, provider: &impl Provider, ctx: &Context<'_>) -> Result<()> {
+    async fn verify(
+        &self, issuer: &str, provider: &impl Provider, ctx: &Context<'_>,
+    ) -> Result<()> {
         tracing::debug!("token::verify");
 
         // TODO: get Issuer metadata
@@ -212,7 +217,7 @@ impl TokenRequest {
 
         if let Some(client_id) = &self.client_id {
             // client metadata
-            let Ok(client) = Metadata::client(provider, client_id).await else {
+            let Ok(client) = Metadata::client(provider, issuer, client_id).await else {
                 return Err(Error::InvalidClient(format!("{client_id} is not a valid client_id")));
             };
             // Client and server must support the same scopes.

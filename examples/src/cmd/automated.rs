@@ -11,7 +11,7 @@ use serde_json::json;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
 
-const ISSUER_ID: &str = "http://localhost:8080";
+const ISSUER: &str = "http://localhost:8080";
 const VERIFIER_ID: &str = "http://localhost:8081";
 const WALLET_ID: &str = "http://localhost:8082";
 
@@ -20,7 +20,7 @@ async fn main() -> Result<()> {
     let subscriber = FmtSubscriber::builder().with_max_level(Level::INFO).finish();
     tracing::subscriber::set_global_default(subscriber)?;
 
-    issuer::serve(ISSUER_ID).await?;
+    issuer::serve(ISSUER).await?;
     verifier::serve(VERIFIER_ID).await?;
     wallet::serve(WALLET_ID).await?;
 
@@ -46,7 +46,7 @@ async fn create_offer() -> Result<CreateOfferResponse> {
         "tx_code_required": true
     });
 
-    let http_resp = client.post(format!("{ISSUER_ID}/create_offer")).json(&value).send().await?;
+    let http_resp = client.post(format!("{ISSUER}/create_offer")).json(&value).send().await?;
     if http_resp.status() != StatusCode::CREATED {
         let body = http_resp.text().await?;
         return Err(anyhow!("{body}"));

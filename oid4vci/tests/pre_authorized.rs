@@ -16,7 +16,7 @@ use test_utils::issuer::Issuer;
 use test_utils::wallet::Wallet;
 use tokio::sync::OnceCell;
 
-const ISSUER_ID: &str = "http://localhost:8080";
+const ISSUER: &str = "http://localhost:8080";
 const BOB_SUBJECT: &str = "normal_user";
 
 static BOB: OnceCell<Wallet> = OnceCell::const_new();
@@ -28,7 +28,7 @@ async fn bob() -> &'static Wallet {
 // credential offer to the Wallet is made by value.
 #[tokio::test]
 async fn offer_val() {
-    let provider = Issuer::new(ISSUER_ID).await;
+    let provider = Issuer::new(ISSUER).await;
     let bob = bob().await;
 
     // --------------------------------------------------
@@ -39,7 +39,7 @@ async fn offer_val() {
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
-        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
+        credibil_oid4vci::handle(ISSUER, request, &provider).await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -55,12 +55,12 @@ async fn offer_val() {
         })
         .build();
     let token =
-        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+        credibil_oid4vci::handle(ISSUER, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a proof for a credential request
     // --------------------------------------------------
-    let nonce = credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider)
+    let nonce = credibil_oid4vci::handle(ISSUER, NonceRequest, &provider)
         .await
         .expect("should return nonce");
 
@@ -74,7 +74,7 @@ async fn offer_val() {
 
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
-        .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
+        .payload(ProofClaims::new().credential_issuer(ISSUER).nonce(&nonce.c_nonce))
         .key_ref(&bob_key)
         .add_signer(bob)
         .build()
@@ -97,7 +97,7 @@ async fn offer_val() {
             authorization: token.access_token.clone(),
         },
     };
-    let response = credibil_oid4vci::handle(ISSUER_ID, request, &provider)
+    let response = credibil_oid4vci::handle(ISSUER, request, &provider)
         .await
         .expect("should return credential");
 
@@ -118,7 +118,7 @@ async fn offer_val() {
     };
     let bob_did = bob_kid.split('#').next().expect("should have did");
 
-    assert_eq!(jwt.claims.iss, ISSUER_ID);
+    assert_eq!(jwt.claims.iss, ISSUER);
     assert_eq!(jwt.claims.sub, bob_did.to_string());
 
     let OneMany::One(subject) = jwt.claims.vc.credential_subject else {
@@ -132,7 +132,7 @@ async fn offer_val() {
 // credential offer to the Wallet is made by reference.
 #[tokio::test]
 async fn offer_ref() {
-    let provider = Issuer::new(ISSUER_ID).await;
+    let provider = Issuer::new(ISSUER).await;
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
@@ -143,19 +143,19 @@ async fn offer_ref() {
         .by_ref(true)
         .build();
     let create_offer =
-        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
+        credibil_oid4vci::handle(ISSUER, request, &provider).await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer URI and fetches the offer
     // --------------------------------------------------
     let uri = create_offer.offer_type.as_uri().expect("should have offer");
-    let path = format!("{ISSUER_ID}/credential_offer/");
+    let path = format!("{ISSUER}/credential_offer/");
     let Some(id) = uri.strip_prefix(&path) else {
         panic!("should have prefix");
     };
     let request = CredentialOfferRequest { id: id.to_string() };
     let response =
-        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should fetch offer");
+        credibil_oid4vci::handle(ISSUER, request, &provider).await.expect("should fetch offer");
 
     // validate offer
     let offer = response.0.clone();
@@ -170,7 +170,7 @@ async fn offer_ref() {
 // configuration id.
 #[tokio::test]
 async fn two_datasets() {
-    let provider = Issuer::new(ISSUER_ID).await;
+    let provider = Issuer::new(ISSUER).await;
     let bob = bob().await;
 
     // --------------------------------------------------
@@ -181,7 +181,7 @@ async fn two_datasets() {
         .with_credential("Developer_W3C_VC")
         .build();
     let response =
-        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
+        credibil_oid4vci::handle(ISSUER, request, &provider).await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -197,7 +197,7 @@ async fn two_datasets() {
         })
         .build();
     let token =
-        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+        credibil_oid4vci::handle(ISSUER, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares 2 credential requests
@@ -209,7 +209,7 @@ async fn two_datasets() {
     ]);
 
     for identifier in &details[0].credential_identifiers {
-        let nonce = credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider)
+        let nonce = credibil_oid4vci::handle(ISSUER, NonceRequest, &provider)
             .await
             .expect("should return nonce");
 
@@ -223,7 +223,7 @@ async fn two_datasets() {
 
         let jws = JwsBuilder::new()
             .typ(JwtType::ProofJwt)
-            .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
+            .payload(ProofClaims::new().credential_issuer(ISSUER).nonce(&nonce.c_nonce))
             .key_ref(&bob_key)
             .add_signer(bob)
             .build()
@@ -244,7 +244,7 @@ async fn two_datasets() {
             },
         };
 
-        let response = credibil_oid4vci::handle(ISSUER_ID, request, &provider)
+        let response = credibil_oid4vci::handle(ISSUER, request, &provider)
             .await
             .expect("should return credential");
 
@@ -274,7 +274,7 @@ async fn two_datasets() {
 // requested in the token request.
 #[tokio::test]
 async fn reduce_credentials() {
-    let provider = Issuer::new(ISSUER_ID).await;
+    let provider = Issuer::new(ISSUER).await;
     let bob = bob().await;
 
     // --------------------------------------------------
@@ -286,7 +286,7 @@ async fn reduce_credentials() {
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
-        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
+        credibil_oid4vci::handle(ISSUER, request, &provider).await.expect("should create offer");
 
     let offer = response.offer_type.as_object().expect("should have offer");
     assert_eq!(offer.credential_configuration_ids.len(), 2);
@@ -310,7 +310,7 @@ async fn reduce_credentials() {
         )
         .build();
     let token =
-        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+        credibil_oid4vci::handle(ISSUER, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a credential request
@@ -320,7 +320,7 @@ async fn reduce_credentials() {
 
     let identifier = &details[0].credential_identifiers[0];
 
-    let nonce = credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider)
+    let nonce = credibil_oid4vci::handle(ISSUER, NonceRequest, &provider)
         .await
         .expect("should return nonce");
 
@@ -334,7 +334,7 @@ async fn reduce_credentials() {
 
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
-        .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
+        .payload(ProofClaims::new().credential_issuer(ISSUER).nonce(&nonce.c_nonce))
         .key_ref(&bob_key)
         .add_signer(bob)
         .build()
@@ -355,7 +355,7 @@ async fn reduce_credentials() {
         },
     };
 
-    let response = credibil_oid4vci::handle(ISSUER_ID, request, &provider)
+    let response = credibil_oid4vci::handle(ISSUER, request, &provider)
         .await
         .expect("should return credential");
 
@@ -383,7 +383,7 @@ async fn reduce_credentials() {
 // Should return fewer claims when requested in token request.
 #[tokio::test]
 async fn reduce_claims() {
-    let provider = Issuer::new(ISSUER_ID).await;
+    let provider = Issuer::new(ISSUER).await;
     let bob = bob().await;
 
     // --------------------------------------------------
@@ -394,7 +394,7 @@ async fn reduce_claims() {
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
-        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
+        credibil_oid4vci::handle(ISSUER, request, &provider).await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -417,12 +417,12 @@ async fn reduce_claims() {
         )
         .build();
     let token =
-        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+        credibil_oid4vci::handle(ISSUER, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a proof for a credential request
     // --------------------------------------------------
-    let nonce = credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider)
+    let nonce = credibil_oid4vci::handle(ISSUER, NonceRequest, &provider)
         .await
         .expect("should return nonce");
 
@@ -436,7 +436,7 @@ async fn reduce_claims() {
 
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
-        .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
+        .payload(ProofClaims::new().credential_issuer(ISSUER).nonce(&nonce.c_nonce))
         .key_ref(&bob_key)
         .add_signer(bob)
         .build()
@@ -460,7 +460,7 @@ async fn reduce_claims() {
         },
     };
 
-    let response = credibil_oid4vci::handle(ISSUER_ID, request, &provider)
+    let response = credibil_oid4vci::handle(ISSUER, request, &provider)
         .await
         .expect("should return credential");
 
@@ -482,7 +482,7 @@ async fn reduce_claims() {
     };
     let bob_did = bob_kid.split('#').next().expect("should have did");
 
-    assert_eq!(jwt.claims.iss, ISSUER_ID);
+    assert_eq!(jwt.claims.iss, ISSUER);
     assert_eq!(jwt.claims.sub, bob_did.to_string());
 
     let OneMany::One(subject) = jwt.claims.vc.credential_subject else {
@@ -496,7 +496,7 @@ async fn reduce_claims() {
 // Should handle an acceptance notication from the wallet.
 #[tokio::test]
 async fn notify_accepted() {
-    let provider = Issuer::new(ISSUER_ID).await;
+    let provider = Issuer::new(ISSUER).await;
     let bob = bob().await;
 
     // --------------------------------------------------
@@ -507,7 +507,7 @@ async fn notify_accepted() {
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response =
-        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should create offer");
+        credibil_oid4vci::handle(ISSUER, request, &provider).await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -523,12 +523,12 @@ async fn notify_accepted() {
         })
         .build();
     let token =
-        credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("should return token");
+        credibil_oid4vci::handle(ISSUER, request, &provider).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a proof for a credential request
     // --------------------------------------------------
-    let nonce = credibil_oid4vci::handle(ISSUER_ID, NonceRequest, &provider)
+    let nonce = credibil_oid4vci::handle(ISSUER, NonceRequest, &provider)
         .await
         .expect("should return nonce");
 
@@ -542,7 +542,7 @@ async fn notify_accepted() {
 
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
-        .payload(ProofClaims::new().credential_issuer(ISSUER_ID).nonce(&nonce.c_nonce))
+        .payload(ProofClaims::new().credential_issuer(ISSUER).nonce(&nonce.c_nonce))
         .key_ref(&bob_key)
         .add_signer(bob)
         .build()
@@ -566,7 +566,7 @@ async fn notify_accepted() {
         },
     };
 
-    let response = credibil_oid4vci::handle(ISSUER_ID, request, &provider)
+    let response = credibil_oid4vci::handle(ISSUER, request, &provider)
         .await
         .expect("should return credential");
 
@@ -590,5 +590,5 @@ async fn notify_accepted() {
         },
     };
 
-    credibil_oid4vci::handle(ISSUER_ID, request, &provider).await.expect("response is ok");
+    credibil_oid4vci::handle(ISSUER, request, &provider).await.expect("response is ok");
 }

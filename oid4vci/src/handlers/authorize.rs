@@ -13,10 +13,10 @@ use std::fmt::Debug;
 
 use anyhow::Context as _;
 use chrono::Utc;
+use credibil_core::state::State;
 
-use crate::common::generate;
-use crate::common::state::State;
 use crate::error::{invalid, server};
+use crate::generate;
 use crate::handlers::{Body, Error, Handler, Request, Response, Result};
 use crate::oauth::GrantType;
 use crate::provider::{Metadata, Provider, StateStore, Subject};
@@ -41,7 +41,7 @@ async fn authorize(
         AuthorizationRequest::Object(request) => request,
         AuthorizationRequest::Uri(uri) => {
             is_par = true;
-            let state = StateStore::get::<RequestObject>(provider, &uri.request_uri)
+            let state = StateStore::get::<RequestObject>(provider, issuer, &uri.request_uri)
                 .await
                 .context("retrieving state")?;
 
@@ -53,22 +53,22 @@ async fn authorize(
     };
 
     // get issuer metadata
-    let Ok(issuer) = Metadata::issuer(provider, issuer).await else {
+    let Ok(issuer_meta) = Metadata::issuer(provider, issuer).await else {
         return Err(invalid!("invalid `credential_issuer`"));
     };
 
     let mut ctx = Context {
-        issuer,
+        issuer: issuer_meta,
         is_par,
         ..Context::default()
     };
-    ctx.verify(provider, &request).await?;
+    ctx.verify(issuer, provider, &request).await?;
 
     // authorization_detail
     let mut details = vec![];
 
     for (config_id, mut auth_det) in ctx.auth_dets.clone() {
-        let identifiers = Subject::authorize(provider, &request.subject_id, &config_id)
+        let identifiers = Subject::authorize(provider, issuer, &request.subject_id, &config_id)
             .await
             .map_err(|e| Error::AccessDenied(format!("issue authorizing subject: {e}")))?;
 
@@ -103,11 +103,11 @@ async fn authorize(
     };
 
     let code = generate::auth_code();
-    StateStore::put(provider, &code, &state).await.context("saving authorization state")?;
+    StateStore::put(provider, issuer, &code, &state).await.context("saving authorization state")?;
 
     // remove offer state
     if let Some(issuer_state) = &request.issuer_state {
-        StateStore::purge(provider, issuer_state).await.context("purging offer state")?;
+        StateStore::purge(provider, issuer, issuer_state).await.context("purging offer state")?;
     }
 
     Ok(AuthorizationResponse {
@@ -138,10 +138,10 @@ pub struct Context {
 
 impl Context {
     pub async fn verify(
-        &mut self, provider: &impl Provider, request: &RequestObject,
+        &mut self, issuer: &str, provider: &impl Provider, request: &RequestObject,
     ) -> Result<()> {
         // client and server metadata
-        let Ok(client) = Metadata::client(provider, &request.client_id).await else {
+        let Ok(client) = Metadata::client(provider, issuer, &request.client_id).await else {
             return Err(Error::InvalidClient(format!(
                 "{} is not a valid client_id",
                 request.client_id
@@ -199,7 +199,7 @@ impl Context {
 
         // does offer `subject_id`  match request `subject_id`?
         if let Some(issuer_state) = &request.issuer_state {
-            let state = StateStore::get::<Offered>(provider, issuer_state)
+            let state = StateStore::get::<Offered>(provider, issuer, issuer_state)
                 .await
                 .context("retrieving state")?;
 

@@ -8,6 +8,8 @@ use crate::datastore::Store;
 use crate::identity::DidIdentity;
 
 const VERIFIER_METADATA: &[u8] = include_bytes!("../data/verifier-metadata.json");
+const METADATA: &str = "METADATA";
+const VERIFIER: &str = "VERIFIER";
 
 #[derive(Clone)]
 pub struct Verifier {
@@ -17,13 +19,13 @@ pub struct Verifier {
 
 impl Verifier {
     #[must_use]
-    pub async fn new(verifier_id: &str) -> Self {
+    pub async fn new(verifier: &str) -> Self {
         let datastore = Store::open();
-        datastore.put("owner", "VERIFIER", verifier_id, VERIFIER_METADATA).await.unwrap();
+        datastore.put(verifier, METADATA, VERIFIER, VERIFIER_METADATA).await.unwrap();
 
         Self {
             datastore,
-            identity: DidIdentity::new(verifier_id).await,
+            identity: DidIdentity::new(verifier).await,
         }
     }
 

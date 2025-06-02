@@ -15,15 +15,15 @@ use crate::types::{RegistrationRequest, RegistrationResponse};
 /// Returns an `OpenID4VCI` error if the request is invalid or if the provider is
 /// not available.
 async fn register(
-    _issuer: &str, provider: &impl Provider,
+    issuer: &str, provider: &impl Provider,
     request: Request<RegistrationRequest, RegistrationHeaders>,
 ) -> Result<RegistrationResponse> {
     // verify access token
-    StateStore::get::<Token>(provider, &request.headers.authorization)
+    StateStore::get::<Token>(provider, issuer, &request.headers.authorization)
         .await
         .context("retrieving state")?;
 
-    let Ok(client_metadata) = provider.register(&request.body.client_metadata).await else {
+    let Ok(client_metadata) = provider.register(issuer, &request.body.client_metadata).await else {
         return Err(server!("registration failed"));
     };
 

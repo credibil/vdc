@@ -13,15 +13,15 @@ use std::future::Future;
 
 use anyhow::{Result, anyhow};
 use credibil_core::datastore::Datastore;
+pub(crate) use credibil_core::state::StateStore;
 use credibil_identity::{IdentityResolver, SignerExt};
 use credibil_status::StatusStore;
 
-pub(crate) use crate::common::state::StateStore;
 use crate::types::{ClientMetadata, Dataset, IssuerMetadata, ServerMetadata};
 
+const METADATA: &str = "METADATA";
 const ISSUER: &str = "ISSUER";
 const SERVER: &str = "SERVER";
-const CLIENT: &str = "CLIENT";
 const SUBJECT: &str = "SUBJECT";
 
 /// Issuer Provider trait.
@@ -41,22 +41,20 @@ impl<T> Provider for T where
 /// and `Server` metadata to the library.
 pub trait Metadata: Send + Sync {
     /// Client (wallet) metadata for the specified issuance client.
-    fn client(&self, client_id: &str) -> impl Future<Output = Result<ClientMetadata>> + Send;
+    fn client(
+        &self, owner: &str, client_id: &str,
+    ) -> impl Future<Output = Result<ClientMetadata>> + Send;
 
     /// Credential Issuer metadata for the specified issuer.
-    fn issuer(
-        &self, credential_issuer: &str,
-    ) -> impl Future<Output = Result<IssuerMetadata>> + Send;
+    fn issuer(&self, owner: &str) -> impl Future<Output = Result<IssuerMetadata>> + Send;
 
     /// Authorization Server metadata for the specified issuer/server.
-    fn server(
-        &self, credential_issuer: &str,
-    ) -> impl Future<Output = Result<ServerMetadata>> + Send;
+    fn server(&self, owner: &str) -> impl Future<Output = Result<ServerMetadata>> + Send;
 
     /// Used to dynamically register OAuth 2.0 clients with the authorization
     /// server.
     fn register(
-        &self, client: &ClientMetadata,
+        &self, owner: &str, client: &ClientMetadata,
     ) -> impl Future<Output = Result<ClientMetadata>> + Send;
 }
 
@@ -68,56 +66,56 @@ pub trait Subject: Send + Sync {
     /// `credential_identifier`s the subject (holder) is authorized to
     /// request.
     fn authorize(
-        &self, subject_id: &str, credential_configuration_id: &str,
+        &self, owner: &str, subject_id: &str, credential_configuration_id: &str,
     ) -> impl Future<Output = Result<Vec<String>>> + Send;
 
     /// Returns a populated `Dataset` object for the given subject (holder) and
     /// credential definition.
     fn dataset(
-        &self, subject_id: &str, credential_identifier: &str,
+        &self, owner: &str, subject_id: &str, credential_identifier: &str,
     ) -> impl Future<Output = Result<Dataset>> + Send;
 }
 
 impl<T: Datastore> Metadata for T {
-    async fn client(&self, client_id: &str) -> Result<ClientMetadata> {
-        let Some(block) = Datastore::get(self, "owner", CLIENT, client_id).await? else {
+    async fn client(&self, owner: &str, client_id: &str) -> Result<ClientMetadata> {
+        let Some(data) = Datastore::get(self, owner, METADATA, client_id).await? else {
             return Err(anyhow!("could not find client"));
         };
-        Ok(serde_json::from_slice(&block)?)
+        Ok(serde_json::from_slice(&data)?)
     }
 
-    async fn issuer(&self, credential_issuer: &str) -> Result<IssuerMetadata> {
-        let Some(block) = Datastore::get(self, "owner", ISSUER, credential_issuer).await? else {
-            return Err(anyhow!("could not find issuer"));
+    async fn issuer(&self, owner: &str) -> Result<IssuerMetadata> {
+        let Some(data) = Datastore::get(self, owner, METADATA, ISSUER).await? else {
+            return Err(anyhow!("could not find issuer metadata"));
         };
-        Ok(serde_json::from_slice(&block)?)
+        Ok(serde_json::from_slice(&data)?)
     }
 
-    async fn server(&self, issuer: &str) -> Result<ServerMetadata> {
-        let Some(block) = Datastore::get(self, "owner", SERVER, issuer).await? else {
-            return Err(anyhow!("could not find server for issuer"));
+    async fn server(&self, owner: &str) -> Result<ServerMetadata> {
+        let Some(data) = Datastore::get(self, owner, METADATA, SERVER).await? else {
+            return Err(anyhow!("could not find server metadata"));
         };
-        Ok(serde_json::from_slice(&block)?)
+        Ok(serde_json::from_slice(&data)?)
     }
 
-    async fn register(&self, client: &ClientMetadata) -> Result<ClientMetadata> {
+    async fn register(&self, owner: &str, client: &ClientMetadata) -> Result<ClientMetadata> {
         let mut client = client.clone();
         client.oauth.client_id = uuid::Uuid::new_v4().to_string();
 
         let data = serde_json::to_vec(&client)?;
-        Datastore::put(self, "owner", CLIENT, &client.oauth.client_id, &data).await?;
+        Datastore::put(self, owner, METADATA, &client.oauth.client_id, &data).await?;
         Ok(client)
     }
 }
 
 impl<T: Datastore> Subject for T {
     async fn authorize(
-        &self, subject_id: &str, credential_configuration_id: &str,
+        &self, owner: &str, subject_id: &str, credential_configuration_id: &str,
     ) -> Result<Vec<String>> {
-        let Some(block) = Datastore::get(self, "owner", SUBJECT, subject_id).await? else {
+        let Some(data) = Datastore::get(self, owner, SUBJECT, subject_id).await? else {
             return Err(anyhow!("could not find dataset for subject"));
         };
-        let datasets: HashMap<String, Dataset> = serde_json::from_slice(&block)?;
+        let datasets: HashMap<String, Dataset> = serde_json::from_slice(&data)?;
 
         // find dataset identifiers for the provided subject & credential
         let identifiers = datasets
@@ -132,11 +130,13 @@ impl<T: Datastore> Subject for T {
         Ok(identifiers)
     }
 
-    async fn dataset(&self, subject_id: &str, credential_identifier: &str) -> Result<Dataset> {
-        let Some(block) = Datastore::get(self, "owner", SUBJECT, subject_id).await? else {
+    async fn dataset(
+        &self, owner: &str, subject_id: &str, credential_identifier: &str,
+    ) -> Result<Dataset> {
+        let Some(data) = Datastore::get(self, owner, SUBJECT, subject_id).await? else {
             return Err(anyhow!("could not find dataset for subject"));
         };
-        let datasets: HashMap<String, Dataset> = serde_json::from_slice(&block)?;
+        let datasets: HashMap<String, Dataset> = serde_json::from_slice(&data)?;
 
         let Some(dataset) = datasets.get(credential_identifier) else {
             return Err(anyhow!("could not find dataset for subject"));

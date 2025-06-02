@@ -540,6 +540,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bytes",
+ "chrono",
  "credibil-identity",
  "credibil-jose",
  "http",
@@ -689,6 +690,7 @@ dependencies = [
  "credibil-identity",
  "credibil-jose",
  "flate2",
+ "http",
  "serde",
  "serde_json",
  "serde_repr",

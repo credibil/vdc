@@ -17,6 +17,7 @@ version.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+chrono.workspace = true
 anyhow.workspace = true
 bytes = "1.10.1"
 credibil-identity.workspace = true

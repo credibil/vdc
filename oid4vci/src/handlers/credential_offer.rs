@@ -29,12 +29,12 @@ use crate::types::{CredentialOffer, CredentialOfferRequest, CredentialOfferRespo
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
 async fn credential_offer(
-    _issuer: &str, provider: &impl Provider, request: CredentialOfferRequest,
+    issuer: &str, provider: &impl Provider, request: CredentialOfferRequest,
 ) -> Result<CredentialOfferResponse> {
-    let state = StateStore::get::<CredentialOffer>(provider, &request.id)
+    let state = StateStore::get::<CredentialOffer>(provider, issuer, &request.id)
         .await
         .context("credential offer not found in state")?;
-    StateStore::purge(provider, &request.id).await.context("purging state")?;
+    StateStore::purge(provider, issuer, &request.id).await.context("purging state")?;
 
     if state.is_expired() {
         return Err(invalid!("state expired"));

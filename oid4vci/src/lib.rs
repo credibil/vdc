@@ -15,8 +15,8 @@ pub mod pkce;
 pub mod provider;
 pub mod types;
 
-mod common;
 mod error;
+mod generate;
 mod handlers;
 mod state;
 

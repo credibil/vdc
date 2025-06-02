@@ -38,16 +38,16 @@ use crate::types::{AuthorizationResponse, RedirectResponse, RequestObject};
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
 async fn response(
-    _verifier: &str, provider: &impl Provider, request: AuthorizationResponse,
+    verifier: &str, provider: &impl Provider, request: AuthorizationResponse,
 ) -> Result<RedirectResponse> {
     // FIXME: handle case where Wallet returns error instead of presentation
-    verify(provider, &request).await?;
+    verify(verifier, provider, &request).await?;
 
     // retrive state and clear
     let Some(state_key) = &request.state else {
         return Err(invalid!("client state not found"));
     };
-    StateStore::purge(provider, state_key).await.context("purging state")?;
+    StateStore::purge(provider, verifier, state_key).await.context("purging state")?;
 
     Ok(RedirectResponse {
         // FIXME: add response to state using `response_code` so Wallet can fetch full response
@@ -71,12 +71,14 @@ impl<P: Provider> Handler<RedirectResponse, P> for Request<AuthorizationResponse
 impl Body for AuthorizationResponse {}
 
 // Verfiy the `vp_token` and presentation against the `dcql_query`.
-async fn verify(provider: &impl Provider, request: &AuthorizationResponse) -> Result<()> {
+async fn verify(
+    verifier: &str, provider: &impl Provider, request: &AuthorizationResponse,
+) -> Result<()> {
     // get state by client state key
     let Some(state_key) = &request.state else {
         return Err(invalid!("client state not found"));
     };
-    let Ok(state) = StateStore::get::<RequestObject>(provider, state_key).await else {
+    let Ok(state) = StateStore::get::<RequestObject>(provider, verifier, state_key).await else {
         return Err(invalid!("state not found"));
     };
 

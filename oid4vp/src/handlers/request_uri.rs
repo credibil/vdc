@@ -34,7 +34,7 @@ pub async fn request_uri(
     verifier: &str, provider: &impl Provider, request: RequestUriRequest,
 ) -> Result<RequestUriResponse> {
     // retrieve request object from state
-    let state = StateStore::get::<RequestObject>(provider, &request.id)
+    let state = StateStore::get::<RequestObject>(provider, verifier, &request.id)
         .await
         .context("retrieving state")?;
 
