@@ -42,7 +42,6 @@ impl DidIdentity {
     pub async fn document(&self, url: &str) -> Result<Document> {
         let url = url.trim_end_matches("/did.json").trim_end_matches("/.well-known");
         let did = did::web::default_did(url)?;
-
         let Some(doc_bytes) = Store::open().get(&did, "DID", &did).await? else {
             bail!("document not found");
         };
