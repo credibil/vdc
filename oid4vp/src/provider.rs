@@ -5,9 +5,9 @@ use std::future::Future;
 use anyhow::{Result, anyhow};
 use credibil_core::datastore::Datastore;
 pub use credibil_core::state::StateStore;
-use credibil_identity::IdentityResolver;
+pub use credibil_identity::IdentityResolver;
 pub use credibil_identity::SignerExt;
-use credibil_status::StatusToken;
+pub use credibil_status::StatusToken;
 
 use crate::types::Verifier;
 

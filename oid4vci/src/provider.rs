@@ -14,8 +14,8 @@ use std::future::Future;
 use anyhow::{Result, anyhow};
 use credibil_core::datastore::Datastore;
 pub use credibil_core::state::StateStore;
-use credibil_identity::{IdentityResolver, SignerExt};
-use credibil_status::StatusStore;
+pub use credibil_identity::{IdentityResolver, SignerExt};
+pub use credibil_status::StatusStore;
 
 use crate::types::{ClientMetadata, Dataset, IssuerMetadata, ServerMetadata};
 
