@@ -13,7 +13,7 @@ use std::future::Future;
 
 use anyhow::{Result, anyhow};
 use credibil_core::datastore::Datastore;
-pub(crate) use credibil_core::state::StateStore;
+pub use credibil_core::state::StateStore;
 use credibil_identity::{IdentityResolver, SignerExt};
 use credibil_status::StatusStore;
 
