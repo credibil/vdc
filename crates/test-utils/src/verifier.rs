@@ -1,8 +1,8 @@
 use anyhow::Result;
 use credibil_core::datastore::Datastore;
 use credibil_identity::did::Document;
-use credibil_identity::se::{Algorithm, PublicKey, Receiver, SharedSecret, Signer};
-use credibil_identity::{Identity, IdentityResolver, VerifyBy, Signature};
+use credibil_identity::ecc::{Algorithm, PublicKey, Receiver, SharedSecret, Signer};
+use credibil_identity::{Identity, IdentityResolver, Signature, VerifyBy};
 
 use crate::datastore::Store;
 use crate::identity::DidIdentity;

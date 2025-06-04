@@ -2,7 +2,7 @@
 
 use anyhow::{Context as _, Result, anyhow};
 use credibil_core::{Kind, OneMany};
-use credibil_identity::{VerifyBy, Signature};
+use credibil_identity::{Signature, VerifyBy};
 use credibil_jose::encode_jws;
 
 use crate::dcql::Matched;

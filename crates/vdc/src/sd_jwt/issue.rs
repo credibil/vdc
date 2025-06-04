@@ -245,8 +245,8 @@ impl<S: Signature> SdJwtVcBuilder<Vct, HasIssuer, HasKeyBinding, HasClaims, HasS
 
 #[cfg(test)]
 mod tests {
-    use credibil_jose::PublicKeyJwk;
     use credibil_ecc::{Curve, KeyType};
+    use credibil_jose::PublicKeyJwk;
     use serde_json::json;
     use test_utils::issuer::Issuer;
 

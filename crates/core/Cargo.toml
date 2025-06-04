@@ -17,11 +17,9 @@ version.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-chrono.workspace = true
 anyhow.workspace = true
 bytes = "1.10.1"
-credibil-identity.workspace = true
-credibil-jose.workspace = true
+chrono.workspace = true
 http.workspace = true
 http-body = "1.0.1"
 http-body-util = "0.1"

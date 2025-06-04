@@ -174,7 +174,7 @@ impl<S: Signature> MdocBuilder<HasDocType, HasDeviceKey, HasClaims, HasSigner<'_
 
 #[cfg(test)]
 mod tests {
-    use credibil_core::did_jwk;
+    use credibil_identity::did_jwk;
     use credibil_jose::KeyBinding;
     use serde_json::json;
     use test_utils::issuer::Issuer;

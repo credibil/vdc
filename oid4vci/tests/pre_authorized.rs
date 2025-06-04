@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use credibil_oid4vci::identity::{VerifyBy, Signature};
+use credibil_oid4vci::identity::{Signature, VerifyBy};
 use credibil_oid4vci::jose::{JwsBuilder, Jwt, decode_jws};
 use credibil_oid4vci::proof::W3cVcClaims;
 use credibil_oid4vci::types::{

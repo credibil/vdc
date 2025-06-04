@@ -535,8 +535,6 @@ dependencies = [
  "anyhow",
  "bytes",
  "chrono",
- "credibil-identity",
- "credibil-jose",
  "http",
  "http-body",
  "http-body-util",

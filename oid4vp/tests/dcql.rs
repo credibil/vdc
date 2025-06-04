@@ -1,7 +1,7 @@
 //! Tests for the Verifier API
 
 use credibil_oid4vp::datastore::Datastore;
-use credibil_oid4vp::identity::{VerifyBy, Signature};
+use credibil_oid4vp::identity::{Signature, VerifyBy};
 use credibil_oid4vp::jose::PublicKeyJwk;
 use credibil_oid4vp::status::{StatusClaim, StatusList, TokenBuilder};
 use credibil_oid4vp::vdc::{

@@ -1,8 +1,8 @@
 use anyhow::{Result, anyhow, bail};
 use credibil_identity::did::{self, Document, DocumentBuilder};
+use credibil_identity::ecc::{Algorithm, Curve, Signer};
 use credibil_identity::jose::PublicKeyJwk;
-use credibil_identity::se::{Algorithm, Curve, Signer};
-use credibil_identity::{Identity, IdentityResolver, VerifyBy, Signature};
+use credibil_identity::{Identity, IdentityResolver, Signature, VerifyBy};
 use test_kms::Keyring;
 
 use crate::datastore::Store;

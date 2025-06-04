@@ -13,8 +13,8 @@ use std::fmt::Debug;
 
 use anyhow::Context as _;
 use chrono::Utc;
-use credibil_core::did_jwk;
 use credibil_core::state::State;
+use credibil_identity::did_jwk;
 use credibil_jose::{Jwt, KeyBinding, decode_jws};
 use credibil_status::{StatusList, StatusStore, TokenBuilder};
 use credibil_vdc::FormatProfile;

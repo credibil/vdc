@@ -6,9 +6,6 @@ pub mod html;
 pub mod http;
 pub mod state;
 
-mod did;
-
-pub use did::*;
 use serde::{Deserialize, Serialize};
 
 /// `Kind` allows serde to serialize/deserialize a string or an object.

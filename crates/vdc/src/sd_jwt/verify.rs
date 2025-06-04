@@ -1,8 +1,7 @@
 //! # sd-jwt Identity
 
 use anyhow::{Result, anyhow};
-use credibil_core::did_jwk;
-use credibil_identity::IdentityResolver;
+use credibil_identity::{IdentityResolver, did_jwk};
 use credibil_jose::{Jwt, decode_jws};
 use credibil_status::{StatusListClaims, StatusToken};
 
