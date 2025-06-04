@@ -1,4 +1,4 @@
-//! # mdoc Verification
+//! # mdoc Identity
 
 use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};

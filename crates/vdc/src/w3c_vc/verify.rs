@@ -1,4 +1,4 @@
-//! # W3C Verification
+//! # W3C Identity
 
 use anyhow::{Result, anyhow};
 use credibil_core::did_jwk;

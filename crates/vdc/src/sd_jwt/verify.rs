@@ -1,4 +1,4 @@
-//! # sd-jwt Verification
+//! # sd-jwt Identity
 
 use anyhow::{Result, anyhow};
 use credibil_core::did_jwk;

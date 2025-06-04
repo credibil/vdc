@@ -9,7 +9,7 @@ use axum::extract::{Query, State};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::{Json, Router};
-use credibil_oid4vci::identity::SignerExt;
+use credibil_oid4vci::identity::Signature;
 use credibil_oid4vci::identity::did::Document;
 use credibil_oid4vci::jose::JwsBuilder;
 use credibil_oid4vci::{

@@ -5,7 +5,7 @@
 use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_core::Kind;
-use credibil_identity::SignerExt;
+use credibil_identity::Signature;
 use sha2::{Digest, Sha256};
 
 use crate::dcql::Matched;
@@ -59,7 +59,7 @@ pub struct HasResponseUri(String);
 pub struct NoSigner;
 /// Builder state has a signer.
 #[doc(hidden)]
-pub struct HasSigner<'a, S: SignerExt>(pub &'a S);
+pub struct HasSigner<'a, S: Signature>(pub &'a S);
 
 impl Default for DeviceResponseBuilder<NoMatched, NoClientId, NoNonce, NoResponseUri, NoSigner> {
     fn default() -> Self {
@@ -149,7 +149,7 @@ impl<M, C, N, S> DeviceResponseBuilder<M, C, N, NoResponseUri, S> {
 impl<M, C, N, U> DeviceResponseBuilder<M, C, N, U, NoSigner> {
     /// Set the credential Signer.
     #[must_use]
-    pub fn signer<S: SignerExt>(
+    pub fn signer<S: Signature>(
         self, signer: &'_ S,
     ) -> DeviceResponseBuilder<M, C, N, U, HasSigner<'_, S>> {
         DeviceResponseBuilder {
@@ -162,7 +162,7 @@ impl<M, C, N, U> DeviceResponseBuilder<M, C, N, U, NoSigner> {
     }
 }
 
-impl<S: SignerExt>
+impl<S: Signature>
     DeviceResponseBuilder<HasMatched<'_>, HasClientId, HasNonce, HasResponseUri, HasSigner<'_, S>>
 {
     /// Build the SD-JWT credential, returning a base64url-encoded, JSON SD-JWT

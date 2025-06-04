@@ -6,21 +6,21 @@ use anyhow::{Result, anyhow};
 use credibil_core::datastore::Datastore;
 pub use credibil_core::state::StateStore;
 pub use credibil_identity::IdentityResolver;
-pub use credibil_identity::SignerExt;
+pub use credibil_identity::Signature;
 pub use credibil_status::StatusToken;
 
 use crate::types::Verifier;
 
 /// Verifier Provider trait.
 pub trait Provider:
-    Metadata + StateStore + SignerExt + IdentityResolver + StatusToken + Clone
+    Metadata + StateStore + Signature + IdentityResolver + StatusToken + Clone
 {
 }
 
 /// A blanket implementation for `Provider` trait so that any type implementing
 /// the required super traits is considered a `Provider`.
 impl<T> Provider for T where
-    T: Metadata + StateStore + SignerExt + IdentityResolver + StatusToken + Clone
+    T: Metadata + StateStore + Signature + IdentityResolver + StatusToken + Clone
 {
 }
 

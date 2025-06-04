@@ -1,6 +1,6 @@
 # Credibil VC
 
-Issuance and Verification libraries for use in `OpenID` Verifiable Credentials solutions.
+Issuance and Identity libraries for use in `OpenID` Verifiable Credentials solutions.
 
 > [!CAUTION]
 >

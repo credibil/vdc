@@ -2,7 +2,7 @@ use anyhow::Result;
 use credibil_core::datastore::Datastore;
 use credibil_identity::did::Document;
 use credibil_identity::se::{Algorithm, PublicKey, Receiver, SharedSecret, Signer};
-use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
+use credibil_identity::{Identity, IdentityResolver, Key, Signature};
 
 use crate::datastore::Store;
 use crate::identity::DidIdentity;
@@ -35,7 +35,7 @@ impl Verifier {
 }
 
 impl IdentityResolver for Verifier {
-    async fn resolve(&self, url: &str) -> anyhow::Result<Identity> {
+    async fn resolve(&self, url: &str) -> Result<Identity> {
         self.identity.resolve(url).await
     }
 }
@@ -54,7 +54,7 @@ impl Signer for Verifier {
     }
 }
 
-impl SignerExt for Verifier {
+impl Signature for Verifier {
     async fn verification_method(&self) -> Result<Key> {
         self.identity.verification_method().await
     }

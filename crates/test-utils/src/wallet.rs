@@ -3,7 +3,7 @@ use cid::Cid;
 use credibil_core::datastore::Datastore;
 use credibil_identity::did::Document;
 use credibil_identity::se::{Algorithm, Signer};
-use credibil_identity::{Identity, IdentityResolver, Key, SignerExt};
+use credibil_identity::{IdentityResolver, Key, Signature, Identity};
 use credibil_vdc::Queryable;
 use multihash_codetable::{Code, MultihashDigest};
 use serde::Serialize;
@@ -99,7 +99,7 @@ impl Signer for Wallet {
     }
 }
 
-impl SignerExt for Wallet {
+impl Signature for Wallet {
     async fn verification_method(&self) -> Result<Key> {
         self.identity.verification_method().await
     }

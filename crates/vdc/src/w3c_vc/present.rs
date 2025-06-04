@@ -2,7 +2,7 @@
 
 use anyhow::{Context as _, Result, anyhow};
 use credibil_core::{Kind, OneMany};
-use credibil_identity::{Key, SignerExt};
+use credibil_identity::{Key, Signature};
 use credibil_jose::encode_jws;
 
 use crate::dcql::Matched;
@@ -36,7 +36,7 @@ pub struct HasClientId(String);
 pub struct NoSigner;
 /// Builder state has a signer.
 #[doc(hidden)]
-pub struct HasSigner<'a, S: SignerExt>(pub &'a S);
+pub struct HasSigner<'a, S: Signature>(pub &'a S);
 
 impl Default for W3cVpBuilder<NoMatched, NoClientId, NoSigner> {
     fn default() -> Self {
@@ -95,11 +95,11 @@ impl<M, C, S> W3cVpBuilder<M, C, S> {
     }
 }
 
-// SignerExt
+// Signature
 impl<M, C> W3cVpBuilder<M, C, NoSigner> {
-    /// Set the credential `SignerExt`.
+    /// Set the credential `Signature`.
     #[must_use]
-    pub fn signer<S: SignerExt>(self, signer: &'_ S) -> W3cVpBuilder<M, C, HasSigner<'_, S>> {
+    pub fn signer<S: Signature>(self, signer: &'_ S) -> W3cVpBuilder<M, C, HasSigner<'_, S>> {
         W3cVpBuilder {
             matched: self.matched,
             client_id: self.client_id,
@@ -109,7 +109,7 @@ impl<M, C> W3cVpBuilder<M, C, NoSigner> {
     }
 }
 
-impl<S: SignerExt> W3cVpBuilder<HasMatched<'_>, HasClientId, HasSigner<'_, S>> {
+impl<S: Signature> W3cVpBuilder<HasMatched<'_>, HasClientId, HasSigner<'_, S>> {
     /// Build the presentation.
     ///
     /// # Errors

@@ -12,7 +12,7 @@ use coset::{
     CoseSign1, CoseSign1Builder, HeaderBuilder, ProtectedHeader, SignatureContext, iana,
     sig_structure_data,
 };
-use credibil_identity::{Key, SignerExt};
+use credibil_identity::{Key, Signature};
 use credibil_jose::PublicKeyJwk;
 use credibil_se::PublicKey;
 use serde::{Deserialize, Serialize, de, ser};
@@ -30,7 +30,7 @@ const Y: i64 = -3;
 /// # Errors
 ///
 /// Returns an error if the signing fails or if the algorithm is unsupported.
-pub async fn sign(payload: Vec<u8>, signer: &impl SignerExt) -> Result<CoseSign1> {
+pub async fn sign(payload: Vec<u8>, signer: &impl Signature) -> Result<CoseSign1> {
     // header
     let algorithm = match signer.algorithm().await? {
         credibil_se::Algorithm::EdDSA => iana::Algorithm::EdDSA,

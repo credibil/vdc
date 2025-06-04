@@ -1,9 +1,8 @@
 use anyhow::{Result, anyhow, bail};
-use credibil_identity::Identity::DidDocument;
 use credibil_identity::did::{self, Document, DocumentBuilder};
 use credibil_identity::jose::PublicKeyJwk;
 use credibil_identity::se::{Algorithm, Curve, Signer};
-use credibil_identity::{IdentityResolver, Key, SignerExt};
+use credibil_identity::{Identity, IdentityResolver, Key, Signature};
 use test_kms::Keyring;
 
 use crate::datastore::Store;
@@ -50,7 +49,7 @@ impl DidIdentity {
 }
 
 impl IdentityResolver for DidIdentity {
-    async fn resolve(&self, url: &str) -> Result<credibil_identity::Identity> {
+    async fn resolve(&self, url: &str) -> Result<Identity> {
         let doc = match self.document(url).await {
             Ok(doc) => doc,
             Err(_) => {
@@ -59,7 +58,7 @@ impl IdentityResolver for DidIdentity {
                 resp.json::<Document>().await.map_err(|e| anyhow!("{e}"))?
             }
         };
-        Ok(DidDocument(doc))
+        Ok(Identity::DidDocument(doc))
     }
 }
 
@@ -77,7 +76,7 @@ impl Signer for DidIdentity {
     }
 }
 
-impl SignerExt for DidIdentity {
+impl Signature for DidIdentity {
     async fn verification_method(&self) -> Result<Key> {
         let doc = self.document(&self.owner).await?;
         let vm = &doc.verification_method.as_ref().unwrap()[0];

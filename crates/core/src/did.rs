@@ -15,7 +15,7 @@ pub async fn did_jwk(did_url: &str, resolver: &impl IdentityResolver) -> Result<
         .await
         .map_err(|e| anyhow!("issue dereferencing DID URL {did_url}: {e}"))?;
     let Resource::VerificationMethod(vm) = deref else {
-        return Err(anyhow!("Verification method not found"));
+        return Err(anyhow!("Identity method not found"));
     };
     vm.key.jwk().map_err(|e| anyhow!("JWK not found: {e}"))
 }

@@ -66,7 +66,7 @@ pub struct VerifierMetadata {
     pub vp_formats_supported: Option<Vec<VpFormat>>,
 }
 
-/// /// Client Identifier prefixes that may be supported by the Wallet.
+/// Client Identifier prefixes that may be supported by the Wallet.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ClientIdPrefix {

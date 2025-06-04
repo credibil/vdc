@@ -11,7 +11,7 @@
 
 use anyhow::{Context as _, Result};
 use chrono::Utc;
-use credibil_identity::SignerExt;
+use credibil_identity::Signature;
 use credibil_jose::Jws;
 use credibil_status::StatusClaim;
 use serde_json::{Map, Value};
@@ -63,7 +63,7 @@ pub struct HasClaims(Map<String, Value>);
 pub struct NoSigner;
 /// Builder state has a signer.
 #[doc(hidden)]
-pub struct HasSigner<'a, S: SignerExt>(pub &'a S);
+pub struct HasSigner<'a, S: Signature>(pub &'a S);
 
 impl Default for SdJwtVcBuilder<NoVct, NoIssuer, NoKeyBinding, NoClaims, NoSigner> {
     fn default() -> Self {
@@ -174,11 +174,11 @@ impl<V, I, K, C, S> SdJwtVcBuilder<V, I, K, C, S> {
     }
 }
 
-// SignerExt
+// Signature
 impl<V, I, K, C> SdJwtVcBuilder<V, I, K, C, NoSigner> {
-    /// Set the credential `SignerExt`.
+    /// Set the credential `Signature`.
     #[must_use]
-    pub fn signer<S: SignerExt>(
+    pub fn signer<S: Signature>(
         self, signer: &'_ S,
     ) -> SdJwtVcBuilder<V, I, K, C, HasSigner<'_, S>> {
         SdJwtVcBuilder {
@@ -193,7 +193,7 @@ impl<V, I, K, C> SdJwtVcBuilder<V, I, K, C, NoSigner> {
     }
 }
 
-impl<S: SignerExt> SdJwtVcBuilder<Vct, HasIssuer, HasKeyBinding, HasClaims, HasSigner<'_, S>> {
+impl<S: Signature> SdJwtVcBuilder<Vct, HasIssuer, HasKeyBinding, HasClaims, HasSigner<'_, S>> {
     /// Build the SD-JWT credential, returning a base64url-encoded, JSON SD-JWT
     /// with the format `<Issuer-signed JWT>~<Disclosure 1>~<Disclosure 2>~...~`
     ///
