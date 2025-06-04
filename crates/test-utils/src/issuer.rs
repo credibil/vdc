@@ -1,8 +1,8 @@
 use anyhow::Result;
 use credibil_core::datastore::Datastore;
+use credibil_ecc::{Algorithm, Signer};
 use credibil_identity::did::Document;
-use credibil_identity::{Identity, IdentityResolver, Key, Signature};
-use credibil_se::{Algorithm, Signer};
+use credibil_identity::{Identity, IdentityResolver, Signature, VerifyBy};
 
 use crate::datastore::Store;
 use crate::identity::DidIdentity;
@@ -65,7 +65,7 @@ impl Signer for Issuer {
 }
 
 impl Signature for Issuer {
-    async fn verification_method(&self) -> Result<Key> {
+    async fn verification_method(&self) -> Result<VerifyBy> {
         self.identity.verification_method().await
     }
 }

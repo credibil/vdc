@@ -2,7 +2,7 @@
 
 use std::fmt::Debug;
 
-use credibil_se::{AlgAlgorithm, Algorithm, EncAlgorithm};
+use credibil_ecc::{AlgAlgorithm, Algorithm, EncAlgorithm};
 use credibil_vdc::mso_mdoc::cose;
 use serde::{Deserialize, Serialize};
 

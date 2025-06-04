@@ -2,7 +2,7 @@ use anyhow::{Result, anyhow, bail};
 use credibil_identity::did::{self, Document, DocumentBuilder};
 use credibil_identity::jose::PublicKeyJwk;
 use credibil_identity::se::{Algorithm, Curve, Signer};
-use credibil_identity::{Identity, IdentityResolver, Key, Signature};
+use credibil_identity::{Identity, IdentityResolver, VerifyBy, Signature};
 use test_kms::Keyring;
 
 use crate::datastore::Store;
@@ -77,9 +77,9 @@ impl Signer for DidIdentity {
 }
 
 impl Signature for DidIdentity {
-    async fn verification_method(&self) -> Result<Key> {
+    async fn verification_method(&self) -> Result<VerifyBy> {
         let doc = self.document(&self.owner).await?;
         let vm = &doc.verification_method.as_ref().unwrap()[0];
-        Ok(Key::KeyId(vm.id.clone()))
+        Ok(VerifyBy::KeyId(vm.id.clone()))
     }
 }

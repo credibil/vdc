@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use credibil_oid4vci::identity::{Key, Signature};
+use credibil_oid4vci::identity::{VerifyBy, Signature};
 use credibil_oid4vci::jose::{JwsBuilder, Jwt, decode_jws};
 use credibil_oid4vci::proof::W3cVcClaims;
 use credibil_oid4vci::types::{
@@ -113,7 +113,7 @@ async fn offer_val() {
     let resolver = async |kid: String| did_jwk(&kid, &provider).await;
     let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
-    let Key::KeyId(bob_kid) = bob.verification_method().await.unwrap() else {
+    let VerifyBy::KeyId(bob_kid) = bob.verification_method().await.unwrap() else {
         panic!("should have did");
     };
     let bob_did = bob_kid.split('#').next().expect("should have did");
@@ -477,7 +477,7 @@ async fn reduce_claims() {
     let resolver = async |kid: String| did_jwk(&kid, &provider).await;
     let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
-    let Key::KeyId(bob_kid) = bob.verification_method().await.unwrap() else {
+    let VerifyBy::KeyId(bob_kid) = bob.verification_method().await.unwrap() else {
         panic!("should have did");
     };
     let bob_did = bob_kid.split('#').next().expect("should have did");

@@ -2,7 +2,7 @@
 
 use anyhow::{Context as _, Result, anyhow};
 use credibil_core::{Kind, OneMany};
-use credibil_identity::{Key, Signature};
+use credibil_identity::{VerifyBy, Signature};
 use credibil_jose::encode_jws;
 
 use crate::dcql::Matched;
@@ -117,7 +117,7 @@ impl<S: Signature> W3cVpBuilder<HasMatched<'_>, HasClientId, HasSigner<'_, S>> {
     pub async fn build(self) -> Result<String> {
         let matched = self.matched.0;
 
-        let Key::KeyId(kid) = self.signer.0.verification_method().await? else {
+        let VerifyBy::KeyId(kid) = self.signer.0.verification_method().await? else {
             return Err(anyhow!("failed to get verification method"));
         };
         let (holder_did, _) =

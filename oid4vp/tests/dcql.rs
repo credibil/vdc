@@ -1,7 +1,7 @@
 //! Tests for the Verifier API
 
 use credibil_oid4vp::datastore::Datastore;
-use credibil_oid4vp::identity::{Key, Signature};
+use credibil_oid4vp::identity::{VerifyBy, Signature};
 use credibil_oid4vp::jose::PublicKeyJwk;
 use credibil_oid4vp::status::{StatusClaim, StatusList, TokenBuilder};
 use credibil_oid4vp::vdc::{
@@ -487,7 +487,7 @@ async fn populate(owner: &str) -> Wallet {
     let mut wallet = Wallet::new(owner).await;
     let issuer = issuer().await;
 
-    let Key::KeyId(did_url) = wallet.verification_method().await.unwrap() else {
+    let VerifyBy::KeyId(did_url) = wallet.verification_method().await.unwrap() else {
         panic!("should have did");
     };
     let holder_jwk = did_jwk(&did_url, &wallet).await.expect("should get key");

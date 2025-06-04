@@ -35,6 +35,6 @@ tracing-subscriber.workspace = true
 
 # credibil-identity.workspace = true
 # credibil-jose.workspace = true
-# credibil-se.workspace = true
+# credibil-ecc.workspace = true
 # credibil-vdc.workspace = true
 # test-kms = { git = "https://github.com/credibil/se.git" }

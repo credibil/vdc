@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use credibil_oid4vci::datastore::Datastore;
-use credibil_oid4vci::identity::{Key, Signature};
+use credibil_oid4vci::identity::{VerifyBy, Signature};
 use credibil_oid4vci::jose::{JwsBuilder, Jwt, decode_jws};
 use credibil_oid4vci::proof::W3cVcClaims;
 use credibil_oid4vci::types::{
@@ -152,7 +152,7 @@ async fn deferred() {
     let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
     // verify the credential
-    let Key::KeyId(carol_kid) = carol.verification_method().await.unwrap() else {
+    let VerifyBy::KeyId(carol_kid) = carol.verification_method().await.unwrap() else {
         panic!("should have did");
     };
     let carol_did = carol_kid.split('#').next().expect("should have did");

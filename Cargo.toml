@@ -28,13 +28,13 @@ nursery = "warn"
 anyhow = "1.0.98"
 axum = { version = "0.8.4", features = ["macros"] }
 axum-extra = { version = "0.10.1", features = ["typed-header"] }
-base64ct = { version = "1.7.3", features = ["std"] }
+base64ct = { version = "1.8.0", features = ["std"] }
 chrono = { version = "0.4.41", features = ["serde"] }
 ciborium = "0.2.2"
 credibil-core = { path = "crates/core" }
+credibil-ecc = { git = "https://github.com/credibil/se.git" }
 credibil-identity = { git = "https://github.com/credibil/identity.git" }
 credibil-jose = { git = "https://github.com/credibil/se.git" }
-credibil-se = { git = "https://github.com/credibil/se.git" }
 credibil-status = { path = "crates/status" }
 credibil-vdc = { path = "crates/vdc" }
 http = "1.3.1"
@@ -43,16 +43,22 @@ serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140", features = ["alloc"] }
 serde_repr = "0.1"
 sha2 = "0.10.9"
+test-kms = { git = "https://github.com/credibil/se.git" }
 test-utils = { path = "crates/test-utils" }
 thiserror = "2.0.12"
 tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread", "signal"] }
-tower-http = { version = "0.6.5", features = ["cors", "set-header", "trace"] }
+tower-http = { version = "0.6.6", features = ["cors", "set-header", "trace"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter", "fmt"] }
 uuid = { version = "1.17.0", features = ["fast-rng", "v4"] }
 
 [patch."https://github.com/credibil/identity"]
 credibil-identity = { path = "../identity" }
+
+[patch."https://github.com/credibil/se"]
+credibil-ecc = { path = "../se/ecc" }
+credibil-jose = { path = "../se/jose" }
+test-kms = { path = "../se/crates/test-kms" }
 
 [profile.release]
 # optimize for small code size
