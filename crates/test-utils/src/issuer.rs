@@ -34,7 +34,6 @@ impl Issuer {
         datastore.put(issuer, SUBJECT, "pending_user", PENDING_USER).await.unwrap();
 
         Self {
-            // datastore,
             identity: DidIdentity::new(issuer).await,
         }
     }
