@@ -563,6 +563,7 @@ dependencies = [
  "chrono",
  "credibil-ecc",
  "credibil-jose",
+ "dashmap",
  "multibase",
  "nom",
  "serde",
