@@ -3,7 +3,8 @@
 use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use coset::CoseSign1;
-use credibil_identity::{IdentityResolver, did_jwk};
+use credibil_identity::IdentityResolver;
+use credibil_identity::did::did_jwk;
 
 use crate::dcql::Claim;
 use crate::mso_mdoc::{CoseKey, DeviceAuth, DeviceResponse};

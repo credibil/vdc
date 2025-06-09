@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 
+use credibil_oid4vci::did::did_jwk;
 use credibil_oid4vci::identity::{Signature, VerifyBy};
 use credibil_oid4vci::jose::{JwsBuilder, Jwt, decode_jws};
 use credibil_oid4vci::proof::W3cVcClaims;
@@ -10,7 +11,7 @@ use credibil_oid4vci::types::{
     CredentialResponse, NonceRequest, NotificationEvent, NotificationRequest, ProofClaims,
     TokenGrantType, TokenRequest,
 };
-use credibil_oid4vci::{CredentialHeaders, JwtType, NotificationHeaders, OneMany, did_jwk};
+use credibil_oid4vci::{CredentialHeaders, JwtType, NotificationHeaders, OneMany};
 use serde_json::json;
 use test_utils::issuer::Issuer;
 use test_utils::wallet::Wallet;

@@ -16,11 +16,12 @@ use credibil_oid4vci::{
     CredentialOffer, CredentialRequest, CredentialResponse, IssuerMetadata, JwtType, NonceResponse,
     ProofClaims, ServerMetadata, TokenGrantType, TokenRequest, TokenResponse, sd_jwt,
 };
+use credibil_oid4vp::did::did_jwk;
 use credibil_oid4vp::identity::ecc::Algorithm;
 use credibil_oid4vp::jose::{self, Jwt};
 use credibil_oid4vp::{
     AuthorizationRequest, AuthorizationResponse, ClientId, RequestObject, RequestUriMethod,
-    RequestUriRequest, RequestUriResponse, ResponseMode, VpFormat, Wallet, did_jwk, vp_token,
+    RequestUriRequest, RequestUriResponse, ResponseMode, VpFormat, Wallet, vp_token,
 };
 use http::StatusCode;
 use serde::Deserialize;

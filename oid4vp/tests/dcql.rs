@@ -1,6 +1,7 @@
 //! Tests for the Verifier API
 
 use credibil_oid4vp::datastore::Datastore;
+use credibil_oid4vp::did::did_jwk;
 use credibil_oid4vp::identity::{Signature, VerifyBy};
 use credibil_oid4vp::jose::PublicKeyJwk;
 use credibil_oid4vp::status::{StatusClaim, StatusList, TokenBuilder};
@@ -8,8 +9,7 @@ use credibil_oid4vp::vdc::{
     DcqlQuery, MdocBuilder, SdJwtVcBuilder, W3cVcBuilder, mso_mdoc, sd_jwt, w3c_vc,
 };
 use credibil_oid4vp::{
-    AuthorizationRequest, AuthorizationResponse, CreateRequest, DeviceFlow, ResponseMode, did_jwk,
-    vp_token,
+    AuthorizationRequest, AuthorizationResponse, CreateRequest, DeviceFlow, ResponseMode, vp_token,
 };
 use serde_json::{Value, json};
 use test_utils::issuer::Issuer;

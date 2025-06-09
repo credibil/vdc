@@ -519,6 +519,7 @@ dependencies = [
 [[package]]
 name = "credibil-core"
 version = "0.1.0"
+source = "git+https://github.com/credibil/core.git#95f57ccafaa5522867caf7f6df93ab774be371ff"
 dependencies = [
  "anyhow",
  "bytes",
@@ -529,6 +530,25 @@ dependencies = [
  "percent-encoding",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "credibil-did"
+version = "0.1.2"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "credibil-ecc",
+ "credibil-jose",
+ "dashmap",
+ "multibase",
+ "nom",
+ "serde",
+ "serde_json",
+ "serde_json_canonicalizer",
+ "sha2",
+ "url",
+ "uuid",
 ]
 
 [[package]]
@@ -558,20 +578,9 @@ dependencies = [
 name = "credibil-identity"
 version = "0.1.2"
 dependencies = [
- "anyhow",
- "base64ct",
- "chrono",
+ "credibil-did",
  "credibil-ecc",
  "credibil-jose",
- "dashmap",
- "multibase",
- "nom",
- "serde",
- "serde_json",
- "serde_json_canonicalizer",
- "sha2",
- "url",
- "uuid",
 ]
 
 [[package]]

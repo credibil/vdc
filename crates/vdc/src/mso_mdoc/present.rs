@@ -253,7 +253,7 @@ impl<S: Signature>
 
 #[cfg(test)]
 mod tests {
-    use credibil_identity::did_jwk;
+    use credibil_identity::did::did_jwk;
     use credibil_jose::KeyBinding;
     use serde_json::{Value, json};
     use test_utils::issuer::Issuer;

@@ -26,7 +26,9 @@ pub mod proof {
 }
 pub use credibil_core::state::State;
 pub use credibil_core::{OneMany, datastore, html, http};
-pub use credibil_identity::{self as identity, did_jwk};
+pub use credibil_identity::{
+    did, {self as identity},
+};
 pub use credibil_vdc::{mso_mdoc, sd_jwt, w3c_vc};
 use serde::{Deserialize, Serialize};
 pub use {credibil_jose as jose, credibil_status as status, credibil_vdc as vdc};

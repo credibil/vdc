@@ -31,7 +31,7 @@ axum-extra = { version = "0.10.1", features = ["typed-header"] }
 base64ct = { version = "1.8.0", features = ["std"] }
 chrono = { version = "0.4.41", features = ["serde"] }
 ciborium = "0.2.2"
-credibil-core = { path = "crates/core" }
+credibil-core = { git = "https://github.com/credibil/core.git" }
 credibil-ecc = { git = "https://github.com/credibil/se.git" }
 credibil-identity = { git = "https://github.com/credibil/identity.git" }
 credibil-jose = { git = "https://github.com/credibil/se.git" }
@@ -52,7 +52,7 @@ tracing-subscriber = { version = "0.3.19", features = ["env-filter", "fmt"] }
 uuid = { version = "1.17.0", features = ["fast-rng", "v4"] }
 
 [patch."https://github.com/credibil/identity"]
-credibil-identity = { path = "../identity" }
+credibil-identity = { path = "../identity/identity" }
 
 # [patch."https://github.com/credibil/se"]
 # credibil-ecc = { path = "../se/ecc" }
