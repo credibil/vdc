@@ -2,7 +2,7 @@ use anyhow::{Result, anyhow, bail};
 use credibil_identity::did::{self, Document, DocumentBuilder, KeyId, VerificationMethod};
 use credibil_identity::ecc::Algorithm;
 // use test_kms::Keyring;
-use credibil_identity::ecc::{Curve, Keyring, Signer};
+use credibil_identity::ecc::{Curve::Ed25519, Keyring, Signer};
 use credibil_identity::jose::PublicKeyJwk;
 use credibil_identity::{Identity, IdentityResolver, Signature, VerifyBy};
 
@@ -17,16 +17,14 @@ pub struct DidIdentity {
 impl DidIdentity {
     pub async fn new(owner: &str) -> Self {
         // create a new keyring and add a signing key.
-        let signer = Keyring::generate(&Vault, owner, "signing", Curve::Ed25519)
-            .await
-            .expect("should generate");
+        let signer =
+            Keyring::generate(&Vault, owner, "signing", Ed25519).await.expect("should generate");
         let key_bytes = signer.verifying_key().await.expect("should get key");
         let jwk = PublicKeyJwk::from_bytes(&key_bytes).expect("should convert");
 
+        // generate a did:web document
         let vm = VerificationMethod::build().key(jwk).key_id(KeyId::Index("key-0".to_string()));
         let builder = DocumentBuilder::new().verification_method(vm).derive_key_agreement(true);
-
-        // generate a did:web document
         let document = did::web::CreateBuilder::new(owner)
             .document(builder)
             .build()

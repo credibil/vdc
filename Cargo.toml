@@ -43,7 +43,6 @@ serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140", features = ["alloc"] }
 serde_repr = "0.1"
 sha2 = "0.10.9"
-test-kms = { git = "https://github.com/credibil/se.git" }
 test-utils = { path = "crates/test-utils" }
 thiserror = "2.0.12"
 tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread", "signal"] }
@@ -55,10 +54,9 @@ uuid = { version = "1.17.0", features = ["fast-rng", "v4"] }
 [patch."https://github.com/credibil/identity"]
 credibil-identity = { path = "../identity" }
 
-[patch."https://github.com/credibil/se"]
-credibil-ecc = { path = "../se/ecc" }
-credibil-jose = { path = "../se/jose" }
-# test-kms = { path = "../se/crates/test-kms" }
+# [patch."https://github.com/credibil/se"]
+# credibil-ecc = { path = "../se/ecc" }
+# credibil-jose = { path = "../se/jose" }
 
 [profile.release]
 # optimize for small code size
