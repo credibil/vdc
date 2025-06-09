@@ -19,14 +19,14 @@ const SUBJECT: &str = "SUBJECT";
 
 #[derive(Clone)]
 pub struct Issuer {
-    datastore: Store,
+    // datastore: Store,
     identity: DidIdentity,
 }
 
 impl Issuer {
     #[must_use]
     pub async fn new(issuer: &str) -> Self {
-        let datastore = Store::open();
+        let datastore = Store;
         datastore.put(issuer, METADATA, ISSUER, ISSUER_METADATA).await.unwrap();
         datastore.put(issuer, METADATA, SERVER, SERVER_METADATA).await.unwrap();
         datastore.put(issuer, METADATA, "http://localhost:8082", CLIENT_METADATA).await.unwrap();
@@ -34,7 +34,7 @@ impl Issuer {
         datastore.put(issuer, SUBJECT, "pending_user", PENDING_USER).await.unwrap();
 
         Self {
-            datastore,
+            // datastore,
             identity: DidIdentity::new(issuer).await,
         }
     }
@@ -72,18 +72,18 @@ impl Signature for Issuer {
 
 impl Datastore for Issuer {
     async fn put(&self, owner: &str, partition: &str, key: &str, data: &[u8]) -> Result<()> {
-        self.datastore.put(owner, partition, key, data).await
+        Store.put(owner, partition, key, data).await
     }
 
     async fn get(&self, owner: &str, partition: &str, key: &str) -> Result<Option<Vec<u8>>> {
-        self.datastore.get(owner, partition, key).await
+        Store.get(owner, partition, key).await
     }
 
     async fn delete(&self, owner: &str, partition: &str, key: &str) -> Result<()> {
-        self.datastore.delete(owner, partition, key).await
+        Store.delete(owner, partition, key).await
     }
 
     async fn get_all(&self, owner: &str, partition: &str) -> Result<Vec<(String, Vec<u8>)>> {
-        self.datastore.get_all(owner, partition).await
+        Store.get_all(owner, partition).await
     }
 }
