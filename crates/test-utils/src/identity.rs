@@ -1,46 +1,50 @@
 use anyhow::{Result, anyhow, bail};
-use credibil_identity::did::{self, Document, DocumentBuilder};
-use credibil_identity::ecc::{Algorithm, Curve, Signer};
+use credibil_identity::did::{self, Document, DocumentBuilder, KeyId, VerificationMethod};
+use credibil_identity::ecc::Algorithm;
+// use test_kms::Keyring;
+use credibil_identity::ecc::{Curve, Keyring, Signer};
 use credibil_identity::jose::PublicKeyJwk;
 use credibil_identity::{Identity, IdentityResolver, Signature, VerifyBy};
-use test_kms::Keyring;
 
 use crate::datastore::Store;
+use crate::vault::KeyVault as Vault;
 
 #[derive(Clone)]
 pub struct DidIdentity {
     pub owner: String,
-    keyring: Keyring,
 }
 
 impl DidIdentity {
     pub async fn new(owner: &str) -> Self {
         // create a new keyring and add a signing key.
-        let mut keyring = Keyring::new(owner).await.expect("should create keyring");
-        keyring.add(&Curve::Ed25519, "signer").await.expect("should add key");
-        let key_bytes = keyring.verifying_key("signer").await.expect("should get verifying key");
-        let verifying_key = PublicKeyJwk::from_bytes(&key_bytes).expect("should convert to JWK");
+        let signer = Keyring::generate(&Vault, owner, "signing", Curve::Ed25519)
+            .await
+            .expect("should generate");
+        let key_bytes = signer.verifying_key().await.expect("should get key");
+        let jwk = PublicKeyJwk::from_bytes(&key_bytes).expect("should convert");
+
+        let vm = VerificationMethod::build().key(jwk).key_id(KeyId::Index("key-0".to_string()));
+        let builder = DocumentBuilder::new().verification_method(vm).derive_key_agreement(true);
 
         // generate a did:web document
-        let did = did::web::default_did(owner).expect("should create DID");
-        let document = DocumentBuilder::new(&did)
-            .add_verifying_key(&verifying_key, true)
-            .expect("should add verifying key")
-            .build();
+        let document = did::web::CreateBuilder::new(owner)
+            .document(builder)
+            .build()
+            .expect("should build document");
         let doc_bytes = serde_json::to_vec(&document).expect("should serialize");
 
         // save to global datastore
+        let did = did::web::to_did(owner).expect("should create DID");
         Store::open().put(&did, "DID", &did, &doc_bytes).await.expect("should put");
 
         Self {
             owner: owner.to_string(),
-            keyring,
         }
     }
 
     pub async fn document(&self, url: &str) -> Result<Document> {
         let url = url.trim_end_matches("/did.json").trim_end_matches("/.well-known");
-        let did = did::web::default_did(url)?;
+        let did = did::web::to_did(url)?;
         let Some(doc_bytes) = Store::open().get(&did, "DID", &did).await? else {
             bail!("document not found");
         };
@@ -64,11 +68,13 @@ impl IdentityResolver for DidIdentity {
 
 impl Signer for DidIdentity {
     async fn try_sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
-        self.keyring.sign("signer", msg).await
+        let signer = Keyring::entry(&Vault, &self.owner, "signing").await?;
+        Ok(signer.sign(msg).await)
     }
 
     async fn verifying_key(&self) -> Result<Vec<u8>> {
-        self.keyring.verifying_key("signer").await
+        let signer = Keyring::entry(&Vault, &self.owner, "signing").await?;
+        signer.verifying_key().await
     }
 
     async fn algorithm(&self) -> Result<Algorithm> {

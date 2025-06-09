@@ -6,6 +6,7 @@ pub mod wallet;
 
 mod datastore;
 mod identity;
+mod vault;
 
 pub use issuer::Issuer;
 pub use verifier::Verifier;

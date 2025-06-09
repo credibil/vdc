@@ -312,18 +312,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "blockstore"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a8962daed8fb337472d9c4215006443acba1e40c6c91c9d4a3f440d1fb30436"
-dependencies = [
- "cid",
- "dashmap",
- "multihash",
- "thiserror 1.0.69",
-]
-
-[[package]]
 name = "bumpalo"
 version = "3.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -552,18 +540,15 @@ dependencies = [
  "anyhow",
  "base64ct",
  "chacha20poly1305",
+ "ciborium",
  "ecdsa",
  "ecies",
  "ed25519-dalek",
  "k256",
- "multibase",
  "p256",
  "rand 0.8.5",
  "serde",
- "serde_json",
- "serde_repr",
  "sha2",
- "tracing",
  "x25519-dalek",
  "zeroize",
 ]
@@ -595,10 +580,8 @@ dependencies = [
  "base64ct",
  "credibil-ecc",
  "multibase",
- "rand 0.8.5",
  "serde",
  "serde_json",
- "serde_repr",
  "tracing",
  "zeroize",
 ]
@@ -2822,24 +2805,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "test-kms"
-version = "0.1.2"
-dependencies = [
- "anyhow",
- "blockstore",
- "ciborium",
- "cid",
- "credibil-ecc",
- "ecies",
- "ed25519-dalek",
- "multihash-codetable",
- "rand 0.8.5",
- "serde",
- "sha2",
- "x25519-dalek",
-]
-
-[[package]]
 name = "test-utils"
 version = "0.0.0"
 dependencies = [
@@ -2855,7 +2820,6 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "test-kms",
 ]
 
 [[package]]

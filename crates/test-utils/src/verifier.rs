@@ -65,6 +65,10 @@ impl Receiver for Verifier {
         todo!()
     }
 
+    async fn public_key(&self) -> Result<Vec<u8>> {
+        todo!()
+    }
+
     async fn shared_secret(&self, _sender_public: PublicKey) -> Result<SharedSecret> {
         todo!()
     }

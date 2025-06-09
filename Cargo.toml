@@ -58,7 +58,7 @@ credibil-identity = { path = "../identity" }
 [patch."https://github.com/credibil/se"]
 credibil-ecc = { path = "../se/ecc" }
 credibil-jose = { path = "../se/jose" }
-test-kms = { path = "../se/crates/test-kms" }
+# test-kms = { path = "../se/crates/test-kms" }
 
 [profile.release]
 # optimize for small code size

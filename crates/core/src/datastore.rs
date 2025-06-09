@@ -4,7 +4,7 @@ use anyhow::Result;
 
 /// `Datastore` is used by implementers to provide data storage
 /// capability.
-pub trait Datastore: Sized + Send + Sync {
+pub trait Datastore: Send + Sync {
     /// Store a data item in the underlying item store.
     fn put(
         &self, owner: &str, partition: &str, key: &str, data: &[u8],
