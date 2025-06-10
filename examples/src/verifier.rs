@@ -82,7 +82,6 @@ async fn authorization(
         .into_response()
 }
 
-
 #[axum::debug_handler]
 async fn did(
     State(provider): State<Verifier>, TypedHeader(host): TypedHeader<Host>, request: Request,

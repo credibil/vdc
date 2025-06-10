@@ -1,4 +1,6 @@
-use anyhow::{Result, anyhow};
+use std::thread;
+
+use anyhow::Result;
 use credibil_identity::did::{self, Document, DocumentBuilder, KeyId, VerificationMethod};
 use credibil_identity::ecc::{Entry, Signer};
 use credibil_identity::jose::PublicKeyJwk;
@@ -27,17 +29,15 @@ impl DidIdentity {
     }
 
     pub async fn document(&self, url: &str) -> Result<Document> {
-        let request = did::DocumentRequest { url: url.to_string() };
-        let doc = match did::handle("owner", request, &Store).await {
-            Ok(response) => response.0.clone(),
-            Err(_) => {
-                let url = url.replace("https", "http");
-                let resp = reqwest::get(url).await.map_err(|e| anyhow!("fetching: {e}"))?;
-                resp.json::<Document>().await.map_err(|e| anyhow!("{e}"))?
-            }
-        };
+        // not in a tokio runtime == running in a test
+        if thread::current().name() != Some("tokio-runtime-worker") {
+            let request = did::DocumentRequest { url: url.to_string() };
+            return did::handle("owner", request, &Store).await.map(|r| r.0.clone());
+        }
 
-        Ok(doc)
+        // in a tokio runtime: assume web server is running
+        let resp = reqwest::get(url.replace("https", "http")).await?;
+        Ok(resp.json::<Document>().await?)
     }
 
     pub async fn resolve(&self, url: &str) -> Result<Identity> {
