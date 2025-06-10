@@ -1,8 +1,8 @@
 use anyhow::Result;
 use cid::Cid;
 use credibil_core::datastore::Datastore;
-use credibil_identity::did::Document;
-use credibil_identity::ecc::{Algorithm, Signer};
+use credibil_ecc::Curve::Ed25519;
+use credibil_ecc::{Algorithm, Entry, Keyring, Signer};
 use credibil_identity::{Identity, IdentityResolver, Signature, VerifyBy};
 use credibil_vdc::Queryable;
 use multihash_codetable::{Code, MultihashDigest};
@@ -11,12 +11,13 @@ use serde::de::DeserializeOwned;
 
 use crate::datastore::Store;
 use crate::identity::DidIdentity;
+use crate::vault::KeyVault as Vault;
 
 #[derive(Clone)]
 pub struct Wallet {
-    id: String,
+    wallet_id: String,
+    signer: Entry,
     identity: DidIdentity,
-    datastore: Store,
 }
 
 const RAW_CODEC: u64 = 0x55;
@@ -50,32 +51,32 @@ impl Block {
 impl Wallet {
     pub async fn new(wallet_id: impl Into<String>) -> Self {
         let wallet_id: String = wallet_id.into();
-        let datastore = Store::open();
+
+        let signer = Keyring::generate(&Vault, &wallet_id, "signing", Ed25519)
+            .await
+            .expect("should generate");
+        let identity = DidIdentity::new(&wallet_id, &signer).await;
 
         Self {
-            identity: DidIdentity::new(&wallet_id).await,
-            id: wallet_id,
-            datastore,
+            wallet_id,
+            signer,
+            identity,
         }
     }
 
     pub fn id(&self) -> &str {
-        &self.id
+        &self.wallet_id
     }
 
     // Add a credential to the store.
-    pub async fn add(&mut self, queryable: Queryable) -> Result<()> {
+    pub async fn add(&self, queryable: Queryable) -> Result<()> {
         let block = Block::new(&queryable)?;
-        self.datastore.put(&self.id, "CREDENTIAL", &block.cid()?.to_string(), block.data()).await
+        Store.put(&self.wallet_id, "CREDENTIAL", &block.cid()?.to_string(), block.data()).await
     }
 
     pub async fn fetch(&self) -> Result<Vec<Queryable>> {
-        let all_vcs = self.datastore.get_all(&self.id, "CREDENTIAL").await?;
+        let all_vcs = Store.get_all(&self.wallet_id, "CREDENTIAL").await?;
         all_vcs.iter().map(|(_, v)| Block::from_slice(v).try_into()).collect()
-    }
-
-    pub async fn did(&self) -> Result<Document> {
-        self.identity.document(&self.identity.owner).await
     }
 }
 
@@ -87,15 +88,15 @@ impl IdentityResolver for Wallet {
 
 impl Signer for Wallet {
     async fn try_sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
-        self.identity.try_sign(msg).await
+        self.signer.try_sign(msg).await
     }
 
     async fn verifying_key(&self) -> Result<Vec<u8>> {
-        self.identity.verifying_key().await
+        self.signer.verifying_key().await
     }
 
     async fn algorithm(&self) -> Result<Algorithm> {
-        self.identity.algorithm().await
+        self.signer.algorithm().await
     }
 }
 
@@ -107,18 +108,18 @@ impl Signature for Wallet {
 
 impl Datastore for Wallet {
     async fn put(&self, owner: &str, partition: &str, key: &str, data: &[u8]) -> Result<()> {
-        self.datastore.put(owner, partition, key, data).await
+        Store.put(owner, partition, key, data).await
     }
 
     async fn get(&self, owner: &str, partition: &str, key: &str) -> Result<Option<Vec<u8>>> {
-        self.datastore.get(owner, partition, key).await
+        Store.get(owner, partition, key).await
     }
 
     async fn delete(&self, owner: &str, partition: &str, key: &str) -> Result<()> {
-        self.datastore.delete(owner, partition, key).await
+        Store.delete(owner, partition, key).await
     }
 
     async fn get_all(&self, owner: &str, partition: &str) -> Result<Vec<(String, Vec<u8>)>> {
-        self.datastore.get_all(owner, partition).await
+        Store.get_all(owner, partition).await
     }
 }

@@ -2,7 +2,8 @@
 //!
 //! A (naive) HTTP server for OpenID4VP verifier.
 
-use axum::extract::{Path, State};
+use anyhow::Result;
+use axum::extract::{Path, Request, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
@@ -81,12 +82,18 @@ async fn authorization(
         .into_response()
 }
 
-use anyhow::Result;
 
 #[axum::debug_handler]
-async fn did(State(provider): State<Verifier>) -> Result<Json<Document>, AppError> {
-    let doc = provider.did().await.map_err(AppError::from)?;
-    Ok(Json(doc))
+async fn did(
+    State(provider): State<Verifier>, TypedHeader(host): TypedHeader<Host>, request: Request,
+) -> Result<Json<Document>, AppError> {
+    let request = credibil_identity::did::DocumentRequest {
+        url: format!("http://{host}{}", request.uri()),
+    };
+    let doc = credibil_identity::did::handle(&format!("http://{host}"), request, &provider)
+        .await
+        .map_err(AppError::from)?;
+    Ok(Json(doc.0.clone()))
 }
 
 struct AppError(anyhow::Error);

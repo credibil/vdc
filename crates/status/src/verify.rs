@@ -1,6 +1,5 @@
 //! Token Status for Verifiers
 
-use std::fmt::Debug;
 use std::io::Read;
 
 use anyhow::{Result, anyhow};
@@ -8,7 +7,6 @@ use base64ct::{Base64UrlUnpadded, Encoding};
 use bitvec::order::Lsb0;
 use bitvec::view::BitView;
 use flate2::read::ZlibDecoder;
-use serde::{Deserialize, Serialize};
 
 use crate::StatusList;
 
@@ -29,14 +27,4 @@ impl StatusList {
         let bitslice = inflated.view_bits::<Lsb0>();
         Ok(bitslice.get(idx).is_some_and(|x| *x))
     }
-}
-
-/// Used to query the Status List endpoint in order to return Status List
-/// Token(s).
-#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
-pub struct StatusListRequest {
-    /// The index of the Status List to retrieve. When not specified, all
-    /// status lists should be returned.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
 }

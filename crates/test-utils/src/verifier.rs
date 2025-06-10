@@ -1,11 +1,12 @@
 use anyhow::Result;
 use credibil_core::datastore::Datastore;
-use credibil_identity::did::Document;
-use credibil_identity::ecc::{Algorithm, PublicKey, Receiver, SharedSecret, Signer};
+use credibil_ecc::Curve::Ed25519;
+use credibil_ecc::{Algorithm, Entry, Keyring, Signer};
 use credibil_identity::{Identity, IdentityResolver, Signature, VerifyBy};
 
 use crate::datastore::Store;
 use crate::identity::DidIdentity;
+use crate::vault::KeyVault as Vault;
 
 const VERIFIER_METADATA: &[u8] = include_bytes!("../data/verifier-metadata.json");
 const METADATA: &str = "METADATA";
@@ -13,8 +14,8 @@ const VERIFIER: &str = "VERIFIER";
 
 #[derive(Clone)]
 pub struct Verifier {
+    signer: Entry,
     identity: DidIdentity,
-    datastore: Store,
 }
 
 impl Verifier {
@@ -23,14 +24,11 @@ impl Verifier {
         let datastore = Store::open();
         datastore.put(verifier, METADATA, VERIFIER, VERIFIER_METADATA).await.unwrap();
 
-        Self {
-            datastore,
-            identity: DidIdentity::new(verifier).await,
-        }
-    }
+        let signer =
+            Keyring::generate(&Vault, verifier, "signing", Ed25519).await.expect("should generate");
+        let identity = DidIdentity::new(verifier, &signer).await;
 
-    pub async fn did(&self) -> Result<Document> {
-        self.identity.document(&self.identity.owner).await
+        Self { signer, identity }
     }
 }
 
@@ -42,52 +40,38 @@ impl IdentityResolver for Verifier {
 
 impl Signer for Verifier {
     async fn try_sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
-        self.identity.try_sign(msg).await
+        self.signer.try_sign(msg).await
     }
 
     async fn verifying_key(&self) -> Result<Vec<u8>> {
-        self.identity.verifying_key().await
+        self.signer.verifying_key().await
     }
 
     async fn algorithm(&self) -> Result<Algorithm> {
-        self.identity.algorithm().await
+        self.signer.algorithm().await
     }
 }
 
 impl Signature for Verifier {
     async fn verification_method(&self) -> Result<VerifyBy> {
-        self.identity.verification_method().await
-    }
-}
-
-impl Receiver for Verifier {
-    async fn key_id(&self) -> Result<String> {
-        todo!()
-    }
-
-    async fn public_key(&self) -> Result<Vec<u8>> {
-        todo!()
-    }
-
-    async fn shared_secret(&self, _sender_public: PublicKey) -> Result<SharedSecret> {
-        todo!()
+        self.signer.verification_method().await
     }
 }
 
 impl Datastore for Verifier {
     async fn put(&self, owner: &str, partition: &str, key: &str, data: &[u8]) -> Result<()> {
-        self.datastore.put(owner, partition, key, data).await
+        Store.put(owner, partition, key, data).await
     }
 
     async fn get(&self, owner: &str, partition: &str, key: &str) -> Result<Option<Vec<u8>>> {
-        self.datastore.get(owner, partition, key).await
+        Store.get(owner, partition, key).await
     }
 
     async fn delete(&self, owner: &str, partition: &str, key: &str) -> Result<()> {
-        self.datastore.delete(owner, partition, key).await
+        Store.delete(owner, partition, key).await
     }
 
     async fn get_all(&self, owner: &str, partition: &str) -> Result<Vec<(String, Vec<u8>)>> {
-        self.datastore.get_all(owner, partition).await
+        Store.get_all(owner, partition).await
     }
 }

@@ -2,13 +2,13 @@
 //!
 //! A (naive) HTTP server for a web wallet.
 
-use std::sync::Arc;
-
 use anyhow::{Context, Result, anyhow};
-use axum::extract::{Query, State};
+use axum::extract::{Query, Request, State};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::{Json, Router};
+use axum_extra::TypedHeader;
+use axum_extra::headers::Host;
 use credibil_oid4vci::identity::Signature;
 use credibil_oid4vci::identity::did::Document;
 use credibil_oid4vci::jose::JwsBuilder;
@@ -27,15 +27,9 @@ use http::StatusCode;
 use serde::Deserialize;
 use test_utils::wallet;
 use tokio::net::TcpListener;
-use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
-
-#[derive(Clone)]
-struct AppState {
-    provider: Arc<Mutex<wallet::Wallet>>,
-}
 
 pub async fn serve(wallet_id: &'static str) -> Result<JoinHandle<()>> {
     let wallet = wallet::Wallet::new(wallet_id).await;
@@ -46,9 +40,7 @@ pub async fn serve(wallet_id: &'static str) -> Result<JoinHandle<()>> {
         .route("/.well-known/did.json", get(did))
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any))
-        .with_state(AppState {
-            provider: Arc::new(Mutex::new(wallet)),
-        });
+        .with_state(wallet);
 
     let jh = tokio::spawn(async move {
         let addr = wallet_id.strip_prefix("http://").unwrap_or(wallet_id);
@@ -68,7 +60,7 @@ struct OfferUri {
 
 #[axum::debug_handler]
 async fn credential_offer(
-    State(state): State<AppState>, Query(offer_uri): Query<OfferUri>,
+    State(provider): State<wallet::Wallet>, Query(offer_uri): Query<OfferUri>,
 ) -> Result<(), AppError> {
     let http = reqwest::Client::new();
 
@@ -107,7 +99,6 @@ async fn credential_offer(
         tx_code: offer_uri.tx_code.clone(),
     };
 
-    let provider = state.provider.lock().await;
     let token_req = TokenRequest::builder().client_id(provider.id()).grant_type(grant_type).build();
     let token_uri = server.oauth.token_endpoint;
     let http_resp = http.post(&token_uri).form(&token_req).send().await?;
@@ -116,7 +107,6 @@ async fn credential_offer(
         return Err(anyhow!("token: {body}").into());
     }
     let token_resp = http_resp.json::<TokenResponse>().await?;
-    drop(provider);
 
     // --------------------------------------------------
     // Proof for credential request
@@ -132,7 +122,7 @@ async fn credential_offer(
     let nonce_resp = http_resp.json::<NonceResponse>().await?;
 
     // proof of possession of key material
-    let provider = state.provider.lock().await;
+
     let key = provider.verification_method().await?.try_into()?;
 
     let jws = JwsBuilder::new()
@@ -143,12 +133,10 @@ async fn credential_offer(
                 .nonce(&nonce_resp.c_nonce),
         )
         .key_ref(&key)
-        .add_signer(&*provider)
+        .add_signer(&provider)
         .build()
         .await?;
     let jwt = jws.encode()?;
-
-    drop(provider);
 
     // --------------------------------------------------
     // Fetch credential
@@ -184,17 +172,15 @@ async fn credential_offer(
         return Err(anyhow!("credential is not an SD-JWT").into());
     };
 
-    let mut provider = state.provider.lock().await;
-    let q = sd_jwt::to_queryable(jwt, &*provider).await?;
-    (*provider).add(q).await?;
-    drop(provider);
+    let q = sd_jwt::to_queryable(jwt, &provider).await?;
+    provider.add(q).await?;
 
     Ok(())
 }
 
 #[axum::debug_handler]
 async fn authorize(
-    State(state): State<AppState>, Query(request): Query<AuthorizationRequest>,
+    State(provider): State<wallet::Wallet>, Query(request): Query<AuthorizationRequest>,
 ) -> Result<(), AppError> {
     let http = reqwest::Client::new();
 
@@ -235,8 +221,7 @@ async fn authorize(
         return Err(anyhow!("expected JWT in response").into());
     };
 
-    let provider = state.provider.lock().await;
-    let jwk = async |kid: String| did_jwk(&kid, &*provider).await;
+    let jwk = async |kid: String| did_jwk(&kid, &provider).await;
     let decoded: Jwt<RequestObject> = jose::decode_jws(&jwt, jwk).await?;
     let request_object = decoded.claims;
 
@@ -252,7 +237,7 @@ async fn authorize(
     // --------------------------------------------------
     // Generate a VP token
     // --------------------------------------------------
-    let vp_token = vp_token::generate(&request_object, &results, &*provider).await?;
+    let vp_token = vp_token::generate(&request_object, &results, &provider).await?;
     let response = AuthorizationResponse {
         vp_token,
         state: request_object.state,
@@ -284,10 +269,16 @@ async fn authorize(
 }
 
 #[axum::debug_handler]
-async fn did(State(state): State<AppState>) -> Result<Json<Document>, AppError> {
-    let provider = state.provider.lock().await;
-    let doc = provider.did().await.map_err(AppError::from)?;
-    Ok(Json(doc))
+async fn did(
+    State(provider): State<wallet::Wallet>, TypedHeader(host): TypedHeader<Host>, request: Request,
+) -> Result<Json<Document>, AppError> {
+    let request = credibil_identity::did::DocumentRequest {
+        url: format!("http://{host}{}", request.uri()),
+    };
+    let doc = credibil_identity::did::handle(&format!("http://{host}"), request, &provider)
+        .await
+        .map_err(AppError::from)?;
+    Ok(Json(doc.0.clone()))
 }
 
 // Wrap anyhow::Error.

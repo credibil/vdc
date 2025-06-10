@@ -484,7 +484,7 @@ async fn specific_values() {
 
 // Initialise a mock "wallet" with test credentials.
 async fn populate(owner: &str) -> Wallet {
-    let mut wallet = Wallet::new(owner).await;
+    let wallet = Wallet::new(owner).await;
     let issuer = issuer().await;
 
     let VerifyBy::KeyId(did_url) = wallet.verification_method().await.unwrap() else {

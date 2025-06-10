@@ -1,11 +1,12 @@
 use anyhow::Result;
 use credibil_core::datastore::Datastore;
-use credibil_ecc::{Algorithm, Signer};
-use credibil_identity::did::Document;
+use credibil_ecc::{Algorithm, Entry, Keyring, Signer};
+use credibil_identity::ecc::Curve::Ed25519;
 use credibil_identity::{Identity, IdentityResolver, Signature, VerifyBy};
 
 use crate::datastore::Store;
 use crate::identity::DidIdentity;
+use crate::vault::KeyVault as Vault;
 
 const ISSUER_METADATA: &[u8] = include_bytes!("../data/issuer-metadata.json");
 const SERVER_METADATA: &[u8] = include_bytes!("../data/server-metadata.json");
@@ -19,7 +20,7 @@ const SUBJECT: &str = "SUBJECT";
 
 #[derive(Clone)]
 pub struct Issuer {
-    // datastore: Store,
+    signer: Entry,
     identity: DidIdentity,
 }
 
@@ -33,13 +34,11 @@ impl Issuer {
         datastore.put(issuer, SUBJECT, "normal_user", NORMAL_USER).await.unwrap();
         datastore.put(issuer, SUBJECT, "pending_user", PENDING_USER).await.unwrap();
 
-        Self {
-            identity: DidIdentity::new(issuer).await,
-        }
-    }
+        let signer =
+            Keyring::generate(&Vault, issuer, "signing", Ed25519).await.expect("should generate");
+        let identity = DidIdentity::new(issuer, &signer).await;
 
-    pub async fn did(&self) -> Result<Document> {
-        self.identity.document(&self.identity.owner).await
+        Self { signer, identity }
     }
 }
 
@@ -51,15 +50,15 @@ impl IdentityResolver for Issuer {
 
 impl Signer for Issuer {
     async fn try_sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
-        self.identity.try_sign(msg).await
+        Ok(self.signer.sign(msg).await)
     }
 
     async fn verifying_key(&self) -> Result<Vec<u8>> {
-        self.identity.verifying_key().await
+        self.signer.verifying_key().await
     }
 
     async fn algorithm(&self) -> Result<Algorithm> {
-        self.identity.algorithm().await
+        Ok(Algorithm::EdDSA)
     }
 }
 
