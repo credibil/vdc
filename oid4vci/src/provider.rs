@@ -14,7 +14,7 @@ use std::future::Future;
 use anyhow::{Result, anyhow};
 use credibil_core::datastore::Datastore;
 pub use credibil_core::state::StateStore;
-pub use credibil_identity::{IdentityResolver, SignerExt};
+pub use credibil_proof::{Resolver, Signature};
 pub use credibil_status::StatusStore;
 
 use crate::types::{ClientMetadata, Dataset, IssuerMetadata, ServerMetadata};
@@ -26,14 +26,14 @@ const SUBJECT: &str = "SUBJECT";
 
 /// Issuer Provider trait.
 pub trait Provider:
-    Metadata + Subject + StateStore + SignerExt + IdentityResolver + StatusStore + Clone
+    Metadata + Subject + StateStore + Signature + Resolver + StatusStore + Clone
 {
 }
 
 /// A blanket implementation for `Provider` trait so that any type implementing
 /// the required super traits is considered a `Provider`.
 impl<T> Provider for T where
-    T: Metadata + Subject + StateStore + SignerExt + IdentityResolver + StatusStore + Clone
+    T: Metadata + Subject + StateStore + Signature + Resolver + StatusStore + Clone
 {
 }
 

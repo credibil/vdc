@@ -39,8 +39,7 @@ jobs:
       - run: |
           sudo apt-get update
           sudo apt-get -y install libwebkit2gtk-4.1-dev
-      
-      - run: cargo nextest run --all-features
+      - run: cargo nextest run --all --all-features
 
   # windows:
   #   name: Test suite (windows)

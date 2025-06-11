@@ -12,9 +12,9 @@ use coset::{
     CoseSign1, CoseSign1Builder, HeaderBuilder, ProtectedHeader, SignatureContext, iana,
     sig_structure_data,
 };
-use credibil_identity::{Key, SignerExt};
+use credibil_ecc::PublicKey;
 use credibil_jose::PublicKeyJwk;
-use credibil_se::PublicKey;
+use credibil_proof::{Signature, VerifyBy};
 use serde::{Deserialize, Serialize, de, ser};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
@@ -30,13 +30,13 @@ const Y: i64 = -3;
 /// # Errors
 ///
 /// Returns an error if the signing fails or if the algorithm is unsupported.
-pub async fn sign(payload: Vec<u8>, signer: &impl SignerExt) -> Result<CoseSign1> {
+pub async fn sign(payload: Vec<u8>, signer: &impl Signature) -> Result<CoseSign1> {
     // header
     let algorithm = match signer.algorithm().await? {
-        credibil_se::Algorithm::EdDSA => iana::Algorithm::EdDSA,
-        credibil_se::Algorithm::Es256K => return Err(anyhow!("unsupported algorithm")),
+        credibil_ecc::Algorithm::EdDSA => iana::Algorithm::EdDSA,
+        credibil_ecc::Algorithm::Es256K => return Err(anyhow!("unsupported algorithm")),
     };
-    let Key::KeyId(key_id) = signer.verification_method().await? else {
+    let VerifyBy::KeyId(key_id) = signer.verification_method().await? else {
         return Err(anyhow!("invalid verification method"));
     };
     let protected = HeaderBuilder::new().algorithm(algorithm).key_id(key_id.into_bytes()).build();
@@ -94,8 +94,8 @@ impl CoseKey {
     pub fn verify(&self, sig: &[u8], sig_data: &[u8]) -> Result<()> {
         let verifying_key: PublicKey = self.clone().try_into()?;
         match self.crv {
-            Curve::Es256K => credibil_se::Algorithm::Es256K.verify(sig_data, sig, &verifying_key),
-            Curve::Ed25519 => credibil_se::Algorithm::EdDSA.verify(sig_data, sig, &verifying_key),
+            Curve::Es256K => credibil_ecc::Algorithm::Es256K.verify(sig_data, sig, &verifying_key),
+            Curve::Ed25519 => credibil_ecc::Algorithm::EdDSA.verify(sig_data, sig, &verifying_key),
             _ => bail!("unsupported DSA curve"),
         }
     }
@@ -136,13 +136,13 @@ impl TryFrom<CoseKey> for PublicKey {
 impl From<PublicKeyJwk> for CoseKey {
     fn from(jwk: PublicKeyJwk) -> Self {
         let kty = match jwk.kty {
-            credibil_se::KeyType::Okp => KeyType::Okp,
-            credibil_se::KeyType::Ec => KeyType::Ec,
-            credibil_se::KeyType::Oct => todo!("add support for KeyType::Oct"),
+            credibil_ecc::KeyType::Okp => KeyType::Okp,
+            credibil_ecc::KeyType::Ec => KeyType::Ec,
+            credibil_ecc::KeyType::Oct => todo!("add support for KeyType::Oct"),
         };
         let crv = match jwk.crv {
-            credibil_se::Curve::Ed25519 => Curve::Ed25519,
-            credibil_se::Curve::Es256K => Curve::Es256K,
+            credibil_ecc::Curve::Ed25519 => Curve::Ed25519,
+            credibil_ecc::Curve::Es256K => Curve::Es256K,
             _ => todo!("add support for other curves"),
         };
 

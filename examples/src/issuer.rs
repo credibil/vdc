@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use anyhow::Result;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Request, State};
 use axum::http::header::AUTHORIZATION;
 use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
 use axum::response::{Html, IntoResponse, Redirect, Response};
@@ -337,9 +337,16 @@ async fn statuslists(
 }
 
 #[axum::debug_handler]
-async fn did(State(provider): State<Issuer>) -> Result<Json<Document>, AppError> {
-    let doc = provider.did().await.map_err(AppError::from)?;
-    Ok(Json(doc))
+async fn did(
+    State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>, request: Request,
+) -> Result<Json<Document>, AppError> {
+    let request = credibil_proof::DocumentRequest {
+        url: format!("http://{host}{}", request.uri()),
+    };
+    let doc = credibil_proof::handle(&format!("http://{host}"), request, &provider)
+        .await
+        .map_err(AppError::from)?;
+    Ok(Json(doc.0.clone()))
 }
 
 // Wrap anyhow::Error.

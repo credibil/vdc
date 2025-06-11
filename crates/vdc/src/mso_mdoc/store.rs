@@ -3,7 +3,7 @@
 use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_core::Kind;
-use credibil_identity::IdentityResolver;
+use credibil_proof::Resolver;
 
 use crate::FormatProfile;
 use crate::dcql::{Claim, Queryable};
@@ -15,7 +15,7 @@ use crate::mso_mdoc::{DataItem, IssuerSigned, MobileSecurityObject, serde_cbor, 
 ///
 /// Returns an error if the decoding fails or if the `mdoc` signature
 /// verification fails.
-pub async fn to_queryable(issued: &str, resolver: &impl IdentityResolver) -> Result<Queryable> {
+pub async fn to_queryable(issued: &str, resolver: &impl Resolver) -> Result<Queryable> {
     let mdoc_bytes = Base64UrlUnpadded::decode_vec(issued)?;
     let issuer_signed: IssuerSigned = serde_cbor::from_slice(&mdoc_bytes)?;
 

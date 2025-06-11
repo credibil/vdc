@@ -2,8 +2,8 @@
 
 use anyhow::{Context as _, Result, anyhow};
 use chrono::Utc;
-use credibil_identity::SignerExt;
 use credibil_jose::Jws;
+use credibil_proof::Signature;
 
 use crate::dcql::Matched;
 use crate::sd_jwt::{Disclosure, JwtType, KbJwtClaims};
@@ -36,7 +36,7 @@ pub struct HasClientId(String);
 pub struct NoSigner;
 /// Builder state has a signer.
 #[doc(hidden)]
-pub struct HasSigner<'a, S: SignerExt>(pub &'a S);
+pub struct HasSigner<'a, S: Signature>(pub &'a S);
 
 impl Default for SdJwtVpBuilder<NoMatched, NoClientId, NoSigner> {
     fn default() -> Self {
@@ -95,11 +95,11 @@ impl<M, C, S> SdJwtVpBuilder<M, C, S> {
     }
 }
 
-// SignerExt
+// Signature
 impl<M, C> SdJwtVpBuilder<M, C, NoSigner> {
-    /// Set the credential `SignerExt`.
+    /// Set the credential `Signature`.
     #[must_use]
-    pub fn signer<S: SignerExt>(self, signer: &'_ S) -> SdJwtVpBuilder<M, C, HasSigner<'_, S>> {
+    pub fn signer<S: Signature>(self, signer: &'_ S) -> SdJwtVpBuilder<M, C, HasSigner<'_, S>> {
         SdJwtVpBuilder {
             matched: self.matched,
             client_id: self.client_id,
@@ -109,7 +109,7 @@ impl<M, C> SdJwtVpBuilder<M, C, NoSigner> {
     }
 }
 
-impl<S: SignerExt> SdJwtVpBuilder<HasMatched<'_>, HasClientId, HasSigner<'_, S>> {
+impl<S: Signature> SdJwtVpBuilder<HasMatched<'_>, HasClientId, HasSigner<'_, S>> {
     /// Build the SD-JWT credential, returning a base64url-encoded, JSON SD-JWT
     /// with the format: `<Issuer-signed JWT>~<Disclosure 1>~<Disclosure 2>~...~<KB-JWT>`.
     ///

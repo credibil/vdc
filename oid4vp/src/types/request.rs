@@ -5,8 +5,8 @@ use std::str::FromStr;
 use anyhow::{Context, Result};
 use base64ct::{Base64, Encoding};
 use credibil_core::{Kind, html};
-pub use credibil_identity::SignerExt;
 use credibil_jose::{JwsBuilder, PublicKeyJwk};
+pub use credibil_proof::Signature;
 use credibil_vdc::dcql::DcqlQuery;
 use qrcode::QrCode;
 use serde::{Deserialize, Serialize};
@@ -270,7 +270,7 @@ impl RequestObject {
     ///
     /// Returns an `Error::ServerError` error if the Request Object cannot be
     /// serialized.
-    pub async fn url_encode_jwt(&self, signer: &impl SignerExt) -> Result<String> {
+    pub async fn url_encode_jwt(&self, signer: &impl Signature) -> Result<String> {
         let payload: AuthorizationClaims = self.clone().into();
 
         let key_ref = signer.verification_method().await?.try_into()?;

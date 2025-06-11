@@ -13,9 +13,9 @@ use std::fmt::Debug;
 
 use anyhow::Context as _;
 use chrono::Utc;
-use credibil_core::did_jwk;
 use credibil_core::state::State;
 use credibil_jose::{Jwt, KeyBinding, decode_jws};
+use credibil_proof::resolve_jwk;
 use credibil_status::{StatusList, StatusStore, TokenBuilder};
 use credibil_vdc::FormatProfile;
 use credibil_vdc::mso_mdoc::MdocBuilder;
@@ -140,7 +140,7 @@ impl CredentialRequest {
 
             // the same `c_nonce` should be used for all proofs
             let mut nonces = HashSet::new();
-            let resolver = async |kid: String| did_jwk(&kid, provider).await;
+            let resolver = async |kid: String| resolve_jwk(&kid, provider).await;
 
             for proof in proof_jwts {
                 // TODO: ProofClaims cannot use `client_id` if the access token was
@@ -255,7 +255,7 @@ impl Context {
                     }
                 }
                 FormatProfile::MsoMdoc { doctype } => {
-                    let jwk = did_jwk(kid, provider)
+                    let jwk = resolve_jwk(kid, provider)
                         .await
                         .context("retrieving JWK for `dc+sd-jwt` credential")?;
 
@@ -275,7 +275,7 @@ impl Context {
                 FormatProfile::DcSdJwt { vct } => {
                     // TODO: cache the result of jwk when verifying proof (`verify` method)
                     let jwk =
-                        did_jwk(kid, provider).await.context("getting JWK for `dc+sd-jwt`")?;
+                        resolve_jwk(kid, provider).await.context("getting JWK for `dc+sd-jwt`")?;
                     let Some(did) = kid.split('#').next() else {
                         return Err(Error::InvalidProof("Proof JWT DID is invalid".to_string()));
                     };

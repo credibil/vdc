@@ -1,16 +1,16 @@
 //! Tests for the Verifier API
 
 use credibil_oid4vp::datastore::Datastore;
-use credibil_oid4vp::identity::{Key, SignerExt};
+use credibil_oid4vp::identity::{Signature, VerifyBy};
 use credibil_oid4vp::jose::PublicKeyJwk;
 use credibil_oid4vp::status::{StatusClaim, StatusList, TokenBuilder};
 use credibil_oid4vp::vdc::{
     DcqlQuery, MdocBuilder, SdJwtVcBuilder, W3cVcBuilder, mso_mdoc, sd_jwt, w3c_vc,
 };
 use credibil_oid4vp::{
-    AuthorizationRequest, AuthorizationResponse, CreateRequest, DeviceFlow, ResponseMode, did_jwk,
-    vp_token,
+    AuthorizationRequest, AuthorizationResponse, CreateRequest, DeviceFlow, ResponseMode, vp_token,
 };
+use credibil_proof::resolve_jwk;
 use serde_json::{Value, json};
 use test_utils::issuer::Issuer;
 use test_utils::verifier::Verifier;
@@ -484,13 +484,13 @@ async fn specific_values() {
 
 // Initialise a mock "wallet" with test credentials.
 async fn populate(owner: &str) -> Wallet {
-    let mut wallet = Wallet::new(owner).await;
+    let wallet = Wallet::new(owner).await;
     let issuer = issuer().await;
 
-    let Key::KeyId(did_url) = wallet.verification_method().await.unwrap() else {
+    let VerifyBy::KeyId(did_url) = wallet.verification_method().await.unwrap() else {
         panic!("should have did");
     };
-    let holder_jwk = did_jwk(&did_url, &wallet).await.expect("should get key");
+    let holder_jwk = resolve_jwk(&did_url, &wallet).await.expect("should get key");
 
     // create a status list token
     let statuslist_id = format!("{ISSUER_ID}/statuslists/1");

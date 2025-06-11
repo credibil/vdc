@@ -1,9 +1,8 @@
-//! # sd-jwt Verification
+//! # sd-jwt Identity
 
 use anyhow::{Result, anyhow};
-use credibil_core::did_jwk;
-use credibil_identity::IdentityResolver;
 use credibil_jose::{Jwt, decode_jws};
+use credibil_proof::{Resolver, resolve_jwk};
 use credibil_status::{StatusListClaims, StatusToken};
 
 use crate::dcql::Claim;
@@ -17,8 +16,8 @@ use crate::sd_jwt::{Disclosure, KbJwtClaims, KeyBinding, SdJwtClaims};
 /// # Errors
 ///
 /// Returns an error if the SD-JWT credential is invalid.
-pub async fn verify_vc(vc: &str, resolver: &impl IdentityResolver) -> Result<Jwt<SdJwtClaims>> {
-    let jwk = async |kid: String| did_jwk(&kid, resolver).await;
+pub async fn verify_vc(vc: &str, resolver: &impl Resolver) -> Result<Jwt<SdJwtClaims>> {
+    let jwk = async |kid: String| resolve_jwk(&kid, resolver).await;
     let sd_jwt: Jwt<SdJwtClaims> = decode_jws(vc, jwk).await?;
 
     // FIXME: verify issuer ('iss' claim)
@@ -36,7 +35,7 @@ pub async fn verify_vp<R>(
     vp: &str, nonce: &str, client_id: &str, resolver: &R,
 ) -> Result<Vec<Claim>>
 where
-    R: IdentityResolver + StatusToken,
+    R: Resolver + StatusToken,
 {
     // extract components of the sd-jwt presentation
     let split = vp.split('~').collect::<Vec<_>>();
@@ -54,7 +53,7 @@ where
     if let Some(status_claim) = &sd_jwt.claims.status {
         // FIXME: move this code  to `StatusList`
         let token = StatusToken::fetch(resolver, &status_claim.status_list.uri).await?;
-        let jwk = async |kid: String| did_jwk(&kid, resolver).await;
+        let jwk = async |kid: String| resolve_jwk(&kid, resolver).await;
         let decoded: Jwt<StatusListClaims> = decode_jws(&token, jwk).await?;
         if !decoded.claims.status_list.is_valid(status_claim.status_list.idx)? {
             return Err(anyhow!("credential status is invalid"));

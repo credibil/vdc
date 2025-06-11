@@ -10,8 +10,8 @@ use bitvec::slice::BitSlice;
 use bitvec::vec::BitVec;
 use bitvec::view::BitView;
 use chrono::{DateTime, Utc};
-use credibil_identity::SignerExt;
 use credibil_jose::Jws;
+use credibil_proof::Signature;
 use flate2::Compression;
 use flate2::read::ZlibDecoder;
 use flate2::write::ZlibEncoder;
@@ -107,7 +107,7 @@ pub struct HasUri(String);
 pub struct NoSigner;
 /// Builder state has a signer.
 #[doc(hidden)]
-pub struct HasSigner<'a, S: SignerExt>(pub &'a S);
+pub struct HasSigner<'a, S: Signature>(pub &'a S);
 
 impl Default for TokenBuilder<NoList, NoUri, NoSigner> {
     fn default() -> Self {
@@ -164,7 +164,7 @@ impl<L, U, S> TokenBuilder<L, U, S> {
 impl<L, U> TokenBuilder<L, U, NoSigner> {
     /// Set the token signer.
     #[must_use]
-    pub fn signer<S: SignerExt>(self, signer: &'_ S) -> TokenBuilder<L, U, HasSigner<'_, S>> {
+    pub fn signer<S: Signature>(self, signer: &'_ S) -> TokenBuilder<L, U, HasSigner<'_, S>> {
         TokenBuilder {
             status_list: self.status_list,
             uri: self.uri,
@@ -174,7 +174,7 @@ impl<L, U> TokenBuilder<L, U, NoSigner> {
     }
 }
 
-impl<S: SignerExt> TokenBuilder<HasList, HasUri, HasSigner<'_, S>> {
+impl<S: Signature> TokenBuilder<HasList, HasUri, HasSigner<'_, S>> {
     /// Build the token.
     ///
     /// # Errors

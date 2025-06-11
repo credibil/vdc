@@ -1,10 +1,9 @@
-//! # mdoc Verification
+//! # mdoc Identity
 
 use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use coset::CoseSign1;
-use credibil_core::did_jwk;
-use credibil_identity::IdentityResolver;
+use credibil_proof::{Resolver, resolve_jwk};
 
 use crate::dcql::Claim;
 use crate::mso_mdoc::{CoseKey, DeviceAuth, DeviceResponse};
@@ -15,7 +14,7 @@ use crate::serde_cbor;
 /// # Errors
 ///
 /// Returns an error if the presentation is invalid or if verification fails.
-pub async fn verify_vp(vp: &str, resolver: &impl IdentityResolver) -> Result<Vec<Claim>> {
+pub async fn verify_vp(vp: &str, resolver: &impl Resolver) -> Result<Vec<Claim>> {
     // extract components of the mdoc presentation
     let cbor = Base64UrlUnpadded::decode_vec(vp)?;
     let response = serde_cbor::from_slice::<DeviceResponse>(&cbor)?;
@@ -60,11 +59,9 @@ pub async fn verify_vp(vp: &str, resolver: &impl IdentityResolver) -> Result<Vec
     Ok(claims)
 }
 
-pub async fn verify_signature(
-    signature: &CoseSign1, resolver: &impl IdentityResolver,
-) -> Result<()> {
+pub async fn verify_signature(signature: &CoseSign1, resolver: &impl Resolver) -> Result<()> {
     let kid_bytes = &signature.protected.header.key_id;
     let kid = String::from_utf8_lossy(kid_bytes);
-    let verifying_key: CoseKey = did_jwk(&kid, resolver).await?.into();
+    let verifying_key: CoseKey = resolve_jwk(&*kid, resolver).await?.into();
     signature.verify_signature(&[], |sig, tbs| verifying_key.verify(sig, tbs))
 }

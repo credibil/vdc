@@ -5,7 +5,7 @@
 use anyhow::anyhow;
 use base64ct::{Base64UrlUnpadded, Encoding};
 use ciborium::cbor;
-use credibil_identity::SignerExt;
+use credibil_proof::Signature;
 use rand::{Rng, rng};
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
@@ -51,7 +51,7 @@ pub struct HasClaims(Map<String, Value>);
 pub struct NoSigner;
 /// Builder state has a signer.
 #[doc(hidden)]
-pub struct HasSigner<'a, S: SignerExt>(pub &'a S);
+pub struct HasSigner<'a, S: Signature>(pub &'a S);
 
 impl MdocBuilder<NoDocType, NoDeviceKey, NoClaims, NoSigner> {
     /// Create a new ISO mDL credential builder.
@@ -109,8 +109,8 @@ impl<D, K, S> MdocBuilder<D, K, NoClaims, S> {
 }
 
 impl<D, K, C> MdocBuilder<D, K, C, NoSigner> {
-    /// Set the credential `SignerExt`.
-    pub fn signer<S: SignerExt>(self, signer: &'_ S) -> MdocBuilder<D, K, C, HasSigner<'_, S>> {
+    /// Set the credential `Signature`.
+    pub fn signer<S: Signature>(self, signer: &'_ S) -> MdocBuilder<D, K, C, HasSigner<'_, S>> {
         MdocBuilder {
             doctype: self.doctype,
             device_key: self.device_key,
@@ -120,7 +120,7 @@ impl<D, K, C> MdocBuilder<D, K, C, NoSigner> {
     }
 }
 
-impl<S: SignerExt> MdocBuilder<HasDocType, HasDeviceKey, HasClaims, HasSigner<'_, S>> {
+impl<S: Signature> MdocBuilder<HasDocType, HasDeviceKey, HasClaims, HasSigner<'_, S>> {
     /// Build the ISO mDL credential, returning a base64url-encoded,
     /// CBOR-encoded, ISO mDL.
     ///
@@ -174,8 +174,8 @@ impl<S: SignerExt> MdocBuilder<HasDocType, HasDeviceKey, HasClaims, HasSigner<'_
 
 #[cfg(test)]
 mod tests {
-    use credibil_core::did_jwk;
     use credibil_jose::KeyBinding;
+    use credibil_proof::resolve_jwk;
     use serde_json::json;
     use test_utils::issuer::Issuer;
     use test_utils::wallet::Wallet;
@@ -195,7 +195,7 @@ mod tests {
         let KeyBinding::Kid(kid) = key_ref else {
             panic!("should have key id");
         };
-        let device_jwk = did_jwk(&kid, &wallet).await.expect("should fetch JWK");
+        let device_jwk = resolve_jwk(&kid, &wallet).await.expect("should fetch JWK");
 
         let claims_json = json!({
             "org.iso.18013.5.1": {

@@ -2,8 +2,8 @@
 
 use anyhow::{Context as _, Result, anyhow};
 use credibil_core::{Kind, OneMany};
-use credibil_identity::{Key, SignerExt};
 use credibil_jose::encode_jws;
+use credibil_proof::{Signature, VerifyBy};
 
 use crate::dcql::Matched;
 use crate::w3c_vc::{VerifiablePresentation, W3cVpClaims};
@@ -36,7 +36,7 @@ pub struct HasClientId(String);
 pub struct NoSigner;
 /// Builder state has a signer.
 #[doc(hidden)]
-pub struct HasSigner<'a, S: SignerExt>(pub &'a S);
+pub struct HasSigner<'a, S: Signature>(pub &'a S);
 
 impl Default for W3cVpBuilder<NoMatched, NoClientId, NoSigner> {
     fn default() -> Self {
@@ -95,11 +95,11 @@ impl<M, C, S> W3cVpBuilder<M, C, S> {
     }
 }
 
-// SignerExt
+// Signature
 impl<M, C> W3cVpBuilder<M, C, NoSigner> {
-    /// Set the credential `SignerExt`.
+    /// Set the credential `Signature`.
     #[must_use]
-    pub fn signer<S: SignerExt>(self, signer: &'_ S) -> W3cVpBuilder<M, C, HasSigner<'_, S>> {
+    pub fn signer<S: Signature>(self, signer: &'_ S) -> W3cVpBuilder<M, C, HasSigner<'_, S>> {
         W3cVpBuilder {
             matched: self.matched,
             client_id: self.client_id,
@@ -109,7 +109,7 @@ impl<M, C> W3cVpBuilder<M, C, NoSigner> {
     }
 }
 
-impl<S: SignerExt> W3cVpBuilder<HasMatched<'_>, HasClientId, HasSigner<'_, S>> {
+impl<S: Signature> W3cVpBuilder<HasMatched<'_>, HasClientId, HasSigner<'_, S>> {
     /// Build the presentation.
     ///
     /// # Errors
@@ -117,7 +117,7 @@ impl<S: SignerExt> W3cVpBuilder<HasMatched<'_>, HasClientId, HasSigner<'_, S>> {
     pub async fn build(self) -> Result<String> {
         let matched = self.matched.0;
 
-        let Key::KeyId(kid) = self.signer.0.verification_method().await? else {
+        let VerifyBy::KeyId(kid) = self.signer.0.verification_method().await? else {
             return Err(anyhow!("failed to get verification method"));
         };
         let (holder_did, _) =

@@ -55,7 +55,7 @@ async fn request_jwt() {
         panic!("no JWT found in response");
     };
 
-    let resolver = async |kid: String| did_jwk(&kid, &provider).await;
+    let resolver = async |kid: String| resolve_jwk(&kid, &provider).await;
 
     let jwt: jws::Jwt<RequestObject> = decode_jws(&jwt_enc, resolver).await.expect("jwt is valid");
     assert_snapshot!("response", jwt);

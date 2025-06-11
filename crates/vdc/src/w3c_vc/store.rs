@@ -4,8 +4,8 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use credibil_core::Kind;
-use credibil_identity::IdentityResolver;
 use credibil_jose::Jws;
+use credibil_proof::Resolver;
 use serde_json::Value;
 
 use crate::dcql::{Claim, Queryable};
@@ -18,7 +18,7 @@ use crate::{CredentialDefinition, FormatProfile};
 ///
 /// Returns an error if the decoding fails.
 pub async fn to_queryable(
-    issued: impl Into<Kind<VerifiableCredential>>, _resolver: &impl IdentityResolver,
+    issued: impl Into<Kind<VerifiableCredential>>, _resolver: &impl Resolver,
 ) -> Result<Queryable> {
     let issued = issued.into();
 
