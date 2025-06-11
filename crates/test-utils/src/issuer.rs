@@ -5,7 +5,7 @@ use credibil_proof::ecc::Curve::Ed25519;
 use credibil_proof::{Resolver, Signature, VerifyBy};
 
 use crate::datastore::Store;
-use crate::identity::DidIdentity;
+use crate::identity::Identity;
 use crate::vault::KeyVault as Vault;
 
 const ISSUER_METADATA: &[u8] = include_bytes!("../data/issuer-metadata.json");
@@ -21,7 +21,7 @@ const SUBJECT: &str = "SUBJECT";
 #[derive(Clone)]
 pub struct Issuer {
     signer: Entry,
-    identity: DidIdentity,
+    identity: Identity,
 }
 
 impl Issuer {
@@ -36,7 +36,7 @@ impl Issuer {
 
         let signer =
             Keyring::generate(&Vault, issuer, "signing", Ed25519).await.expect("should generate");
-        let identity = DidIdentity::new(issuer, &signer).await;
+        let identity = Identity::new(issuer, &signer).await;
 
         Self { signer, identity }
     }

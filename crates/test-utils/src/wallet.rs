@@ -10,14 +10,14 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 
 use crate::datastore::Store;
-use crate::identity::DidIdentity;
+use crate::identity::Identity;
 use crate::vault::KeyVault as Vault;
 
 #[derive(Clone)]
 pub struct Wallet {
     wallet_id: String,
     signer: Entry,
-    identity: DidIdentity,
+    identity: Identity,
 }
 
 const RAW_CODEC: u64 = 0x55;
@@ -55,7 +55,7 @@ impl Wallet {
         let signer = Keyring::generate(&Vault, &wallet_id, "signing", Ed25519)
             .await
             .expect("should generate");
-        let identity = DidIdentity::new(&wallet_id, &signer).await;
+        let identity = Identity::new(&wallet_id, &signer).await;
 
         Self {
             wallet_id,

@@ -5,7 +5,7 @@ use credibil_ecc::{Algorithm, Entry, Keyring, Signer};
 use credibil_proof::{Resolver, Signature, VerifyBy};
 
 use crate::datastore::Store;
-use crate::identity::DidIdentity;
+use crate::identity::Identity;
 use crate::vault::KeyVault as Vault;
 
 const VERIFIER_METADATA: &[u8] = include_bytes!("../data/verifier-metadata.json");
@@ -15,7 +15,7 @@ const VERIFIER: &str = "VERIFIER";
 #[derive(Clone)]
 pub struct Verifier {
     signer: Entry,
-    identity: DidIdentity,
+    identity: Identity,
 }
 
 impl Verifier {
@@ -26,7 +26,7 @@ impl Verifier {
 
         let signer =
             Keyring::generate(&Vault, verifier, "signing", Ed25519).await.expect("should generate");
-        let identity = DidIdentity::new(verifier, &signer).await;
+        let identity = Identity::new(verifier, &signer).await;
 
         Self { signer, identity }
     }

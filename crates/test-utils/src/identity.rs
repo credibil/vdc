@@ -9,11 +9,11 @@ use credibil_proof::{DocumentRequest, VerifyBy};
 use crate::datastore::Store;
 
 #[derive(Clone)]
-pub struct DidIdentity {
+pub struct Identity {
     pub owner: String,
 }
 
-impl DidIdentity {
+impl Identity {
     pub async fn new(owner: &str, signer: &Entry) -> Self {
         let key_bytes = signer.verifying_key().await.expect("should get key");
         let jwk = PublicKeyJwk::from_bytes(&key_bytes).expect("should convert");
