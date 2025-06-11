@@ -61,7 +61,7 @@ pub async fn verify_vp(vp: &str, resolver: &impl Resolver) -> Result<Vec<Claim>>
 
 pub async fn verify_signature(signature: &CoseSign1, resolver: &impl Resolver) -> Result<()> {
     let kid_bytes = &signature.protected.header.key_id;
-    let kid = String::from_utf8_lossy(kid_bytes).to_owned().to_string();
-    let verifying_key: CoseKey = resolve_jwk(&kid, resolver).await?.into();
+    let kid = String::from_utf8_lossy(kid_bytes);
+    let verifying_key: CoseKey = resolve_jwk(&*kid, resolver).await?.into();
     signature.verify_signature(&[], |sig, tbs| verifying_key.verify(sig, tbs))
 }

@@ -23,7 +23,6 @@ credibil-oid4vci = { path = "../oid4vci" }
 credibil-oid4vp = { path = "../oid4vp" }
 credibil-proof.workspace = true
 credibil-status.workspace = true
-dashmap = "6.1.0"
 http.workspace = true
 oauth2 = { version = "5.0.0" }
 reqwest.workspace = true
@@ -35,7 +34,3 @@ tower-http.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 
-# credibil-jose.workspace = true
-# credibil-ecc.workspace = true
-# credibil-vdc.workspace = true
-# test-kms = { git = "https://github.com/credibil/se.git" }
