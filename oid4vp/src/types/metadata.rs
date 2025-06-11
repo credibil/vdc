@@ -82,7 +82,7 @@ pub enum ClientIdPrefix {
 
     /// The `sub` claim in the Verifier attestation JWT when the Verifier
     /// authenticates using a JWT.
-    VerifierAttestation,
+    VerifierInfo,
 
     /// A DNS name matching a dNSName Subject Alternative Name (SAN) entry in
     /// the leaf certificate passed with the request.

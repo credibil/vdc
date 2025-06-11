@@ -65,8 +65,7 @@ pub struct CredentialQuery {
 
     /// Additional properties requested that apply to the metadata of the
     /// credential. Properties are specific to Credential Format Profile.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub meta: Option<MetadataQuery>,
+    pub meta: MetadataQuery,
 
     /// Issuer certification authorities or trust frameworks that the Verifier
     /// will accept. Every credential returned by the Wallet SHOULD match at
@@ -132,7 +131,7 @@ impl CredentialQuery {
         }
 
         // metadata match
-        if self.meta.as_ref().is_some_and(|meta| !meta.execute(queryable)) {
+        if !self.meta.execute(queryable) {
             return None;
         }
         // claims match

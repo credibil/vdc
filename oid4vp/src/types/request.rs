@@ -245,12 +245,12 @@ pub struct RequestObject {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub transaction_data: Option<Vec<TransactionData>>,
 
-    /// Attestations about the Verifier relevant to the Credential Request.
+    /// Information about the Verifier relevant to the Credential Request.
     ///
-    /// Attestations are intended to support authorization decisions, inform
+    /// `VerifierInfo` is intended to support authorization decisions, inform
     /// Wallet policy enforcement, or enrich the End-User consent dialog.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub verifier_attestations: Option<Vec<VerifierAttestation>>,
+    pub verifier_info: Option<Vec<VerifierInfo>>,
 
     /// The Wallet provided nonce used to mitigate replay attacks.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -364,7 +364,7 @@ pub enum ClientId {
     /// authenticates using a JWT.
     ///
     /// For example, `verifier.example`.
-    VerifierAttestation(String),
+    VerifierInfo(String),
 
     /// A DNS name matching a dNSName Subject Alternative Name (SAN) entry in
     /// the leaf certificate passed with the request.
@@ -401,7 +401,7 @@ impl Display for ClientId {
             Self::RedirectUri(uri) => write!(f, "redirect_uri:{uri}"),
             Self::OpenIdFederation(uri) => write!(f, "openid_federation:{uri}"),
             Self::DecentralizedIdentifier(did) => write!(f, "decentralized_identifier:{did}"),
-            Self::VerifierAttestation(sub) => write!(f, "verifier_attestation:{sub}"),
+            Self::VerifierInfo(sub) => write!(f, "verifier_attestation:{sub}"),
             Self::X509SanDns(fqdn) => write!(f, "x509_san_dns:{fqdn}"),
             Self::Origin(uri) => write!(f, "origin:{uri}"),
             Self::X509Hash(hash) => write!(f, "x509_hash:{hash}"),
@@ -420,7 +420,7 @@ impl From<String> for ClientId {
         } else if let Some(did) = value.strip_prefix("decentralized_identifier:") {
             Self::DecentralizedIdentifier(did.to_string())
         } else if let Some(sub) = value.strip_prefix("verifier_attestation:") {
-            Self::VerifierAttestation(sub.to_string())
+            Self::VerifierInfo(sub.to_string())
         } else if let Some(fqdn) = value.strip_prefix("x509_san_dns:") {
             Self::X509SanDns(fqdn.to_string())
         } else if let Some(uri) = value.strip_prefix("origin:") {
@@ -566,7 +566,7 @@ pub struct TransactionData {
 /// Details about the transaction that the Verifier is requesting the End-User
 /// to authorize.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
-pub struct VerifierAttestation {
+pub struct VerifierInfo {
     /// The format of the attestation and how it is encoded.
     pub format: String,
 
@@ -698,7 +698,7 @@ mod tests {
             state: Some("af0ifjsldkj".to_string()),
             client_metadata: Some(VerifierMetadata::default()),
             transaction_data: Some(vec![TransactionData::default()]),
-            verifier_attestations: Some(vec![VerifierAttestation::default()]),
+            verifier_info: Some(vec![VerifierInfo::default()]),
             wallet_nonce: None,
         };
 
@@ -722,7 +722,7 @@ mod tests {
             state: Some("af0ifjsldkj".to_string()),
             client_metadata: Some(VerifierMetadata::default()),
             transaction_data: Some(vec![TransactionData::default()]),
-            verifier_attestations: Some(vec![VerifierAttestation::default()]),
+            verifier_info: Some(vec![VerifierInfo::default()]),
             wallet_nonce: None,
         };
 

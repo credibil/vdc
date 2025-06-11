@@ -230,13 +230,6 @@ pub enum SingleProof {
         /// The JWT containing the Wallet's proof of possession of key material.
         attestation: String,
     },
-    //
-    // /// A W3C Verifiable Presentation object signed using the Data Integrity Proof.
-    // #[serde(rename = "ldp_vp")]
-    // LdpVp {
-    //     /// The JWT containing the Wallet's proof of possession of key material.
-    //     ldp_vp: String,
-    // },
 }
 
 impl Default for SingleProof {

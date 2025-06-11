@@ -288,13 +288,6 @@ pub struct CredentialConfiguration {
     ///  - `cwt`: A CWT [RFC8392] is used as proof of possession. A proof object
     ///    MUST include a cwt claim containing a CWT defined in Section 7.2.1.3.
     ///
-    ///  - `ldp_vp`: A W3C Verifiable Presentation object signed using the Data
-    ///    Integrity Proof as defined in [VC_DATA_2.0] or [VC_DATA], and where
-    ///    the proof of possession MUST be done in accordance with
-    ///    [VC_Data_Integrity]. When `proof_type` is set to `ldp_vp`, the proof
-    ///    object MUST include a `ldp_vp` claim containing a W3C Verifiable
-    ///    Presentation defined in Section 7.2.1.2.
-    ///
     /// # Example
     ///
     /// ```json

@@ -98,9 +98,7 @@ async fn verify(
         let Some(query) = dcql_query.credentials.iter().find(|q| q.id == *query_id) else {
             return Err(invalid!("query not found: {query_id}"));
         };
-        let Some(meta) = &query.meta else {
-            return Err(invalid!("meta not found: {query_id}"));
-        };
+
         let nonce = &request_object.nonce;
         let client_id = &request_object.client_id.to_string();
 
@@ -121,7 +119,7 @@ async fn verify(
             };
 
             found.push(Queryable {
-                meta: meta.into(),
+                meta: query.meta.clone().into(),
                 claims,
                 credential: Kind::String(String::new()),
             });
