@@ -3,7 +3,7 @@ use cid::Cid;
 use credibil_core::datastore::Datastore;
 use credibil_ecc::Curve::Ed25519;
 use credibil_ecc::{Algorithm, Entry, Keyring, Signer};
-use credibil_identity::{Identity, IdentityResolver, Signature, VerifyBy};
+use credibil_proof::{Resolver, Signature, VerifyBy};
 use credibil_vdc::Queryable;
 use multihash_codetable::{Code, MultihashDigest};
 use serde::Serialize;
@@ -80,8 +80,8 @@ impl Wallet {
     }
 }
 
-impl IdentityResolver for Wallet {
-    async fn resolve(&self, url: &str) -> Result<Identity> {
+impl Resolver for Wallet {
+    async fn resolve(&self, url: &str) -> Result<Vec<u8>> {
         self.identity.resolve(url).await
     }
 }

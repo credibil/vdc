@@ -2,7 +2,6 @@
 
 use std::collections::HashMap;
 
-use credibil_oid4vci::did::did_jwk;
 use credibil_oid4vci::identity::{Signature, VerifyBy};
 use credibil_oid4vci::jose::{JwsBuilder, Jwt, decode_jws};
 use credibil_oid4vci::proof::W3cVcClaims;
@@ -12,6 +11,7 @@ use credibil_oid4vci::types::{
     TokenGrantType, TokenRequest,
 };
 use credibil_oid4vci::{CredentialHeaders, JwtType, NotificationHeaders, OneMany};
+use credibil_proof::resolve_jwk;
 use serde_json::json;
 use test_utils::issuer::Issuer;
 use test_utils::wallet::Wallet;
@@ -111,7 +111,7 @@ async fn offer_val() {
     let Credential { credential } = credentials.first().expect("should have credential");
 
     let token = credential.as_str().expect("should be a string");
-    let resolver = async |kid: String| did_jwk(&kid, &provider).await;
+    let resolver = async |kid: String| resolve_jwk(&kid, &provider).await;
     let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
     let VerifyBy::KeyId(bob_kid) = bob.verification_method().await.unwrap() else {
@@ -259,7 +259,7 @@ async fn two_datasets() {
 
         // verify the credential proof
         let token = credential.as_str().expect("should be a string");
-        let resolver = async |kid: String| did_jwk(&kid, &provider).await;
+        let resolver = async |kid: String| resolve_jwk(&kid, &provider).await;
         let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
         // validate the credential subject
@@ -370,7 +370,7 @@ async fn reduce_credentials() {
 
     // verify the credential proof
     let token = credential.as_str().expect("should be a string");
-    let resolver = async |kid: String| did_jwk(&kid, &provider).await;
+    let resolver = async |kid: String| resolve_jwk(&kid, &provider).await;
     let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
     // validate the credential subject
@@ -475,7 +475,7 @@ async fn reduce_claims() {
 
     // verify the credential proof
     let token = credential.as_str().expect("should be a string");
-    let resolver = async |kid: String| did_jwk(&kid, &provider).await;
+    let resolver = async |kid: String| resolve_jwk(&kid, &provider).await;
     let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
     let VerifyBy::KeyId(bob_kid) = bob.verification_method().await.unwrap() else {

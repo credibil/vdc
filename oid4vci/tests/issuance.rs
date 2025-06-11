@@ -4,7 +4,6 @@
 
 use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_jose::{JwsBuilder, Jwt, decode_jws};
-use credibil_oid4vci::did::did_jwk;
 use credibil_oid4vci::identity::{Signature, VerifyBy};
 use credibil_oid4vci::proof::W3cVcClaims;
 use credibil_oid4vci::types::{
@@ -13,6 +12,7 @@ use credibil_oid4vci::types::{
 };
 use credibil_oid4vci::vdc::sd_jwt::SdJwtClaims;
 use credibil_oid4vci::{CredentialHeaders, JwtType, OneMany};
+use credibil_proof::resolve_jwk;
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use test_utils::issuer::Issuer;
@@ -140,7 +140,7 @@ async fn two_proofs() {
     };
     let dan_did = dan_kid.split('#').next().expect("should have did");
 
-    let resolver = async |kid: String| did_jwk(&kid, &provider).await;
+    let resolver = async |kid: String| resolve_jwk(&kid, &provider).await;
     let dids = vec![bob_did.to_string(), dan_did.to_string()];
 
     for (i, credential) in credentials.iter().enumerate() {
@@ -252,7 +252,7 @@ async fn sd_jwt() {
     let parts = sd_jwt.split_once('~').expect("should split");
 
     let token = parts.0;
-    let resolver = async |kid: String| did_jwk(&kid, &provider).await;
+    let resolver = async |kid: String| resolve_jwk(&kid, &provider).await;
     let jwt: Jwt<SdJwtClaims> = decode_jws(token, resolver).await.expect("should decode");
 
     // verify the credential

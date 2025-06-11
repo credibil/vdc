@@ -1,9 +1,8 @@
 //! # W3C Identity
 
 use anyhow::{Result, anyhow};
-use credibil_identity::IdentityResolver;
-use credibil_identity::did::did_jwk;
 use credibil_jose::{Jwt, decode_jws};
+use credibil_proof::{Resolver, resolve_jwk};
 
 use super::W3cVpClaims;
 use crate::dcql::Claim;
@@ -16,13 +15,13 @@ use crate::w3c_vc::store;
 /// Returns an error if the SD-JWT presentation is invalid or if verification
 /// fails.
 pub async fn verify_vp(
-    vp: &str, nonce: &str, client_id: &str, resolver: &impl IdentityResolver,
+    vp: &str, nonce: &str, client_id: &str, resolver: &impl Resolver,
 ) -> Result<Vec<Claim>> {
     // verify and unpack jwt:
     //  1. it should be signed by the holder
     //  2. the `nonce` should contain the authorization request nonce
     //  3. the `aud` claim should match the client identifier
-    let jwk = async |kid: String| did_jwk(&kid, resolver).await;
+    let jwk = async |kid: String| resolve_jwk(&kid, resolver).await;
     let vp_jwt: Jwt<W3cVpClaims> = decode_jws(vp, jwk).await?;
 
     // verify claims

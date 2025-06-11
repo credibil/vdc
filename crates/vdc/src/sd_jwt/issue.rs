@@ -11,8 +11,8 @@
 
 use anyhow::{Context as _, Result};
 use chrono::Utc;
-use credibil_identity::Signature;
 use credibil_jose::Jws;
+use credibil_proof::Signature;
 use credibil_status::StatusClaim;
 use serde_json::{Map, Value};
 

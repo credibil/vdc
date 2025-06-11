@@ -9,8 +9,8 @@
 
 use anyhow::Context as _;
 use credibil_core::{Kind, OneMany};
-use credibil_identity::Signature;
 use credibil_jose::encode_jws;
+use credibil_proof::Signature;
 use credibil_status::StatusClaim;
 use serde_json::{Map, Value};
 

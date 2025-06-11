@@ -2,7 +2,7 @@
 
 use anyhow::{Result, anyhow};
 use credibil_core::Kind;
-use credibil_identity::IdentityResolver;
+use credibil_proof::Resolver;
 use serde_json::Value;
 
 use crate::FormatProfile;
@@ -14,7 +14,7 @@ use crate::sd_jwt::{Disclosure, verify};
 /// # Errors
 ///
 /// Returns an error if the decoding fails.
-pub async fn to_queryable(issued: &str, resolver: &impl IdentityResolver) -> Result<Queryable> {
+pub async fn to_queryable(issued: &str, resolver: &impl Resolver) -> Result<Queryable> {
     // extract components of the sd-jwt credential
     let split = issued.split('~').collect::<Vec<_>>();
     if split.len() < 2 {

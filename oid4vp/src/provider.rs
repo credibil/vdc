@@ -5,23 +5,17 @@ use std::future::Future;
 use anyhow::{Result, anyhow};
 use credibil_core::datastore::Datastore;
 pub use credibil_core::state::StateStore;
-pub use credibil_identity::{IdentityResolver, Signature};
+pub use credibil_proof::{Resolver, Signature};
 pub use credibil_status::StatusToken;
 
 use crate::types::Verifier;
 
 /// Verifier Provider trait.
-pub trait Provider:
-    Metadata + StateStore + Signature + IdentityResolver + StatusToken + Clone
-{
-}
+pub trait Provider: Metadata + StateStore + Signature + Resolver + StatusToken + Clone {}
 
 /// A blanket implementation for `Provider` trait so that any type implementing
 /// the required super traits is considered a `Provider`.
-impl<T> Provider for T where
-    T: Metadata + StateStore + Signature + IdentityResolver + StatusToken + Clone
-{
-}
+impl<T> Provider for T where T: Metadata + StateStore + Signature + Resolver + StatusToken + Clone {}
 
 /// The `Metadata` trait is used by implementers to provide `Verifier` (client)
 /// metadata to the library.

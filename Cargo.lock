@@ -556,7 +556,7 @@ dependencies = [
 [[package]]
 name = "credibil-ecc"
 version = "0.1.2"
-source = "git+https://github.com/credibil/se.git#00db0ea998ae6bdec2340378fe4e37448a551f14"
+source = "git+https://github.com/credibil/key.git#00db0ea998ae6bdec2340378fe4e37448a551f14"
 dependencies = [
  "aes-gcm",
  "aes-kw",
@@ -577,18 +577,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "credibil-identity"
-version = "0.1.2"
-dependencies = [
- "credibil-did",
- "credibil-ecc",
- "credibil-jose",
-]
-
-[[package]]
 name = "credibil-jose"
 version = "0.1.2"
-source = "git+https://github.com/credibil/se.git#00db0ea998ae6bdec2340378fe4e37448a551f14"
+source = "git+https://github.com/credibil/key.git#00db0ea998ae6bdec2340378fe4e37448a551f14"
 dependencies = [
  "anyhow",
  "base64ct",
@@ -611,8 +602,8 @@ dependencies = [
  "chrono",
  "credibil-core",
  "credibil-ecc",
- "credibil-identity",
  "credibil-jose",
+ "credibil-proof",
  "credibil-status",
  "credibil-vdc",
  "fastrand",
@@ -645,8 +636,8 @@ dependencies = [
  "chrono",
  "credibil-core",
  "credibil-ecc",
- "credibil-identity",
  "credibil-jose",
+ "credibil-proof",
  "credibil-status",
  "credibil-vdc",
  "fastrand",
@@ -665,6 +656,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "credibil-proof"
+version = "0.1.2"
+dependencies = [
+ "anyhow",
+ "credibil-core",
+ "credibil-did",
+ "credibil-ecc",
+ "credibil-jose",
+ "serde",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
 name = "credibil-status"
 version = "0.1.0"
 dependencies = [
@@ -673,8 +678,8 @@ dependencies = [
  "bitvec",
  "chrono",
  "credibil-core",
- "credibil-identity",
  "credibil-jose",
+ "credibil-proof",
  "flate2",
  "http",
  "serde",
@@ -695,8 +700,8 @@ dependencies = [
  "coset",
  "credibil-core",
  "credibil-ecc",
- "credibil-identity",
  "credibil-jose",
+ "credibil-proof",
  "credibil-status",
  "fastrand",
  "hex",
@@ -979,9 +984,9 @@ dependencies = [
  "anyhow",
  "axum",
  "axum-extra",
- "credibil-identity",
  "credibil-oid4vci",
  "credibil-oid4vp",
+ "credibil-proof",
  "credibil-status",
  "dashmap",
  "http",
@@ -2829,7 +2834,7 @@ dependencies = [
  "cid",
  "credibil-core",
  "credibil-ecc",
- "credibil-identity",
+ "credibil-proof",
  "credibil-vdc",
  "dashmap",
  "multihash-codetable",

@@ -19,9 +19,9 @@ path = "src/cmd/automated.rs"
 anyhow.workspace = true
 axum.workspace = true
 axum-extra.workspace = true
-credibil-identity.workspace = true
 credibil-oid4vci = { path = "../oid4vci" }
 credibil-oid4vp = { path = "../oid4vp" }
+credibil-proof.workspace = true
 credibil-status.workspace = true
 dashmap = "6.1.0"
 http.workspace = true

@@ -5,7 +5,7 @@
 use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_core::Kind;
-use credibil_identity::Signature;
+use credibil_proof::Signature;
 use sha2::{Digest, Sha256};
 
 use crate::dcql::Matched;
@@ -253,8 +253,8 @@ impl<S: Signature>
 
 #[cfg(test)]
 mod tests {
-    use credibil_identity::did::did_jwk;
     use credibil_jose::KeyBinding;
+    use credibil_proof::resolve_jwk;
     use serde_json::{Value, json};
     use test_utils::issuer::Issuer;
     use test_utils::wallet::Wallet;
@@ -321,7 +321,7 @@ mod tests {
         let KeyBinding::Kid(kid) = key_ref else {
             panic!("should have key id");
         };
-        let device_jwk = did_jwk(&kid, &wallet).await.expect("should fetch JWK");
+        let device_jwk = resolve_jwk(&kid, &wallet).await.expect("should fetch JWK");
 
         let claims_json = json!({
             "org.iso.18013.5.1": {

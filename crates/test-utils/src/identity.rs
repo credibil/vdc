@@ -1,10 +1,10 @@
 use std::thread;
 
 use anyhow::Result;
-use credibil_identity::did::{self, Document, DocumentBuilder, KeyId, VerificationMethod};
-use credibil_identity::ecc::{Entry, Signer};
-use credibil_identity::jose::PublicKeyJwk;
-use credibil_identity::{Identity, VerifyBy};
+use credibil_proof::did::{Document, DocumentBuilder, KeyId, VerificationMethod};
+use credibil_proof::ecc::{Entry, Signer};
+use credibil_proof::jose::PublicKeyJwk;
+use credibil_proof::{DocumentRequest, VerifyBy};
 
 use crate::datastore::Store;
 
@@ -21,7 +21,7 @@ impl DidIdentity {
         // generate a did:web document
         let vm = VerificationMethod::build().key(jwk).key_id(KeyId::Index("key-0".to_string()));
         let builder = DocumentBuilder::new().verification_method(vm).derive_key_agreement(true);
-        did::web::create(owner, builder, &Store).await.expect("should create");
+        credibil_proof::create(owner, builder, &Store).await.expect("should create");
 
         Self {
             owner: owner.to_string(),
@@ -31,8 +31,8 @@ impl DidIdentity {
     pub async fn document(&self, url: &str) -> Result<Document> {
         // not in a tokio runtime == running in a test
         if thread::current().name() != Some("tokio-runtime-worker") {
-            let request = did::DocumentRequest { url: url.to_string() };
-            return did::handle("owner", request, &Store).await.map(|r| r.0.clone());
+            let request = DocumentRequest { url: url.to_string() };
+            return credibil_proof::handle("owner", request, &Store).await.map(|r| r.0.clone());
         }
 
         // in a tokio runtime: assume web server is running
@@ -40,9 +40,9 @@ impl DidIdentity {
         Ok(resp.json::<Document>().await?)
     }
 
-    pub async fn resolve(&self, url: &str) -> Result<Identity> {
+    pub async fn resolve(&self, url: &str) -> Result<Vec<u8>> {
         let doc = self.document(url).await?;
-        Ok(Identity::DidDocument(doc))
+        serde_json::to_vec(&doc).map_err(|e| e.into())
     }
 
     pub async fn verification_method(&self) -> Result<VerifyBy> {

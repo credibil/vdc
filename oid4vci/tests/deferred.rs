@@ -3,7 +3,6 @@
 use std::collections::HashMap;
 
 use credibil_oid4vci::datastore::Datastore;
-use credibil_oid4vci::did::did_jwk;
 use credibil_oid4vci::identity::{Signature, VerifyBy};
 use credibil_oid4vci::jose::{JwsBuilder, Jwt, decode_jws};
 use credibil_oid4vci::proof::W3cVcClaims;
@@ -12,6 +11,7 @@ use credibil_oid4vci::types::{
     DeferredCredentialRequest, NonceRequest, ProofClaims, TokenGrantType, TokenRequest,
 };
 use credibil_oid4vci::{CredentialHeaders, DeferredHeaders, JwtType, OneMany};
+use credibil_proof::resolve_jwk;
 use serde_json::json;
 use test_utils::issuer::Issuer;
 use test_utils::wallet::Wallet;
@@ -149,7 +149,7 @@ async fn deferred() {
 
     // verify the credential proof
     let token = credential.as_str().expect("should be a string");
-    let resolver = async |kid: String| did_jwk(&kid, &provider).await;
+    let resolver = async |kid: String| resolve_jwk(&kid, &provider).await;
     let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
     // verify the credential

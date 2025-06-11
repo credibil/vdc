@@ -16,13 +16,13 @@ use credibil_oid4vci::{
     CredentialOffer, CredentialRequest, CredentialResponse, IssuerMetadata, JwtType, NonceResponse,
     ProofClaims, ServerMetadata, TokenGrantType, TokenRequest, TokenResponse, sd_jwt,
 };
-use credibil_oid4vp::did::did_jwk;
 use credibil_oid4vp::identity::ecc::Algorithm;
 use credibil_oid4vp::jose::{self, Jwt};
 use credibil_oid4vp::{
     AuthorizationRequest, AuthorizationResponse, ClientId, RequestObject, RequestUriMethod,
     RequestUriRequest, RequestUriResponse, ResponseMode, VpFormat, Wallet, vp_token,
 };
+use credibil_proof::resolve_jwk;
 use http::StatusCode;
 use serde::Deserialize;
 use test_utils::wallet;
@@ -221,7 +221,7 @@ async fn authorize(
         return Err(anyhow!("expected JWT in response").into());
     };
 
-    let jwk = async |kid: String| did_jwk(&kid, &provider).await;
+    let jwk = async |kid: String| resolve_jwk(&kid, &provider).await;
     let decoded: Jwt<RequestObject> = jose::decode_jws(&jwt, jwk).await?;
     let request_object = decoded.claims;
 
@@ -272,10 +272,10 @@ async fn authorize(
 async fn did(
     State(provider): State<wallet::Wallet>, TypedHeader(host): TypedHeader<Host>, request: Request,
 ) -> Result<Json<Document>, AppError> {
-    let request = credibil_identity::did::DocumentRequest {
+    let request = credibil_proof::DocumentRequest {
         url: format!("http://{host}{}", request.uri()),
     };
-    let doc = credibil_identity::did::handle(&format!("http://{host}"), request, &provider)
+    let doc = credibil_proof::handle(&format!("http://{host}"), request, &provider)
         .await
         .map_err(AppError::from)?;
     Ok(Json(doc.0.clone()))

@@ -86,10 +86,10 @@ async fn authorization(
 async fn did(
     State(provider): State<Verifier>, TypedHeader(host): TypedHeader<Host>, request: Request,
 ) -> Result<Json<Document>, AppError> {
-    let request = credibil_identity::did::DocumentRequest {
+    let request = credibil_proof::DocumentRequest {
         url: format!("http://{host}{}", request.uri()),
     };
-    let doc = credibil_identity::did::handle(&format!("http://{host}"), request, &provider)
+    let doc = credibil_proof::handle(&format!("http://{host}"), request, &provider)
         .await
         .map_err(AppError::from)?;
     Ok(Json(doc.0.clone()))

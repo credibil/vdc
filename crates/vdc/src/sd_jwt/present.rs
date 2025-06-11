@@ -2,8 +2,8 @@
 
 use anyhow::{Context as _, Result, anyhow};
 use chrono::Utc;
-use credibil_identity::Signature;
 use credibil_jose::Jws;
+use credibil_proof::Signature;
 
 use crate::dcql::Matched;
 use crate::sd_jwt::{Disclosure, JwtType, KbJwtClaims};

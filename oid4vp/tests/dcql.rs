@@ -1,7 +1,6 @@
 //! Tests for the Verifier API
 
 use credibil_oid4vp::datastore::Datastore;
-use credibil_oid4vp::did::did_jwk;
 use credibil_oid4vp::identity::{Signature, VerifyBy};
 use credibil_oid4vp::jose::PublicKeyJwk;
 use credibil_oid4vp::status::{StatusClaim, StatusList, TokenBuilder};
@@ -11,6 +10,7 @@ use credibil_oid4vp::vdc::{
 use credibil_oid4vp::{
     AuthorizationRequest, AuthorizationResponse, CreateRequest, DeviceFlow, ResponseMode, vp_token,
 };
+use credibil_proof::resolve_jwk;
 use serde_json::{Value, json};
 use test_utils::issuer::Issuer;
 use test_utils::verifier::Verifier;
@@ -490,7 +490,7 @@ async fn populate(owner: &str) -> Wallet {
     let VerifyBy::KeyId(did_url) = wallet.verification_method().await.unwrap() else {
         panic!("should have did");
     };
-    let holder_jwk = did_jwk(&did_url, &wallet).await.expect("should get key");
+    let holder_jwk = resolve_jwk(&did_url, &wallet).await.expect("should get key");
 
     // create a status list token
     let statuslist_id = format!("{ISSUER_ID}/statuslists/1");

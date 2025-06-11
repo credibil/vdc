@@ -2,7 +2,7 @@ use anyhow::Result;
 use credibil_core::datastore::Datastore;
 use credibil_ecc::Curve::Ed25519;
 use credibil_ecc::{Algorithm, Entry, Keyring, Signer};
-use credibil_identity::{Identity, IdentityResolver, Signature, VerifyBy};
+use credibil_proof::{Resolver, Signature, VerifyBy};
 
 use crate::datastore::Store;
 use crate::identity::DidIdentity;
@@ -32,8 +32,8 @@ impl Verifier {
     }
 }
 
-impl IdentityResolver for Verifier {
-    async fn resolve(&self, url: &str) -> Result<Identity> {
+impl Resolver for Verifier {
+    async fn resolve(&self, url: &str) -> Result<Vec<u8>> {
         self.identity.resolve(url).await
     }
 }
