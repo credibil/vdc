@@ -535,7 +535,7 @@ dependencies = [
 [[package]]
 name = "credibil-did"
 version = "0.1.2"
-source = "git+https://github.com/credibil/proof.git#624745c2c275957fbe3b043bd052f51ed8ea8f34"
+source = "git+https://github.com/credibil/proof.git#ffdf6f8e23c7f9450f4650b8720a3c5dd1bd3695"
 dependencies = [
  "anyhow",
  "chrono",
@@ -555,7 +555,7 @@ dependencies = [
 [[package]]
 name = "credibil-ecc"
 version = "0.1.2"
-source = "git+https://github.com/credibil/key.git#00db0ea998ae6bdec2340378fe4e37448a551f14"
+source = "git+https://github.com/credibil/key.git#a014404c3e3b4f1296b7f5aa7a8b9419390131fa"
 dependencies = [
  "aes-gcm",
  "aes-kw",
@@ -578,7 +578,7 @@ dependencies = [
 [[package]]
 name = "credibil-jose"
 version = "0.1.2"
-source = "git+https://github.com/credibil/key.git#00db0ea998ae6bdec2340378fe4e37448a551f14"
+source = "git+https://github.com/credibil/key.git#a014404c3e3b4f1296b7f5aa7a8b9419390131fa"
 dependencies = [
  "anyhow",
  "base64ct",
@@ -657,7 +657,7 @@ dependencies = [
 [[package]]
 name = "credibil-proof"
 version = "0.1.2"
-source = "git+https://github.com/credibil/proof.git#624745c2c275957fbe3b043bd052f51ed8ea8f34"
+source = "git+https://github.com/credibil/proof.git#ffdf6f8e23c7f9450f4650b8720a3c5dd1bd3695"
 dependencies = [
  "anyhow",
  "credibil-core",
@@ -1724,9 +1724,9 @@ checksum = "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3"
 
 [[package]]
 name = "memchr"
-version = "2.7.4"
+version = "2.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
+checksum = "32a282da65faaf38286cf3be983213fcf1d2e2a58700e808f83f4ea9a4804bc0"
 
 [[package]]
 name = "mime"
@@ -3373,9 +3373,9 @@ dependencies = [
 
 [[package]]
 name = "windows-link"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76840935b766e1b0a05c0066835fb9ec80071d4c09a16f6bd5f7e655e3c14c38"
+checksum = "d3bfe459f85da17560875b8bf1423d6f113b7a87a5d942e7da0ac71be7c61f8b"
 
 [[package]]
 name = "windows-registry"

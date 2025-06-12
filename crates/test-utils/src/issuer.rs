@@ -1,6 +1,6 @@
 use anyhow::Result;
 use credibil_core::datastore::Datastore;
-use credibil_ecc::{Algorithm, Entry, Keyring, Signer};
+use credibil_ecc::{Algorithm, Entry, Keyring, PublicKey, Signer};
 use credibil_proof::ecc::Curve::Ed25519;
 use credibil_proof::{Resolver, Signature, VerifyBy};
 
@@ -53,7 +53,7 @@ impl Signer for Issuer {
         Ok(self.signer.sign(msg).await)
     }
 
-    async fn verifying_key(&self) -> Result<Vec<u8>> {
+    async fn verifying_key(&self) -> Result<PublicKey> {
         self.signer.verifying_key().await
     }
 

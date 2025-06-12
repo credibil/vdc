@@ -15,8 +15,8 @@ pub struct Identity {
 
 impl Identity {
     pub async fn new(owner: &str, signer: &Entry) -> Self {
-        let key_bytes = signer.verifying_key().await.expect("should get key");
-        let jwk = PublicKeyJwk::from_bytes(&key_bytes).expect("should convert");
+        let key = signer.verifying_key().await.expect("should get key");
+        let jwk = PublicKeyJwk::from_bytes(&key.to_bytes()).expect("should convert");
 
         // generate a did:web document
         let vm = VerificationMethod::build().key(jwk).key_id(KeyId::Index("key-0".to_string()));

@@ -2,7 +2,7 @@ use anyhow::Result;
 use cid::Cid;
 use credibil_core::datastore::Datastore;
 use credibil_ecc::Curve::Ed25519;
-use credibil_ecc::{Algorithm, Entry, Keyring, Signer};
+use credibil_ecc::{Algorithm, Entry, Keyring, PublicKey, Signer};
 use credibil_proof::{Resolver, Signature, VerifyBy};
 use credibil_vdc::Queryable;
 use multihash_codetable::{Code, MultihashDigest};
@@ -91,7 +91,7 @@ impl Signer for Wallet {
         self.signer.try_sign(msg).await
     }
 
-    async fn verifying_key(&self) -> Result<Vec<u8>> {
+    async fn verifying_key(&self) -> Result<PublicKey> {
         self.signer.verifying_key().await
     }
 
