@@ -22,7 +22,8 @@ mod state;
 
 use std::fmt::Display;
 
-pub use credibil_core::{datastore, http, state::State};
+pub use credibil_core::state::State;
+pub use credibil_core::{datastore, http};
 pub use credibil_proof::{self as identity, did};
 use serde::{Deserialize, Serialize};
 pub use {credibil_jose as jose, credibil_status as status, credibil_vdc as vdc};

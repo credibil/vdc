@@ -3,8 +3,8 @@ use credibil_core::datastore::Datastore;
 use credibil_ecc::{Algorithm, PublicKey, Signer};
 use credibil_proof::{Resolver, Signature, VerifyBy};
 
-use crate::datastore::Store;
 use crate::identity::Identity;
+use crate::store::Store;
 
 const VERIFIER_METADATA: &[u8] = include_bytes!("../data/verifier-metadata.json");
 const METADATA: &str = "METADATA";

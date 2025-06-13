@@ -4,6 +4,7 @@ use std::sync::LazyLock;
 
 use anyhow::Result;
 use credibil_core::datastore::Datastore;
+use credibil_ecc::Vault;
 use dashmap::DashMap;
 
 static STORE: LazyLock<DashMap<String, Vec<u8>>> = LazyLock::new(DashMap::new);
@@ -47,6 +48,24 @@ impl Store {
 }
 
 impl Datastore for Store {
+    async fn put(&self, owner: &str, partition: &str, key: &str, data: &[u8]) -> Result<()> {
+        self.put(owner, partition, key, data).await
+    }
+
+    async fn get(&self, owner: &str, partition: &str, key: &str) -> Result<Option<Vec<u8>>> {
+        self.get(owner, partition, key).await
+    }
+
+    async fn delete(&self, owner: &str, partition: &str, key: &str) -> Result<()> {
+        self.delete(owner, partition, key).await
+    }
+
+    async fn get_all(&self, owner: &str, partition: &str) -> Result<Vec<(String, Vec<u8>)>> {
+        self.get_all(owner, partition).await
+    }
+}
+
+impl Vault for Store {
     async fn put(&self, owner: &str, partition: &str, key: &str, data: &[u8]) -> Result<()> {
         self.put(owner, partition, key, data).await
     }
