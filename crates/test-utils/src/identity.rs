@@ -2,19 +2,24 @@ use std::thread;
 
 use anyhow::Result;
 use credibil_proof::did::{Document, DocumentBuilder, KeyId, VerificationMethod};
-use credibil_proof::ecc::{Entry, Signer};
+use credibil_proof::ecc::Curve::Ed25519;
+use credibil_proof::ecc::{Entry, Keyring, Signer};
 use credibil_proof::jose::PublicKeyJwk;
 use credibil_proof::{DocumentRequest, VerifyBy};
 
 use crate::datastore::Store;
+use crate::vault::KeyVault as Vault;
 
 #[derive(Clone)]
 pub struct Identity {
-    pub owner: String,
+    pub signer: Entry,
+    owner: String,
 }
 
 impl Identity {
-    pub async fn new(owner: &str, signer: &Entry) -> Self {
+    pub async fn new(owner: &str) -> Self {
+        let signer =
+            Keyring::generate(&Vault, owner, "signing", Ed25519).await.expect("should generate");
         let key = signer.verifying_key().await.expect("should get key");
         let jwk = PublicKeyJwk::from_bytes(&key.to_bytes()).expect("should convert");
 
@@ -24,6 +29,7 @@ impl Identity {
         credibil_proof::create(owner, builder, &Store).await.expect("should create");
 
         Self {
+            signer,
             owner: owner.to_string(),
         }
     }

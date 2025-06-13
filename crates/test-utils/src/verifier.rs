@@ -1,12 +1,10 @@
 use anyhow::Result;
 use credibil_core::datastore::Datastore;
-use credibil_ecc::Curve::Ed25519;
-use credibil_ecc::{Algorithm, Entry, Keyring, PublicKey, Signer};
+use credibil_ecc::{Algorithm, PublicKey, Signer};
 use credibil_proof::{Resolver, Signature, VerifyBy};
 
 use crate::datastore::Store;
 use crate::identity::Identity;
-use crate::vault::KeyVault as Vault;
 
 const VERIFIER_METADATA: &[u8] = include_bytes!("../data/verifier-metadata.json");
 const METADATA: &str = "METADATA";
@@ -14,7 +12,6 @@ const VERIFIER: &str = "VERIFIER";
 
 #[derive(Clone)]
 pub struct Verifier {
-    signer: Entry,
     identity: Identity,
 }
 
@@ -24,11 +21,9 @@ impl Verifier {
         let datastore = Store::open();
         datastore.put(verifier, METADATA, VERIFIER, VERIFIER_METADATA).await.unwrap();
 
-        let signer =
-            Keyring::generate(&Vault, verifier, "signing", Ed25519).await.expect("should generate");
-        let identity = Identity::new(verifier, &signer).await;
+        let identity = Identity::new(verifier).await;
 
-        Self { signer, identity }
+        Self { identity }
     }
 }
 
@@ -40,21 +35,21 @@ impl Resolver for Verifier {
 
 impl Signer for Verifier {
     async fn try_sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
-        self.signer.try_sign(msg).await
+        self.identity.signer.try_sign(msg).await
     }
 
     async fn verifying_key(&self) -> Result<PublicKey> {
-        self.signer.verifying_key().await
+        self.identity.signer.verifying_key().await
     }
 
     async fn algorithm(&self) -> Result<Algorithm> {
-        self.signer.algorithm().await
+        self.identity.signer.algorithm().await
     }
 }
 
 impl Signature for Verifier {
     async fn verification_method(&self) -> Result<VerifyBy> {
-        self.signer.verification_method().await
+        self.identity.signer.verification_method().await
     }
 }
 

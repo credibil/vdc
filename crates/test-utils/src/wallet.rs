@@ -1,8 +1,7 @@
 use anyhow::Result;
 use cid::Cid;
 use credibil_core::datastore::Datastore;
-use credibil_ecc::Curve::Ed25519;
-use credibil_ecc::{Algorithm, Entry, Keyring, PublicKey, Signer};
+use credibil_ecc::{Algorithm, PublicKey, Signer};
 use credibil_proof::{Resolver, Signature, VerifyBy};
 use credibil_vdc::Queryable;
 use multihash_codetable::{Code, MultihashDigest};
@@ -11,12 +10,10 @@ use serde::de::DeserializeOwned;
 
 use crate::datastore::Store;
 use crate::identity::Identity;
-use crate::vault::KeyVault as Vault;
 
 #[derive(Clone)]
 pub struct Wallet {
     wallet_id: String,
-    signer: Entry,
     identity: Identity,
 }
 
@@ -52,16 +49,9 @@ impl Wallet {
     pub async fn new(wallet_id: impl Into<String>) -> Self {
         let wallet_id: String = wallet_id.into();
 
-        let signer = Keyring::generate(&Vault, &wallet_id, "signing", Ed25519)
-            .await
-            .expect("should generate");
-        let identity = Identity::new(&wallet_id, &signer).await;
+        let identity = Identity::new(&wallet_id).await;
 
-        Self {
-            wallet_id,
-            signer,
-            identity,
-        }
+        Self { wallet_id, identity }
     }
 
     pub fn id(&self) -> &str {
@@ -88,15 +78,15 @@ impl Resolver for Wallet {
 
 impl Signer for Wallet {
     async fn try_sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
-        self.signer.try_sign(msg).await
+        self.identity.signer.try_sign(msg).await
     }
 
     async fn verifying_key(&self) -> Result<PublicKey> {
-        self.signer.verifying_key().await
+        self.identity.signer.verifying_key().await
     }
 
     async fn algorithm(&self) -> Result<Algorithm> {
-        self.signer.algorithm().await
+        self.identity.signer.algorithm().await
     }
 }
 
