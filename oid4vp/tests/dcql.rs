@@ -8,8 +8,7 @@ use credibil_oid4vp::vdc::{
     DcqlQuery, MdocBuilder, SdJwtVcBuilder, W3cVcBuilder, mso_mdoc, sd_jwt, w3c_vc,
 };
 use credibil_oid4vp::{
-    AuthorizationRequest, AuthorizationResponse, Client, CreateRequest, DeviceFlow, ResponseMode,
-    vp_token,
+    AuthorizationRequest, AuthorizationResponse, CreateRequest, DeviceFlow, ResponseMode, vp_token,
 };
 use credibil_proof::resolve_jwk;
 use serde_json::{Value, json};
@@ -66,14 +65,7 @@ async fn multiple_claims() {
             response_uri: "http://localhost:3000/cb".to_string(),
         },
     };
-    // let response = credibil_oid4vp::handle(VERIFIER_ID, request, verifier)
-    //     .await
-    //     .expect("should create request");
-    let response = Client::new()
-        .owner(VERIFIER_ID)
-        .provider(verifier)
-        .body(request)
-        .handle()
+    let response = credibil_oid4vp::handle(VERIFIER_ID, request, verifier)
         .await
         .expect("should create request");
 
