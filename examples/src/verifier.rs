@@ -83,7 +83,7 @@ async fn authorization(
         return (StatusCode::BAD_REQUEST, "issue deserializing `AuthorizationResponse`")
             .into_response();
     };
-    
+
     // credibil_oid4vp::handle(&format!("http://{host}"), req, &provider)
     //     .await
     //     .into_http()

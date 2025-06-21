@@ -122,7 +122,7 @@ impl<'a, P: Provider> Client<'a, P, Headerless> {
 impl<'a, P: Provider> Client<'a, P, Headerless> {
     /// Set the headers for the request.
     #[must_use]
-    pub fn headers<H: Headers>(self, headers: H) -> Client<'a, P, WithHeaders<H>> {
+    pub const fn headers<H: Headers>(self, headers: H) -> Client<'a, P, WithHeaders<H>> {
         Client {
             owner: self.owner,
             provider: self.provider,
@@ -131,7 +131,7 @@ impl<'a, P: Provider> Client<'a, P, Headerless> {
     }
 }
 
-impl<'a, P: Provider> Client<'a, P, Headerless> {
+impl<P: Provider> Client<'_, P, Headerless> {
     /// Build the Create Offer request with a pre-authorized code grant.
     ///
     /// # Errors
@@ -144,11 +144,10 @@ impl<'a, P: Provider> Client<'a, P, Headerless> {
     {
         let request: Request<B, NoHeaders> = body.into();
         Ok(request.handle(self.owner, self.provider).await?.into())
-        // self::handle(self.owner, body, self.provider).await
     }
 }
 
-impl<'a, P: Provider, H: Headers> Client<'a, P, WithHeaders<H>> {
+impl<P: Provider, H: Headers> Client<'_, P, WithHeaders<H>> {
     /// Build the Create Offer request with a pre-authorized code grant.
     ///
     /// # Errors
@@ -164,6 +163,5 @@ impl<'a, P: Provider, H: Headers> Client<'a, P, WithHeaders<H>> {
             headers: self.headers.0.clone(),
         };
         Ok(request.handle(self.owner, self.provider).await?.into())
-        // self::handle(self.owner, request, self.provider).await
     }
 }

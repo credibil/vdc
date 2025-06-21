@@ -109,7 +109,7 @@ impl<'a, P: Provider> Client<'a, P, NoHeaders> {
 //     }
 // }
 
-impl<'a, P: Provider, H: Headers> Client<'a, P, H> {
+impl<P: Provider, H: Headers> Client<'_, P, H> {
     /// Set the headers for the request.
     #[must_use]
     pub fn headers(mut self, headers: H) -> Self {
@@ -118,7 +118,7 @@ impl<'a, P: Provider, H: Headers> Client<'a, P, H> {
     }
 }
 
-impl<'a, P: Provider, H: Headers> Client<'a, P, H> {
+impl<P: Provider, H: Headers> Client<'_, P, H> {
     /// Build the Create Offer request with a pre-authorized code grant.
     ///
     /// # Errors
