@@ -12,7 +12,7 @@ use axum_extra::TypedHeader;
 use axum_extra::headers::Host;
 use credibil_oid4vp::http::IntoHttp;
 use credibil_oid4vp::identity::did::Document;
-use credibil_oid4vp::{AuthorizationResponse, CreateRequest, RequestUriRequest};
+use credibil_oid4vp::{AuthorizationResponse, Client, CreateRequest, RequestUriRequest};
 use serde_json::json;
 use test_utils::verifier::Verifier;
 use tokio::net::TcpListener;
@@ -48,7 +48,8 @@ async fn create_request(
     State(provider): State<Verifier>, TypedHeader(host): TypedHeader<Host>,
     Json(request): Json<CreateRequest>,
 ) -> impl IntoResponse {
-    credibil_oid4vp::handle(&format!("http://{host}"), request, &provider).await.into_http()
+    Client::new(&format!("http://{host}"), &provider).handle(request).await.into_http()
+    // credibil_oid4vp::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }
 
 #[axum::debug_handler]
@@ -61,7 +62,13 @@ async fn request_uri(
             .into_response();
     };
     request.id = id;
-    credibil_oid4vp::handle(&format!("http://{host}"), request, &provider)
+
+    // credibil_oid4vp::handle(&format!("http://{host}"), request, &provider)
+    //     .await
+    //     .into_http()
+    //     .into_response()
+    Client::new(&format!("http://{host}"), &provider)
+        .handle(request)
         .await
         .into_http()
         .into_response()
@@ -72,11 +79,17 @@ async fn authorization(
     State(provider): State<Verifier>, TypedHeader(host): TypedHeader<Host>,
     Form(form): Form<Vec<(String, String)>>,
 ) -> impl IntoResponse {
-    let Ok(req) = AuthorizationResponse::form_decode(&form) else {
+    let Ok(request) = AuthorizationResponse::form_decode(&form) else {
         return (StatusCode::BAD_REQUEST, "issue deserializing `AuthorizationResponse`")
             .into_response();
     };
-    credibil_oid4vp::handle(&format!("http://{host}"), req, &provider)
+    
+    // credibil_oid4vp::handle(&format!("http://{host}"), req, &provider)
+    //     .await
+    //     .into_http()
+    //     .into_response()
+    Client::new(&format!("http://{host}"), &provider)
+        .handle(request)
         .await
         .into_http()
         .into_response()

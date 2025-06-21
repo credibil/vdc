@@ -92,3 +92,78 @@ impl From<HeaderMap> for LanguageHeader {
         Self { accept_language }
     }
 }
+
+/// Build an API `Client` to execute the request.
+pub struct Client<'a, P: Provider, H> {
+    owner: &'a str,
+    provider: &'a P,
+    headers: H,
+}
+
+/// The request has no headers.
+#[doc(hidden)]
+pub struct Headerless;
+/// The request has headers.
+#[doc(hidden)]
+pub struct WithHeaders<H: Headers>(H);
+
+impl<'a, P: Provider> Client<'a, P, Headerless> {
+    /// Create a new `Client`.
+    #[must_use]
+    pub const fn new(owner: &'a str, provider: &'a P) -> Self {
+        Self {
+            owner,
+            provider,
+            headers: Headerless,
+        }
+    }
+}
+
+impl<'a, P: Provider> Client<'a, P, Headerless> {
+    /// Set the headers for the request.
+    #[must_use]
+    pub fn headers<H: Headers>(self, headers: H) -> Client<'a, P, WithHeaders<H>> {
+        Client {
+            owner: self.owner,
+            provider: self.provider,
+            headers: WithHeaders(headers),
+        }
+    }
+}
+
+impl<'a, P: Provider> Client<'a, P, Headerless> {
+    /// Build the Create Offer request with a pre-authorized code grant.
+    ///
+    /// # Errors
+    ///
+    /// Will fail if request cannot be processed.
+    pub async fn handle<B, U>(&self, body: B) -> Result<Response<U>>
+    where
+        B: Body,
+        Request<B, NoHeaders>: Handler<U, P, Error = Error> + From<B>,
+    {
+        let request: Request<B, NoHeaders> = body.into();
+        Ok(request.handle(self.owner, self.provider).await?.into())
+        // self::handle(self.owner, body, self.provider).await
+    }
+}
+
+impl<'a, P: Provider, H: Headers> Client<'a, P, WithHeaders<H>> {
+    /// Build the Create Offer request with a pre-authorized code grant.
+    ///
+    /// # Errors
+    ///
+    /// Will fail if request cannot be processed.
+    pub async fn handle<B, U>(&self, body: B) -> Result<Response<U>>
+    where
+        B: Body,
+        Request<B, H>: Handler<U, P, Error = Error>,
+    {
+        let request = Request {
+            body,
+            headers: self.headers.0.clone(),
+        };
+        Ok(request.handle(self.owner, self.provider).await?.into())
+        // self::handle(self.owner, request, self.provider).await
+    }
+}

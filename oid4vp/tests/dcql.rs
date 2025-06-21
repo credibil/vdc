@@ -8,7 +8,8 @@ use credibil_oid4vp::vdc::{
     DcqlQuery, MdocBuilder, SdJwtVcBuilder, W3cVcBuilder, mso_mdoc, sd_jwt, w3c_vc,
 };
 use credibil_oid4vp::{
-    AuthorizationRequest, AuthorizationResponse, CreateRequest, DeviceFlow, ResponseMode, vp_token,
+    AuthorizationRequest, AuthorizationResponse, Client, CreateRequest, DeviceFlow, ResponseMode,
+    vp_token,
 };
 use credibil_proof::resolve_jwk;
 use serde_json::{Value, json};
@@ -37,6 +38,7 @@ async fn wallet() -> &'static Wallet {
 #[tokio::test]
 async fn multiple_claims() {
     let verifier = verifier().await;
+    let client = Client::new(VERIFIER_ID, verifier);
 
     // --------------------------------------------------
     // Verifier creates an Authorization Request to request presentation of
@@ -65,9 +67,11 @@ async fn multiple_claims() {
             response_uri: "http://localhost:3000/cb".to_string(),
         },
     };
-    let response = credibil_oid4vp::handle(VERIFIER_ID, request, verifier)
-        .await
-        .expect("should create request");
+
+    let response = client.handle(request).await.expect("should handle request");
+    // let response = credibil_oid4vp::handle(VERIFIER_ID, request, verifier)
+    //     .await
+    //     .expect("should create request");
 
     // extract request object and send to Wallet
     let AuthorizationRequest::Object(req_obj) = response.body.0 else {
@@ -92,9 +96,10 @@ async fn multiple_claims() {
     // --------------------------------------------------
     // Verifier processes the Wallets's Authorization Response.
     // --------------------------------------------------
-    let response = credibil_oid4vp::handle(VERIFIER_ID, request, verifier)
-        .await
-        .expect("should create request");
+    let response = client.handle(request).await.expect("should handle request");
+    // let response = credibil_oid4vp::handle(VERIFIER_ID, request, verifier)
+    //     .await
+    //     .expect("should create request");
 
     // --------------------------------------------------
     // Wallet follows Verifier's redirect.

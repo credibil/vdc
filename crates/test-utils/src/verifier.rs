@@ -49,7 +49,7 @@ impl Signer for Verifier {
 
 impl Signature for Verifier {
     async fn verification_method(&self) -> Result<VerifyBy> {
-        self.identity.signer.verification_method().await
+        self.identity.verification_method().await
     }
 }
 
