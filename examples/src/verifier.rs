@@ -49,7 +49,6 @@ async fn create_request(
     Json(request): Json<CreateRequest>,
 ) -> impl IntoResponse {
     Client::new(&format!("http://{host}"), &provider).handle(request).await.into_http()
-    // credibil_oid4vp::handle(&format!("http://{host}"), request, &provider).await.into_http()
 }
 
 #[axum::debug_handler]
@@ -63,10 +62,6 @@ async fn request_uri(
     };
     request.id = id;
 
-    // credibil_oid4vp::handle(&format!("http://{host}"), request, &provider)
-    //     .await
-    //     .into_http()
-    //     .into_response()
     Client::new(&format!("http://{host}"), &provider)
         .handle(request)
         .await
@@ -84,10 +79,6 @@ async fn authorization(
             .into_response();
     };
 
-    // credibil_oid4vp::handle(&format!("http://{host}"), req, &provider)
-    //     .await
-    //     .into_http()
-    //     .into_response()
     Client::new(&format!("http://{host}"), &provider)
         .handle(request)
         .await

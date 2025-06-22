@@ -49,16 +49,8 @@ where
 pub struct Client<'a, P: Provider, H: Headers> {
     owner: &'a str,
     provider: &'a P,
-    // body: B,
     headers: H,
 }
-
-// /// request body is set.
-// #[doc(hidden)]
-// pub struct NoBody;
-// /// The request body is set.
-// #[doc(hidden)]
-// pub struct HasBody<B: Body>(B);
 
 impl<'a, P: Provider> Client<'a, P, NoHeaders> {
     /// Create a new `Client`.
@@ -132,3 +124,11 @@ impl<P: Provider, H: Headers> Client<'_, P, H> {
         self::handle(self.owner, body, self.provider).await
     }
 }
+
+
+// /// Build an API `Client` to execute the request.
+// pub struct Client2 {
+//     owner: &'a str,
+//     provider: &'a P,
+//     headers: H,
+// }

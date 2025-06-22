@@ -90,7 +90,6 @@ async fn credential_offer(
     Path(offer_id): Path<String>,
 ) -> impl IntoResponse {
     let request = CredentialOfferRequest { id: offer_id };
-    // credibil_oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
     Client::new(&format!("http://{host}"), &provider).handle(request).await.into_http()
 }
 
@@ -112,22 +111,14 @@ async fn metadata(
         .into_http()
 }
 
-// OAuth Server metadata endpoint
 #[axum::debug_handler]
 async fn oauth_server(
     State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
 ) -> impl IntoResponse {
     let request = ServerRequest { issuer: None };
-    // credibil_oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
     Client::new(&format!("http://{host}"), &provider).handle(request).await.into_http()
 }
 
-/// Authorize endpoint
-/// RFC 6749: https://tools.ietf.org/html/rfc6749#section-4.1.2
-///
-/// The authorization server issues an authorization code and delivers it to the
-/// client by adding the response parameters to the query component of the
-/// redirection URI using the "application/x-www-form-urlencoded" format.
 #[axum::debug_handler]
 async fn authorize(
     State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
@@ -183,12 +174,6 @@ async fn authorize(
     }
 }
 
-/// Authorize endpoint
-/// RFC 6749: https://tools.ietf.org/html/rfc6749#section-4.1.2
-///
-/// The authorization server issues an authorization code and delivers it to the
-/// client by adding the response parameters to the query component of the
-/// redirection URI using the "application/x-www-form-urlencoded" format.
 #[axum::debug_handler]
 async fn par(
     State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
@@ -225,10 +210,6 @@ async fn par(
     }
 
     // process request
-    // credibil_oid4vci::handle(&format!("http://{host}"), request, &provider)
-    //     .await
-    //     .into_http()
-    //     .into_response()
     Client::new(&format!("http://{host}"), &provider)
         .handle(request)
         .await
@@ -278,10 +259,6 @@ async fn token(
         return (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid request"})))
             .into_response();
     };
-    // credibil_oid4vci::handle(&format!("http://{host}"), tr, &provider)
-    //     .await
-    //     .into_http()
-    //     .into_response()
     Client::new(&format!("http://{host}"), &provider).handle(tr).await.into_http().into_response()
 }
 
@@ -298,14 +275,6 @@ async fn credential(
     State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>, Json(request): Json<CredentialRequest>,
 ) -> impl IntoResponse {
-    // let request = credibil_oid4vci::Request {
-    //     body: request,
-    //     headers: CredentialHeaders {
-    //         authorization: auth.token().to_string(),
-    //     },
-    // };
-    // credibil_oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
-
     let headers = CredentialHeaders {
         authorization: auth.token().to_string(),
     };
@@ -322,14 +291,6 @@ async fn deferred_credential(
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     Json(request): Json<DeferredCredentialRequest>,
 ) -> impl IntoResponse {
-    // let request = credibil_oid4vci::Request {
-    //     body: request,
-    //     headers: CredentialHeaders {
-    //         authorization: auth.token().to_string(),
-    //     },
-    // };
-    // credibil_oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
-
     let headers = CredentialHeaders {
         authorization: auth.token().to_string(),
     };
@@ -346,14 +307,6 @@ async fn notification(
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     Json(request): Json<NotificationRequest>,
 ) -> impl IntoResponse {
-    // let request = credibil_oid4vci::Request {
-    //     body: request,
-    //     headers: NotificationHeaders {
-    //         authorization: auth.token().to_string(),
-    //     },
-    // };
-    // credibil_oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
-
     let headers = NotificationHeaders {
         authorization: auth.token().to_string(),
     };
@@ -364,7 +317,6 @@ async fn notification(
         .into_http()
 }
 
-// Status Lists endpoint
 #[axum::debug_handler]
 async fn statuslists(
     State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>, Path(id): Path<String>,
@@ -410,7 +362,6 @@ impl From<credibil_oid4vci::Error> for AppError {
     }
 }
 
-// Convert `AppError` into an axum response.
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         (self.status, format!("{}", self.error)).into_response()

@@ -57,16 +57,11 @@ async fn offer_val() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    // let token =
-    //     credibil_oid4vci::handle(ISSUER, request, &provider).await.expect("should return token");
     let token = client.handle(request).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a proof for a credential request
     // --------------------------------------------------
-    // let nonce = credibil_oid4vci::handle(ISSUER, NonceRequest, &provider)
-    //     .await
-    //     .expect("should return nonce");
     let nonce = client.handle(NonceRequest).await.expect("should return nonce");
 
     // proof of possession of key material
@@ -95,16 +90,6 @@ async fn offer_val() {
         .credential_identifier(&details[0].credential_identifiers[0])
         .with_proof(jwt)
         .build();
-
-    // let request = credibil_oid4vci::Request {
-    //     body: request,
-    //     headers: CredentialHeaders {
-    //         authorization: token.access_token.clone(),
-    //     },
-    // };
-    // let response = credibil_oid4vci::handle(ISSUER, request, &provider)
-    //     .await
-    //     .expect("should return credential");
 
     let headers = CredentialHeaders {
         authorization: token.access_token.clone(),
