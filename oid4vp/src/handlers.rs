@@ -26,6 +26,7 @@ pub type Result<T, E = Error> = anyhow::Result<T, E>;
 pub struct Client<P: Provider> {
     /// The owner of the client, typically a DID or URL.
     pub owner: String,
+    
     /// The provider to use while handling of the request.
     pub provider: P,
 }
@@ -43,38 +44,48 @@ impl<P: Provider> Client<P> {
 
 impl<P: Provider> Client<P> {
     /// Create a new `Request` with no headers.
-    pub fn request<B: Body>(&self, body: B) -> Request2<P, NoHeaders, B> {
+    pub fn request<B: Body>(&self, body: B) -> Request2<P, Unset, B> {
         Request2::new(self.clone(), body)
     }
 }
 
 /// Request builder.
 #[derive(Debug)]
-pub struct Request2<P: Provider, H: Headers, B: Body> {
+pub struct Request2<P: Provider, H, B: Body> {
     client: Client<P>,
-    headers: Option<H>,
+    headers: H,
     body: B,
 }
 
-impl<P: Provider, H: Headers, B: Body> Request2<P, H, B> {
+/// The request has no headers.
+#[doc(hidden)]
+pub struct Unset;
+/// The request has headers.
+#[doc(hidden)]
+pub struct HeaderSet<H: Headers>(H);
+
+impl<P: Provider, B: Body> Request2<P, Unset, B> {
     /// Create a new `Request` instance.
     pub const fn new(client: Client<P>, body: B) -> Self {
         Self {
             client,
-            headers: None,
+            headers: Unset,
             body,
         }
     }
 
     /// Set the headers for the request.
     #[must_use]
-    pub fn headers(mut self, headers: H) -> Self {
-        self.headers = Some(headers);
-        self
+    pub fn headers<H: Headers>(self, headers: H) -> Request2<P, HeaderSet<H>, B> {
+        Request2 {
+            client: self.client,
+            headers: HeaderSet(headers),
+            body: self.body,
+        }
     }
 }
 
-impl<P: Provider, H: Headers, B: Body> Request2<P, H, B> {
+impl<P: Provider, B: Body> Request2<P, Unset, B> {
     /// Process the request and return a response.
     ///
     /// # Errors
@@ -87,6 +98,25 @@ impl<P: Provider, H: Headers, B: Body> Request2<P, H, B> {
         Request<B, NoHeaders>: Handler<U, P, Error = Error> + From<B>,
     {
         let request: Request<B, NoHeaders> = self.body.into();
+        Ok(request.handle(&self.client.owner, &self.client.provider).await?.into())
+    }
+}
+
+impl<P: Provider, H: Headers, B: Body> Request2<P, HeaderSet<H>, B> {
+    /// Process the request and return a response.
+    ///
+    /// # Errors
+    ///
+    /// Will fail if request cannot be processed.
+    pub async fn execute<U>(self) -> Result<Response<U>>
+    where
+        B: Body,
+        Request<B, H>: Handler<U, P, Error = Error>,
+    {
+        let request = Request {
+            body: self.body,
+            headers: self.headers.0.clone(),
+        };
         Ok(request.handle(&self.client.owner, &self.client.provider).await?.into())
     }
 }
