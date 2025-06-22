@@ -46,89 +46,70 @@ where
 }
 
 /// Build an API `Client` to execute the request.
-pub struct Client<'a, P: Provider, H: Headers> {
-    owner: &'a str,
-    provider: &'a P,
-    headers: H,
+#[derive(Clone)]
+pub struct Client<P: Provider> {
+    /// The owner of the client, typically a DID or URL.
+    pub owner: String,
+    /// The provider to use while handling of the request.
+    pub provider: P,
 }
 
-impl<'a, P: Provider> Client<'a, P, NoHeaders> {
+impl<P: Provider> Client<P> {
     /// Create a new `Client`.
     #[must_use]
-    pub const fn new(owner: &'a str, provider: &'a P) -> Self {
+    pub fn new(owner: impl Into<String>, provider: P) -> Self {
         Self {
-            owner,
+            owner: owner.into(),
             provider,
-            // body: NoBody,
-            headers: NoHeaders,
         }
     }
 }
 
-// impl<'a, P: Provider, H: Headers> Client<'a, P, NoBody, H> {
-//     /// Set the request body.
-//     #[must_use]
-//     pub fn body<B: Body>(self, body: B) -> Client<'a, P, HasBody<B>, H> {
-//         Client {
-//             owner: self.owner,
-//             provider: self.provider,
-//             body: HasBody(body),
-//             headers: self.headers,
-//         }
-//     }
-// }
+impl<P: Provider> Client<P> {
+    /// Create a new `Request` with no headers.
+    pub fn request<B: Body>(&self, body: B) -> Request2<P, NoHeaders, B> {
+        Request2::new(self.clone(), body)
+    }
+}
 
-// impl<'a, P: Provider, B, H: Headers> Client<'a, P, B, H> {
-//     /// Set the headers for the request.
-//     #[must_use]
-//     pub fn headers(mut self, headers: H) -> Self {
-//         self.headers = headers;
-//         self
-//     }
-// }
+/// Request builder.
+pub struct Request2<P: Provider, H: Headers, B: Body> {
+    client: Client<P>,
+    headers: Option<H>,
+    body: B,
+}
 
-// impl<'a, P: Provider, B: Body, H: Headers> Client<'a, P, HasBody<B>, H> {
-//     /// Build the Create Offer request with a pre-authorized code grant.
-//     ///
-//     /// # Errors
-//     ///
-//     /// Will fail if request cannot be processed.
-//     pub async fn handle<U>(self) -> Result<Response<U>>
-//     where
-//         Request<B, H>: Handler<U, P, Error = Error> + From<B>,
-//     {
-//         self::handle(self.owner, self.body.0, self.provider).await
-//     }
-// }
+impl<P: Provider, H: Headers, B: Body> Request2<P, H, B> {
+    /// Create a new `Request` instance.
+    pub const fn new(client: Client<P>, body: B) -> Self {
+        Self {
+            client,
+            headers: None,
+            body,
+        }
+    }
 
-impl<P: Provider, H: Headers> Client<'_, P, H> {
     /// Set the headers for the request.
     #[must_use]
     pub fn headers(mut self, headers: H) -> Self {
-        self.headers = headers;
+        self.headers = Some(headers);
         self
     }
 }
 
-impl<P: Provider, H: Headers> Client<'_, P, H> {
-    /// Build the Create Offer request with a pre-authorized code grant.
+impl<P: Provider, H: Headers, B: Body> Request2<P, H, B> {
+    /// Process the request and return a response.
     ///
     /// # Errors
     ///
     /// Will fail if request cannot be processed.
-    pub async fn handle<B, U>(&self, body: B) -> Result<Response<U>>
+    pub async fn execute<U>(self) -> Result<Response<U>>
     where
         B: Body,
-        Request<B, H>: Handler<U, P, Error = Error> + From<B>,
+        Request<B, NoHeaders>: Handler<U, P, Error = Error> + From<B>,
     {
-        self::handle(self.owner, body, self.provider).await
+        // self::handle(&self.client.owner, self.body, &self.client.provider).await
+        let request: Request<B, NoHeaders> = self.body.into();
+        Ok(request.handle(&self.client.owner, &self.client.provider).await?.into())
     }
 }
-
-
-// /// Build an API `Client` to execute the request.
-// pub struct Client2 {
-//     owner: &'a str,
-//     provider: &'a P,
-//     headers: H,
-// }

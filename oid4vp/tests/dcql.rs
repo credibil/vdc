@@ -38,7 +38,7 @@ async fn wallet() -> &'static Wallet {
 #[tokio::test]
 async fn multiple_claims() {
     let verifier = verifier().await;
-    let client = Client::new(VERIFIER_ID, verifier);
+    let client = Client::new(VERIFIER_ID, verifier.clone());
 
     // --------------------------------------------------
     // Verifier creates an Authorization Request to request presentation of
@@ -68,7 +68,7 @@ async fn multiple_claims() {
         },
     };
 
-    let response = client.handle(request).await.expect("should handle request");
+    let response = client.request(request).execute().await.expect("should handle request");
     // let response = credibil_oid4vp::handle(VERIFIER_ID, request, verifier)
     //     .await
     //     .expect("should create request");
@@ -96,7 +96,7 @@ async fn multiple_claims() {
     // --------------------------------------------------
     // Verifier processes the Wallets's Authorization Response.
     // --------------------------------------------------
-    let response = client.handle(request).await.expect("should handle request");
+    let response = client.request(request).execute().await.expect("should handle request");
     // let response = credibil_oid4vp::handle(VERIFIER_ID, request, verifier)
     //     .await
     //     .expect("should create request");
