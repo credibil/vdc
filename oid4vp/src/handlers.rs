@@ -1,6 +1,6 @@
-//! # Endpoint
+//! # Handlers
 //!
-//! `Endpoint` provides the entry point for the `OpenId4VP` API. Requests are
+//! `Handlers` provide the entry point for the `OpenId4VP` API. Requests are
 //! routed to the appropriate handler for processing, returning a response
 //! that can be serialized to JSON or directly to HTTP (using the
 //! [`crate::core::http::IntoHttp`] trait).
@@ -21,32 +21,8 @@ use crate::provider::Provider;
 /// Result type for `OpenID` for Verifiable Presentations.
 pub type Result<T, E = Error> = anyhow::Result<T, E>;
 
-/// Handle incoming OpenID for Verifiable Presentations requests.
-///
-/// # Errors
-///
-/// This method can fail for a number of reasons related to the incoming
-/// message's viability. Expected failues include invalid authorization,
-/// insufficient permissions, and invalid message content.
-///
-/// Implementers should look to the Error type and description for more
-/// information on the reason for failure.
-#[instrument(level = "debug", skip(provider))]
-pub async fn handle<B, H, P, U>(
-    verifier: &str, request: impl Into<Request<B, H>> + Debug, provider: &P,
-) -> Result<Response<U>>
-where
-    B: Body,
-    H: Headers,
-    P: Provider,
-    Request<B, H>: Handler<U, P, Error = Error>,
-{
-    let request: Request<B, H> = request.into();
-    Ok(request.handle(verifier, provider).await?.into())
-}
-
 /// Build an API `Client` to execute the request.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Client<P: Provider> {
     /// The owner of the client, typically a DID or URL.
     pub owner: String,
@@ -73,6 +49,7 @@ impl<P: Provider> Client<P> {
 }
 
 /// Request builder.
+#[derive(Debug)]
 pub struct Request2<P: Provider, H: Headers, B: Body> {
     client: Client<P>,
     headers: Option<H>,
@@ -103,12 +80,12 @@ impl<P: Provider, H: Headers, B: Body> Request2<P, H, B> {
     /// # Errors
     ///
     /// Will fail if request cannot be processed.
+    #[instrument(level = "debug", skip(self))]
     pub async fn execute<U>(self) -> Result<Response<U>>
     where
         B: Body,
         Request<B, NoHeaders>: Handler<U, P, Error = Error> + From<B>,
     {
-        // self::handle(&self.client.owner, self.body, &self.client.provider).await
         let request: Request<B, NoHeaders> = self.body.into();
         Ok(request.handle(&self.client.owner, &self.client.provider).await?.into())
     }

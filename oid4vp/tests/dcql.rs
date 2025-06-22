@@ -67,11 +67,7 @@ async fn multiple_claims() {
             response_uri: "http://localhost:3000/cb".to_string(),
         },
     };
-
     let response = client.request(request).execute().await.expect("should handle request");
-    // let response = credibil_oid4vp::handle(VERIFIER_ID, request, verifier)
-    //     .await
-    //     .expect("should create request");
 
     // extract request object and send to Wallet
     let AuthorizationRequest::Object(req_obj) = response.body.0 else {
@@ -97,9 +93,6 @@ async fn multiple_claims() {
     // Verifier processes the Wallets's Authorization Response.
     // --------------------------------------------------
     let response = client.request(request).execute().await.expect("should handle request");
-    // let response = credibil_oid4vp::handle(VERIFIER_ID, request, verifier)
-    //     .await
-    //     .expect("should create request");
 
     // --------------------------------------------------
     // Wallet follows Verifier's redirect.
@@ -112,6 +105,7 @@ async fn multiple_claims() {
 #[tokio::test]
 async fn multiple_credentials() {
     let verifier = verifier().await;
+    let client = Client::new(VERIFIER_ID, verifier.clone());
 
     // --------------------------------------------------
     // Verifier creates an Authorization Request to request presentation of
@@ -165,9 +159,7 @@ async fn multiple_credentials() {
             response_uri: "http://localhost:3000/cb".to_string(),
         },
     };
-    let response = credibil_oid4vp::handle(VERIFIER_ID, request, verifier)
-        .await
-        .expect("should create request");
+    let response = client.request(request).execute().await.expect("should handle request");
 
     // extract request object and send to Wallet
     let AuthorizationRequest::Object(req_obj) = response.body.0 else {
@@ -192,9 +184,7 @@ async fn multiple_credentials() {
         vp_token,
         state: req_obj.state,
     };
-    let response = credibil_oid4vp::handle(VERIFIER_ID, request, verifier)
-        .await
-        .expect("should create request");
+    let response = client.request(request).execute().await.expect("should handle request");
 
     // --------------------------------------------------
     // Wallet follows Verifier's redirect.
