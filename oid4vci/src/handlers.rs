@@ -30,30 +30,6 @@ use crate::provider::Provider;
 /// Result type for `OpenID` for Verifiable Credential Issuance.
 pub type Result<T, E = Error> = anyhow::Result<T, E>;
 
-/// Handle incoming messages.
-///
-/// # Errors
-///
-/// This method can fail for a number of reasons related to the imcoming
-/// message's viability. Expected failues include invalid authorization,
-/// insufficient permissions, and invalid message content.
-///
-/// Implementers should look to the Error type and description for more
-/// information on the reason for failure.
-#[instrument(level = "debug", skip(provider))]
-pub async fn handle<B, H, P, U>(
-    issuer: &str, request: impl Into<Request<B, H>> + Debug, provider: &P,
-) -> Result<Response<U>>
-where
-    B: Body,
-    H: Headers,
-    P: Provider,
-    Request<B, H>: Handler<U, P, Error = Error>,
-{
-    let request: Request<B, H> = request.into();
-    Ok(request.handle(issuer, provider).await?.into())
-}
-
 /// Credential request headers.
 pub type CredentialHeaders = AuthorizationHeader;
 
@@ -94,74 +70,101 @@ impl From<HeaderMap> for LanguageHeader {
 }
 
 /// Build an API `Client` to execute the request.
-pub struct Client<'a, P: Provider, H> {
-    owner: &'a str,
-    provider: &'a P,
+#[derive(Clone, Debug)]
+pub struct Client<P: Provider> {
+    /// The owner of the client, typically a DID or URL.
+    pub owner: String,
+
+    /// The provider to use while handling of the request.
+    pub provider: P,
+}
+
+impl<P: Provider> Client<P> {
+    /// Create a new `Client`.
+    #[must_use]
+    pub fn new(owner: impl Into<String>, provider: P) -> Self {
+        Self {
+            owner: owner.into(),
+            provider,
+        }
+    }
+}
+
+impl<P: Provider> Client<P> {
+    /// Create a new `Request` with no headers.
+    pub fn request<B: Body>(&self, body: B) -> RequestBuilder<P, Unset, B> {
+        RequestBuilder::new(self.clone(), body)
+    }
+}
+
+/// Request builder.
+#[derive(Debug)]
+pub struct RequestBuilder<P: Provider, H, B: Body> {
+    client: Client<P>,
     headers: H,
+    body: B,
 }
 
 /// The request has no headers.
 #[doc(hidden)]
-pub struct Headerless;
+pub struct Unset;
 /// The request has headers.
 #[doc(hidden)]
-pub struct WithHeaders<H: Headers>(H);
+pub struct HeaderSet<H: Headers>(H);
 
-impl<'a, P: Provider> Client<'a, P, Headerless> {
-    /// Create a new `Client`.
-    #[must_use]
-    pub const fn new(owner: &'a str, provider: &'a P) -> Self {
+impl<P: Provider, B: Body> RequestBuilder<P, Unset, B> {
+    /// Create a new `Request` instance.
+    pub const fn new(client: Client<P>, body: B) -> Self {
         Self {
-            owner,
-            provider,
-            headers: Headerless,
+            client,
+            headers: Unset,
+            body,
         }
     }
-}
 
-impl<'a, P: Provider> Client<'a, P, Headerless> {
     /// Set the headers for the request.
     #[must_use]
-    pub const fn headers<H: Headers>(self, headers: H) -> Client<'a, P, WithHeaders<H>> {
-        Client {
-            owner: self.owner,
-            provider: self.provider,
-            headers: WithHeaders(headers),
+    pub fn headers<H: Headers>(self, headers: H) -> RequestBuilder<P, HeaderSet<H>, B> {
+        RequestBuilder {
+            client: self.client,
+            headers: HeaderSet(headers),
+            body: self.body,
         }
     }
 }
 
-impl<P: Provider> Client<'_, P, Headerless> {
-    /// Build the Create Offer request with a pre-authorized code grant.
+impl<P: Provider, B: Body> RequestBuilder<P, Unset, B> {
+    /// Process the request and return a response.
     ///
     /// # Errors
     ///
     /// Will fail if request cannot be processed.
-    pub async fn handle<B, U>(&self, body: B) -> Result<Response<U>>
+    #[instrument(level = "debug", skip(self))]
+    pub async fn execute<U>(self) -> Result<Response<U>>
     where
         B: Body,
         Request<B, NoHeaders>: Handler<U, P, Error = Error> + From<B>,
     {
-        let request: Request<B, NoHeaders> = body.into();
-        Ok(request.handle(self.owner, self.provider).await?.into())
+        let request: Request<B, NoHeaders> = self.body.into();
+        Ok(request.handle(&self.client.owner, &self.client.provider).await?.into())
     }
 }
 
-impl<P: Provider, H: Headers> Client<'_, P, WithHeaders<H>> {
-    /// Build the Create Offer request with a pre-authorized code grant.
+impl<P: Provider, H: Headers, B: Body> RequestBuilder<P, HeaderSet<H>, B> {
+    /// Process the request and return a response.
     ///
     /// # Errors
     ///
     /// Will fail if request cannot be processed.
-    pub async fn handle<B, U>(&self, body: B) -> Result<Response<U>>
+    pub async fn execute<U>(self) -> Result<Response<U>>
     where
         B: Body,
         Request<B, H>: Handler<U, P, Error = Error>,
     {
         let request = Request {
-            body,
+            body: self.body,
             headers: self.headers.0.clone(),
         };
-        Ok(request.handle(self.owner, self.provider).await?.into())
+        Ok(request.handle(&self.client.owner, &self.client.provider).await?.into())
     }
 }

@@ -51,6 +51,9 @@ tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter", "fmt"] }
 uuid = { version = "1.17.0", features = ["fast-rng", "v4"] }
 
+[patch."https://github.com/credibil/core"]
+credibil-core = { path = "../core" }
+
 # [patch."https://github.com/credibil/proof"]
 # credibil-proof = { path = "../proof" }
 

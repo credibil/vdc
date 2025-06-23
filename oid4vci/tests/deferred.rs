@@ -10,7 +10,7 @@ use credibil_oid4vci::types::{
     CreateOfferRequest, Credential, CredentialRequest, CredentialResponse, Dataset,
     DeferredCredentialRequest, NonceRequest, ProofClaims, TokenGrantType, TokenRequest,
 };
-use credibil_oid4vci::{CredentialHeaders, DeferredHeaders, JwtType, OneMany};
+use credibil_oid4vci::{Client, CredentialHeaders, DeferredHeaders, JwtType, OneMany};
 use credibil_proof::resolve_jwk;
 use serde_json::json;
 use test_utils::issuer::Issuer;
@@ -28,7 +28,7 @@ const ISSUER: &str = "http://localhost:8080";
 // credential offer to the Wallet is made by value.
 #[tokio::test]
 async fn deferred() {
-    let provider = Issuer::new(ISSUER).await;
+    let client = Client::new(ISSUER, Issuer::new(ISSUER).await);
     let carol = carol().await;
 
     // --------------------------------------------------
@@ -38,8 +38,7 @@ async fn deferred() {
         .subject_id(CAROL_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .build();
-    let response =
-        credibil_oid4vci::handle(ISSUER, request, &provider).await.expect("should create offer");
+    let response = client.request(request).execute().await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -54,15 +53,12 @@ async fn deferred() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token =
-        credibil_oid4vci::handle(ISSUER, request, &provider).await.expect("should return token");
+    let token = client.request(request).execute().await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a proof for a credential request
     // --------------------------------------------------
-    let nonce = credibil_oid4vci::handle(ISSUER, NonceRequest, &provider)
-        .await
-        .expect("should return nonce");
+    let nonce = client.request(NonceRequest).execute().await.expect("should return nonce");
 
     // proof of possession of key material
     let key = carol
@@ -91,14 +87,12 @@ async fn deferred() {
         .with_proof(jwt)
         .build();
 
-    let request = credibil_oid4vci::Request {
-        body: request,
-        headers: CredentialHeaders {
+    let response = client
+        .request(request)
+        .headers(CredentialHeaders {
             authorization: token.access_token.clone(),
-        },
-    };
-
-    let response = credibil_oid4vci::handle(ISSUER, request, &provider)
+        })
+        .execute()
         .await
         .expect("should return credential");
 
@@ -108,7 +102,8 @@ async fn deferred() {
     // --------------------------------------------------
     let credential_identifier = &details[0].credential_identifiers[0];
 
-    let data = Datastore::get(&provider, ISSUER, "SUBJECT", CAROL_SUBJECT).await.unwrap().unwrap();
+    let data =
+        Datastore::get(&client.provider, ISSUER, "SUBJECT", CAROL_SUBJECT).await.unwrap().unwrap();
     let mut subject: HashMap<String, Dataset> = serde_json::from_slice(&data).unwrap();
 
     let mut credential: Dataset = subject.get(credential_identifier).unwrap().clone();
@@ -116,8 +111,8 @@ async fn deferred() {
     subject.insert(credential_identifier.to_string(), credential);
 
     let data = serde_json::to_vec(&subject).unwrap();
-    Datastore::delete(&provider, ISSUER, "SUBJECT", CAROL_SUBJECT).await.unwrap();
-    Datastore::put(&provider, ISSUER, "SUBJECT", CAROL_SUBJECT, &data).await.unwrap();
+    Datastore::delete(&client.provider, ISSUER, "SUBJECT", CAROL_SUBJECT).await.unwrap();
+    Datastore::put(&client.provider, ISSUER, "SUBJECT", CAROL_SUBJECT, &data).await.unwrap();
 
     // --------------------------------------------------
     // After a brief wait Bob retrieves the credential
@@ -126,17 +121,14 @@ async fn deferred() {
         panic!("expected transaction_id");
     };
 
-    let request = credibil_oid4vci::Request {
-        body: DeferredCredentialRequest {
-            transaction_id: transaction_id.clone(),
-        },
-        headers: DeferredHeaders {
-            authorization: token.access_token.clone(),
-        },
+    let request = DeferredCredentialRequest {
+        transaction_id: transaction_id.clone(),
     };
-    let response = credibil_oid4vci::handle(ISSUER, request, &provider)
-        .await
-        .expect("should return credential");
+    let headers = DeferredHeaders {
+        authorization: token.access_token.clone(),
+    };
+    let response =
+        client.request(request).headers(headers).execute().await.expect("should return credential");
 
     // --------------------------------------------------
     // Bob extracts and verifies the received credential
@@ -149,7 +141,7 @@ async fn deferred() {
 
     // verify the credential proof
     let token = credential.as_str().expect("should be a string");
-    let resolver = async |kid: String| resolve_jwk(&kid, &provider).await;
+    let resolver = async |kid: String| resolve_jwk(&kid, &client.provider).await;
     let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
     // verify the credential

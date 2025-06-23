@@ -58,7 +58,7 @@ async fn request_uri(
             .into_response();
     };
     request.id = id;
-    client.request(request).execute().await.into_http().into_response()
+    client.request(request).execute().await.into_http()
 }
 
 #[axum::debug_handler]
@@ -69,7 +69,7 @@ async fn authorization(
         return (StatusCode::BAD_REQUEST, "issue deserializing `AuthorizationResponse`")
             .into_response();
     };
-    client.request(request).execute().await.into_http().into_response()
+    client.request(request).execute().await.into_http()
 }
 
 #[axum::debug_handler]

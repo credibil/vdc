@@ -10,8 +10,6 @@ mod metadata;
 mod request_uri;
 mod response;
 
-use std::fmt::Debug;
-
 pub use credibil_core::api::{Body, Handler, Headers, NoHeaders, Request, Response};
 use tracing::instrument;
 
@@ -26,7 +24,7 @@ pub type Result<T, E = Error> = anyhow::Result<T, E>;
 pub struct Client<P: Provider> {
     /// The owner of the client, typically a DID or URL.
     pub owner: String,
-    
+
     /// The provider to use while handling of the request.
     pub provider: P,
 }
@@ -44,14 +42,14 @@ impl<P: Provider> Client<P> {
 
 impl<P: Provider> Client<P> {
     /// Create a new `Request` with no headers.
-    pub fn request<B: Body>(&self, body: B) -> Request2<P, Unset, B> {
-        Request2::new(self.clone(), body)
+    pub fn request<B: Body>(&self, body: B) -> RequestBuilder<P, Unset, B> {
+        RequestBuilder::new(self.clone(), body)
     }
 }
 
 /// Request builder.
 #[derive(Debug)]
-pub struct Request2<P: Provider, H, B: Body> {
+pub struct RequestBuilder<P: Provider, H, B: Body> {
     client: Client<P>,
     headers: H,
     body: B,
@@ -64,7 +62,7 @@ pub struct Unset;
 #[doc(hidden)]
 pub struct HeaderSet<H: Headers>(H);
 
-impl<P: Provider, B: Body> Request2<P, Unset, B> {
+impl<P: Provider, B: Body> RequestBuilder<P, Unset, B> {
     /// Create a new `Request` instance.
     pub const fn new(client: Client<P>, body: B) -> Self {
         Self {
@@ -76,8 +74,8 @@ impl<P: Provider, B: Body> Request2<P, Unset, B> {
 
     /// Set the headers for the request.
     #[must_use]
-    pub fn headers<H: Headers>(self, headers: H) -> Request2<P, HeaderSet<H>, B> {
-        Request2 {
+    pub fn headers<H: Headers>(self, headers: H) -> RequestBuilder<P, HeaderSet<H>, B> {
+        RequestBuilder {
             client: self.client,
             headers: HeaderSet(headers),
             body: self.body,
@@ -85,7 +83,7 @@ impl<P: Provider, B: Body> Request2<P, Unset, B> {
     }
 }
 
-impl<P: Provider, B: Body> Request2<P, Unset, B> {
+impl<P: Provider, B: Body> RequestBuilder<P, Unset, B> {
     /// Process the request and return a response.
     ///
     /// # Errors
@@ -102,7 +100,7 @@ impl<P: Provider, B: Body> Request2<P, Unset, B> {
     }
 }
 
-impl<P: Provider, H: Headers, B: Body> Request2<P, HeaderSet<H>, B> {
+impl<P: Provider, H: Headers, B: Body> RequestBuilder<P, HeaderSet<H>, B> {
     /// Process the request and return a response.
     ///
     /// # Errors

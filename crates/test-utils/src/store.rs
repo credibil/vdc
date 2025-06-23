@@ -7,16 +7,15 @@ use credibil_core::datastore::Datastore;
 use credibil_ecc::Vault;
 use dashmap::DashMap;
 
-static STORE: LazyLock<DashMap<String, Vec<u8>>> = LazyLock::new(DashMap::new);
+static STORE: LazyLock<DashMap<String, Vec<u8>>> = LazyLock::new(|| {
+    let cap: u16 = std::random::random();
+    DashMap::with_capacity(cap as usize)
+});
 
 #[derive(Clone, Debug)]
 pub struct Store;
 
 impl Store {
-    pub fn open() -> Self {
-        Self {}
-    }
-
     pub async fn put(&self, owner: &str, partition: &str, key: &str, data: &[u8]) -> Result<()> {
         let key = format!("{owner}-{partition}-{key}");
         STORE.insert(key, data.to_vec());
@@ -25,6 +24,7 @@ impl Store {
 
     pub async fn get(&self, owner: &str, partition: &str, key: &str) -> Result<Option<Vec<u8>>> {
         let key = format!("{owner}-{partition}-{key}");
+        dbg!(STORE.capacity());
         let Some(bytes) = STORE.get(&key) else {
             return Ok(None);
         };

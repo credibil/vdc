@@ -40,7 +40,7 @@ static PAR_REQUESTS: LazyLock<RwLock<HashMap<String, PushedAuthorizationRequest>
     LazyLock::new(|| RwLock::new(HashMap::new()));
 
 pub async fn serve(issuer_id: &'static str) -> Result<JoinHandle<()>> {
-    let issuer = Issuer::new(issuer_id).await;
+    let client = Client::new(issuer_id, Issuer::new(issuer_id).await);
 
     let router = Router::new()
         .route("/create_offer", post(create_offer))
@@ -63,7 +63,7 @@ pub async fn serve(issuer_id: &'static str) -> Result<JoinHandle<()>> {
             header::CACHE_CONTROL,
             HeaderValue::from_static("no-cache, no-store"),
         ))
-        .with_state(issuer);
+        .with_state(client);
 
     let jh = tokio::spawn(async move {
         let addr = issuer_id.strip_prefix("http://").unwrap_or(issuer_id);
@@ -77,52 +77,35 @@ pub async fn serve(issuer_id: &'static str) -> Result<JoinHandle<()>> {
 
 #[axum::debug_handler]
 async fn create_offer(
-    State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
-    Json(request): Json<CreateOfferRequest>,
+    State(client): State<Client<Issuer>>, Json(request): Json<CreateOfferRequest>,
 ) -> impl IntoResponse {
     // credibil_oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
-    Client::new(&format!("http://{host}"), &provider).handle(request).await.into_http()
+    client.request(request).execute().await.into_http()
 }
 
 #[axum::debug_handler]
 async fn credential_offer(
-    State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
-    Path(offer_id): Path<String>,
+    State(client): State<Client<Issuer>>, Path(offer_id): Path<String>,
 ) -> impl IntoResponse {
     let request = CredentialOfferRequest { id: offer_id };
-    Client::new(&format!("http://{host}"), &provider).handle(request).await.into_http()
+    client.request(request).execute().await.into_http()
 }
 
 // TODO: override default  Cache-Control header to allow caching
 #[axum::debug_handler]
-async fn metadata(
-    headers: HeaderMap, State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
-) -> impl IntoResponse {
-    // let request = credibil_oid4vci::Request {
-    //     body: MetadataRequest,
-    //     headers: headers.into(),
-    // };
-    // credibil_oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
-
-    Client::new(&format!("http://{host}"), &provider)
-        .headers(headers.into())
-        .handle(MetadataRequest)
-        .await
-        .into_http()
+async fn metadata(headers: HeaderMap, State(client): State<Client<Issuer>>) -> impl IntoResponse {
+    client.request(MetadataRequest).headers(headers.into()).execute().await.into_http()
 }
 
 #[axum::debug_handler]
-async fn oauth_server(
-    State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
-) -> impl IntoResponse {
+async fn oauth_server(State(client): State<Client<Issuer>>) -> impl IntoResponse {
     let request = ServerRequest { issuer: None };
-    Client::new(&format!("http://{host}"), &provider).handle(request).await.into_http()
+    client.request(request).execute().await.into_http()
 }
 
 #[axum::debug_handler]
 async fn authorize(
-    State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
-    Form(request): Form<AuthorizationRequest>,
+    State(client): State<Client<Issuer>>, Form(request): Form<AuthorizationRequest>,
 ) -> impl IntoResponse {
     let AuthorizationRequest::Object(object) = request.clone() else {
         panic!("should be an object request");
@@ -163,7 +146,7 @@ async fn authorize(
     };
 
     // match credibil_oid4vci::handle(&format!("http://{host}"), request, &provider).await {
-    match Client::new(&format!("http://{host}"), &provider).handle(request).await {
+    match client.request(request).execute().await {
         Ok(v) => (StatusCode::FOUND, Redirect::to(&format!("{redirect_uri}?code={}", v.body.code)))
             .into_response(),
         Err(e) => {
@@ -176,8 +159,7 @@ async fn authorize(
 
 #[axum::debug_handler]
 async fn par(
-    State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
-    Form(request): Form<PushedAuthorizationRequest>,
+    State(client): State<Client<Issuer>>, Form(request): Form<PushedAuthorizationRequest>,
 ) -> impl IntoResponse {
     let object = &request.request;
 
@@ -210,11 +192,7 @@ async fn par(
     }
 
     // process request
-    Client::new(&format!("http://{host}"), &provider)
-        .handle(request)
-        .await
-        .into_http()
-        .into_response()
+    client.request(request).execute().await.into_http()
 }
 
 #[derive(Deserialize)]
@@ -252,87 +230,70 @@ async fn handle_login(
 
 #[axum::debug_handler]
 async fn token(
-    State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
-    Form(form): Form<Vec<(String, String)>>,
+    State(client): State<Client<Issuer>>, Form(form): Form<Vec<(String, String)>>,
 ) -> impl IntoResponse {
     let Ok(tr) = TokenRequest::form_decode(&form) else {
         return (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid request"})))
             .into_response();
     };
-    Client::new(&format!("http://{host}"), &provider).handle(tr).await.into_http().into_response()
+    client.request(tr).execute().await.into_http()
 }
 
 #[axum::debug_handler]
-async fn nonce(
-    State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
-) -> impl IntoResponse {
+async fn nonce(State(client): State<Client<Issuer>>) -> impl IntoResponse {
     let request = NonceRequest;
-    credibil_oid4vci::handle(&format!("http://{host}"), request, &provider).await.into_http()
+    client.request(request).execute().await.into_http()
 }
 
 #[axum::debug_handler]
 async fn credential(
-    State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>, Json(request): Json<CredentialRequest>,
+    State(client): State<Client<Issuer>>, TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    Json(request): Json<CredentialRequest>,
 ) -> impl IntoResponse {
     let headers = CredentialHeaders {
         authorization: auth.token().to_string(),
     };
-    Client::new(&format!("http://{host}"), &provider)
-        .headers(headers)
-        .handle(request)
-        .await
-        .into_http()
+    client.request(request).headers(headers).execute().await.into_http()
 }
 
 #[axum::debug_handler]
 async fn deferred_credential(
-    State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    State(client): State<Client<Issuer>>, TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     Json(request): Json<DeferredCredentialRequest>,
 ) -> impl IntoResponse {
     let headers = CredentialHeaders {
         authorization: auth.token().to_string(),
     };
-    Client::new(&format!("http://{host}"), &provider)
-        .headers(headers)
-        .handle(request)
-        .await
-        .into_http()
+    client.request(request).headers(headers).execute().await.into_http()
 }
 
 #[axum::debug_handler]
 async fn notification(
-    State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>,
-    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    State(client): State<Client<Issuer>>, TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     Json(request): Json<NotificationRequest>,
 ) -> impl IntoResponse {
     let headers = NotificationHeaders {
         authorization: auth.token().to_string(),
     };
-    Client::new(&format!("http://{host}"), &provider)
-        .headers(headers)
-        .handle(request)
-        .await
-        .into_http()
+    client.request(request).headers(headers).execute().await.into_http()
 }
 
 #[axum::debug_handler]
 async fn statuslists(
-    State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>, Path(id): Path<String>,
+    State(client): State<Client<Issuer>>, Path(id): Path<String>,
 ) -> impl IntoResponse {
     let request = StatusListRequest { id: Some(id) };
-    credibil_status::handle(&format!("http://{host}"), request, &provider).await.into_http()
+    credibil_status::handle(&client.owner, request, &client.provider).await.into_http()
 }
 
 #[axum::debug_handler]
 async fn did(
-    State(provider): State<Issuer>, TypedHeader(host): TypedHeader<Host>, request: Request,
+    State(client): State<Client<Issuer>>, request: Request,
 ) -> Result<Json<Document>, AppError> {
     let request = credibil_proof::DocumentRequest {
-        url: format!("http://{host}{}", request.uri()),
+        url: format!("{}/{}", client.owner, request.uri()),
     };
-    let doc = credibil_proof::handle(&format!("http://{host}"), request, &provider)
+    let doc = credibil_proof::handle(&client.owner, request, &client.provider)
         .await
         .map_err(AppError::from)?;
     Ok(Json(doc.0.clone()))
