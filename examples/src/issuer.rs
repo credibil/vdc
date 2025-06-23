@@ -283,7 +283,7 @@ async fn statuslists(
     State(client): State<Client<Issuer>>, Path(id): Path<String>,
 ) -> impl IntoResponse {
     let request = StatusListRequest { id: Some(id) };
-    credibil_status::handle(&client.owner, request, &client.provider).await.into_http()
+    client.request(request).execute().await.into_http()
 }
 
 #[axum::debug_handler]
@@ -293,9 +293,7 @@ async fn did(
     let request = credibil_proof::DocumentRequest {
         url: format!("{}/{}", client.owner, request.uri()),
     };
-    let doc = credibil_proof::handle(&client.owner, request, &client.provider)
-        .await
-        .map_err(AppError::from)?;
+    let doc = client.request(request).execute().await.map_err(AppError::from)?;
     Ok(Json(doc.0.clone()))
 }
 

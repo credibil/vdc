@@ -519,6 +519,7 @@ dependencies = [
 [[package]]
 name = "credibil-core"
 version = "0.1.0"
+source = "git+https://github.com/credibil/core.git#8676989ef520571697d4f0769113ed733b4edcd4"
 dependencies = [
  "anyhow",
  "axum-core",
@@ -535,7 +536,7 @@ dependencies = [
 [[package]]
 name = "credibil-did"
 version = "0.1.2"
-source = "git+https://github.com/credibil/proof.git#6af067849d2b4e909946a189a7e572af6ae0230e"
+source = "git+https://github.com/credibil/proof.git#39348a6eb3095291828574b1f87603b41a04c415"
 dependencies = [
  "anyhow",
  "chrono",
@@ -649,7 +650,6 @@ dependencies = [
  "thiserror 2.0.12",
  "tokio",
  "tower-http",
- "tracing",
  "tracing-subscriber",
  "uuid",
 ]
@@ -657,7 +657,7 @@ dependencies = [
 [[package]]
 name = "credibil-proof"
 version = "0.1.2"
-source = "git+https://github.com/credibil/proof.git#6af067849d2b4e909946a189a7e572af6ae0230e"
+source = "git+https://github.com/credibil/proof.git#39348a6eb3095291828574b1f87603b41a04c415"
 dependencies = [
  "anyhow",
  "credibil-core",
@@ -686,7 +686,6 @@ dependencies = [
  "serde_json",
  "serde_repr",
  "thiserror 2.0.12",
- "tracing",
 ]
 
 [[package]]
@@ -987,7 +986,6 @@ dependencies = [
  "credibil-oid4vci",
  "credibil-oid4vp",
  "credibil-proof",
- "credibil-status",
  "http",
  "oauth2",
  "reqwest",
@@ -3375,9 +3373,9 @@ checksum = "5e6ad25900d524eaabdbbb96d20b4311e1e7ae1699af4fb28c17ae66c80d798a"
 
 [[package]]
 name = "windows-registry"
-version = "0.5.2"
+version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3bab093bdd303a1240bb99b8aba8ea8a69ee19d34c9e2ef9594e708a4878820"
+checksum = "5b8a9ed28765efc97bbc954883f4e6796c33a06546ebafacbabee9696967499e"
 dependencies = [
  "windows-link",
  "windows-result",

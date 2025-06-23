@@ -79,9 +79,7 @@ async fn did(
     let request = credibil_proof::DocumentRequest {
         url: format!("{}{}", client.owner, request.uri()),
     };
-    let doc = credibil_proof::handle(&client.owner, request, &client.provider)
-        .await
-        .map_err(AppError::from)?;
+    let doc = client.request(request).execute().await.map_err(AppError::from)?;
     Ok(Json(doc.0.clone()))
 }
 

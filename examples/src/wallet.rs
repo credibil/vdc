@@ -22,7 +22,7 @@ use credibil_oid4vp::{
     AuthorizationRequest, AuthorizationResponse, ClientId, RequestObject, RequestUriMethod,
     RequestUriRequest, RequestUriResponse, ResponseMode, VpFormat, Wallet, vp_token,
 };
-use credibil_proof::resolve_jwk;
+use credibil_proof::{Client, resolve_jwk};
 use http::StatusCode;
 use serde::Deserialize;
 use test_utils::wallet;
@@ -272,12 +272,11 @@ async fn authorize(
 async fn did(
     State(provider): State<wallet::Wallet>, TypedHeader(host): TypedHeader<Host>, request: Request,
 ) -> Result<Json<Document>, AppError> {
+    let client = Client::new(format!("http://{host}{}", request.uri()), provider);
     let request = credibil_proof::DocumentRequest {
         url: format!("http://{host}{}", request.uri()),
     };
-    let doc = credibil_proof::handle(&format!("http://{host}"), request, &provider)
-        .await
-        .map_err(AppError::from)?;
+    let doc = client.request(request).execute().await.map_err(AppError::from)?;
     Ok(Json(doc.0.clone()))
 }
 

@@ -33,7 +33,7 @@ impl<P: Provider> Handler<StatusListResponse, P> for Request<StatusListRequest> 
 
     async fn handle(
         self, issuer: &str, provider: &P,
-    ) -> Result<impl Into<Response<StatusListResponse>>, Self::Error> {
+    ) -> Result<impl Into<Response<StatusListResponse>>> {
         statuslist(issuer, provider, self.body).await
     }
 }
