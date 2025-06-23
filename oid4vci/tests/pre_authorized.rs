@@ -20,6 +20,10 @@ use tokio::sync::OnceCell;
 const ISSUER: &str = "http://localhost:8080";
 const BOB_SUBJECT: &str = "normal_user";
 
+static CLIENT: OnceCell<Client<Issuer>> = OnceCell::const_new();
+async fn client() -> &'static Client<Issuer> {
+    CLIENT.get_or_init(|| async { Client::new(ISSUER, Issuer::new(ISSUER).await) }).await
+}
 static BOB: OnceCell<Wallet> = OnceCell::const_new();
 async fn bob() -> &'static Wallet {
     BOB.get_or_init(|| async { Wallet::new("https://pre_auth.io/bob").await }).await
@@ -29,7 +33,7 @@ async fn bob() -> &'static Wallet {
 // credential offer to the Wallet is made by value.
 #[tokio::test]
 async fn offer_val() {
-    let client = Client::new(ISSUER, Issuer::new(ISSUER).await);
+    let client = client().await; // Client::new(ISSUER, Issuer::new(ISSUER).await);
     let bob = bob().await;
 
     // --------------------------------------------------
@@ -125,7 +129,7 @@ async fn offer_val() {
 // credential offer to the Wallet is made by reference.
 #[tokio::test]
 async fn offer_ref() {
-    let client = Client::new(ISSUER, Issuer::new(ISSUER).await);
+    let client = client().await;
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
@@ -161,7 +165,7 @@ async fn offer_ref() {
 // configuration id.
 #[tokio::test]
 async fn two_datasets() {
-    let client = Client::new(ISSUER, Issuer::new(ISSUER).await);
+    let client = client().await;
     let bob = bob().await;
 
     // --------------------------------------------------
@@ -255,7 +259,7 @@ async fn two_datasets() {
 // requested in the token request.
 #[tokio::test]
 async fn reduce_credentials() {
-    let client = Client::new(ISSUER, Issuer::new(ISSUER).await);
+    let client = client().await;
     let bob = bob().await;
 
     // --------------------------------------------------
@@ -352,7 +356,7 @@ async fn reduce_credentials() {
 // Should return fewer claims when requested in token request.
 #[tokio::test]
 async fn reduce_claims() {
-    let client = Client::new(ISSUER, Issuer::new(ISSUER).await);
+    let client = client().await;
     let bob = bob().await;
 
     // --------------------------------------------------
@@ -456,7 +460,7 @@ async fn reduce_claims() {
 // Should handle an acceptance notication from the wallet.
 #[tokio::test]
 async fn notify_accepted() {
-    let client = Client::new(ISSUER, Issuer::new(ISSUER).await);
+    let client = client().await;
     let bob = bob().await;
 
     // --------------------------------------------------

@@ -22,6 +22,10 @@ use tokio::sync::OnceCell;
 const ISSUER: &str = "http://localhost:8080";
 const BOB_SUBJECT: &str = "normal_user";
 
+static CLIENT: OnceCell<Client<Issuer>> = OnceCell::const_new();
+async fn client() -> &'static Client<Issuer> {
+    CLIENT.get_or_init(|| async { Client::new(ISSUER, Issuer::new(ISSUER).await) }).await
+}
 static BOB: OnceCell<Wallet> = OnceCell::const_new();
 async fn bob() -> &'static Wallet {
     BOB.get_or_init(|| async { Wallet::new("https://issuance.io/bob").await }).await
@@ -30,8 +34,7 @@ async fn bob() -> &'static Wallet {
 // Should allow the Wallet to provide 2 JWT proofs when requesting a credential.
 #[tokio::test]
 async fn two_proofs() {
-    // let provider = Issuer::new(ISSUER).await;
-    let client = Client::new(ISSUER, Issuer::new(ISSUER).await);
+    let client = client().await;
     let bob = bob().await;
 
     // --------------------------------------------------
@@ -159,7 +162,7 @@ async fn two_proofs() {
 // Should issue a SD-JWT credential.
 #[tokio::test]
 async fn sd_jwt() {
-    let client = Client::new(ISSUER, Issuer::new(ISSUER).await);
+    let client = client().await;
     let bob = bob().await;
 
     // --------------------------------------------------

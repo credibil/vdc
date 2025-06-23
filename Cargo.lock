@@ -535,7 +535,7 @@ dependencies = [
 [[package]]
 name = "credibil-did"
 version = "0.1.2"
-source = "git+https://github.com/credibil/proof.git#2d9cdae5e785d119fc84bd57a72568dfaea7f665"
+source = "git+https://github.com/credibil/proof.git#6af067849d2b4e909946a189a7e572af6ae0230e"
 dependencies = [
  "anyhow",
  "chrono",
@@ -657,7 +657,7 @@ dependencies = [
 [[package]]
 name = "credibil-proof"
 version = "0.1.2"
-source = "git+https://github.com/credibil/proof.git#2d9cdae5e785d119fc84bd57a72568dfaea7f665"
+source = "git+https://github.com/credibil/proof.git#6af067849d2b4e909946a189a7e572af6ae0230e"
 dependencies = [
  "anyhow",
  "credibil-core",
