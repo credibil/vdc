@@ -32,7 +32,7 @@ impl<P: Provider> Handler<MetadataResponse, P> for Request<MetadataRequest> {
 
     async fn handle(
         self, verifier: &str, provider: &P,
-    ) -> Result<impl Into<Response<MetadataResponse>>, Self::Error> {
+    ) -> Result<impl Into<Response<MetadataResponse>>> {
         metadata(verifier, provider, self.body).await
     }
 }

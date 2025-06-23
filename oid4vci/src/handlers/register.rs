@@ -37,7 +37,7 @@ impl<P: Provider> Handler<RegistrationResponse, P>
 
     async fn handle(
         self, issuer: &str, provider: &P,
-    ) -> Result<impl Into<Response<RegistrationResponse>>, Self::Error> {
+    ) -> Result<impl Into<Response<RegistrationResponse>>> {
         register(issuer, provider, self).await
     }
 }

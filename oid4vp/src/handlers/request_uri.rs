@@ -77,7 +77,7 @@ impl<P: Provider> Handler<RequestUriResponse, P> for Request<RequestUriRequest> 
 
     async fn handle(
         self, verifier: &str, provider: &P,
-    ) -> Result<impl Into<Response<RequestUriResponse>>, Self::Error> {
+    ) -> Result<impl Into<Response<RequestUriResponse>>> {
         request_uri(verifier, provider, self.body).await
     }
 }

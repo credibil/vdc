@@ -122,7 +122,7 @@ impl<P: Provider> Handler<AuthorizationResponse, P> for Request<AuthorizationReq
 
     async fn handle(
         self, issuer: &str, provider: &P,
-    ) -> Result<impl Into<Response<AuthorizationResponse>>, Self::Error> {
+    ) -> Result<impl Into<Response<AuthorizationResponse>>> {
         authorize(issuer, provider, self.body).await
     }
 }

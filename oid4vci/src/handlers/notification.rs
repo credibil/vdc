@@ -59,7 +59,7 @@ impl<P: Provider> Handler<NotificationResponse, P>
 
     async fn handle(
         self, issuer: &str, provider: &P,
-    ) -> Result<impl Into<Response<NotificationResponse>>, Self::Error> {
+    ) -> Result<impl Into<Response<NotificationResponse>>> {
         notification(issuer, provider, self).await
     }
 }

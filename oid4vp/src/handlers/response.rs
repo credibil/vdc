@@ -63,7 +63,7 @@ impl<P: Provider> Handler<RedirectResponse, P> for Request<AuthorizationResponse
 
     async fn handle(
         self, verifier: &str, provider: &P,
-    ) -> Result<impl Into<Response<RedirectResponse>>, Self::Error> {
+    ) -> Result<impl Into<Response<RedirectResponse>>> {
         response(verifier, provider, self.body).await
     }
 }

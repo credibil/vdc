@@ -100,7 +100,7 @@ impl<P: Provider> Handler<TokenResponse, P> for Request<TokenRequest> {
 
     async fn handle(
         self, issuer: &str, provider: &P,
-    ) -> Result<impl Into<Response<TokenResponse>>, Self::Error> {
+    ) -> Result<impl Into<Response<TokenResponse>>> {
         token(issuer, provider, self.body).await
     }
 }
