@@ -40,7 +40,7 @@ impl<P: Provider> Handler<NonceResponse, P> for Request<NonceRequest> {
 
     async fn handle(
         self, issuer: &str, provider: &P,
-    ) -> Result<impl Into<Response<NonceResponse>>, Self::Error> {
+    ) -> Result<impl Into<Response<NonceResponse>>> {
         nonce(issuer, provider, self.body).await
     }
 }

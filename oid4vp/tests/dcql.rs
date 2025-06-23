@@ -8,7 +8,8 @@ use credibil_oid4vp::vdc::{
     DcqlQuery, MdocBuilder, SdJwtVcBuilder, W3cVcBuilder, mso_mdoc, sd_jwt, w3c_vc,
 };
 use credibil_oid4vp::{
-    AuthorizationRequest, AuthorizationResponse, CreateRequest, DeviceFlow, ResponseMode, vp_token,
+    AuthorizationRequest, AuthorizationResponse, Client, CreateRequest, DeviceFlow, ResponseMode,
+    vp_token,
 };
 use credibil_proof::resolve_jwk;
 use serde_json::{Value, json};
@@ -20,11 +21,12 @@ use tokio::sync::OnceCell;
 const ISSUER_ID: &str = "http://localhost:8080";
 const VERIFIER_ID: &str = "http://localhost:8081";
 
-static VERIFIER: OnceCell<Verifier> = OnceCell::const_new();
+
 static ISSUER: OnceCell<Issuer> = OnceCell::const_new();
 static WALLET: OnceCell<Wallet> = OnceCell::const_new();
-async fn verifier() -> &'static Verifier {
-    VERIFIER.get_or_init(|| async { Verifier::new(VERIFIER_ID).await }).await
+static CLIENT: OnceCell<Client<Verifier>> = OnceCell::const_new();
+async fn client() -> &'static Client<Verifier> {
+    CLIENT.get_or_init(|| async { Client::new(VERIFIER_ID, Verifier::new(VERIFIER_ID).await) }).await
 }
 async fn issuer() -> &'static Issuer {
     ISSUER.get_or_init(|| async { Issuer::new(ISSUER_ID).await }).await
@@ -36,7 +38,7 @@ async fn wallet() -> &'static Wallet {
 // Should request a Credential with the claims `vehicle_holder` and `first_name`.
 #[tokio::test]
 async fn multiple_claims() {
-    let verifier = verifier().await;
+    let client = client().await;
 
     // --------------------------------------------------
     // Verifier creates an Authorization Request to request presentation of
@@ -65,9 +67,7 @@ async fn multiple_claims() {
             response_uri: "http://localhost:3000/cb".to_string(),
         },
     };
-    let response = credibil_oid4vp::handle(VERIFIER_ID, request, verifier)
-        .await
-        .expect("should create request");
+    let response = client.request(request).execute().await.expect("should handle request");
 
     // extract request object and send to Wallet
     let AuthorizationRequest::Object(req_obj) = response.body.0 else {
@@ -92,9 +92,7 @@ async fn multiple_claims() {
     // --------------------------------------------------
     // Verifier processes the Wallets's Authorization Response.
     // --------------------------------------------------
-    let response = credibil_oid4vp::handle(VERIFIER_ID, request, verifier)
-        .await
-        .expect("should create request");
+    let response = client.request(request).execute().await.expect("should handle request");
 
     // --------------------------------------------------
     // Wallet follows Verifier's redirect.
@@ -106,7 +104,7 @@ async fn multiple_claims() {
 // Should return multiple Credentials.
 #[tokio::test]
 async fn multiple_credentials() {
-    let verifier = verifier().await;
+    let client = client().await;
 
     // --------------------------------------------------
     // Verifier creates an Authorization Request to request presentation of
@@ -160,9 +158,7 @@ async fn multiple_credentials() {
             response_uri: "http://localhost:3000/cb".to_string(),
         },
     };
-    let response = credibil_oid4vp::handle(VERIFIER_ID, request, verifier)
-        .await
-        .expect("should create request");
+    let response = client.request(request).execute().await.expect("should handle request");
 
     // extract request object and send to Wallet
     let AuthorizationRequest::Object(req_obj) = response.body.0 else {
@@ -187,9 +183,7 @@ async fn multiple_credentials() {
         vp_token,
         state: req_obj.state,
     };
-    let response = credibil_oid4vp::handle(VERIFIER_ID, request, verifier)
-        .await
-        .expect("should create request");
+    let response = client.request(request).execute().await.expect("should handle request");
 
     // --------------------------------------------------
     // Wallet follows Verifier's redirect.
@@ -204,7 +198,6 @@ async fn multiple_credentials() {
 // Should also optionally return the `nice_to_have` credential.
 #[tokio::test]
 async fn complex_query() {
-    // let verifier = verifier().await;
     let wallet = wallet().await;
     let all_vcs = wallet.fetch().await.expect("should fetch credentials");
 
@@ -299,7 +292,6 @@ async fn complex_query() {
 // Should return an ID and address from any credential.
 #[tokio::test]
 async fn any_credential() {
-    // let verifier = verifier().await;
     let wallet = wallet().await;
     let all_vcs = wallet.fetch().await.expect("should fetch credentials");
 

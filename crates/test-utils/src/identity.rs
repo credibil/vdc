@@ -5,7 +5,7 @@ use credibil_proof::did::{Document, DocumentBuilder, KeyId, VerificationMethod};
 use credibil_proof::ecc::Curve::Ed25519;
 use credibil_proof::ecc::{Entry, Keyring, Signer};
 use credibil_proof::jose::PublicKeyJwk;
-use credibil_proof::{DocumentRequest, VerifyBy};
+use credibil_proof::{Client, DocumentRequest, VerifyBy};
 
 use crate::store::Store;
 // use crate::vault::KeyVault as Vault;
@@ -38,7 +38,9 @@ impl Identity {
         // not in a tokio runtime == running in a test
         if thread::current().name() != Some("tokio-runtime-worker") {
             let request = DocumentRequest { url: url.to_string() };
-            return credibil_proof::handle("owner", request, &Store).await.map(|r| r.0.clone());
+            //return credibil_proof::handle("owner", request, &Store).await.map(|r| r.0.clone());
+            let client = Client::new(&self.owner, Store);
+            return client.request(request).execute().await.map(|r| r.0.clone());
         }
 
         // in a tokio runtime: assume web server is running

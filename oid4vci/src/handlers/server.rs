@@ -43,7 +43,7 @@ impl<P: Provider> Handler<ServerResponse, P> for Request<ServerRequest> {
 
     async fn handle(
         self, issuer: &str, provider: &P,
-    ) -> Result<impl Into<Response<ServerResponse>>, Self::Error> {
+    ) -> Result<impl Into<Response<ServerResponse>>> {
         metadata(issuer, provider, self.body).await
     }
 }

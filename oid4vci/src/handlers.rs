@@ -17,42 +17,16 @@ mod register;
 mod server;
 mod token;
 
-use std::fmt::Debug;
-
-pub use credibil_core::api::{Body, Handler, Headers, NoHeaders, Request, Response};
+pub use credibil_core::api::{
+    Body, Client, Handler, Headers, NoHeaders, Request, RequestBuilder, Response,
+};
 use http::HeaderMap;
 use http::header::ACCEPT_LANGUAGE;
-use tracing::instrument;
 
 pub use crate::error::Error;
-use crate::provider::Provider;
 
 /// Result type for `OpenID` for Verifiable Credential Issuance.
-pub type Result<T, E = Error> = anyhow::Result<T, E>;
-
-/// Handle incoming messages.
-///
-/// # Errors
-///
-/// This method can fail for a number of reasons related to the imcoming
-/// message's viability. Expected failues include invalid authorization,
-/// insufficient permissions, and invalid message content.
-///
-/// Implementers should look to the Error type and description for more
-/// information on the reason for failure.
-#[instrument(level = "debug", skip(provider))]
-pub async fn handle<B, H, P, U>(
-    issuer: &str, request: impl Into<Request<B, H>> + Debug, provider: &P,
-) -> Result<Response<U>>
-where
-    B: Body,
-    H: Headers,
-    P: Provider,
-    Request<B, H>: Handler<U, P, Error = Error>,
-{
-    let request: Request<B, H> = request.into();
-    Ok(request.handle(issuer, provider).await?.into())
-}
+pub type Result<T> = anyhow::Result<T, Error>;
 
 /// Credential request headers.
 pub type CredentialHeaders = AuthorizationHeader;

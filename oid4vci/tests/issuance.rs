@@ -11,7 +11,7 @@ use credibil_oid4vci::types::{
     ProofClaims, TokenGrantType, TokenRequest,
 };
 use credibil_oid4vci::vdc::sd_jwt::SdJwtClaims;
-use credibil_oid4vci::{CredentialHeaders, JwtType, OneMany};
+use credibil_oid4vci::{Client, CredentialHeaders, JwtType, OneMany};
 use credibil_proof::resolve_jwk;
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -22,6 +22,10 @@ use tokio::sync::OnceCell;
 const ISSUER: &str = "http://localhost:8080";
 const BOB_SUBJECT: &str = "normal_user";
 
+static CLIENT: OnceCell<Client<Issuer>> = OnceCell::const_new();
+async fn client() -> &'static Client<Issuer> {
+    CLIENT.get_or_init(|| async { Client::new(ISSUER, Issuer::new(ISSUER).await) }).await
+}
 static BOB: OnceCell<Wallet> = OnceCell::const_new();
 async fn bob() -> &'static Wallet {
     BOB.get_or_init(|| async { Wallet::new("https://issuance.io/bob").await }).await
@@ -30,7 +34,7 @@ async fn bob() -> &'static Wallet {
 // Should allow the Wallet to provide 2 JWT proofs when requesting a credential.
 #[tokio::test]
 async fn two_proofs() {
-    let provider = Issuer::new(ISSUER).await;
+    let client = client().await;
     let bob = bob().await;
 
     // --------------------------------------------------
@@ -40,8 +44,7 @@ async fn two_proofs() {
         .subject_id(BOB_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .build();
-    let response =
-        credibil_oid4vci::handle(ISSUER, request, &provider).await.expect("should create offer");
+    let response = client.request(request).execute().await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -56,15 +59,12 @@ async fn two_proofs() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token =
-        credibil_oid4vci::handle(ISSUER, request, &provider).await.expect("should return token");
+    let token = client.request(request).execute().await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares 2 proofs for the credential request
     // --------------------------------------------------
-    let nonce = credibil_oid4vci::handle(ISSUER, NonceRequest, &provider)
-        .await
-        .expect("should return nonce");
+    let nonce = client.request(NonceRequest).execute().await.expect("should return nonce");
 
     // proof of possession of key material
     let bob_key = bob
@@ -110,14 +110,12 @@ async fn two_proofs() {
         .with_proof(jws_2.encode().expect("should encode JWS"))
         .build();
 
-    let request = credibil_oid4vci::Request {
-        body: request,
-        headers: CredentialHeaders {
+    let response = client
+        .request(request)
+        .headers(CredentialHeaders {
             authorization: token.access_token.clone(),
-        },
-    };
-
-    let response = credibil_oid4vci::handle(ISSUER, request, &provider)
+        })
+        .execute()
         .await
         .expect("should return credential");
 
@@ -140,7 +138,7 @@ async fn two_proofs() {
     };
     let dan_did = dan_kid.split('#').next().expect("should have did");
 
-    let resolver = async |kid: String| resolve_jwk(&kid, &provider).await;
+    let resolver = async |kid: String| resolve_jwk(&kid, &client.provider).await;
     let dids = vec![bob_did.to_string(), dan_did.to_string()];
 
     for (i, credential) in credentials.iter().enumerate() {
@@ -164,7 +162,7 @@ async fn two_proofs() {
 // Should issue a SD-JWT credential.
 #[tokio::test]
 async fn sd_jwt() {
-    let provider = Issuer::new(ISSUER).await;
+    let client = client().await;
     let bob = bob().await;
 
     // --------------------------------------------------
@@ -174,8 +172,7 @@ async fn sd_jwt() {
         .subject_id(BOB_SUBJECT)
         .with_credential("Identity_SD_JWT")
         .build();
-    let response =
-        credibil_oid4vci::handle(ISSUER, request, &provider).await.expect("should create offer");
+    let response = client.request(request).execute().await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -190,15 +187,12 @@ async fn sd_jwt() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token =
-        credibil_oid4vci::handle(ISSUER, request, &provider).await.expect("should return token");
+    let token = client.request(request).execute().await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares 2 proofs for the credential request
     // --------------------------------------------------
-    let nonce = credibil_oid4vci::handle(ISSUER, NonceRequest, &provider)
-        .await
-        .expect("should return nonce");
+    let nonce = client.request(NonceRequest).execute().await.expect("should return nonce");
 
     // proof of possession of key material
     let bob_key = bob
@@ -226,14 +220,12 @@ async fn sd_jwt() {
         .with_proof(jws.encode().expect("should encode JWS"))
         .build();
 
-    let request = credibil_oid4vci::Request {
-        body: request,
-        headers: CredentialHeaders {
+    let response = client
+        .request(request)
+        .headers(CredentialHeaders {
             authorization: token.access_token.clone(),
-        },
-    };
-
-    let response = credibil_oid4vci::handle(ISSUER, request, &provider)
+        })
+        .execute()
         .await
         .expect("should return credential");
 
@@ -252,7 +244,7 @@ async fn sd_jwt() {
     let parts = sd_jwt.split_once('~').expect("should split");
 
     let token = parts.0;
-    let resolver = async |kid: String| resolve_jwk(&kid, &provider).await;
+    let resolver = async |kid: String| resolve_jwk(&kid, &client.provider).await;
     let jwt: Jwt<SdJwtClaims> = decode_jws(token, resolver).await.expect("should decode");
 
     // verify the credential

@@ -13,27 +13,20 @@ static STORE: LazyLock<DashMap<String, Vec<u8>>> = LazyLock::new(DashMap::new);
 pub struct Store;
 
 impl Store {
-    pub fn open() -> Self {
-        Self {}
-    }
-
     pub async fn put(&self, owner: &str, partition: &str, key: &str, data: &[u8]) -> Result<()> {
-        let key = format!("{owner}-{partition}-{key}");
-        STORE.insert(key, data.to_vec());
+        STORE.insert(format!("{owner}-{partition}-{key}"), data.to_vec());
         Ok(())
     }
 
     pub async fn get(&self, owner: &str, partition: &str, key: &str) -> Result<Option<Vec<u8>>> {
-        let key = format!("{owner}-{partition}-{key}");
-        let Some(bytes) = STORE.get(&key) else {
+        let Some(bytes) = STORE.get(&format!("{owner}-{partition}-{key}")) else {
             return Ok(None);
         };
         Ok(Some(bytes.to_vec()))
     }
 
     pub async fn delete(&self, owner: &str, partition: &str, key: &str) -> Result<()> {
-        let key = format!("{owner}-{partition}-{key}");
-        STORE.remove(&key);
+        STORE.remove(&format!("{owner}-{partition}-{key}"));
         Ok(())
     }
 

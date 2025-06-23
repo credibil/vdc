@@ -18,7 +18,7 @@ pub struct Verifier {
 impl Verifier {
     #[must_use]
     pub async fn new(verifier: &str) -> Self {
-        let datastore = Store::open();
+        let datastore = Store;
         datastore.put(verifier, METADATA, VERIFIER, VERIFIER_METADATA).await.unwrap();
 
         let identity = Identity::new(verifier).await;
@@ -49,7 +49,7 @@ impl Signer for Verifier {
 
 impl Signature for Verifier {
     async fn verification_method(&self) -> Result<VerifyBy> {
-        self.identity.signer.verification_method().await
+        self.identity.verification_method().await
     }
 }
 
