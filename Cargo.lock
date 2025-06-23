@@ -519,6 +519,7 @@ dependencies = [
 [[package]]
 name = "credibil-core"
 version = "0.1.0"
+source = "git+https://github.com/credibil/core.git#c8ad0372d90d675e222ab1b9d5377ff8796b9428"
 dependencies = [
  "anyhow",
  "axum-core",
