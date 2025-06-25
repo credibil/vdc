@@ -9,12 +9,11 @@
 //! Credential Endpoint or the Batch Credential Endpoint.
 
 use anyhow::Context as _;
+use credibil_core::api::{Body, Handler, Request, Response};
 
 use crate::error::invalid;
 use crate::handlers::credential::credential;
-use crate::handlers::{
-    Body, CredentialHeaders, DeferredHeaders, Error, Handler, Request, Response, Result,
-};
+use crate::handlers::{CredentialHeaders, DeferredHeaders, Error, Result};
 use crate::provider::{Provider, StateStore};
 use crate::state::Deferred;
 use crate::types::{CredentialResponse, DeferredCredentialRequest, DeferredCredentialResponse};

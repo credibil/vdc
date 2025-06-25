@@ -17,8 +17,9 @@
 //! `/.well-known/oauth-authorization-server/issuer1`.
 
 use anyhow::Context as _;
+use credibil_core::api::{Body, Handler, Request, Response};
 
-use crate::handlers::{Body, Error, Handler, Request, Response, Result};
+use crate::handlers::{Error, Result};
 use crate::provider::{Metadata, Provider};
 use crate::types::{ServerRequest, ServerResponse};
 
@@ -29,7 +30,7 @@ use crate::types::{ServerRequest, ServerResponse};
 /// Returns an `OpenID4VCI` error if the request is invalid or if the provider is
 /// not available.
 async fn metadata(
-    issuer: &str, provider: &impl Provider, _request: ServerRequest,
+    issuer: &str, provider: &impl Provider, _: ServerRequest,
 ) -> Result<ServerResponse> {
     let server = Metadata::server(provider, issuer)
         .await

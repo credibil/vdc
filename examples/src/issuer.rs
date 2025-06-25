@@ -192,7 +192,7 @@ async fn par(
     }
 
     // process request
-    client.request(request).execute().await.into_http()
+    client.request(request).execute().await.into_http().into_response()
 }
 
 #[derive(Deserialize)]
@@ -236,7 +236,7 @@ async fn token(
         return (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid request"})))
             .into_response();
     };
-    client.request(tr).execute().await.into_http()
+    client.request(tr).execute().await.into_http().into_response()
 }
 
 #[axum::debug_handler]

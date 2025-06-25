@@ -10,10 +10,6 @@ mod metadata;
 mod request_uri;
 mod response;
 
-pub use credibil_core::api::{
-    Body, Client, Handler, Headers, NoHeaders, Request, RequestBuilder, Response,
-};
-
 pub use crate::error::Error;
 
 /// Result type for `OpenID` for Verifiable Presentations.

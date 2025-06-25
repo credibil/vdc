@@ -23,11 +23,12 @@
 
 use anyhow::Context;
 use credibil_core::Kind;
+use credibil_core::api::{Body, Handler, Request, Response};
 use credibil_vdc::dcql::{Queryable, RequestedFormat};
 use credibil_vdc::{mso_mdoc, sd_jwt, w3c_vc};
 
 use crate::error::invalid;
-use crate::handlers::{Body, Error, Handler, Request, Response, Result};
+use crate::handlers::{Error, Result};
 use crate::provider::{Provider, StateStore};
 use crate::types::{AuthorizationResponse, RedirectResponse, RequestObject};
 

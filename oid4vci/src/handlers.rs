@@ -17,9 +17,6 @@ mod register;
 mod server;
 mod token;
 
-pub use credibil_core::api::{
-    Body, Client, Handler, Headers, NoHeaders, Request, RequestBuilder, Response,
-};
 use http::HeaderMap;
 use http::header::ACCEPT_LANGUAGE;
 

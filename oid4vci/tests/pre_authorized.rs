@@ -33,7 +33,7 @@ async fn bob() -> &'static Wallet {
 // credential offer to the Wallet is made by value.
 #[tokio::test]
 async fn offer_val() {
-    let client = client().await; // Client::new(ISSUER, Issuer::new(ISSUER).await);
+    let client = client().await;
     let bob = bob().await;
 
     // --------------------------------------------------

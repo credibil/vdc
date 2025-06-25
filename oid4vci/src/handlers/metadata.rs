@@ -24,8 +24,9 @@
 //! ```
 
 use anyhow::Context as _;
+use credibil_core::api::{Body, Handler, Headers, Request, Response};
 
-use crate::handlers::{Body, Error, Handler, Headers, MetadataHeaders, Request, Response, Result};
+use crate::handlers::{Error, MetadataHeaders, Result};
 use crate::provider::{Metadata, Provider};
 use crate::types::{MetadataRequest, MetadataResponse};
 

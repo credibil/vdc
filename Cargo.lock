@@ -313,9 +313,9 @@ dependencies = [
 
 [[package]]
 name = "bumpalo"
-version = "3.18.1"
+version = "3.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "793db76d6187cd04dff33004d8e6c9cc4e05cd330500379d2394209271b4aeee"
+checksum = "46c5e41b57b8bba42a04676d81cb89e9ee8e859a1a66f80a5a72e1cb76b34d43"
 
 [[package]]
 name = "bytemuck"
@@ -519,14 +519,14 @@ dependencies = [
 [[package]]
 name = "credibil-core"
 version = "0.1.0"
-source = "git+https://github.com/credibil/core.git#8676989ef520571697d4f0769113ed733b4edcd4"
+source = "git+https://github.com/credibil/core.git#4399500b9bf0393106e9773fe29cd10bad968034"
 dependencies = [
  "anyhow",
- "axum-core",
  "bytes",
  "chrono",
  "http",
  "http-body",
+ "http-body-util",
  "percent-encoding",
  "serde",
  "serde_json",

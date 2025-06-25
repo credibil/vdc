@@ -1,9 +1,10 @@
 //! # Dynamic Client Registration Endpoint
 
 use anyhow::Context as _;
+use credibil_core::api::{Body, Handler, Request, Response};
 
 use crate::error::server;
-use crate::handlers::{Body, Error, Handler, RegistrationHeaders, Request, Response, Result};
+use crate::handlers::{Error, RegistrationHeaders, Result};
 use crate::provider::{Provider, StateStore};
 use crate::state::Token;
 use crate::types::{RegistrationRequest, RegistrationResponse};

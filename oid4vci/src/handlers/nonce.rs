@@ -9,10 +9,11 @@
 
 use anyhow::Context as _;
 use chrono::Utc;
+use credibil_core::api::{Body, Handler, Request, Response};
 use credibil_core::state::State;
 
 use crate::generate;
-use crate::handlers::{Body, Error, Handler, Request, Response, Result};
+use crate::handlers::{Error, Result};
 use crate::provider::{Provider, StateStore};
 use crate::state::Expire;
 use crate::types::{NonceRequest, NonceResponse};

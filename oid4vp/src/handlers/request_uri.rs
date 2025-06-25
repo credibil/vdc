@@ -15,11 +15,12 @@
 //! to match the Wallet's capabilities.
 
 use anyhow::Context;
+use credibil_core::api::{Body, Handler, Request, Response};
 use credibil_jose::JwsBuilder;
 
 use crate::JwtType;
 use crate::error::invalid;
-use crate::handlers::{Body, Error, Handler, Request, Response, Result};
+use crate::handlers::{Error, Result};
 use crate::provider::{Provider, StateStore};
 use crate::types::{ClientId, RequestObject, RequestUriRequest, RequestUriResponse};
 

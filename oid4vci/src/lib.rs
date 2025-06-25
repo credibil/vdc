@@ -24,6 +24,7 @@ mod state;
 pub mod proof {
     pub use credibil_vdc::w3c_vc::{Payload, Verify, W3cVcClaims};
 }
+pub use credibil_core::api::*;
 pub use credibil_core::state::State;
 pub use credibil_core::{OneMany, datastore, html, http};
 pub use credibil_proof::{

@@ -13,6 +13,7 @@ use std::fmt::Debug;
 
 use anyhow::Context as _;
 use chrono::Utc;
+use credibil_core::api::{Body, Handler, Request, Response};
 use credibil_core::state::State;
 use credibil_jose::{Jwt, KeyBinding, decode_jws};
 use credibil_proof::resolve_jwk;
@@ -23,7 +24,7 @@ use credibil_vdc::sd_jwt::SdJwtVcBuilder;
 use credibil_vdc::w3c_vc::W3cVcBuilder;
 
 use crate::error::server;
-use crate::handlers::{Body, CredentialHeaders, Error, Handler, Request, Response, Result};
+use crate::handlers::{CredentialHeaders, Error, Result};
 use crate::provider::{Metadata, Provider, StateStore, Subject};
 use crate::state::{Deferred, Expire, Token};
 use crate::types::{

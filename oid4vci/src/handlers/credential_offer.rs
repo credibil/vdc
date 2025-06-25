@@ -15,9 +15,10 @@
 //! [JWT VC Issuance Profile]: (https://identity.foundation/jwt-vc-issuance-profile)
 
 use anyhow::Context as _;
+use credibil_core::api::{Body, Handler, Request, Response};
 
 use crate::error::invalid;
-use crate::handlers::{Body, Error, Handler, Request, Response, Result};
+use crate::handlers::{Error, Result};
 use crate::provider::{Provider, StateStore};
 use crate::types::{CredentialOffer, CredentialOfferRequest, CredentialOfferResponse};
 

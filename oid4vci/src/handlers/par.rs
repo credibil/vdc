@@ -8,10 +8,11 @@
 
 use anyhow::Context as _;
 use chrono::{Duration, Utc};
+use credibil_core::api::{Body, Handler, Request, Response};
 use credibil_core::state::State;
 
 use crate::generate;
-use crate::handlers::{Body, Error, Handler, Request, Response, Result, authorize};
+use crate::handlers::{Error, Result, authorize};
 use crate::provider::{Metadata, Provider, StateStore};
 use crate::types::{PushedAuthorizationRequest, PushedAuthorizationResponse};
 

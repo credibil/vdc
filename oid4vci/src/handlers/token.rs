@@ -17,11 +17,12 @@ use std::fmt::Debug;
 
 use anyhow::Context as _;
 use chrono::Utc;
+use credibil_core::api::{Body, Handler, Request, Response};
 use credibil_core::state::State;
 use serde::de::DeserializeOwned;
 
 use crate::error::{invalid, server};
-use crate::handlers::{Body, Error, Handler, Request, Response, Result};
+use crate::handlers::{Error, Result};
 use crate::oauth::GrantType;
 use crate::provider::{Metadata, Provider, StateStore};
 use crate::state::{Authorized, Expire, Offered, Token};
