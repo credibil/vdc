@@ -19,7 +19,7 @@ use tokio::sync::OnceCell;
 
 static CLIENT: OnceCell<Client<Issuer>> = OnceCell::const_new();
 async fn client() -> &'static Client<Issuer> {
-    CLIENT.get_or_init(|| async { Client::new(ISSUER, Issuer::new(ISSUER).await) }).await
+    CLIENT.get_or_init(|| async { Client::new(Issuer::new(ISSUER).await) }).await
 }
 static CAROL: OnceCell<Wallet> = OnceCell::const_new();
 async fn carol() -> &'static Wallet {
@@ -32,7 +32,7 @@ const ISSUER: &str = "http://localhost:8080";
 // credential offer to the Wallet is made by value.
 #[tokio::test]
 async fn deferred() {
-    let client = client().await; // Client::new(ISSUER, Issuer::new(ISSUER).await);
+    let client = client().await; // Client::new(Issuer::new(ISSUER).await);
     let carol = carol().await;
 
     // --------------------------------------------------
@@ -42,7 +42,8 @@ async fn deferred() {
         .subject_id(CAROL_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .build();
-    let response = client.request(request).execute().await.expect("should create offer");
+    let response =
+        client.request(request).owner(ISSUER).execute().await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -57,12 +58,13 @@ async fn deferred() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token = client.request(request).execute().await.expect("should return token");
+    let token = client.request(request).owner(ISSUER).execute().await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a proof for a credential request
     // --------------------------------------------------
-    let nonce = client.request(NonceRequest).execute().await.expect("should return nonce");
+    let nonce =
+        client.request(NonceRequest).owner(ISSUER).execute().await.expect("should return nonce");
 
     // proof of possession of key material
     let key = carol
@@ -93,6 +95,7 @@ async fn deferred() {
 
     let response = client
         .request(request)
+        .owner(ISSUER)
         .headers(CredentialHeaders {
             authorization: token.access_token.clone(),
         })
@@ -131,8 +134,13 @@ async fn deferred() {
     let headers = DeferredHeaders {
         authorization: token.access_token.clone(),
     };
-    let response =
-        client.request(request).headers(headers).execute().await.expect("should return credential");
+    let response = client
+        .request(request)
+        .owner(ISSUER)
+        .headers(headers)
+        .execute()
+        .await
+        .expect("should return credential");
 
     // --------------------------------------------------
     // Bob extracts and verifies the received credential

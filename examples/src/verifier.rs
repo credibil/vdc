@@ -8,6 +8,8 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Form, Json, Router};
+use axum_extra::TypedHeader;
+use axum_extra::headers::Host;
 use credibil_oid4vp::http::IntoHttp;
 use credibil_oid4vp::identity::did::Document;
 use credibil_oid4vp::{AuthorizationResponse, Client, CreateRequest, RequestUriRequest};
@@ -19,7 +21,7 @@ use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 
 pub async fn serve(verifier_id: &'static str) -> Result<JoinHandle<()>> {
-    let client = Client::new(verifier_id, Verifier::new(verifier_id).await);
+    let client = Client::new(Verifier::new(verifier_id).await);
 
     let router = Router::new()
         .route("/create_request", post(create_request))
@@ -43,43 +45,62 @@ pub async fn serve(verifier_id: &'static str) -> Result<JoinHandle<()>> {
 
 #[axum::debug_handler]
 async fn create_request(
-    State(client): State<Client<Verifier>>, Json(request): Json<CreateRequest>,
+    State(client): State<Client<Verifier>>, TypedHeader(host): TypedHeader<Host>,
+    Json(request): Json<CreateRequest>,
 ) -> impl IntoResponse {
-    client.request(request).execute().await.into_http()
+    client.request(request).owner(&format!("http://{host}")).execute().await.into_http()
 }
 
 #[axum::debug_handler]
 async fn request_uri(
-    State(client): State<Client<Verifier>>, Path(id): Path<String>,
-    body: Form<Vec<(String, String)>>,
+    State(client): State<Client<Verifier>>, TypedHeader(host): TypedHeader<Host>,
+    Path(id): Path<String>, body: Form<Vec<(String, String)>>,
 ) -> impl IntoResponse {
     let Ok(mut request) = RequestUriRequest::form_decode(&body) else {
         return (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid request"})))
             .into_response();
     };
     request.id = id;
-    client.request(request).execute().await.into_http().into_response()
+    client
+        .request(request)
+        .owner(&format!("http://{host}"))
+        .execute()
+        .await
+        .into_http()
+        .into_response()
 }
 
 #[axum::debug_handler]
 async fn authorization(
-    State(client): State<Client<Verifier>>, Form(form): Form<Vec<(String, String)>>,
+    State(client): State<Client<Verifier>>, TypedHeader(host): TypedHeader<Host>,
+    Form(form): Form<Vec<(String, String)>>,
 ) -> impl IntoResponse {
     let Ok(request) = AuthorizationResponse::form_decode(&form) else {
         return (StatusCode::BAD_REQUEST, "issue deserializing `AuthorizationResponse`")
             .into_response();
     };
-    client.request(request).execute().await.into_http().into_response()
+    client
+        .request(request)
+        .owner(&format!("http://{host}"))
+        .execute()
+        .await
+        .into_http()
+        .into_response()
 }
 
 #[axum::debug_handler]
 async fn did(
-    State(client): State<Client<Verifier>>, request: Request,
+    State(client): State<Client<Verifier>>, TypedHeader(host): TypedHeader<Host>, request: Request,
 ) -> Result<Json<Document>, AppError> {
     let request = credibil_proof::DocumentRequest {
-        url: format!("{}{}", client.owner, request.uri()),
+        url: format!("http://{host}{}", request.uri()),
     };
-    let doc = client.request(request).execute().await.map_err(AppError::from)?;
+    let doc = client
+        .request(request)
+        .owner(&format!("http://{host}"))
+        .execute()
+        .await
+        .map_err(AppError::from)?;
     Ok(Json(doc.0.clone()))
 }
 

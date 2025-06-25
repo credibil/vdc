@@ -272,11 +272,16 @@ async fn authorize(
 async fn did(
     State(provider): State<wallet::Wallet>, TypedHeader(host): TypedHeader<Host>, request: Request,
 ) -> Result<Json<Document>, AppError> {
-    let client = Client::new(format!("http://{host}{}", request.uri()), provider);
-    let request = credibil_proof::DocumentRequest {
+    let client = Client::new(provider);
+    let r = credibil_proof::DocumentRequest {
         url: format!("http://{host}{}", request.uri()),
     };
-    let doc = client.request(request).execute().await.map_err(AppError::from)?;
+    let doc = client
+        .request(r)
+        .owner(&format!("http://{host}{}", request.uri()))
+        .execute()
+        .await
+        .map_err(AppError::from)?;
     Ok(Json(doc.0.clone()))
 }
 

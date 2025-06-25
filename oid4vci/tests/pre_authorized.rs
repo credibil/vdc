@@ -22,7 +22,7 @@ const BOB_SUBJECT: &str = "normal_user";
 
 static CLIENT: OnceCell<Client<Issuer>> = OnceCell::const_new();
 async fn client() -> &'static Client<Issuer> {
-    CLIENT.get_or_init(|| async { Client::new(ISSUER, Issuer::new(ISSUER).await) }).await
+    CLIENT.get_or_init(|| async { Client::new(Issuer::new(ISSUER).await) }).await
 }
 static BOB: OnceCell<Wallet> = OnceCell::const_new();
 async fn bob() -> &'static Wallet {
@@ -43,7 +43,8 @@ async fn offer_val() {
         .subject_id(BOB_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .build();
-    let response = client.request(request).execute().await.expect("should create offer");
+    let response =
+        client.request(request).owner(ISSUER).execute().await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -58,12 +59,13 @@ async fn offer_val() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token = client.request(request).execute().await.expect("should return token");
+    let token = client.request(request).owner(ISSUER).execute().await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a proof for a credential request
     // --------------------------------------------------
-    let nonce = client.request(NonceRequest).execute().await.expect("should return nonce");
+    let nonce =
+        client.request(NonceRequest).owner(ISSUER).execute().await.expect("should return nonce");
 
     // proof of possession of key material
     let bob_key = bob
@@ -95,8 +97,13 @@ async fn offer_val() {
     let headers = CredentialHeaders {
         authorization: token.access_token.clone(),
     };
-    let response =
-        client.request(request).headers(headers).execute().await.expect("should get credential");
+    let response = client
+        .request(request)
+        .owner(ISSUER)
+        .headers(headers)
+        .execute()
+        .await
+        .expect("should get credential");
 
     // --------------------------------------------------
     // Bob extracts and verifies the received credential
@@ -139,7 +146,8 @@ async fn offer_ref() {
         .with_credential("EmployeeID_W3C_VC")
         .by_ref(true)
         .build();
-    let create_offer = client.request(request).execute().await.expect("should create offer");
+    let create_offer =
+        client.request(request).owner(ISSUER).execute().await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer URI and fetches the offer
@@ -150,7 +158,8 @@ async fn offer_ref() {
         panic!("should have prefix");
     };
     let request = CredentialOfferRequest { id: id.to_string() };
-    let response = client.request(request).execute().await.expect("should fetch offer");
+    let response =
+        client.request(request).owner(ISSUER).execute().await.expect("should fetch offer");
 
     // validate offer
     let offer = response.0.clone();
@@ -175,7 +184,8 @@ async fn two_datasets() {
         .subject_id(BOB_SUBJECT)
         .with_credential("Developer_W3C_VC")
         .build();
-    let response = client.request(request).execute().await.expect("should create offer");
+    let response =
+        client.request(request).owner(ISSUER).execute().await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -190,7 +200,7 @@ async fn two_datasets() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token = client.request(request).execute().await.expect("should return token");
+    let token = client.request(request).owner(ISSUER).execute().await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares 2 credential requests
@@ -202,7 +212,12 @@ async fn two_datasets() {
     ]);
 
     for identifier in &details[0].credential_identifiers {
-        let nonce = client.request(NonceRequest).execute().await.expect("should return nonce");
+        let nonce = client
+            .request(NonceRequest)
+            .owner(ISSUER)
+            .execute()
+            .await
+            .expect("should return nonce");
 
         // proof of possession of key material
         let bob_key = bob
@@ -230,8 +245,13 @@ async fn two_datasets() {
         let headers = CredentialHeaders {
             authorization: token.access_token.clone(),
         };
-        let response =
-            client.request(request).headers(headers).execute().await.expect("should execute");
+        let response = client
+            .request(request)
+            .owner(ISSUER)
+            .headers(headers)
+            .execute()
+            .await
+            .expect("should execute");
 
         // --------------------------------------------------
         // Bob extracts and verifies the received credential
@@ -270,7 +290,8 @@ async fn reduce_credentials() {
         .with_credential("Developer_W3C_VC")
         .with_credential("EmployeeID_W3C_VC")
         .build();
-    let response = client.request(request).execute().await.expect("should create offer");
+    let response =
+        client.request(request).owner(ISSUER).execute().await.expect("should create offer");
 
     let offer = response.offer_type.as_object().expect("should have offer");
     assert_eq!(offer.credential_configuration_ids.len(), 2);
@@ -292,7 +313,7 @@ async fn reduce_credentials() {
             AuthorizationDetail::builder().configuration_id("EmployeeID_W3C_VC").build(),
         )
         .build();
-    let token = client.request(request).execute().await.expect("should return token");
+    let token = client.request(request).owner(ISSUER).execute().await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a credential request
@@ -301,7 +322,8 @@ async fn reduce_credentials() {
     assert_eq!(details[0].credential_identifiers.len(), 1);
 
     let identifier = &details[0].credential_identifiers[0];
-    let nonce = client.request(NonceRequest).execute().await.expect("should return nonce");
+    let nonce =
+        client.request(NonceRequest).owner(ISSUER).execute().await.expect("should return nonce");
 
     // proof of possession of key material
     let bob_key = bob
@@ -329,8 +351,13 @@ async fn reduce_credentials() {
     let headers = CredentialHeaders {
         authorization: token.access_token.clone(),
     };
-    let response =
-        client.request(request).headers(headers).execute().await.expect("should get credential");
+    let response = client
+        .request(request)
+        .owner(ISSUER)
+        .headers(headers)
+        .execute()
+        .await
+        .expect("should get credential");
 
     // --------------------------------------------------
     // Bob extracts and verifies the received credential
@@ -366,7 +393,8 @@ async fn reduce_claims() {
         .subject_id(BOB_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .build();
-    let response = client.request(request).execute().await.expect("should create offer");
+    let response =
+        client.request(request).owner(ISSUER).execute().await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -388,12 +416,13 @@ async fn reduce_claims() {
                 .build(),
         )
         .build();
-    let token = client.request(request).execute().await.expect("should return token");
+    let token = client.request(request).owner(ISSUER).execute().await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a proof for a credential request
     // --------------------------------------------------
-    let nonce = client.request(NonceRequest).execute().await.expect("should return nonce");
+    let nonce =
+        client.request(NonceRequest).owner(ISSUER).execute().await.expect("should return nonce");
 
     // proof of possession of key material
     let bob_key = bob
@@ -425,8 +454,13 @@ async fn reduce_claims() {
         authorization: token.access_token.clone(),
     };
 
-    let response =
-        client.request(request).headers(headers).execute().await.expect("should get credential");
+    let response = client
+        .request(request)
+        .owner(ISSUER)
+        .headers(headers)
+        .execute()
+        .await
+        .expect("should get credential");
 
     // --------------------------------------------------
     // Bob extracts and verifies the received credential
@@ -470,7 +504,8 @@ async fn notify_accepted() {
         .subject_id(BOB_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .build();
-    let response = client.request(request).execute().await.expect("should create offer");
+    let response =
+        client.request(request).owner(ISSUER).execute().await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -485,12 +520,13 @@ async fn notify_accepted() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token = client.request(request).execute().await.expect("should return token");
+    let token = client.request(request).owner(ISSUER).execute().await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a proof for a credential request
     // --------------------------------------------------
-    let nonce = client.request(NonceRequest).execute().await.expect("should return nonce");
+    let nonce =
+        client.request(NonceRequest).owner(ISSUER).execute().await.expect("should return nonce");
 
     // proof of possession of key material
     let bob_key = bob
@@ -522,8 +558,13 @@ async fn notify_accepted() {
         authorization: token.access_token.clone(),
     };
 
-    let response =
-        client.request(request).headers(headers).execute().await.expect("should get credential");
+    let response = client
+        .request(request)
+        .owner(ISSUER)
+        .headers(headers)
+        .execute()
+        .await
+        .expect("should get credential");
 
     // --------------------------------------------------
     // Bob send a notication advising the credential was accepted
@@ -540,5 +581,5 @@ async fn notify_accepted() {
     let headers = NotificationHeaders {
         authorization: token.access_token.clone(),
     };
-    client.request(request).headers(headers).execute().await.expect("response is ok");
+    client.request(request).owner(ISSUER).headers(headers).execute().await.expect("response is ok");
 }

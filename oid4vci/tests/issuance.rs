@@ -24,7 +24,7 @@ const BOB_SUBJECT: &str = "normal_user";
 
 static CLIENT: OnceCell<Client<Issuer>> = OnceCell::const_new();
 async fn client() -> &'static Client<Issuer> {
-    CLIENT.get_or_init(|| async { Client::new(ISSUER, Issuer::new(ISSUER).await) }).await
+    CLIENT.get_or_init(|| async { Client::new(Issuer::new(ISSUER).await) }).await
 }
 static BOB: OnceCell<Wallet> = OnceCell::const_new();
 async fn bob() -> &'static Wallet {
@@ -44,7 +44,8 @@ async fn two_proofs() {
         .subject_id(BOB_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .build();
-    let response = client.request(request).execute().await.expect("should create offer");
+    let response =
+        client.request(request).owner(ISSUER).execute().await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -59,12 +60,13 @@ async fn two_proofs() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token = client.request(request).execute().await.expect("should return token");
+    let token = client.request(request).owner(ISSUER).execute().await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares 2 proofs for the credential request
     // --------------------------------------------------
-    let nonce = client.request(NonceRequest).execute().await.expect("should return nonce");
+    let nonce =
+        client.request(NonceRequest).owner(ISSUER).execute().await.expect("should return nonce");
 
     // proof of possession of key material
     let bob_key = bob
@@ -112,6 +114,7 @@ async fn two_proofs() {
 
     let response = client
         .request(request)
+        .owner(ISSUER)
         .headers(CredentialHeaders {
             authorization: token.access_token.clone(),
         })
@@ -172,7 +175,8 @@ async fn sd_jwt() {
         .subject_id(BOB_SUBJECT)
         .with_credential("Identity_SD_JWT")
         .build();
-    let response = client.request(request).execute().await.expect("should create offer");
+    let response =
+        client.request(request).owner(ISSUER).execute().await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -187,12 +191,13 @@ async fn sd_jwt() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token = client.request(request).execute().await.expect("should return token");
+    let token = client.request(request).owner(ISSUER).execute().await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares 2 proofs for the credential request
     // --------------------------------------------------
-    let nonce = client.request(NonceRequest).execute().await.expect("should return nonce");
+    let nonce =
+        client.request(NonceRequest).owner(ISSUER).execute().await.expect("should return nonce");
 
     // proof of possession of key material
     let bob_key = bob
@@ -222,6 +227,7 @@ async fn sd_jwt() {
 
     let response = client
         .request(request)
+        .owner(ISSUER)
         .headers(CredentialHeaders {
             authorization: token.access_token.clone(),
         })

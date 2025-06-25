@@ -39,8 +39,8 @@ impl Identity {
         if thread::current().name() != Some("tokio-runtime-worker") {
             let request = DocumentRequest { url: url.to_string() };
             //return credibil_proof::handle("owner", request, &Store).await.map(|r| r.0.clone());
-            let client = Client::new(&self.owner, Store);
-            return client.request(request).execute().await.map(|r| r.0.clone());
+            let client = Client::new(Store);
+            return client.request(request).owner(&self.owner).execute().await.map(|r| r.0.clone());
         }
 
         // in a tokio runtime: assume web server is running
