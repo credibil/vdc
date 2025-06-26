@@ -24,6 +24,7 @@ const VERIFIER_ID: &str = "http://localhost:8081";
 static ISSUER: OnceCell<Issuer> = OnceCell::const_new();
 static WALLET: OnceCell<Wallet> = OnceCell::const_new();
 static CLIENT: OnceCell<Client<Verifier>> = OnceCell::const_new();
+
 async fn client() -> &'static Client<Verifier> {
     CLIENT.get_or_init(|| async { Client::new(Verifier::new(VERIFIER_ID).await) }).await
 }

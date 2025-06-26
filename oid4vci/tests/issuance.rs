@@ -23,10 +23,11 @@ const ISSUER: &str = "http://localhost:8080";
 const BOB_SUBJECT: &str = "normal_user";
 
 static CLIENT: OnceCell<Client<Issuer>> = OnceCell::const_new();
+static BOB: OnceCell<Wallet> = OnceCell::const_new();
+
 async fn client() -> &'static Client<Issuer> {
     CLIENT.get_or_init(|| async { Client::new(Issuer::new(ISSUER).await) }).await
 }
-static BOB: OnceCell<Wallet> = OnceCell::const_new();
 async fn bob() -> &'static Wallet {
     BOB.get_or_init(|| async { Wallet::new("https://issuance.io/bob").await }).await
 }

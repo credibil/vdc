@@ -18,10 +18,11 @@ use test_utils::wallet::Wallet;
 use tokio::sync::OnceCell;
 
 static CLIENT: OnceCell<Client<Issuer>> = OnceCell::const_new();
+static CAROL: OnceCell<Wallet> = OnceCell::const_new();
+
 async fn client() -> &'static Client<Issuer> {
     CLIENT.get_or_init(|| async { Client::new(Issuer::new(ISSUER).await) }).await
 }
-static CAROL: OnceCell<Wallet> = OnceCell::const_new();
 async fn carol() -> &'static Wallet {
     CAROL.get_or_init(|| async { Wallet::new("https://deferred.io/carol").await }).await
 }
