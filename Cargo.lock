@@ -519,7 +519,7 @@ dependencies = [
 [[package]]
 name = "credibil-core"
 version = "0.1.0"
-source = "git+https://github.com/credibil/core.git#85871654f2a1e3b82caf7a20a0f32dad9a0d9c33"
+source = "git+https://github.com/credibil/core.git#cda67a45f43ac42b17837e67eb04901836230326"
 dependencies = [
  "anyhow",
  "bytes",
