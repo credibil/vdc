@@ -80,7 +80,7 @@ async fn create_offer(
     State(client): State<Client<Issuer>>, TypedHeader(host): TypedHeader<Host>,
     Json(request): Json<CreateOfferRequest>,
 ) -> impl IntoResponse {
-    client.request(request).owner(&format!("http://{host}")).execute().await.into_http()
+    client.request(request).owner(&format!("http://{host}")).await.into_http()
 }
 
 #[axum::debug_handler]
@@ -89,7 +89,7 @@ async fn credential_offer(
     Path(offer_id): Path<String>,
 ) -> impl IntoResponse {
     let request = CredentialOfferRequest { id: offer_id };
-    client.request(request).owner(&format!("http://{host}")).execute().await.into_http()
+    client.request(request).owner(&format!("http://{host}")).await.into_http()
 }
 
 // TODO: override default  Cache-Control header to allow caching
@@ -101,7 +101,6 @@ async fn metadata(
         .request(MetadataRequest)
         .owner(&format!("http://{host}"))
         .headers(headers.into())
-        .execute()
         .await
         .into_http()
 }
@@ -111,7 +110,7 @@ async fn oauth_server(
     State(client): State<Client<Issuer>>, TypedHeader(host): TypedHeader<Host>,
 ) -> impl IntoResponse {
     let request = ServerRequest { issuer: None };
-    client.request(request).owner(&format!("http://{host}")).execute().await.into_http()
+    client.request(request).owner(&format!("http://{host}")).await.into_http()
 }
 
 #[axum::debug_handler]
@@ -157,7 +156,7 @@ async fn authorize(
             .into_response();
     };
 
-    match client.request(request).owner(&format!("http://{host}")).execute().await {
+    match client.request(request).owner(&format!("http://{host}")).await {
         Ok(v) => (StatusCode::FOUND, Redirect::to(&format!("{redirect_uri}?code={}", v.body.code)))
             .into_response(),
         Err(e) => {
@@ -204,13 +203,7 @@ async fn par(
     }
 
     // process request
-    client
-        .request(request)
-        .owner(&format!("http://{host}"))
-        .execute()
-        .await
-        .into_http()
-        .into_response()
+    client.request(request).owner(&format!("http://{host}")).await.into_http().into_response()
 }
 
 #[derive(Deserialize)]
@@ -255,7 +248,7 @@ async fn token(
         return (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid request"})))
             .into_response();
     };
-    client.request(r).owner(&format!("http://{host}")).execute().await.into_http().into_response()
+    client.request(r).owner(&format!("http://{host}")).await.into_http().into_response()
 }
 
 #[axum::debug_handler]
@@ -263,7 +256,7 @@ async fn nonce(
     State(client): State<Client<Issuer>>, TypedHeader(host): TypedHeader<Host>,
 ) -> impl IntoResponse {
     let request = NonceRequest;
-    client.request(request).owner(&format!("http://{host}")).execute().await.into_http()
+    client.request(request).owner(&format!("http://{host}")).await.into_http()
 }
 
 #[axum::debug_handler]
@@ -274,7 +267,7 @@ async fn credential(
     let headers = CredentialHeaders {
         authorization: auth.token().to_string(),
     };
-    client.request(r).owner(&format!("http://{host}")).headers(headers).execute().await.into_http()
+    client.request(r).owner(&format!("http://{host}")).headers(headers).await.into_http()
 }
 
 #[axum::debug_handler]
@@ -286,7 +279,7 @@ async fn deferred_credential(
     let headers = CredentialHeaders {
         authorization: auth.token().to_string(),
     };
-    client.request(r).owner(&format!("http://{host}")).headers(headers).execute().await.into_http()
+    client.request(r).owner(&format!("http://{host}")).headers(headers).await.into_http()
 }
 
 #[axum::debug_handler]
@@ -298,13 +291,7 @@ async fn notification(
     let headers = NotificationHeaders {
         authorization: auth.token().to_string(),
     };
-    client
-        .request(request)
-        .owner(&format!("http://{host}"))
-        .headers(headers)
-        .execute()
-        .await
-        .into_http()
+    client.request(request).owner(&format!("http://{host}")).headers(headers).await.into_http()
 }
 
 #[axum::debug_handler]
@@ -313,7 +300,7 @@ async fn statuslists(
     Path(id): Path<String>,
 ) -> impl IntoResponse {
     let request = StatusListRequest { id: Some(id) };
-    client.request(request).owner(&format!("http://{host}")).execute().await.into_http()
+    client.request(request).owner(&format!("http://{host}")).await.into_http()
 }
 
 #[axum::debug_handler]
@@ -323,12 +310,8 @@ async fn did(
     let request = credibil_proof::DocumentRequest {
         url: format!("http://{host}/{}", request.uri()),
     };
-    let doc = client
-        .request(request)
-        .owner(&format!("http://{host}"))
-        .execute()
-        .await
-        .map_err(AppError::from)?;
+    let doc =
+        client.request(request).owner(&format!("http://{host}")).await.map_err(AppError::from)?;
     Ok(Json(doc.0.clone()))
 }
 

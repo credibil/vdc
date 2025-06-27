@@ -67,8 +67,7 @@ async fn multiple_claims() {
             response_uri: "http://localhost:3000/cb".to_string(),
         },
     };
-    let response =
-        client.request(request).owner(VERIFIER_ID).execute().await.expect("should execute");
+    let response = client.request(request).owner(VERIFIER_ID).await.expect("should execute");
 
     // extract request object and send to Wallet
     let AuthorizationRequest::Object(req_obj) = response.body.0 else {
@@ -93,8 +92,7 @@ async fn multiple_claims() {
     // --------------------------------------------------
     // Verifier processes the Wallets's Authorization Response.
     // --------------------------------------------------
-    let response =
-        client.request(request).owner(VERIFIER_ID).execute().await.expect("should execute");
+    let response = client.request(request).owner(VERIFIER_ID).await.expect("should execute");
 
     // --------------------------------------------------
     // Wallet follows Verifier's redirect.
@@ -160,8 +158,7 @@ async fn multiple_credentials() {
             response_uri: "http://localhost:3000/cb".to_string(),
         },
     };
-    let response =
-        client.request(request).owner(VERIFIER_ID).execute().await.expect("should execute");
+    let response = client.request(request).owner(VERIFIER_ID).await.expect("should execute");
 
     // extract request object and send to Wallet
     let AuthorizationRequest::Object(req_obj) = response.body.0 else {
@@ -186,8 +183,7 @@ async fn multiple_credentials() {
         vp_token,
         state: req_obj.state,
     };
-    let response =
-        client.request(request).owner(VERIFIER_ID).execute().await.expect("should execute");
+    let response = client.request(request).owner(VERIFIER_ID).await.expect("should execute");
 
     // --------------------------------------------------
     // Wallet follows Verifier's redirect.

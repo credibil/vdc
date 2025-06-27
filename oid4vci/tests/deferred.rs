@@ -43,8 +43,7 @@ async fn deferred() {
         .subject_id(CAROL_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .build();
-    let response =
-        client.request(request).owner(ISSUER).execute().await.expect("should create offer");
+    let response = client.request(request).owner(ISSUER).await.expect("should create offer");
 
     // --------------------------------------------------
     // Bob receives the offer and requests a token
@@ -59,13 +58,12 @@ async fn deferred() {
             tx_code: response.tx_code.clone(),
         })
         .build();
-    let token = client.request(request).owner(ISSUER).execute().await.expect("should return token");
+    let token = client.request(request).owner(ISSUER).await.expect("should return token");
 
     // --------------------------------------------------
     // Bob receives the token and prepares a proof for a credential request
     // --------------------------------------------------
-    let nonce =
-        client.request(NonceRequest).owner(ISSUER).execute().await.expect("should return nonce");
+    let nonce = client.request(NonceRequest).owner(ISSUER).await.expect("should return nonce");
 
     // proof of possession of key material
     let key = carol
@@ -100,7 +98,6 @@ async fn deferred() {
         .headers(CredentialHeaders {
             authorization: token.access_token.clone(),
         })
-        .execute()
         .await
         .expect("should return credential");
 
@@ -139,7 +136,6 @@ async fn deferred() {
         .request(request)
         .owner(ISSUER)
         .headers(headers)
-        .execute()
         .await
         .expect("should return credential");
 

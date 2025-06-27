@@ -48,7 +48,7 @@ async fn create_request(
     State(client): State<Client<Verifier>>, TypedHeader(host): TypedHeader<Host>,
     Json(request): Json<CreateRequest>,
 ) -> impl IntoResponse {
-    client.request(request).owner(&format!("http://{host}")).execute().await.into_http()
+    client.request(request).owner(&format!("http://{host}")).await.into_http()
 }
 
 #[axum::debug_handler]
@@ -61,13 +61,7 @@ async fn request_uri(
             .into_response();
     };
     request.id = id;
-    client
-        .request(request)
-        .owner(&format!("http://{host}"))
-        .execute()
-        .await
-        .into_http()
-        .into_response()
+    client.request(request).owner(&format!("http://{host}")).await.into_http().into_response()
 }
 
 #[axum::debug_handler]
@@ -79,13 +73,7 @@ async fn authorization(
         return (StatusCode::BAD_REQUEST, "issue deserializing `AuthorizationResponse`")
             .into_response();
     };
-    client
-        .request(request)
-        .owner(&format!("http://{host}"))
-        .execute()
-        .await
-        .into_http()
-        .into_response()
+    client.request(request).owner(&format!("http://{host}")).await.into_http().into_response()
 }
 
 #[axum::debug_handler]
@@ -95,12 +83,8 @@ async fn did(
     let request = credibil_proof::DocumentRequest {
         url: format!("http://{host}{}", request.uri()),
     };
-    let doc = client
-        .request(request)
-        .owner(&format!("http://{host}"))
-        .execute()
-        .await
-        .map_err(AppError::from)?;
+    let doc =
+        client.request(request).owner(&format!("http://{host}")).await.map_err(AppError::from)?;
     Ok(Json(doc.0.clone()))
 }
 

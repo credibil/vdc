@@ -279,7 +279,6 @@ async fn did(
     let doc = client
         .request(r)
         .owner(&format!("http://{host}{}", request.uri()))
-        .execute()
         .await
         .map_err(AppError::from)?;
     Ok(Json(doc.0.clone()))
