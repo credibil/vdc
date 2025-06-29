@@ -32,10 +32,8 @@ async fn statuslist(
 impl<P: Provider> Handler<StatusListResponse, P> for Request<StatusListRequest> {
     type Error = Error;
 
-    async fn handle(
-        self, issuer: &str, provider: &P,
-    ) -> Result<impl Into<Response<StatusListResponse>>> {
-        statuslist(issuer, provider, self.body).await
+    async fn handle(self, issuer: &str, provider: &P) -> Result<Response<StatusListResponse>> {
+        Ok(statuslist(issuer, provider, self.body).await?.into())
     }
 }
 

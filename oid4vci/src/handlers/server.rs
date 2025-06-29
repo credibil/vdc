@@ -42,10 +42,8 @@ async fn metadata(
 impl<P: Provider> Handler<ServerResponse, P> for Request<ServerRequest> {
     type Error = Error;
 
-    async fn handle(
-        self, issuer: &str, provider: &P,
-    ) -> Result<impl Into<Response<ServerResponse>>> {
-        metadata(issuer, provider, self.body).await
+    async fn handle(self, issuer: &str, provider: &P) -> Result<Response<ServerResponse>> {
+        Ok(metadata(issuer, provider, self.body).await?.into())
     }
 }
 

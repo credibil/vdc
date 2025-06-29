@@ -60,8 +60,8 @@ impl<P: Provider> Handler<PushedAuthorizationResponse, P> for Request<PushedAuth
 
     async fn handle(
         self, issuer: &str, provider: &P,
-    ) -> Result<impl Into<Response<PushedAuthorizationResponse>>> {
-        par(issuer, provider, self.body).await
+    ) -> Result<Response<PushedAuthorizationResponse>> {
+        Ok(par(issuer, provider, self.body).await?.into())
     }
 }
 

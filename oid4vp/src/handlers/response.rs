@@ -62,10 +62,8 @@ async fn response(
 impl<P: Provider> Handler<RedirectResponse, P> for Request<AuthorizationResponse> {
     type Error = Error;
 
-    async fn handle(
-        self, verifier: &str, provider: &P,
-    ) -> Result<impl Into<Response<RedirectResponse>>> {
-        response(verifier, provider, self.body).await
+    async fn handle(self, verifier: &str, provider: &P) -> Result<Response<RedirectResponse>> {
+        Ok(response(verifier, provider, self.body).await?.into())
     }
 }
 

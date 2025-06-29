@@ -83,8 +83,8 @@ impl<P: Provider> Handler<CredentialResponse, P> for Request<CredentialRequest, 
 
     async fn handle(
         self, issuer: &str, provider: &P,
-    ) -> Result<impl Into<Response<CredentialResponse>>> {
-        credential(issuer, provider, self).await
+    ) -> Result<Response<CredentialResponse>> {
+        Ok(credential(issuer, provider, self).await?.into())
     }
 }
 

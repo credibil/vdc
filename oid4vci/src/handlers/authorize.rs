@@ -121,10 +121,8 @@ async fn authorize(
 impl<P: Provider> Handler<AuthorizationResponse, P> for Request<AuthorizationRequest> {
     type Error = Error;
 
-    async fn handle(
-        self, issuer: &str, provider: &P,
-    ) -> Result<impl Into<Response<AuthorizationResponse>>> {
-        authorize(issuer, provider, self.body).await
+    async fn handle(self, issuer: &str, provider: &P) -> Result<Response<AuthorizationResponse>> {
+        Ok(authorize(issuer, provider, self.body).await?.into())
     }
 }
 

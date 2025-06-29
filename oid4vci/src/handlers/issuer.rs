@@ -49,8 +49,8 @@ impl<P: Provider> Handler<IssuerResponse, P> for Request<IssuerRequest, Metadata
 
     async fn handle(
         self, issuer: &str, provider: &P,
-    ) -> Result<impl Into<Response<IssuerResponse>>> {
-        metadata(issuer, provider, self).await
+    ) -> Result<Response<IssuerResponse>> {
+        Ok(metadata(issuer, provider, self).await?.into())
     }
 }
 

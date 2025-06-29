@@ -72,8 +72,8 @@ impl<P: Provider> Handler<CreateResponse, P> for Request<CreateRequest> {
 
     async fn handle(
         self, verifier: &str, provider: &P,
-    ) -> Result<impl Into<Response<CreateResponse>>> {
-        create_request(verifier, provider, self.body).await
+    ) -> Result<Response<CreateResponse>> {
+        Ok(create_request(verifier, provider, self.body).await?.into())
     }
 }
 

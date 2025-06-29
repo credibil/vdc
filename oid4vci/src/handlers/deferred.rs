@@ -66,8 +66,8 @@ impl<P: Provider> Handler<DeferredCredentialResponse, P>
 
     async fn handle(
         self, issuer: &str, provider: &P,
-    ) -> Result<impl Into<Response<DeferredCredentialResponse>>> {
-        deferred(issuer, provider, self).await
+    ) -> Result<Response<DeferredCredentialResponse>> {
+        Ok(deferred(issuer, provider, self).await?.into())
     }
 }
 

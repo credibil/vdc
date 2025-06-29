@@ -33,8 +33,8 @@ impl<P: Provider> Handler<VerifierResponse, P> for Request<VerifierRequest> {
 
     async fn handle(
         self, verifier: &str, provider: &P,
-    ) -> Result<impl Into<Response<VerifierResponse>>> {
-        metadata(verifier, provider, self.body).await
+    ) -> Result<Response<VerifierResponse>> {
+        Ok(metadata(verifier, provider, self.body).await?.into())
     }
 }
 

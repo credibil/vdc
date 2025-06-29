@@ -78,8 +78,8 @@ impl<P: Provider> Handler<RequestUriResponse, P> for Request<RequestUriRequest> 
 
     async fn handle(
         self, verifier: &str, provider: &P,
-    ) -> Result<impl Into<Response<RequestUriResponse>>> {
-        request_uri(verifier, provider, self.body).await
+    ) -> Result<Response<RequestUriResponse>> {
+        Ok(request_uri(verifier, provider, self.body).await?.into())
     }
 }
 
