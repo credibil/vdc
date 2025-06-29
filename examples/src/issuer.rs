@@ -19,9 +19,8 @@ use credibil_oid4vci::identity::did::Document;
 use credibil_oid4vci::status::StatusListRequest;
 use credibil_oid4vci::{
     AuthorizationRequest, Client, CreateOfferRequest, CredentialHeaders, CredentialOfferRequest,
-    CredentialRequest, DeferredCredentialRequest, MetadataRequest, NonceRequest,
-    NotificationHeaders, NotificationRequest, PushedAuthorizationRequest, ServerRequest,
-    TokenRequest, html,
+    CredentialRequest, DeferredCredentialRequest, IssuerRequest, NonceRequest, NotificationHeaders,
+    NotificationRequest, PushedAuthorizationRequest, ServerRequest, TokenRequest, html,
 };
 use oauth2::CsrfToken;
 use serde::Deserialize;
@@ -54,8 +53,8 @@ pub async fn serve(issuer_id: &'static str) -> Result<JoinHandle<()>> {
         .route("/deferred_credential", post(deferred_credential))
         .route("/notification", post(notification))
         .route("/statuslists/{id}", get(statuslists))
-        .route("/.well-known/openid-credential-issuer", get(metadata))
-        .route("/.well-known/oauth-authorization-server", get(oauth_server))
+        .route("/.well-known/openid-credential-issuer", get(issuer))
+        .route("/.well-known/oauth-authorization-server", get(server))
         .route("/.well-known/did.json", get(did))
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any))
@@ -94,11 +93,11 @@ async fn credential_offer(
 
 // TODO: override default  Cache-Control header to allow caching
 #[axum::debug_handler]
-async fn metadata(
+async fn issuer(
     headers: HeaderMap, State(client): State<Client<Issuer>>, TypedHeader(host): TypedHeader<Host>,
 ) -> impl IntoResponse {
     client
-        .request(MetadataRequest)
+        .request(IssuerRequest)
         .owner(&format!("http://{host}"))
         .headers(headers.into())
         .await
@@ -106,7 +105,7 @@ async fn metadata(
 }
 
 #[axum::debug_handler]
-async fn oauth_server(
+async fn server(
     State(client): State<Client<Issuer>>, TypedHeader(host): TypedHeader<Host>,
 ) -> impl IntoResponse {
     let request = ServerRequest { issuer: None };

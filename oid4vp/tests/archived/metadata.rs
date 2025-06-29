@@ -4,7 +4,7 @@ mod utils;
 
 // use providers::wallet_provider::holder_provider::CLIENT_ID;
 use credibil_openid::oid4vp::endpoint;
-use credibil_openid::oid4vp::types::MetadataRequest;
+use credibil_openid::oid4vp::types::VerifierRequest;
 use insta::assert_yaml_snapshot as assert_snapshot;
 
 #[tokio::test]
@@ -12,7 +12,7 @@ async fn metadata_ok() {
     utils::init_tracer();
     let provider = test_verifier::ProviderImpl::new();
 
-    let request = MetadataRequest {
+    let request = VerifierRequest {
         client_id: "http://localhost:8080".to_string(),
     };
     let response = endpoint::handle("http://localhost:8080", request, &provider).await.expect("ok");

@@ -32,11 +32,11 @@ use crate::types::{ServerRequest, ServerResponse};
 async fn metadata(
     issuer: &str, provider: &impl Provider, _: ServerRequest,
 ) -> Result<ServerResponse> {
-    let server = Metadata::server(provider, issuer)
+    let oauth_server = Metadata::server(provider, issuer)
         .await
         .context("getting authorization server metadata")?;
 
-    Ok(ServerResponse(server))
+    Ok(ServerResponse(oauth_server))
 }
 
 impl<P: Provider> Handler<ServerResponse, P> for Request<ServerRequest> {

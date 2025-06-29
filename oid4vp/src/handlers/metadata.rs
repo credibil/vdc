@@ -10,7 +10,7 @@ use credibil_core::api::{Body, Handler, Request, Response};
 
 use crate::handlers::{Error, Result};
 use crate::provider::{Metadata, Provider};
-use crate::types::{MetadataRequest, MetadataResponse};
+use crate::types::{VerifierRequest, VerifierResponse};
 
 /// Endpoint for Wallets to request Verifier (Client) metadata.
 ///
@@ -19,23 +19,23 @@ use crate::types::{MetadataRequest, MetadataResponse};
 /// Returns an `OpenID4VP` error if the request is invalid or if the provider is
 /// not available.
 async fn metadata(
-    _verifier: &str, provider: &impl Provider, request: MetadataRequest,
-) -> Result<MetadataResponse> {
-    Ok(MetadataResponse {
+    _verifier: &str, provider: &impl Provider, request: VerifierRequest,
+) -> Result<VerifierResponse> {
+    Ok(VerifierResponse {
         client: Metadata::verifier(provider, &request.client_id)
             .await
             .context("getting metadata")?,
     })
 }
 
-impl<P: Provider> Handler<MetadataResponse, P> for Request<MetadataRequest> {
+impl<P: Provider> Handler<VerifierResponse, P> for Request<VerifierRequest> {
     type Error = Error;
 
     async fn handle(
         self, verifier: &str, provider: &P,
-    ) -> Result<impl Into<Response<MetadataResponse>>> {
+    ) -> Result<impl Into<Response<VerifierResponse>>> {
         metadata(verifier, provider, self.body).await
     }
 }
 
-impl Body for MetadataRequest {}
+impl Body for VerifierRequest {}
