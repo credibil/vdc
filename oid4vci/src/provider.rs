@@ -19,10 +19,10 @@ pub use credibil_status::StatusStore;
 
 use crate::types::{ClientMetadata, Dataset, IssuerMetadata, ServerMetadata};
 
-const METADATA: &str = "METADATA";
-const ISSUER: &str = "ISSUER";
-const SERVER: &str = "SERVER";
-const SUBJECT: &str = "SUBJECT";
+const METADATA: &str = "metadata";
+const ISSUER: &str = "issuer";
+const SERVER: &str = "server";
+const SUBJECT: &str = "subject";
 
 /// Issuer Provider trait.
 pub trait Provider:

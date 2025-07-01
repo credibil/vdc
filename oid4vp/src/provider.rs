@@ -33,7 +33,7 @@ pub trait Metadata: Send + Sync {
     ) -> impl Future<Output = Result<Verifier>> + Send;
 }
 
-const METADATA: &str = "METADATA";
+const METADATA: &str = "metadata";
 const VERIFIER: &str = "VERIFIER";
 
 impl<T: Datastore> Metadata for T {

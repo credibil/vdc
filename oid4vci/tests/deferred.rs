@@ -108,7 +108,7 @@ async fn deferred() {
     let credential_identifier = &details[0].credential_identifiers[0];
 
     let data =
-        Datastore::get(&client.provider, ISSUER, "SUBJECT", CAROL_SUBJECT).await.unwrap().unwrap();
+        Datastore::get(&client.provider, ISSUER, "subject", CAROL_SUBJECT).await.unwrap().unwrap();
     let mut subject: HashMap<String, Dataset> = serde_json::from_slice(&data).unwrap();
 
     let mut credential: Dataset = subject.get(credential_identifier).unwrap().clone();
@@ -116,8 +116,8 @@ async fn deferred() {
     subject.insert(credential_identifier.to_string(), credential);
 
     let data = serde_json::to_vec(&subject).unwrap();
-    Datastore::delete(&client.provider, ISSUER, "SUBJECT", CAROL_SUBJECT).await.unwrap();
-    Datastore::put(&client.provider, ISSUER, "SUBJECT", CAROL_SUBJECT, &data).await.unwrap();
+    Datastore::delete(&client.provider, ISSUER, "subject", CAROL_SUBJECT).await.unwrap();
+    Datastore::put(&client.provider, ISSUER, "subject", CAROL_SUBJECT, &data).await.unwrap();
 
     // --------------------------------------------------
     // After a brief wait Bob retrieves the credential

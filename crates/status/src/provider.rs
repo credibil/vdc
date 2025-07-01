@@ -34,7 +34,6 @@ impl<T: Datastore> StatusStore for T {
     #[allow(unused)]
     async fn put(&self, owner: &str, id: &str, token: &str) -> Result<()> {
         let data = serde_json::to_vec(token)?;
-        Datastore::delete(self, owner, STATUSTOKEN, id).await?;
         Datastore::put(self, owner, STATUSTOKEN, id, &data).await
     }
 

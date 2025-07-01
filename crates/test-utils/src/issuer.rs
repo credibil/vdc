@@ -11,10 +11,10 @@ const SERVER_METADATA: &[u8] = include_bytes!("../data/server-metadata.json");
 const NORMAL_USER: &[u8] = include_bytes!("../data/normal-user.json");
 const PENDING_USER: &[u8] = include_bytes!("../data/pending-user.json");
 const CLIENT_METADATA: &[u8] = include_bytes!("../data/client-metadata.json");
-const METADATA: &str = "METADATA";
-const ISSUER: &str = "ISSUER";
-const SERVER: &str = "SERVER";
-const SUBJECT: &str = "SUBJECT";
+const METADATA: &str = "metadata";
+const ISSUER: &str = "issuer";
+const SERVER: &str = "server";
+const SUBJECT: &str = "subject";
 
 #[derive(Clone)]
 pub struct Issuer {

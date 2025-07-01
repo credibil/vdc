@@ -7,7 +7,7 @@ use crate::identity::Identity;
 use crate::store::Store;
 
 const VERIFIER_METADATA: &[u8] = include_bytes!("../data/verifier-metadata.json");
-const METADATA: &str = "METADATA";
+const METADATA: &str = "metadata";
 const VERIFIER: &str = "VERIFIER";
 
 #[derive(Clone)]
