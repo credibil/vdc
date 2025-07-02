@@ -5,6 +5,7 @@ use std::str::FromStr;
 use anyhow::{Context, Result};
 use base64ct::{Base64, Encoding};
 use credibil_core::{Kind, html};
+use credibil_ecc::EncAlgorithm;
 use credibil_jose::{JwsBuilder, PublicKeyJwk};
 pub use credibil_proof::Signature;
 use credibil_vdc::dcql::DcqlQuery;
@@ -13,8 +14,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use crate::JwtType;
-use crate::types::VerifierMetadata;
-use crate::types::metadata::Wallet;
+use crate::types::metadata::{VpFormat, Wallet};
 
 /// The Request Object Request is created by the Verifier to generate an
 /// Authorization Request Object.
@@ -192,7 +192,7 @@ pub struct RequestObject {
 
     /// Client Metadata contains Verifier metadata values.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub client_metadata: Option<VerifierMetadata>,
+    pub client_metadata: Option<ClientMetadata>,
 
     /// An array of base64url-encoded JSON objects, each containing details
     /// about the transaction that the Verifier is requesting the End-User to
@@ -432,7 +432,31 @@ impl Default for ResponseMode {
     }
 }
 
+/// Verifier metadata when sent directly in the `RequestObject`.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+pub struct ClientMetadata {
+    /// Public keys, such as those used by the Wallet for encryption of the
+    /// Authorization Response or where the Wallet will require the public key
+    /// of the Verifier to generate the Verifiable Presentation.
+    ///
+    /// This allows the Verifier to pass ephemeral keys specific to this
+    /// Authorization Request.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub jwks: Option<Jwks>,
+
+    /// A list of supported `enc` algorithms that can be used for encrypting
+    /// responses.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub encrypted_response_enc_values_supported: Option<Vec<EncAlgorithm>>,
+
+    /// An object defining the formats and proof types of Verifiable
+    /// Presentations and Verifiable Credentials that a Verifier supports.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vp_formats_supported: Option<Vec<VpFormat>>,
+}
+
 /// JSON Web Key Set (JWKS) containing the public keys of the Verifier.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Jwks {
     /// Keys in the set.
     pub keys: Vec<PublicKeyJwk>,
@@ -608,7 +632,7 @@ mod tests {
                 redirect_uri: "https://client.example.org/cb".to_string(),
             },
             state: Some("af0ifjsldkj".to_string()),
-            client_metadata: Some(VerifierMetadata::default()),
+            client_metadata: Some(ClientMetadata::default()),
             transaction_data: Some(vec![TransactionData::default()]),
             verifier_info: Some(vec![VerifierInfo::default()]),
             wallet_nonce: None,
@@ -632,7 +656,7 @@ mod tests {
                 redirect_uri: "https://client.example.org/cb".to_string(),
             },
             state: Some("af0ifjsldkj".to_string()),
-            client_metadata: Some(VerifierMetadata::default()),
+            client_metadata: Some(ClientMetadata::default()),
             transaction_data: Some(vec![TransactionData::default()]),
             verifier_info: Some(vec![VerifierInfo::default()]),
             wallet_nonce: None,

@@ -21,19 +21,15 @@ use crate::types::{VerifierRequest, VerifierResponse};
 async fn metadata(
     _verifier: &str, provider: &impl Provider, request: VerifierRequest,
 ) -> Result<VerifierResponse> {
-    Ok(VerifierResponse {
-        client: Metadata::verifier(provider, &request.client_id)
-            .await
-            .context("getting metadata")?,
-    })
+    Ok(VerifierResponse(
+        Metadata::verifier(provider, &request.client_id).await.context("getting metadata")?,
+    ))
 }
 
 impl<P: Provider> Handler<VerifierResponse, P> for Request<VerifierRequest> {
     type Error = Error;
 
-    async fn handle(
-        self, verifier: &str, provider: &P,
-    ) -> Result<Response<VerifierResponse>> {
+    async fn handle(self, verifier: &str, provider: &P) -> Result<Response<VerifierResponse>> {
         Ok(metadata(verifier, provider, self.body).await?.into())
     }
 }

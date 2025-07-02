@@ -18,11 +18,7 @@ pub struct VerifierRequest {
 }
 /// Response containing the Verifier's client metadata.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct VerifierResponse {
-    /// The Client metadata for the specified Verifier.
-    #[serde(flatten)]
-    pub client: Verifier,
-}
+pub struct VerifierResponse(pub VerifierMetadata);
 
 /// OAuth 2 client metadata used for registering clients of the issuance and
 /// wallet authorization servers.
@@ -33,26 +29,18 @@ pub struct VerifierResponse {
 /// In the case of Presentation, the Wallet is the Authorization Server and the
 /// Verifier is the Client.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct Verifier {
-    /// The subset of Verifier metadata sent to the Wallet in the
-    /// Authorization Request Object.
-    #[serde(flatten)]
-    pub client_metadata: VerifierMetadata,
-
+pub struct VerifierMetadata {
     /// OAuth 2.0 Client
     #[serde(flatten)]
     pub oauth: OAuthClient,
-}
 
-/// Verifier metadata when sent directly in the `RequestObject`.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct VerifierMetadata {
     /// Public keys, such as those used by the Wallet for encryption of the
     /// Authorization Response or where the Wallet will require the public key
     /// of the Verifier to generate the Verifiable Presentation.
     ///
     /// This allows the Verifier to pass ephemeral keys specific to this
     /// Authorization Request.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub jwks: Option<String>,
 
     /// A list of supported `enc` algorithms that can be used for encrypting

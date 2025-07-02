@@ -9,9 +9,8 @@ use chrono::Utc;
 use credibil_core::api::{Body, Handler, Request, Response};
 use credibil_core::state::State;
 
-use crate::error::invalid;
 use crate::handlers::{Error, Result};
-use crate::provider::{Metadata, Provider, StateStore};
+use crate::provider::{Provider, StateStore};
 use crate::state::Expire;
 use crate::types::{
     ClientId, CreateRequest, CreateResponse, DeviceFlow, RequestObject, ResponseType,
@@ -27,9 +26,10 @@ use crate::{AuthorizationRequest, RequestUri, RequestUriMethod, generate};
 async fn create_request(
     verifier: &str, provider: &impl Provider, request: CreateRequest,
 ) -> Result<CreateResponse> {
-    let Ok(metadata) = Metadata::verifier(provider, verifier).await else {
-        return Err(invalid!("{verifier} is not a valid client_id"));
-    };
+    // TODO: get client metadata
+    // let Ok(metadata) = Metadata::verifier(provider, verifier).await else {
+    //     return Err(invalid!("{verifier} is not a valid client_id"));
+    // };
 
     // TODO: Response Mode "direct_post" is RECOMMENDED for cross-device flows.
 
@@ -39,7 +39,7 @@ async fn create_request(
         state: Some(uri_token.clone()),
         nonce: generate::nonce(),
         dcql_query: request.dcql_query,
-        client_metadata: Some(metadata.client_metadata),
+        client_metadata: None, //Some(metadata.client_metadata),
         response_mode: request.response_mode,
         ..RequestObject::default()
     };
@@ -70,9 +70,7 @@ async fn create_request(
 impl<P: Provider> Handler<CreateResponse, P> for Request<CreateRequest> {
     type Error = Error;
 
-    async fn handle(
-        self, verifier: &str, provider: &P,
-    ) -> Result<Response<CreateResponse>> {
+    async fn handle(self, verifier: &str, provider: &P) -> Result<Response<CreateResponse>> {
         Ok(create_request(verifier, provider, self.body).await?.into())
     }
 }
