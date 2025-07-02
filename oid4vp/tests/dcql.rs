@@ -3,7 +3,7 @@
 use credibil_oid4vp::datastore::Datastore;
 use credibil_oid4vp::identity::{Signature, VerifyBy};
 use credibil_oid4vp::jose::PublicKeyJwk;
-use credibil_oid4vp::status::{StatusClaim, StatusList, TokenBuilder};
+use credibil_oid4vp::status::{STATUSTOKEN, StatusClaim, StatusList, TokenBuilder};
 use credibil_oid4vp::vdc::{
     DcqlQuery, MdocBuilder, SdJwtVcBuilder, W3cVcBuilder, mso_mdoc, sd_jwt, w3c_vc,
 };
@@ -496,7 +496,7 @@ async fn populate(owner: &str) -> Wallet {
         .await
         .expect("should build status list token");
     let data = serde_json::to_vec(&token).expect("should serialize");
-    Datastore::put(issuer, ISSUER_ID, "STATUSTOKEN", &statuslist_id, &data).await.unwrap();
+    Datastore::put(issuer, ISSUER_ID, STATUSTOKEN, &statuslist_id, &data).await.unwrap();
 
     // load credentials
     let vct = "https://credentials.example.com/identity_credential";

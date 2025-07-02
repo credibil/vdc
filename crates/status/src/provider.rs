@@ -9,7 +9,7 @@ use credibil_core::datastore::Datastore;
 /// Verifier Provider trait.
 pub trait Provider: StatusStore + Clone {}
 
-const STATUSTOKEN: &str = "STATUSTOKEN";
+pub const STATUSTOKEN: &str = "statustoken";
 
 /// A blanket implementation for `Provider` trait so that any type implementing
 /// the required super traits is considered a `Provider`.

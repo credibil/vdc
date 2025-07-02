@@ -34,24 +34,24 @@ pub struct VerifierMetadata {
     #[serde(flatten)]
     pub oauth: OAuthClient,
 
-    /// Public keys, such as those used by the Wallet for encryption of the
-    /// Authorization Response or where the Wallet will require the public key
-    /// of the Verifier to generate the Verifiable Presentation.
-    ///
-    /// This allows the Verifier to pass ephemeral keys specific to this
-    /// Authorization Request.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub jwks: Option<String>,
-
-    /// A list of supported `enc` algorithms that can be used for encrypting
-    /// responses.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub encrypted_response_enc_values_supported: Option<Vec<EncAlgorithm>>,
-
     /// An object defining the formats and proof types of Verifiable
     /// Presentations and Verifiable Credentials that a Verifier supports.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub vp_formats_supported: Option<Vec<VpFormat>>,
+    //
+    // /// Public keys, such as those used by the Wallet for encryption of the
+    // /// Authorization Response or where the Wallet will require the public key
+    // /// of the Verifier to generate the Verifiable Presentation.
+    // ///
+    // /// This allows the Verifier to pass ephemeral keys specific to this
+    // /// Authorization Request.
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub jwks: Option<String>,
+
+    // /// A list of supported `enc` algorithms that can be used for encrypting
+    // /// responses.
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub encrypted_response_enc_values_supported: Option<Vec<EncAlgorithm>>,
 }
 
 /// Client Identifier prefixes that may be supported by the Wallet.
