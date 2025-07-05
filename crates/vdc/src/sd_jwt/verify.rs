@@ -44,7 +44,7 @@ where
     }
     let credential = split[0];
     let disclosures = &split[1..split.len() - 1];
-    let key_binding = &split[split.len() - 1];
+    let key_binding = split[split.len() - 1];
 
     // verify and unpack the sd-jwt
     let sd_jwt = verify_vc(credential, resolver).await?;
@@ -53,8 +53,8 @@ where
     if let Some(status_claim) = &sd_jwt.claims.status {
         // FIXME: move this code  to `StatusList`
         let token = StatusToken::fetch(resolver, &status_claim.status_list.uri).await?;
-        let jwk = async |kid: String| resolve_jwk(&kid, resolver).await;
-        let decoded: Jwt<StatusListClaims> = decode_jws(&token, jwk).await?;
+        let jwk_resolver = async |kid: String| resolve_jwk(&kid, resolver).await;
+        let decoded: Jwt<StatusListClaims> = decode_jws(&token, jwk_resolver).await?;
         if !decoded.claims.status_list.is_valid(status_claim.status_list.idx)? {
             return Err(anyhow!("credential status is invalid"));
         }
@@ -70,8 +70,12 @@ where
     let Some(KeyBinding::Jwk(holder_jwk)) = &sd_jwt.claims.cnf else {
         return Err(anyhow!("sd-jwt `cnf` claim not found"));
     };
-    let resolver = async |_| async { Ok(holder_jwk.clone()) }.await;
-    let kb_jwt: Jwt<KbJwtClaims> = decode_jws(key_binding, resolver).await?;
+
+    let jwk_resolver = async |_| async { Ok(holder_jwk.clone()) }.await;
+    let kb_jwt: Jwt<KbJwtClaims> = decode_jws(key_binding, jwk_resolver).await?;
+
+    // let jwk_resolver = async |kid: String| resolve_jwk(&kid, resolver).await;
+    // let kb_jwt: Jwt<KbJwtClaims> = decode_jws(key_binding, jwk_resolver).await?;
 
     // ..verify the `sd_hash` claim
     let sd_hash = super::sd_hash(&format!("{credential}~{}", disclosures.join("~")));

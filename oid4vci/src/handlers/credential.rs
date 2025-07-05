@@ -81,9 +81,7 @@ pub async fn credential(
 impl<P: Provider> Handler<CredentialResponse, P> for Request<CredentialRequest, CredentialHeaders> {
     type Error = Error;
 
-    async fn handle(
-        self, issuer: &str, provider: &P,
-    ) -> Result<Response<CredentialResponse>> {
+    async fn handle(self, issuer: &str, provider: &P) -> Result<Response<CredentialResponse>> {
         Ok(credential(issuer, provider, self).await?.into())
     }
 }
@@ -229,7 +227,7 @@ impl Context {
         // create a credential for each proof
         for kid in &self.proof_kids {
             let status_claim = status_list
-                .add_entry("http://localhost:8080/statuslists/1")
+                .add_entry(format!("{issuer}/statuslists/1"))
                 .context("creating status claim")?;
 
             let credential = match &self.configuration.profile {

@@ -17,40 +17,10 @@ pub struct Wallet {
     identity: Identity,
 }
 
-const RAW_CODEC: u64 = 0x55;
-struct Block(Vec<u8>);
-
-impl Block {
-    pub fn new<T: Serialize>(data: &T) -> Result<Self> {
-        let mut buf = Vec::new();
-        ciborium::into_writer(&data, &mut buf)?;
-        Ok(Self(buf))
-    }
-
-    pub fn from_slice(slice: &[u8]) -> Self {
-        Self(slice.to_vec())
-    }
-
-    pub fn try_into<T: DeserializeOwned>(self) -> Result<T> {
-        ciborium::from_reader(self.0.as_slice()).map_err(|e| e.into())
-    }
-
-    pub fn cid(&self) -> Result<Cid> {
-        let hash = Code::Sha2_256.digest(&self.0);
-        Ok(Cid::new_v1(RAW_CODEC, hash))
-    }
-
-    pub fn data(&self) -> &[u8] {
-        self.0.as_ref()
-    }
-}
-
 impl Wallet {
     pub async fn new(wallet_id: impl Into<String>) -> Self {
         let wallet_id: String = wallet_id.into();
-
         let identity = Identity::new(&wallet_id).await;
-
         Self { wallet_id, identity }
     }
 
@@ -111,5 +81,33 @@ impl Datastore for Wallet {
 
     async fn get_all(&self, owner: &str, partition: &str) -> Result<Vec<(String, Vec<u8>)>> {
         Store.get_all(owner, partition).await
+    }
+}
+
+const RAW_CODEC: u64 = 0x55;
+struct Block(Vec<u8>);
+
+impl Block {
+    pub fn new<T: Serialize>(data: &T) -> Result<Self> {
+        let mut buf = Vec::new();
+        ciborium::into_writer(&data, &mut buf)?;
+        Ok(Self(buf))
+    }
+
+    pub fn from_slice(slice: &[u8]) -> Self {
+        Self(slice.to_vec())
+    }
+
+    pub fn try_into<T: DeserializeOwned>(self) -> Result<T> {
+        ciborium::from_reader(self.0.as_slice()).map_err(|e| e.into())
+    }
+
+    pub fn cid(&self) -> Result<Cid> {
+        let hash = Code::Sha2_256.digest(&self.0);
+        Ok(Cid::new_v1(RAW_CODEC, hash))
+    }
+
+    pub fn data(&self) -> &[u8] {
+        self.0.as_ref()
     }
 }

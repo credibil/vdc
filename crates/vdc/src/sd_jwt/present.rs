@@ -142,7 +142,7 @@ impl<S: Signature> SdJwtVpBuilder<HasMatched<'_>, HasClientId, HasSigner<'_, S>>
         let sd = format!("{credential}~{}", selected.join("~"));
 
         // key binding JWT
-        let key_ref = self.signer.0.verification_method().await?.try_into()?;
+        let key_binding = self.signer.0.verification_method().await?.try_into()?;
         let kb_jwt = Jws::builder()
             .typ(JwtType::KbJwt)
             .payload(KbJwtClaims {
@@ -151,7 +151,7 @@ impl<S: Signature> SdJwtVpBuilder<HasMatched<'_>, HasClientId, HasSigner<'_, S>>
                 iat: Utc::now(),
                 sd_hash: super::sd_hash(&sd),
             })
-            .key_ref(&key_ref)
+            .key_ref(&key_binding)
             .add_signer(self.signer.0)
             .build()
             .await

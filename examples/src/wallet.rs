@@ -74,11 +74,11 @@ async fn credential_offer(
         return Err(anyhow!("issue fetching offer: {status}, {body}").into());
     }
     let offer = http_resp.json::<CredentialOffer>().await?;
-    let issuer_uri = &offer.credential_issuer;
 
     // --------------------------------------------------
     // Fetch metadata
     // --------------------------------------------------
+    let issuer_uri = &offer.credential_issuer;
     let meta_uri = format!("{issuer_uri}/.well-known/openid-credential-issuer");
     let issuer = http.get(&meta_uri).send().await?.json::<IssuerMetadata>().await?;
 
@@ -96,7 +96,7 @@ async fn credential_offer(
     };
     let grant_type = TokenGrantType::PreAuthorizedCode {
         pre_authorized_code: pre_auth_grant.pre_authorized_code,
-        tx_code: offer_uri.tx_code.clone(),
+        tx_code: offer_uri.tx_code,
     };
 
     let token_req = TokenRequest::builder().client_id(provider.id()).grant_type(grant_type).build();
@@ -122,9 +122,7 @@ async fn credential_offer(
     let nonce_resp = http_resp.json::<NonceResponse>().await?;
 
     // proof of possession of key material
-
     let key = provider.verification_method().await?.try_into()?;
-
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(

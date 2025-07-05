@@ -254,8 +254,7 @@ async fn token(
 async fn nonce(
     State(client): State<Client<Issuer>>, TypedHeader(host): TypedHeader<Host>,
 ) -> impl IntoResponse {
-    let request = NonceRequest;
-    client.request(request).owner(&format!("http://{host}")).await.into_http()
+    client.request(NonceRequest).owner(&format!("http://{host}")).await.into_http()
 }
 
 #[axum::debug_handler]
