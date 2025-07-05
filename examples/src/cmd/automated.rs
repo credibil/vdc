@@ -47,7 +47,7 @@ async fn create_offer() -> Result<CreateOfferResponse> {
     });
 
     let http_resp = client.post(format!("{ISSUER}/create_offer")).json(&value).send().await?;
-    if http_resp.status() != StatusCode::CREATED && http_resp.status() != StatusCode::OK {
+    if http_resp.status() != StatusCode::CREATED {
         let body = http_resp.text().await?;
         return Err(anyhow!("{body}"));
     }
