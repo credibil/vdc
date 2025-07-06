@@ -186,13 +186,13 @@ mod tests {
     #[tokio::test]
     async fn build_vc() {
         let wallet = Wallet::new("https://mso_mdoc.io/wallet").await.expect("should create wallet");
-        let key_ref = wallet
+        let key_binding = wallet
             .verification_method()
             .await
             .expect("should have key id")
             .try_into()
             .expect("should map key binding to key ref");
-        let KeyBinding::Kid(kid) = key_ref else {
+        let KeyBinding::Kid(kid) = key_binding else {
             panic!("should have key id");
         };
         let device_jwk = resolve_jwk(&kid, &wallet).await.expect("should fetch JWK");

@@ -228,11 +228,11 @@ impl RequestObject {
     pub async fn url_encode_jwt(&self, signer: &impl Signature) -> Result<String> {
         let payload: AuthorizationClaims = self.clone().into();
 
-        let key_ref = signer.verification_method().await?.try_into()?;
+        let key_binding = signer.verification_method().await?.try_into()?;
         let jws = JwsBuilder::new()
             .typ(JwtType::OauthAuthzReqJwt)
             .payload(payload)
-            .key_ref(&key_ref)
+            .key_binding(&key_binding)
             .add_signer(signer)
             .build()
             .await

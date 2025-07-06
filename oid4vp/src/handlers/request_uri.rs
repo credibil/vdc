@@ -59,12 +59,12 @@ pub async fn request_uri(
     request_object.wallet_nonce = request.wallet_nonce;
 
     let kid = provider.verification_method().await.context("getting verification method")?;
-    let key_ref = kid.try_into().context("converting key_ref")?;
+    let key_binding = kid.try_into().context("converting key_binding")?;
 
     let jws = JwsBuilder::new()
         .typ(JwtType::OauthAuthzReqJwt)
         .payload(request_object)
-        .key_ref(&key_ref)
+        .key_binding(&key_binding)
         .add_signer(provider)
         .build()
         .await

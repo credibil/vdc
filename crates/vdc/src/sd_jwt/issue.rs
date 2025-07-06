@@ -225,11 +225,11 @@ impl<S: Signature> SdJwtVcBuilder<Vct, HasIssuer, HasKeyBinding, HasClaims, HasS
             ..SdJwtClaims::default()
         };
 
-        let key_ref = self.signer.0.verification_method().await?.try_into()?;
+        let key_binding = self.signer.0.verification_method().await?.try_into()?;
         let jws = Jws::builder()
             .typ(JwtType::SdJwt)
             .payload(claims)
-            .key_ref(&key_ref)
+            .key_binding(&key_binding)
             .add_signer(self.signer.0)
             .build()
             .await

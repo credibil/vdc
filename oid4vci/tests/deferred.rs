@@ -84,7 +84,7 @@ async fn deferred() {
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER).nonce(&nonce.c_nonce))
-        .key_ref(&key)
+        .key_binding(&key)
         .add_signer(carol)
         .build()
         .await

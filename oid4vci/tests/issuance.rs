@@ -85,7 +85,7 @@ async fn two_proofs() {
     let jws_1 = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER).nonce(&nonce.c_nonce))
-        .key_ref(&bob_key)
+        .key_binding(&bob_key)
         .add_signer(bob)
         .build()
         .await
@@ -103,7 +103,7 @@ async fn two_proofs() {
     let jws_2 = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER).nonce(&nonce.c_nonce))
-        .key_ref(&dan_key)
+        .key_binding(&dan_key)
         .add_signer(&dan)
         .build()
         .await
@@ -214,7 +214,7 @@ async fn sd_jwt() {
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER).nonce(&nonce.c_nonce))
-        .key_ref(&bob_key)
+        .key_binding(&bob_key)
         .add_signer(bob)
         .build()
         .await

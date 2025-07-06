@@ -38,14 +38,14 @@ credibil-proof = { git = "https://github.com/credibil/proof.git" }
 credibil-status = { path = "crates/status" }
 credibil-vdc = { path = "crates/vdc" }
 http = "1.3.1"
-reqwest = { version = "0.12.20", features = ["json"] }
+reqwest = { version = "0.12.22", features = ["json"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140", features = ["alloc"] }
 serde_repr = "0.1"
 sha2 = "0.10.9"
 test-utils = { path = "crates/test-utils" }
 thiserror = "2.0.12"
-tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread", "signal"] }
+tokio = { version = "1.46.1", features = ["macros", "rt-multi-thread", "signal"] }
 tower-http = { version = "0.6.6", features = ["cors", "set-header", "trace"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter", "fmt"] }

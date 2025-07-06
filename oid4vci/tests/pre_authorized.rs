@@ -84,7 +84,7 @@ async fn offer_val() {
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER).nonce(&nonce.c_nonce))
-        .key_ref(&bob_key)
+        .key_binding(&bob_key)
         .add_signer(bob)
         .build()
         .await
@@ -227,7 +227,7 @@ async fn two_datasets() {
         let jws = JwsBuilder::new()
             .typ(JwtType::ProofJwt)
             .payload(ProofClaims::new().credential_issuer(ISSUER).nonce(&nonce.c_nonce))
-            .key_ref(&bob_key)
+            .key_binding(&bob_key)
             .add_signer(bob)
             .build()
             .await
@@ -326,7 +326,7 @@ async fn reduce_credentials() {
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER).nonce(&nonce.c_nonce))
-        .key_ref(&bob_key)
+        .key_binding(&bob_key)
         .add_signer(bob)
         .build()
         .await
@@ -422,7 +422,7 @@ async fn reduce_claims() {
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER).nonce(&nonce.c_nonce))
-        .key_ref(&bob_key)
+        .key_binding(&bob_key)
         .add_signer(bob)
         .build()
         .await
@@ -523,7 +523,7 @@ async fn notify_accepted() {
     let jws = JwsBuilder::new()
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER).nonce(&nonce.c_nonce))
-        .key_ref(&bob_key)
+        .key_binding(&bob_key)
         .add_signer(bob)
         .build()
         .await

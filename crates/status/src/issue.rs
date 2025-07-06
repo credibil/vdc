@@ -189,11 +189,11 @@ impl<S: Signature> TokenBuilder<HasList, HasUri, HasSigner<'_, S>> {
             status_list: self.status_list.0,
         };
 
-        let key_ref = self.signer.0.verification_method().await?.try_into()?;
+        let key_binding = self.signer.0.verification_method().await?.try_into()?;
         let jws = Jws::builder()
             .typ("statuslist+jwt")
             .payload(claims)
-            .key_ref(&key_ref)
+            .key_binding(&key_binding)
             .add_signer(self.signer.0)
             .build()
             .await

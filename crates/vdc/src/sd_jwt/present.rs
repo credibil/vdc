@@ -151,7 +151,7 @@ impl<S: Signature> SdJwtVpBuilder<HasMatched<'_>, HasClientId, HasSigner<'_, S>>
                 iat: Utc::now(),
                 sd_hash: super::sd_hash(&sd),
             })
-            .key_ref(&key_binding)
+            .key_binding(&key_binding)
             .add_signer(self.signer.0)
             .build()
             .await

@@ -130,7 +130,7 @@ async fn credential_offer(
                 .credential_issuer(&offer.credential_issuer)
                 .nonce(&nonce_resp.c_nonce),
         )
-        .key_ref(&key)
+        .key_binding(&key)
         .add_signer(&provider)
         .build()
         .await?;
