@@ -8,8 +8,7 @@ use multihash_codetable::{Code, MultihashDigest};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
-use crate::identity::Identity;
-use crate::store::Store;
+use crate::resources::{Identity, Store};
 
 #[derive(Clone)]
 pub struct Wallet<'a> {

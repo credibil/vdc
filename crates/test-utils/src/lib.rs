@@ -6,8 +6,7 @@ pub mod issuer;
 pub mod verifier;
 pub mod wallet;
 
-mod identity;
-mod store;
+mod resources;
 
 pub use issuer::Issuer;
 pub use verifier::Verifier;
