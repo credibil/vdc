@@ -185,7 +185,7 @@ mod tests {
 
     #[tokio::test]
     async fn build_vc() {
-        let wallet = Wallet::new("https://mso_mdoc.io/wallet").await;
+        let wallet = Wallet::new("https://mso_mdoc.io/wallet").await.expect("should create wallet");
         let key_ref = wallet
             .verification_method()
             .await
@@ -210,7 +210,7 @@ mod tests {
             .doctype("org.iso.18013.5.1.mDL")
             .device_key(device_jwk)
             .claims(claims.clone())
-            .signer(&Issuer::new("https://mso_mdoc.io/issuer").await)
+            .signer(&Issuer::new("https://mso_mdoc.io/issuer").await.expect("should create issuer"))
             .build()
             .await
             .expect("should build");

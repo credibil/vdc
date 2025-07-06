@@ -282,7 +282,7 @@ mod tests {
             .issuer("https://example.com")
             .key_binding(jwk)
             .claims(claims.clone())
-            .signer(&Issuer::new("https://sd_jwt.io/issuer").await)
+            .signer(&Issuer::new("https://sd_jwt.io/issuer").await.expect("should create issuer"))
             .build()
             .await
             .expect("should build");

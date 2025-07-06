@@ -57,9 +57,7 @@ impl<P: Provider> Handler<NotificationResponse, P>
 {
     type Error = Error;
 
-    async fn handle(
-        self, issuer: &str, provider: &P,
-    ) -> Result<Response<NotificationResponse>> {
+    async fn handle(self, issuer: &str, provider: &P) -> Result<Response<NotificationResponse>> {
         Ok(notification(issuer, provider, self).await?.into())
     }
 }

@@ -17,39 +17,38 @@ const SERVER: &str = "server";
 const SUBJECT: &str = "subject";
 
 #[derive(Clone)]
-pub struct Issuer {
-    identity: Identity,
+pub struct Issuer<'a> {
+    identity: Identity<'a>,
 }
 
-impl Issuer {
-    #[must_use]
-    pub async fn new(issuer: &str) -> Self {
+impl<'a> Issuer<'a> {
+    pub async fn new(issuer: &'a str) -> Result<Self> {
         let datastore = Store;
-        datastore.put(issuer, METADATA, ISSUER, ISSUER_METADATA).await.unwrap();
-        datastore.put(issuer, METADATA, SERVER, SERVER_METADATA).await.unwrap();
-        datastore.put(issuer, METADATA, "http://localhost:8082", CLIENT_METADATA).await.unwrap();
-        datastore.put(issuer, SUBJECT, "normal_user", NORMAL_USER).await.unwrap();
-        datastore.put(issuer, SUBJECT, "pending_user", PENDING_USER).await.unwrap();
+        datastore.put(issuer, METADATA, ISSUER, ISSUER_METADATA).await?;
+        datastore.put(issuer, METADATA, SERVER, SERVER_METADATA).await?;
+        datastore.put(issuer, METADATA, "http://localhost:8082", CLIENT_METADATA).await?;
+        datastore.put(issuer, SUBJECT, "normal_user", NORMAL_USER).await?;
+        datastore.put(issuer, SUBJECT, "pending_user", PENDING_USER).await?;
 
-        let identity = Identity::new(issuer).await;
-
-        Self { identity }
+        Ok(Self {
+            identity: Identity::new(issuer).await?,
+        })
     }
 }
 
-impl Resolver for Issuer {
+impl Resolver for Issuer<'_> {
     async fn resolve(&self, url: &str) -> Result<Vec<u8>> {
         self.identity.resolve(url).await
     }
 }
 
-impl Signer for Issuer {
+impl Signer for Issuer<'_> {
     async fn try_sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
-        Ok(self.identity.signer.sign(msg).await)
+        Ok(self.identity.signer().sign(msg).await)
     }
 
     async fn verifying_key(&self) -> Result<PublicKey> {
-        self.identity.signer.verifying_key().await
+        self.identity.signer().verifying_key().await
     }
 
     async fn algorithm(&self) -> Result<Algorithm> {
@@ -57,13 +56,13 @@ impl Signer for Issuer {
     }
 }
 
-impl Signature for Issuer {
+impl Signature for Issuer<'_> {
     async fn verification_method(&self) -> Result<VerifyBy> {
         self.identity.verification_method().await
     }
 }
 
-impl Datastore for Issuer {
+impl Datastore for Issuer<'_> {
     async fn put(&self, owner: &str, partition: &str, key: &str, data: &[u8]) -> Result<()> {
         Store.put(owner, partition, key, data).await
     }

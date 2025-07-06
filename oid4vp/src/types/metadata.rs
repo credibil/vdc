@@ -140,7 +140,7 @@ pub enum VpFormat {
 ///
 /// See RFC 8414 - Authorization Server Metadata
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct Wallet {
+pub struct WalletMetadata {
     /// OAuth 2.0 Server
     #[serde(flatten)]
     pub oauth: OAuthServer,

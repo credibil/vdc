@@ -21,7 +21,7 @@ use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 
 pub async fn serve(verifier_id: &'static str) -> Result<JoinHandle<()>> {
-    let client = Client::new(Verifier::new(verifier_id).await);
+    let client = Client::new(Verifier::new(verifier_id).await.expect("should create verifier"));
 
     let router = Router::new()
         .route("/create_request", post(create_request))
@@ -45,7 +45,7 @@ pub async fn serve(verifier_id: &'static str) -> Result<JoinHandle<()>> {
 
 #[axum::debug_handler]
 async fn create_request(
-    State(client): State<Client<Verifier>>, TypedHeader(host): TypedHeader<Host>,
+    State(client): State<Client<Verifier<'static>>>, TypedHeader(host): TypedHeader<Host>,
     Json(request): Json<CreateRequest>,
 ) -> impl IntoResponse {
     client.request(request).owner(&format!("http://{host}")).await.into_http()
@@ -53,7 +53,7 @@ async fn create_request(
 
 #[axum::debug_handler]
 async fn request_uri(
-    State(client): State<Client<Verifier>>, TypedHeader(host): TypedHeader<Host>,
+    State(client): State<Client<Verifier<'static>>>, TypedHeader(host): TypedHeader<Host>,
     Path(id): Path<String>, body: Form<Vec<(String, String)>>,
 ) -> impl IntoResponse {
     let Ok(mut request) = RequestUriRequest::form_decode(&body) else {
@@ -66,7 +66,7 @@ async fn request_uri(
 
 #[axum::debug_handler]
 async fn authorization(
-    State(client): State<Client<Verifier>>, TypedHeader(host): TypedHeader<Host>,
+    State(client): State<Client<Verifier<'static>>>, TypedHeader(host): TypedHeader<Host>,
     Form(form): Form<Vec<(String, String)>>,
 ) -> impl IntoResponse {
     let Ok(request) = AuthorizationResponse::form_decode(&form) else {
@@ -78,7 +78,8 @@ async fn authorization(
 
 #[axum::debug_handler]
 async fn did(
-    State(client): State<Client<Verifier>>, TypedHeader(host): TypedHeader<Host>, request: Request,
+    State(client): State<Client<Verifier<'static>>>, TypedHeader(host): TypedHeader<Host>,
+    request: Request,
 ) -> Result<Json<Document>, AppError> {
     let request = credibil_proof::DocumentRequest {
         url: format!("http://{host}{}", request.uri()),

@@ -34,7 +34,7 @@ pub trait Metadata: Send + Sync {
 }
 
 const METADATA: &str = "metadata";
-const VERIFIER: &str = "VERIFIER";
+const VERIFIER: &str = "verifier";
 
 impl<T: Datastore> Metadata for T {
     async fn verifier(&self, owner: &str) -> Result<VerifierMetadata> {

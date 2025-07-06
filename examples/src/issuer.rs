@@ -39,7 +39,7 @@ static PAR_REQUESTS: LazyLock<RwLock<HashMap<String, PushedAuthorizationRequest>
     LazyLock::new(|| RwLock::new(HashMap::new()));
 
 pub async fn serve(issuer_id: &'static str) -> Result<JoinHandle<()>> {
-    let client = Client::new(Issuer::new(issuer_id).await);
+    let client = Client::new(Issuer::new(issuer_id).await.expect("should create issuer"));
 
     let router = Router::new()
         .route("/create_offer", post(create_offer))
@@ -76,7 +76,7 @@ pub async fn serve(issuer_id: &'static str) -> Result<JoinHandle<()>> {
 
 #[axum::debug_handler]
 async fn create_offer(
-    State(client): State<Client<Issuer>>, TypedHeader(host): TypedHeader<Host>,
+    State(client): State<Client<Issuer<'static>>>, TypedHeader(host): TypedHeader<Host>,
     Json(request): Json<CreateOfferRequest>,
 ) -> impl IntoResponse {
     client.request(request).owner(&format!("http://{host}")).await.into_http()
@@ -84,7 +84,7 @@ async fn create_offer(
 
 #[axum::debug_handler]
 async fn credential_offer(
-    State(client): State<Client<Issuer>>, TypedHeader(host): TypedHeader<Host>,
+    State(client): State<Client<Issuer<'static>>>, TypedHeader(host): TypedHeader<Host>,
     Path(offer_id): Path<String>,
 ) -> impl IntoResponse {
     let request = CredentialOfferRequest { id: offer_id };
@@ -94,7 +94,8 @@ async fn credential_offer(
 // TODO: override default  Cache-Control header to allow caching
 #[axum::debug_handler]
 async fn issuer(
-    headers: HeaderMap, State(client): State<Client<Issuer>>, TypedHeader(host): TypedHeader<Host>,
+    headers: HeaderMap, State(client): State<Client<Issuer<'static>>>,
+    TypedHeader(host): TypedHeader<Host>,
 ) -> impl IntoResponse {
     client
         .request(IssuerRequest)
@@ -106,7 +107,7 @@ async fn issuer(
 
 #[axum::debug_handler]
 async fn server(
-    State(client): State<Client<Issuer>>, TypedHeader(host): TypedHeader<Host>,
+    State(client): State<Client<Issuer<'static>>>, TypedHeader(host): TypedHeader<Host>,
 ) -> impl IntoResponse {
     let request = ServerRequest { issuer: None };
     client.request(request).owner(&format!("http://{host}")).await.into_http()
@@ -114,7 +115,7 @@ async fn server(
 
 #[axum::debug_handler]
 async fn authorize(
-    State(client): State<Client<Issuer>>, TypedHeader(host): TypedHeader<Host>,
+    State(client): State<Client<Issuer<'static>>>, TypedHeader(host): TypedHeader<Host>,
     Form(request): Form<AuthorizationRequest>,
 ) -> impl IntoResponse {
     let AuthorizationRequest::Object(object) = request.clone() else {
@@ -168,7 +169,7 @@ async fn authorize(
 
 #[axum::debug_handler]
 async fn par(
-    State(client): State<Client<Issuer>>, TypedHeader(host): TypedHeader<Host>,
+    State(client): State<Client<Issuer<'static>>>, TypedHeader(host): TypedHeader<Host>,
     Form(request): Form<PushedAuthorizationRequest>,
 ) -> impl IntoResponse {
     let object = &request.request;
@@ -240,7 +241,7 @@ async fn handle_login(
 
 #[axum::debug_handler]
 async fn token(
-    State(client): State<Client<Issuer>>, TypedHeader(host): TypedHeader<Host>,
+    State(client): State<Client<Issuer<'static>>>, TypedHeader(host): TypedHeader<Host>,
     Form(form): Form<Vec<(String, String)>>,
 ) -> impl IntoResponse {
     let Ok(r) = TokenRequest::form_decode(&form) else {
@@ -252,14 +253,14 @@ async fn token(
 
 #[axum::debug_handler]
 async fn nonce(
-    State(client): State<Client<Issuer>>, TypedHeader(host): TypedHeader<Host>,
+    State(client): State<Client<Issuer<'static>>>, TypedHeader(host): TypedHeader<Host>,
 ) -> impl IntoResponse {
     client.request(NonceRequest).owner(&format!("http://{host}")).await.into_http()
 }
 
 #[axum::debug_handler]
 async fn credential(
-    State(client): State<Client<Issuer>>, TypedHeader(host): TypedHeader<Host>,
+    State(client): State<Client<Issuer<'static>>>, TypedHeader(host): TypedHeader<Host>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>, Json(r): Json<CredentialRequest>,
 ) -> impl IntoResponse {
     let headers = CredentialHeaders {
@@ -270,7 +271,7 @@ async fn credential(
 
 #[axum::debug_handler]
 async fn deferred_credential(
-    State(client): State<Client<Issuer>>, TypedHeader(host): TypedHeader<Host>,
+    State(client): State<Client<Issuer<'static>>>, TypedHeader(host): TypedHeader<Host>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     Json(r): Json<DeferredCredentialRequest>,
 ) -> impl IntoResponse {
@@ -282,7 +283,7 @@ async fn deferred_credential(
 
 #[axum::debug_handler]
 async fn notification(
-    State(client): State<Client<Issuer>>, TypedHeader(host): TypedHeader<Host>,
+    State(client): State<Client<Issuer<'static>>>, TypedHeader(host): TypedHeader<Host>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     Json(request): Json<NotificationRequest>,
 ) -> impl IntoResponse {
@@ -294,7 +295,7 @@ async fn notification(
 
 #[axum::debug_handler]
 async fn statuslists(
-    State(client): State<Client<Issuer>>, TypedHeader(host): TypedHeader<Host>,
+    State(client): State<Client<Issuer<'static>>>, TypedHeader(host): TypedHeader<Host>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
     let request = StatusListRequest { id: Some(id) };
@@ -303,7 +304,8 @@ async fn statuslists(
 
 #[axum::debug_handler]
 async fn did(
-    State(client): State<Client<Issuer>>, TypedHeader(host): TypedHeader<Host>, request: Request,
+    State(client): State<Client<Issuer<'static>>>, TypedHeader(host): TypedHeader<Host>,
+    request: Request,
 ) -> Result<Json<Document>, AppError> {
     let request = credibil_proof::DocumentRequest {
         url: format!("http://{host}/{}", request.uri()),

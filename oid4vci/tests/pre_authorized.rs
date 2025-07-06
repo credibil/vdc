@@ -20,14 +20,21 @@ use tokio::sync::OnceCell;
 const ISSUER: &str = "http://localhost:8080";
 const BOB_SUBJECT: &str = "normal_user";
 
-static CLIENT: OnceCell<Client<Issuer>> = OnceCell::const_new();
-static BOB: OnceCell<Wallet> = OnceCell::const_new();
+static CLIENT: OnceCell<Client<Issuer<'static>>> = OnceCell::const_new();
+static BOB: OnceCell<Wallet<'static>> = OnceCell::const_new();
 
-async fn client() -> &'static Client<Issuer> {
-    CLIENT.get_or_init(|| async { Client::new(Issuer::new(ISSUER).await) }).await
+async fn client() -> &'static Client<Issuer<'static>> {
+    CLIENT
+        .get_or_init(|| async {
+            Client::new(Issuer::new(ISSUER).await.expect("should create issuer"))
+        })
+        .await
 }
-async fn bob() -> &'static Wallet {
-    BOB.get_or_init(|| async { Wallet::new("https://pre_auth.io/bob").await }).await
+async fn bob() -> &'static Wallet<'static> {
+    BOB.get_or_init(|| async {
+        Wallet::new("https://pre_auth.io/bob").await.expect("should create wallet")
+    })
+    .await
 }
 
 // Should return a credential when using the pre-authorized code flow and the

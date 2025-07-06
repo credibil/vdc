@@ -20,19 +20,19 @@ use credibil_oid4vp::identity::ecc::Algorithm;
 use credibil_oid4vp::jose::{self, Jwt};
 use credibil_oid4vp::{
     AuthorizationRequest, AuthorizationResponse, ClientId, RequestObject, RequestUriMethod,
-    RequestUriRequest, RequestUriResponse, ResponseMode, VpFormat, Wallet, vp_token,
+    RequestUriRequest, RequestUriResponse, ResponseMode, VpFormat, WalletMetadata, vp_token,
 };
 use credibil_proof::{Client, resolve_jwk};
 use http::StatusCode;
 use serde::Deserialize;
-use test_utils::wallet;
+use test_utils::wallet::Wallet;
 use tokio::net::TcpListener;
 use tokio::task::JoinHandle;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 
 pub async fn serve(wallet_id: &'static str) -> Result<JoinHandle<()>> {
-    let wallet = wallet::Wallet::new(wallet_id).await;
+    let wallet = Wallet::new(wallet_id).await.expect("should create wallet");
 
     let router = Router::new()
         .route("/credential_offer", get(credential_offer))
@@ -60,7 +60,7 @@ struct OfferUri {
 
 #[axum::debug_handler]
 async fn credential_offer(
-    State(provider): State<wallet::Wallet>, Query(offer_uri): Query<OfferUri>,
+    State(provider): State<Wallet<'static>>, Query(offer_uri): Query<OfferUri>,
 ) -> Result<(), AppError> {
     let http = reqwest::Client::new();
 
@@ -178,7 +178,7 @@ async fn credential_offer(
 
 #[axum::debug_handler]
 async fn authorize(
-    State(provider): State<wallet::Wallet>, Query(request): Query<AuthorizationRequest>,
+    State(provider): State<Wallet<'static>>, Query(request): Query<AuthorizationRequest>,
 ) -> Result<(), AppError> {
     let http = reqwest::Client::new();
 
@@ -195,7 +195,7 @@ async fn authorize(
 
     let object_req = RequestUriRequest {
         id: req_uri.request_uri.clone(),
-        wallet_metadata: Some(Wallet {
+        wallet_metadata: Some(WalletMetadata {
             vp_formats_supported: Some(vec![VpFormat::DcSdJwt {
                 sd_jwt_alg_values: Some(vec![Algorithm::EdDSA]),
                 kb_jwt_alg_values: Some(vec![Algorithm::EdDSA]),
@@ -268,7 +268,7 @@ async fn authorize(
 
 #[axum::debug_handler]
 async fn did(
-    State(provider): State<wallet::Wallet>, TypedHeader(host): TypedHeader<Host>, request: Request,
+    State(provider): State<Wallet<'static>>, TypedHeader(host): TypedHeader<Host>, request: Request,
 ) -> Result<Json<Document>, AppError> {
     let client = Client::new(provider);
     let r = credibil_proof::DocumentRequest {

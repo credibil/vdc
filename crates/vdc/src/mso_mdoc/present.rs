@@ -265,7 +265,7 @@ mod tests {
 
     #[tokio::test]
     async fn build_vp() {
-        let issuer = Issuer::new("https://mso_mdoc.io/issuer").await;
+        let issuer = Issuer::new("https://mso_mdoc.io/issuer").await.expect("should create issuer");
         let issued = build_vc(&issuer).await;
 
         let given_name = &Claim {
@@ -309,8 +309,8 @@ mod tests {
         let _device_response = serde_cbor::from_slice::<DeviceResponse>(&cbor).unwrap();
     }
 
-    async fn build_vc(issuer: &Issuer) -> String {
-        let wallet = Wallet::new("https://mso_mdoc.io/wallet").await;
+    async fn build_vc(issuer: &Issuer<'_>) -> String {
+        let wallet = Wallet::new("https://mso_mdoc.io/wallet").await.expect("should create wallet");
         let key_ref = wallet
             .verification_method()
             .await

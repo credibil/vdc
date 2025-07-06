@@ -12,61 +12,62 @@ use crate::identity::Identity;
 use crate::store::Store;
 
 #[derive(Clone)]
-pub struct Wallet {
-    wallet_id: String,
-    identity: Identity,
+pub struct Wallet<'a> {
+    wallet_id: &'a str,
+    identity: Identity<'a>,
 }
 
-impl Wallet {
-    pub async fn new(wallet_id: impl Into<String>) -> Self {
-        let wallet_id: String = wallet_id.into();
-        let identity = Identity::new(&wallet_id).await;
-        Self { wallet_id, identity }
+impl<'a> Wallet<'a> {
+    pub async fn new(wallet_id: &'a str) -> Result<Self> {
+        Ok(Self {
+            wallet_id,
+            identity: Identity::new(wallet_id).await?,
+        })
     }
 
     pub fn id(&self) -> &str {
-        &self.wallet_id
+        self.wallet_id
     }
 
     // Add a credential to the store.
     pub async fn add(&self, queryable: Queryable) -> Result<()> {
         let block = Block::new(&queryable)?;
-        Store.put(&self.wallet_id, "CREDENTIAL", &block.cid()?.to_string(), block.data()).await
+        Store.put(self.wallet_id, "credential", &block.cid()?.to_string(), block.data()).await
     }
 
     pub async fn fetch(&self) -> Result<Vec<Queryable>> {
-        let all_vcs = Store.get_all(&self.wallet_id, "CREDENTIAL").await?;
+        let all_vcs = Store.get_all(self.wallet_id, "credential").await?;
         all_vcs.iter().map(|(_, v)| Block::from_slice(v).try_into()).collect()
     }
 }
 
-impl Resolver for Wallet {
+impl Resolver for Wallet<'_> {
     async fn resolve(&self, url: &str) -> Result<Vec<u8>> {
         self.identity.resolve(url).await
     }
 }
 
-impl Signer for Wallet {
+impl Signer for Wallet<'_> {
     async fn try_sign(&self, msg: &[u8]) -> Result<Vec<u8>> {
-        self.identity.signer.try_sign(msg).await
+        self.identity.signer().try_sign(msg).await
     }
 
     async fn verifying_key(&self) -> Result<PublicKey> {
-        self.identity.signer.verifying_key().await
+        self.identity.signer().verifying_key().await
     }
 
     async fn algorithm(&self) -> Result<Algorithm> {
-        self.identity.signer.algorithm().await
+        self.identity.signer().algorithm().await
     }
 }
 
-impl Signature for Wallet {
+impl Signature for Wallet<'_> {
     async fn verification_method(&self) -> Result<VerifyBy> {
         self.identity.verification_method().await
     }
 }
 
-impl Datastore for Wallet {
+impl Datastore for Wallet<'_> {
     async fn put(&self, owner: &str, partition: &str, key: &str, data: &[u8]) -> Result<()> {
         Store.put(owner, partition, key, data).await
     }

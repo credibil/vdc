@@ -20,11 +20,19 @@ use tokio::sync::OnceCell;
 static CLIENT: OnceCell<Client<Issuer>> = OnceCell::const_new();
 static CAROL: OnceCell<Wallet> = OnceCell::const_new();
 
-async fn client() -> &'static Client<Issuer> {
-    CLIENT.get_or_init(|| async { Client::new(Issuer::new(ISSUER).await) }).await
+async fn client() -> &'static Client<Issuer<'static>> {
+    CLIENT
+        .get_or_init(|| async {
+            Client::new(Issuer::new(ISSUER).await.expect("should create issuer"))
+        })
+        .await
 }
-async fn carol() -> &'static Wallet {
-    CAROL.get_or_init(|| async { Wallet::new("https://deferred.io/carol").await }).await
+async fn carol() -> &'static Wallet<'static> {
+    CAROL
+        .get_or_init(|| async {
+            Wallet::new("https://deferred.io/carol").await.expect("should create wallet")
+        })
+        .await
 }
 const CAROL_SUBJECT: &str = "pending_user";
 const ISSUER: &str = "http://localhost:8080";

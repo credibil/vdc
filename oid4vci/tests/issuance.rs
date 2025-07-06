@@ -25,11 +25,18 @@ const BOB_SUBJECT: &str = "normal_user";
 static CLIENT: OnceCell<Client<Issuer>> = OnceCell::const_new();
 static BOB: OnceCell<Wallet> = OnceCell::const_new();
 
-async fn client() -> &'static Client<Issuer> {
-    CLIENT.get_or_init(|| async { Client::new(Issuer::new(ISSUER).await) }).await
+async fn client() -> &'static Client<Issuer<'static>> {
+    CLIENT
+        .get_or_init(|| async {
+            Client::new(Issuer::new(ISSUER).await.expect("should create issuer"))
+        })
+        .await
 }
-async fn bob() -> &'static Wallet {
-    BOB.get_or_init(|| async { Wallet::new("https://issuance.io/bob").await }).await
+async fn bob() -> &'static Wallet<'static> {
+    BOB.get_or_init(|| async {
+        Wallet::new("https://issuance.io/bob").await.expect("should create wallet")
+    })
+    .await
 }
 
 // Should allow the Wallet to provide 2 JWT proofs when requesting a credential.
@@ -84,7 +91,8 @@ async fn two_proofs() {
         .await
         .expect("builds JWS");
 
-    let dan = Wallet::new("https://issuance.io/two_proofs_dan").await;
+    let dan =
+        Wallet::new("https://issuance.io/two_proofs_dan").await.expect("should create wallet");
     let dan_key = dan
         .verification_method()
         .await

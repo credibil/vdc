@@ -23,15 +23,21 @@ const VERIFIER_ID: &str = "http://localhost:8081";
 
 static ISSUER: OnceCell<Issuer> = OnceCell::const_new();
 static WALLET: OnceCell<Wallet> = OnceCell::const_new();
-static CLIENT: OnceCell<Client<Verifier>> = OnceCell::const_new();
+static CLIENT: OnceCell<Client<Verifier<'static>>> = OnceCell::const_new();
 
-async fn client() -> &'static Client<Verifier> {
-    CLIENT.get_or_init(|| async { Client::new(Verifier::new(VERIFIER_ID).await) }).await
+async fn client() -> &'static Client<Verifier<'static>> {
+    CLIENT
+        .get_or_init(|| async {
+            Client::new(Verifier::new(VERIFIER_ID).await.expect("should create verifier"))
+        })
+        .await
 }
-async fn issuer() -> &'static Issuer {
-    ISSUER.get_or_init(|| async { Issuer::new(ISSUER_ID).await }).await
+async fn issuer() -> &'static Issuer<'static> {
+    ISSUER
+        .get_or_init(|| async { Issuer::new(ISSUER_ID).await.expect("should create issuer") })
+        .await
 }
-async fn wallet() -> &'static Wallet {
+async fn wallet() -> &'static Wallet<'static> {
     WALLET.get_or_init(|| async { populate("https://dcql.io/wallet").await }).await
 }
 
@@ -475,8 +481,8 @@ async fn specific_values() {
 }
 
 // Initialise a mock "wallet" with test credentials.
-async fn populate(owner: &str) -> Wallet {
-    let wallet = Wallet::new(owner).await;
+async fn populate(owner: &str) -> Wallet<'_> {
+    let wallet = Wallet::new(owner).await.expect("should create wallet");
     let issuer = issuer().await;
 
     let VerifyBy::KeyId(did_url) = wallet.verification_method().await.unwrap() else {

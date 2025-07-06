@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use crate::JwtType;
-use crate::types::metadata::{VpFormat, Wallet};
+use crate::types::metadata::{VpFormat, WalletMetadata};
 
 /// The Request Object Request is created by the Verifier to generate an
 /// Authorization Request Object.
@@ -531,7 +531,7 @@ pub struct RequestUriRequest {
 
     /// Wallet metadata parameters.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub wallet_metadata: Option<Wallet>,
+    pub wallet_metadata: Option<WalletMetadata>,
 
     /// Provided by the wallet to mitigate replay attacks of the Authorization
     /// Request.
@@ -662,7 +662,7 @@ mod tests {
             wallet_nonce: None,
         };
 
-        let verifier = Verifier::new("http://verifier.io").await;
+        let verifier = Verifier::new("http://verifier.io").await.expect("should create verifier");
         let querystring = request_object.url_encode_jwt(&verifier).await.unwrap();
 
         let request = querystring
