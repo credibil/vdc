@@ -12,8 +12,8 @@ use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
 
 const ISSUER: &str = "http://localhost:8080";
-const VERIFIER_ID: &str = "http://localhost:8081";
-const WALLET_ID: &str = "http://localhost:8082";
+const VERIFIER: &str = "http://localhost:8081";
+const WALLET: &str = "http://localhost:8082";
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -21,8 +21,8 @@ async fn main() -> Result<()> {
     tracing::subscriber::set_global_default(subscriber)?;
 
     issuer::serve(ISSUER).await?;
-    verifier::serve(VERIFIER_ID).await?;
-    wallet::serve(WALLET_ID).await?;
+    verifier::serve(VERIFIER).await?;
+    wallet::serve(WALLET).await?;
 
     // issue credentials
     let offer = create_offer().await?;
@@ -39,7 +39,7 @@ async fn create_offer() -> Result<CreateOfferResponse> {
     let client = reqwest::Client::new();
 
     let value = json!({
-        "subject_id": "normal_user",
+        "subject_id": "normal-user",
         "credential_configuration_ids": ["Identity_SD_JWT"],
         "grant_types": ["urn:ietf:params:oauth:grant-type:pre-authorized_code"],
         "pre-authorize": true,
@@ -63,7 +63,7 @@ async fn make_offer(response: &CreateOfferResponse) -> Result<()> {
     let Some(tx_code) = &response.tx_code else {
         return Err(anyhow!("expected transaction code"));
     };
-    let url = format!("{WALLET_ID}/credential_offer?credential_offer_uri={uri}&tx_code={tx_code}");
+    let url = format!("{WALLET}/credential_offer?credential_offer_uri={uri}&tx_code={tx_code}");
 
     let http_resp = client.get(url).send().await?;
     if http_resp.status() != StatusCode::OK {
@@ -78,9 +78,9 @@ async fn create_request() -> Result<CreateResponse> {
     let client = reqwest::Client::new();
 
     let value = json!({
-        "client_id": VERIFIER_ID,
+        "client_id": VERIFIER,
         "response_mode": "direct_post.jwt",
-        "response_uri": format!("{VERIFIER_ID}/post"),
+        "response_uri": format!("{VERIFIER}/post"),
         "device_flow": "CrossDevice",
         "dcql_query": {
             "credentials": [
@@ -100,8 +100,7 @@ async fn create_request() -> Result<CreateResponse> {
         }
     });
 
-    let http_resp =
-        client.post(format!("{VERIFIER_ID}/create_request")).json(&value).send().await?;
+    let http_resp = client.post(format!("{VERIFIER}/create_request")).json(&value).send().await?;
     if http_resp.status() != StatusCode::OK {
         let body = http_resp.text().await?;
         return Err(anyhow!("{body}"));
@@ -114,7 +113,7 @@ async fn request_authorization(auth_req: &AuthorizationRequest) -> Result<()> {
     let client = reqwest::Client::new();
 
     let qs = auth_req.url_encode()?;
-    let http_resp = client.get(format!("{WALLET_ID}/authorize?{qs}")).send().await?;
+    let http_resp = client.get(format!("{WALLET}/authorize?{qs}")).send().await?;
     if http_resp.status() != StatusCode::OK {
         let body = http_resp.text().await?;
         return Err(anyhow!("{body}"));

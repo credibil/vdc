@@ -1,9 +1,9 @@
 use anyhow::Result;
-use credibil_core::datastore::Datastore;
+use credibil_core::datastore;
 use credibil_ecc::{Algorithm, PublicKey, Signer};
 use credibil_proof::{Resolver, Signature, VerifyBy};
 
-use crate::resources::{Identity, Store};
+use crate::resources::{Datastore, Identity};
 
 const ISSUER_METADATA: &[u8] = include_bytes!("../data/issuer-metadata.json");
 const SERVER_METADATA: &[u8] = include_bytes!("../data/server-metadata.json");
@@ -22,12 +22,12 @@ pub struct Issuer<'a> {
 
 impl<'a> Issuer<'a> {
     pub async fn new(issuer: &'a str) -> Result<Self> {
-        let datastore = Store;
+        let datastore = Datastore;
         datastore.put(issuer, METADATA, ISSUER, ISSUER_METADATA).await?;
         datastore.put(issuer, METADATA, SERVER, SERVER_METADATA).await?;
-        datastore.put(issuer, METADATA, "http://localhost:8082", CLIENT_METADATA).await?;
-        datastore.put(issuer, SUBJECT, "normal_user", NORMAL_USER).await?;
-        datastore.put(issuer, SUBJECT, "pending_user", PENDING_USER).await?;
+        datastore.put(issuer, METADATA, "public-client", CLIENT_METADATA).await?;
+        datastore.put(issuer, SUBJECT, "normal-user", NORMAL_USER).await?;
+        datastore.put(issuer, SUBJECT, "pending-user", PENDING_USER).await?;
 
         Ok(Self {
             identity: Identity::new(issuer).await?,
@@ -61,20 +61,20 @@ impl Signature for Issuer<'_> {
     }
 }
 
-impl Datastore for Issuer<'_> {
+impl datastore::Datastore for Issuer<'_> {
     async fn put(&self, owner: &str, partition: &str, key: &str, data: &[u8]) -> Result<()> {
-        Store.put(owner, partition, key, data).await
+        Datastore.put(owner, partition, key, data).await
     }
 
     async fn get(&self, owner: &str, partition: &str, key: &str) -> Result<Option<Vec<u8>>> {
-        Store.get(owner, partition, key).await
+        Datastore.get(owner, partition, key).await
     }
 
     async fn delete(&self, owner: &str, partition: &str, key: &str) -> Result<()> {
-        Store.delete(owner, partition, key).await
+        Datastore.delete(owner, partition, key).await
     }
 
     async fn get_all(&self, owner: &str, partition: &str) -> Result<Vec<(String, Vec<u8>)>> {
-        Store.get_all(owner, partition).await
+        Datastore.get_all(owner, partition).await
     }
 }

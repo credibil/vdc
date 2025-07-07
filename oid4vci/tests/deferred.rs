@@ -34,7 +34,7 @@ async fn carol() -> &'static Wallet<'static> {
         })
         .await
 }
-const CAROL_SUBJECT: &str = "pending_user";
+const CAROL_SUBJECT: &str = "pending-user";
 const ISSUER: &str = "http://localhost:8080";
 
 // Should return a credential when using the pre-authorized code flow and the

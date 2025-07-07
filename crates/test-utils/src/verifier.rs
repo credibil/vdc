@@ -1,9 +1,9 @@
 use anyhow::Result;
-use credibil_core::datastore::Datastore;
+use credibil_core::datastore;
 use credibil_ecc::{Algorithm, PublicKey, Signer};
 use credibil_proof::{Resolver, Signature, VerifyBy};
 
-use crate::resources::{Identity, Store};
+use crate::resources::{Datastore, Identity};
 
 const VERIFIER_METADATA: &[u8] = include_bytes!("../data/verifier-metadata.json");
 const METADATA: &str = "metadata";
@@ -16,7 +16,7 @@ pub struct Verifier<'a> {
 
 impl<'a> Verifier<'a> {
     pub async fn new(verifier: &'a str) -> Result<Self> {
-        let datastore = Store;
+        let datastore = Datastore;
         datastore.put(verifier, METADATA, VERIFIER, VERIFIER_METADATA).await?;
 
         Ok(Self {
@@ -51,20 +51,20 @@ impl Signature for Verifier<'_> {
     }
 }
 
-impl Datastore for Verifier<'_> {
+impl datastore::Datastore for Verifier<'_> {
     async fn put(&self, owner: &str, partition: &str, key: &str, data: &[u8]) -> Result<()> {
-        Store.put(owner, partition, key, data).await
+        Datastore.put(owner, partition, key, data).await
     }
 
     async fn get(&self, owner: &str, partition: &str, key: &str) -> Result<Option<Vec<u8>>> {
-        Store.get(owner, partition, key).await
+        Datastore.get(owner, partition, key).await
     }
 
     async fn delete(&self, owner: &str, partition: &str, key: &str) -> Result<()> {
-        Store.delete(owner, partition, key).await
+        Datastore.delete(owner, partition, key).await
     }
 
     async fn get_all(&self, owner: &str, partition: &str) -> Result<Vec<(String, Vec<u8>)>> {
-        Store.get_all(owner, partition).await
+        Datastore.get_all(owner, partition).await
     }
 }

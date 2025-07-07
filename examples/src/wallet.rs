@@ -22,7 +22,7 @@ use credibil_oid4vp::{
     AuthorizationRequest, AuthorizationResponse, ClientId, RequestObject, RequestUriMethod,
     RequestUriRequest, RequestUriResponse, ResponseMode, VpFormat, WalletMetadata, vp_token,
 };
-use credibil_proof::{Client, resolve_jwk};
+use credibil_proof::{Client, DocumentRequest, resolve_jwk};
 use http::StatusCode;
 use serde::Deserialize;
 use test_utils::wallet::Wallet;
@@ -99,7 +99,8 @@ async fn credential_offer(
         tx_code: offer_uri.tx_code,
     };
 
-    let token_req = TokenRequest::builder().client_id(provider.id()).grant_type(grant_type).build();
+    let token_req =
+        TokenRequest::builder().client_id("public-client").grant_type(grant_type).build();
     let token_uri = server.oauth.token_endpoint;
     let http_resp = http.post(&token_uri).form(&token_req).send().await?;
     if http_resp.status() != StatusCode::OK {
@@ -270,16 +271,13 @@ async fn authorize(
 async fn did(
     State(provider): State<Wallet<'static>>, TypedHeader(host): TypedHeader<Host>, request: Request,
 ) -> Result<Json<Document>, AppError> {
-    let client = Client::new(provider);
-    let r = credibil_proof::DocumentRequest {
-        url: format!("http://{host}{}", request.uri()),
-    };
-    let doc = client
-        .request(r)
-        .owner(&format!("http://{host}{}", request.uri()))
+    let did_url = format!("http://{host}{}", request.uri());
+    let document = Client::new(provider)
+        .request(DocumentRequest { url: did_url.clone() })
+        .owner(&did_url)
         .await
         .map_err(AppError::from)?;
-    Ok(Json(doc.0.clone()))
+    Ok(Json(document.0.clone()))
 }
 
 // Wrap anyhow::Error.

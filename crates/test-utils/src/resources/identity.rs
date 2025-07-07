@@ -5,9 +5,10 @@ use credibil_proof::did::{Document, DocumentBuilder, KeyId, VerificationMethod};
 use credibil_proof::ecc::Curve::Ed25519;
 use credibil_proof::ecc::{Entry, Keyring, Signer};
 use credibil_proof::jose::PublicKeyJwk;
-use credibil_proof::{Client, DocumentRequest, VerifyBy};
+use credibil_proof::{Client, DocumentRequest, Proof, VerifyBy};
 
-use crate::resources::store::Store;
+use crate::resources::KeyVault;
+use crate::resources::store::Datastore;
 
 #[derive(Clone)]
 pub struct Identity<'a> {
@@ -19,9 +20,9 @@ impl<'a> Identity<'a> {
     /// Create a new identity for the specified owner.
     pub async fn new(owner: &'a str) -> Result<Self> {
         // fetch (or generate) the signing key
-        let signer = match Keyring::entry(&Store, owner, "signing").await {
+        let signer = match Keyring::entry(&KeyVault, owner, "signing").await {
             Ok(entry) => entry,
-            Err(_) => Keyring::generate(&Store, owner, "signing", Ed25519).await?,
+            Err(_) => Keyring::generate(&KeyVault, owner, "signing", Ed25519).await?,
         };
 
         // generate a did:web document
@@ -29,7 +30,7 @@ impl<'a> Identity<'a> {
         let jwk = PublicKeyJwk::from_bytes(&verifying_key.to_bytes())?;
         let vm = VerificationMethod::build().key(jwk).key_id(KeyId::Index("key-0".to_string()));
         let builder = DocumentBuilder::new().verification_method(vm).derive_key_agreement(true);
-        credibil_proof::create(owner, builder, &Store).await?;
+        credibil_proof::create(owner, builder, &Datastore).await?;
 
         Ok(Self { owner, signer })
     }
@@ -44,7 +45,7 @@ impl<'a> Identity<'a> {
             url: format!("{}/.well-known/did.json", self.owner),
         };
         let document =
-            Client::new(Store).request(request).owner(self.owner).await.map(|r| r.0.clone())?;
+            Client::new(Datastore).request(request).owner(self.owner).await.map(|r| r.0.clone())?;
         let Some(vm) = &document.verification_method.as_ref().and_then(|v| v.first()) else {
             return Err(anyhow!("no verification method found"));
         };
@@ -58,9 +59,34 @@ impl<'a> Identity<'a> {
         } else {
             // not in a tokio runtime (-> running in a test)
             let request = DocumentRequest { url: url.to_string() };
-            Client::new(Store).request(request).owner(self.owner).await.map(|r| r.0.clone())?
+            Client::new(Datastore).request(request).owner(self.owner).await.map(|r| r.0.clone())?
         };
-
         Ok(serde_json::to_vec(&document)?)
+    }
+}
+
+impl Proof for Datastore {
+    async fn put(&self, owner: &str, document: &Document) -> Result<()> {
+        let data = serde_json::to_vec(document)?;
+        self.put(owner, "proof", &document.id, &data).await
+    }
+
+    async fn get(&self, owner: &str, key: &str) -> Result<Option<Document>> {
+        let Some(data) = self.get(owner, "proof", key).await? else {
+            return Err(anyhow!("could not find proof"));
+        };
+        Ok(serde_json::from_slice(&data)?)
+    }
+
+    async fn delete(&self, owner: &str, key: &str) -> Result<()> {
+        self.delete(owner, "proof", key).await
+    }
+
+    async fn get_all(&self, owner: &str) -> Result<Vec<(String, Document)>> {
+        self.get_all(owner, "proof")
+            .await?
+            .iter()
+            .map(|(k, v)| Ok((k.to_string(), serde_json::from_slice(v)?)))
+            .collect()
     }
 }

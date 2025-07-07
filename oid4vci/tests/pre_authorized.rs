@@ -18,7 +18,7 @@ use test_utils::wallet::Wallet;
 use tokio::sync::OnceCell;
 
 const ISSUER: &str = "http://localhost:8080";
-const BOB_SUBJECT: &str = "normal_user";
+const BOB_SUBJECT: &str = "normal-user";
 
 static CLIENT: OnceCell<Client<Issuer<'static>>> = OnceCell::const_new();
 static BOB: OnceCell<Wallet<'static>> = OnceCell::const_new();
