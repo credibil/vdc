@@ -11,24 +11,24 @@ static STORE: LazyLock<DashMap<String, Vec<u8>>> = LazyLock::new(DashMap::new);
 pub struct Datastore;
 
 impl Datastore {
-    pub async fn put(&self, owner: &str, partition: &str, key: &str, data: &[u8]) -> Result<()> {
+    pub async fn put(owner: &str, partition: &str, key: &str, data: &[u8]) -> Result<()> {
         STORE.insert(format!("{owner}-{partition}-{key}"), data.to_vec());
         Ok(())
     }
 
-    pub async fn get(&self, owner: &str, partition: &str, key: &str) -> Result<Option<Vec<u8>>> {
+    pub async fn get(owner: &str, partition: &str, key: &str) -> Result<Option<Vec<u8>>> {
         let Some(bytes) = STORE.get(&format!("{owner}-{partition}-{key}")) else {
             return Ok(None);
         };
         Ok(Some(bytes.to_vec()))
     }
 
-    pub async fn delete(&self, owner: &str, partition: &str, key: &str) -> Result<()> {
+    pub async fn delete(owner: &str, partition: &str, key: &str) -> Result<()> {
         STORE.remove(&format!("{owner}-{partition}-{key}"));
         Ok(())
     }
 
-    pub async fn get_all(&self, owner: &str, partition: &str) -> Result<Vec<(String, Vec<u8>)>> {
+    pub async fn get_all(owner: &str, partition: &str) -> Result<Vec<(String, Vec<u8>)>> {
         let all = STORE
             .iter()
             .filter(move |r| r.key().starts_with(&format!("{owner}-{partition}-")))
@@ -38,24 +38,24 @@ impl Datastore {
     }
 }
 
-// #[derive(Clone)]
-// pub struct Keyvalue;
+#[derive(Clone)]
+pub struct Keyvalue;
 
-// impl Keyvalue {
-//     pub fn put(owner: &str, partition: &str, key: &str, data: &[u8]) -> Result<()> {
-//         STORE.insert(format!("{owner}-{partition}-{key}"), data.to_vec());
-//         Ok(())
-//     }
+impl Keyvalue {
+    pub fn put(owner: &str, partition: &str, key: &str, data: &[u8]) -> Result<()> {
+        STORE.insert(format!("{owner}-{partition}-{key}"), data.to_vec());
+        Ok(())
+    }
 
-//     pub fn get(owner: &str, partition: &str, key: &str) -> Result<Option<Vec<u8>>> {
-//         let Some(bytes) = STORE.get(&format!("{owner}-{partition}-{key}")) else {
-//             return Ok(None);
-//         };
-//         Ok(Some(bytes.to_vec()))
-//     }
+    pub fn get(owner: &str, partition: &str, key: &str) -> Result<Option<Vec<u8>>> {
+        let Some(bytes) = STORE.get(&format!("{owner}-{partition}-{key}")) else {
+            return Ok(None);
+        };
+        Ok(Some(bytes.to_vec()))
+    }
 
-//     pub fn delete(owner: &str, partition: &str, key: &str) -> Result<()> {
-//         STORE.remove(&format!("{owner}-{partition}-{key}"));
-//         Ok(())
-//     }
-// }
+    pub fn delete(owner: &str, partition: &str, key: &str) -> Result<()> {
+        STORE.remove(&format!("{owner}-{partition}-{key}"));
+        Ok(())
+    }
+}

@@ -25,7 +25,7 @@ use credibil_oid4vci::{
 use oauth2::CsrfToken;
 use serde::Deserialize;
 use serde_json::json;
-use test_utils::issuer::Issuer;
+use test_utils::Issuer;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
@@ -307,7 +307,7 @@ async fn did(
     State(client): State<Client<Issuer<'static>>>, TypedHeader(host): TypedHeader<Host>,
     request: Request,
 ) -> Result<Json<Document>, AppError> {
-    let request = credibil_proof::DocumentRequest {
+    let request = credibil_binding::DocumentRequest {
         url: format!("http://{host}/{}", request.uri()),
     };
     let doc =

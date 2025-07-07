@@ -517,6 +517,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "credibil-binding"
+version = "0.1.2"
+dependencies = [
+ "anyhow",
+ "credibil-core",
+ "credibil-did",
+ "credibil-ecc",
+ "credibil-jose",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "credibil-core"
 version = "0.1.0"
 source = "git+https://github.com/credibil/core.git#a68726d10f58e8469c2e50c0a4b06df29f410360"
@@ -536,7 +549,6 @@ dependencies = [
 [[package]]
 name = "credibil-did"
 version = "0.1.2"
-source = "git+https://github.com/credibil/proof.git#59ec40d7dd41e2602b7d140a4117fe6d69e5f2a6"
 dependencies = [
  "anyhow",
  "chrono",
@@ -556,7 +568,6 @@ dependencies = [
 [[package]]
 name = "credibil-ecc"
 version = "0.1.2"
-source = "git+https://github.com/credibil/key.git#3e112c2e0c5eeadfd9a66c1f4e7eb81514dff06a"
 dependencies = [
  "aes-gcm",
  "aes-kw",
@@ -579,7 +590,6 @@ dependencies = [
 [[package]]
 name = "credibil-jose"
 version = "0.1.2"
-source = "git+https://github.com/credibil/key.git#3e112c2e0c5eeadfd9a66c1f4e7eb81514dff06a"
 dependencies = [
  "anyhow",
  "base64ct",
@@ -600,10 +610,10 @@ dependencies = [
  "axum-extra",
  "base64ct",
  "chrono",
+ "credibil-binding",
  "credibil-core",
  "credibil-ecc",
  "credibil-jose",
- "credibil-proof",
  "credibil-status",
  "credibil-vdc",
  "fastrand",
@@ -634,10 +644,10 @@ dependencies = [
  "axum-extra",
  "base64ct",
  "chrono",
+ "credibil-binding",
  "credibil-core",
  "credibil-ecc",
  "credibil-jose",
- "credibil-proof",
  "credibil-status",
  "credibil-vdc",
  "fastrand",
@@ -655,21 +665,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "credibil-proof"
-version = "0.1.2"
-source = "git+https://github.com/credibil/proof.git#59ec40d7dd41e2602b7d140a4117fe6d69e5f2a6"
-dependencies = [
- "anyhow",
- "credibil-core",
- "credibil-did",
- "credibil-ecc",
- "credibil-jose",
- "serde",
- "serde_json",
- "tracing",
-]
-
-[[package]]
 name = "credibil-status"
 version = "0.1.0"
 dependencies = [
@@ -677,9 +672,9 @@ dependencies = [
  "base64ct",
  "bitvec",
  "chrono",
+ "credibil-binding",
  "credibil-core",
  "credibil-jose",
- "credibil-proof",
  "flate2",
  "http",
  "serde",
@@ -697,10 +692,10 @@ dependencies = [
  "chrono",
  "ciborium",
  "coset",
+ "credibil-binding",
  "credibil-core",
  "credibil-ecc",
  "credibil-jose",
- "credibil-proof",
  "credibil-status",
  "fastrand",
  "hex",
@@ -983,9 +978,9 @@ dependencies = [
  "anyhow",
  "axum",
  "axum-extra",
+ "credibil-binding",
  "credibil-oid4vci",
  "credibil-oid4vp",
- "credibil-proof",
  "http",
  "oauth2",
  "reqwest",
@@ -2835,11 +2830,14 @@ dependencies = [
  "anyhow",
  "ciborium",
  "cid",
+ "credibil-binding",
  "credibil-core",
  "credibil-ecc",
- "credibil-proof",
+ "credibil-oid4vci",
+ "credibil-oid4vp",
  "credibil-vdc",
  "dashmap",
+ "http",
  "multihash-codetable",
  "reqwest",
  "serde",

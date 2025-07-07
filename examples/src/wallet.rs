@@ -9,6 +9,7 @@ use axum::routing::get;
 use axum::{Json, Router};
 use axum_extra::TypedHeader;
 use axum_extra::headers::Host;
+use credibil_binding::{Client, DocumentRequest, resolve_jwk};
 use credibil_oid4vci::identity::Signature;
 use credibil_oid4vci::identity::did::Document;
 use credibil_oid4vci::jose::JwsBuilder;
@@ -22,10 +23,9 @@ use credibil_oid4vp::{
     AuthorizationRequest, AuthorizationResponse, ClientId, RequestObject, RequestUriMethod,
     RequestUriRequest, RequestUriResponse, ResponseMode, VpFormat, WalletMetadata, vp_token,
 };
-use credibil_proof::{Client, DocumentRequest, resolve_jwk};
 use http::StatusCode;
 use serde::Deserialize;
-use test_utils::wallet::Wallet;
+use test_utils::Wallet;
 use tokio::net::TcpListener;
 use tokio::task::JoinHandle;
 use tower_http::cors::{Any, CorsLayer};
@@ -274,7 +274,7 @@ async fn did(
     let did_url = format!("http://{host}{}", request.uri());
     let document = Client::new(provider)
         .request(DocumentRequest { url: did_url.clone() })
-        .owner(&did_url)
+        .owner(&format!("http://{host}"))
         .await
         .map_err(AppError::from)?;
     Ok(Json(document.0.clone()))

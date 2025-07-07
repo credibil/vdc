@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 
+use credibil_binding::resolve_jwk;
 use credibil_oid4vci::identity::{Signature, VerifyBy};
 use credibil_oid4vci::jose::{JwsBuilder, Jwt, decode_jws};
 use credibil_oid4vci::proof::W3cVcClaims;
@@ -11,10 +12,8 @@ use credibil_oid4vci::types::{
     TokenGrantType, TokenRequest,
 };
 use credibil_oid4vci::{Client, CredentialHeaders, JwtType, NotificationHeaders, OneMany};
-use credibil_proof::resolve_jwk;
 use serde_json::json;
-use test_utils::issuer::Issuer;
-use test_utils::wallet::Wallet;
+use test_utils::{Issuer, Wallet};
 use tokio::sync::OnceCell;
 
 const ISSUER: &str = "http://localhost:8080";

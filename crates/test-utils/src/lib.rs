@@ -1,13 +1,11 @@
-//! # Mock Provider
+//! # Test Utils
 
-#![feature(random)]
+// #![feature(random)]
 
-pub mod issuer;
-pub mod verifier;
-pub mod wallet;
-
+mod providers;
 mod resources;
 
-pub use issuer::Issuer;
-pub use verifier::Verifier;
-pub use wallet::Wallet;
+pub use self::providers::issuer::Issuer;
+pub use self::providers::verifier::Verifier;
+pub use self::providers::wallet::Wallet;
+pub use self::resources::Datastore;

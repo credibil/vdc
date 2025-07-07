@@ -1,8 +1,8 @@
 //! # Store
 
 use anyhow::{Result, anyhow};
+use credibil_binding::Resolver;
 use credibil_core::Kind;
-use credibil_proof::Resolver;
 use serde_json::Value;
 
 use crate::FormatProfile;

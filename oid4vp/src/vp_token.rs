@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use credibil_proof::Signature;
+use credibil_binding::Signature;
 use credibil_vdc::dcql::{QueryResult, RequestedFormat};
 use credibil_vdc::mso_mdoc::DeviceResponseBuilder;
 use credibil_vdc::sd_jwt::SdJwtVpBuilder;

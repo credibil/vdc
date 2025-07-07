@@ -1,9 +1,9 @@
 //! # W3C-VC Presentation
 
 use anyhow::{Context as _, Result, anyhow};
+use credibil_binding::{Signature, VerifyBy};
 use credibil_core::{Kind, OneMany};
 use credibil_jose::encode_jws;
-use credibil_proof::{Signature, VerifyBy};
 
 use crate::dcql::Matched;
 use crate::w3c_vc::{VerifiablePresentation, W3cVpClaims};

@@ -5,7 +5,7 @@
 use anyhow::anyhow;
 use base64ct::{Base64UrlUnpadded, Encoding};
 use ciborium::cbor;
-use credibil_proof::Signature;
+use credibil_binding::Signature;
 use rand::{Rng, rng};
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
@@ -174,11 +174,10 @@ impl<S: Signature> MdocBuilder<HasDocType, HasDeviceKey, HasClaims, HasSigner<'_
 
 #[cfg(test)]
 mod tests {
+    use credibil_binding::resolve_jwk;
     use credibil_jose::KeyBinding;
-    use credibil_proof::resolve_jwk;
     use serde_json::json;
-    use test_utils::issuer::Issuer;
-    use test_utils::wallet::Wallet;
+    use test_utils::{Issuer, Wallet};
 
     use super::*;
     use crate::mso_mdoc::{DataItem, DigestAlgorithm, KeyType, serde_cbor};

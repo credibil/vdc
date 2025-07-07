@@ -12,9 +12,9 @@ use std::collections::HashMap;
 use std::future::Future;
 
 use anyhow::{Result, anyhow};
+pub use credibil_binding::{Resolver, Signature};
 use credibil_core::datastore::Datastore;
 pub use credibil_core::state::StateStore;
-pub use credibil_proof::{Resolver, Signature};
 pub use credibil_status::StatusStore;
 
 use crate::types::{ClientMetadata, Dataset, IssuerMetadata, ServerMetadata};

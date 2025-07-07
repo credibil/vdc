@@ -2,8 +2,8 @@
 
 use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
+use credibil_binding::Resolver;
 use credibil_core::Kind;
-use credibil_proof::Resolver;
 
 use crate::FormatProfile;
 use crate::dcql::{Claim, Queryable};

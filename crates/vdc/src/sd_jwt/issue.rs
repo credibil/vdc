@@ -11,8 +11,8 @@
 
 use anyhow::{Context as _, Result};
 use chrono::Utc;
+use credibil_binding::Signature;
 use credibil_jose::Jws;
-use credibil_proof::Signature;
 use credibil_status::StatusClaim;
 use serde_json::{Map, Value};
 
@@ -248,7 +248,7 @@ mod tests {
     use credibil_ecc::{Curve, KeyType};
     use credibil_jose::PublicKeyJwk;
     use serde_json::json;
-    use test_utils::issuer::Issuer;
+    use test_utils::Issuer;
 
     use super::SdJwtVcBuilder;
 

@@ -31,10 +31,12 @@ axum-extra = { version = "0.10.1", features = ["typed-header"] }
 base64ct = { version = "1.8.0", features = ["std"] }
 chrono = { version = "0.4.41", features = ["serde"] }
 ciborium = "0.2.2"
+credibil-binding = { git = "https://github.com/credibil/key.git" }
 credibil-core = { git = "https://github.com/credibil/core.git" }
 credibil-ecc = { git = "https://github.com/credibil/key.git" }
 credibil-jose = { git = "https://github.com/credibil/key.git" }
-credibil-proof = { git = "https://github.com/credibil/proof.git" }
+credibil-oid4vci = { path = "oid4vci" }
+credibil-oid4vp = { path = "oid4vp" }
 credibil-status = { path = "crates/status" }
 credibil-vdc = { path = "crates/vdc" }
 http = "1.3.1"
@@ -55,11 +57,12 @@ uuid = { version = "1.17.0", features = ["fast-rng", "v4"] }
 # credibil-core = { path = "../core" }
 
 # [patch."https://github.com/credibil/proof"]
-# credibil-proof = { path = "../proof" }
+# credibil-binding = { path = "../proof" }
 
-# [patch."https://github.com/credibil/key"]
-# credibil-ecc = { path = "../key/ecc" }
-# credibil-jose = { path = "../key/jose" }
+[patch."https://github.com/credibil/key"]
+credibil-ecc = { path = "../key/ecc" }
+credibil-jose = { path = "../key/jose" }
+credibil-binding = { path = "../key/binding" }
 
 [profile.release]
 # optimize for small code size

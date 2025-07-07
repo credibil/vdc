@@ -14,7 +14,7 @@ use credibil_oid4vp::http::IntoHttp;
 use credibil_oid4vp::identity::did::Document;
 use credibil_oid4vp::{AuthorizationResponse, Client, CreateRequest, RequestUriRequest};
 use serde_json::json;
-use test_utils::verifier::Verifier;
+use test_utils::Verifier;
 use tokio::net::TcpListener;
 use tokio::task::JoinHandle;
 use tower_http::cors::{Any, CorsLayer};
@@ -81,7 +81,7 @@ async fn did(
     State(client): State<Client<Verifier<'static>>>, TypedHeader(host): TypedHeader<Host>,
     request: Request,
 ) -> Result<Json<Document>, AppError> {
-    let request = credibil_proof::DocumentRequest {
+    let request = credibil_binding::DocumentRequest {
         url: format!("http://{host}{}", request.uri()),
     };
     let doc =
