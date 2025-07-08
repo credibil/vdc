@@ -23,13 +23,6 @@ pub trait Provider:
 {
 }
 
-/// A blanket implementation for `Provider` trait so that any type implementing
-/// the required super traits is considered a `Provider`.
-impl<T> Provider for T where
-    T: Metadata + Subject + StateStore + Signature + Resolver + StatusStore + Clone
-{
-}
-
 /// The `Metadata` trait is used by implementers to provide `Client`, `Issuer`,
 /// and `Server` metadata to the library.
 pub trait Metadata: Send + Sync {

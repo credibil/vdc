@@ -8,7 +8,7 @@ use credibil_binding::ecc::{Entry, Keyring, Signer};
 use credibil_binding::jose::PublicKeyJwk;
 use credibil_binding::{Binding, DocumentRequest, Resolver, Signature, VerifyBy};
 use credibil_ecc::{Algorithm, PublicKey};
-use credibil_oid4vp::provider::{Metadata, StateStore, StatusToken};
+use credibil_oid4vp::provider::{Metadata, Provider, StateStore, StatusToken};
 use credibil_oid4vp::{Client, State, VerifierMetadata};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -45,6 +45,8 @@ impl<'a> Verifier<'a> {
         Ok(verifier)
     }
 }
+
+impl Provider for Verifier<'_> {}
 
 impl Resolver for Verifier<'_> {
     async fn resolve(&self, url: &str) -> Result<Vec<u8>> {
