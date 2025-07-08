@@ -102,9 +102,7 @@ async fn deferred() {
     let response = client
         .request(request)
         .owner(ISSUER)
-        .headers(CredentialHeaders {
-            authorization: token.access_token.clone(),
-        })
+        .headers(CredentialHeaders { authorization: token.access_token.clone() })
         .await
         .expect("should return credential");
 
@@ -132,12 +130,8 @@ async fn deferred() {
         panic!("expected transaction_id");
     };
 
-    let request = DeferredCredentialRequest {
-        transaction_id: transaction_id.clone(),
-    };
-    let headers = DeferredHeaders {
-        authorization: token.access_token.clone(),
-    };
+    let request = DeferredCredentialRequest { transaction_id: transaction_id.clone() };
+    let headers = DeferredHeaders { authorization: token.access_token.clone() };
     let response = client
         .request(request)
         .owner(ISSUER)

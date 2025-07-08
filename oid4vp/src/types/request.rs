@@ -426,9 +426,7 @@ pub enum ResponseMode {
 
 impl Default for ResponseMode {
     fn default() -> Self {
-        Self::Fragment {
-            redirect_uri: String::new(),
-        }
+        Self::Fragment { redirect_uri: String::new() }
     }
 }
 

@@ -277,10 +277,8 @@ mod tests {
         };
 
         // skip `portrait` claim
-        let matched = Matched {
-            claims: vec![given_name, family_name],
-            issued: &Kind::String(issued),
-        };
+        let matched =
+            Matched { claims: vec![given_name, family_name], issued: &Kind::String(issued) };
 
         let response = DeviceResponseBuilder::new()
             .matched(&matched)

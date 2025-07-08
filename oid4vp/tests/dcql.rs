@@ -87,10 +87,7 @@ async fn multiple_claims() {
     // assert_eq!(results.len(), 2);
 
     let vp_token = vp_token::generate(&req_obj, &results, wallet).await.expect("should get token");
-    let request = AuthorizationResponse {
-        vp_token,
-        state: req_obj.state,
-    };
+    let request = AuthorizationResponse { vp_token, state: req_obj.state };
 
     // --------------------------------------------------
     // Verifier processes the Wallets's Authorization Response.
@@ -182,10 +179,7 @@ async fn multiple_credentials() {
     let vp_token = vp_token::generate(&req_obj, &results, wallet).await.expect("should get token");
     assert_eq!(vp_token.len(), 3);
 
-    let request = AuthorizationResponse {
-        vp_token,
-        state: req_obj.state,
-    };
+    let request = AuthorizationResponse { vp_token, state: req_obj.state };
     let response = client.request(request).owner(VERIFIER_ID).await.expect("should execute");
 
     // --------------------------------------------------

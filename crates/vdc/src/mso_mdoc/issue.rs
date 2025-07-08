@@ -57,12 +57,7 @@ impl MdocBuilder<NoDocType, NoDeviceKey, NoClaims, NoSigner> {
     /// Create a new ISO mDL credential builder.
     #[must_use]
     pub const fn new() -> Self {
-        Self {
-            doctype: NoDocType,
-            device_key: NoDeviceKey,
-            claims: NoClaims,
-            signer: NoSigner,
-        }
+        Self { doctype: NoDocType, device_key: NoDeviceKey, claims: NoClaims, signer: NoSigner }
     }
 }
 

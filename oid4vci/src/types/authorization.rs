@@ -166,10 +166,7 @@ pub struct AuthorizationDetailBuilder<C> {
 
 impl Default for AuthorizationDetailBuilder<NoDefinition> {
     fn default() -> Self {
-        Self {
-            credential: NoDefinition,
-            claims: None,
-        }
+        Self { credential: NoDefinition, claims: None }
     }
 }
 
@@ -647,9 +644,7 @@ pub enum AuthorizationDefinition {
 
 impl Default for AuthorizationDefinition {
     fn default() -> Self {
-        Self::ConfigurationId {
-            credential_configuration_id: String::new(),
-        }
+        Self::ConfigurationId { credential_configuration_id: String::new() }
     }
 }
 
@@ -658,14 +653,8 @@ impl Default for AuthorizationDefinition {
 impl PartialEq for AuthorizationDefinition {
     fn eq(&self, other: &Self) -> bool {
         match self {
-            Self::ConfigurationId {
-                credential_configuration_id,
-                ..
-            } => {
-                let Self::ConfigurationId {
-                    credential_configuration_id: other_id,
-                    ..
-                } = &other
+            Self::ConfigurationId { credential_configuration_id, .. } => {
+                let Self::ConfigurationId { credential_configuration_id: other_id, .. } = &other
                 else {
                     return false;
                 };

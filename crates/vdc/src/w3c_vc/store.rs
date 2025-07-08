@@ -57,11 +57,7 @@ pub async fn to_queryable(
         claims.extend(nested);
     }
 
-    Ok(Queryable {
-        meta,
-        claims,
-        credential: issued,
-    })
+    Ok(Queryable { meta, claims, credential: issued })
 }
 
 fn unpack_claims(path: Vec<String>, value: &Value) -> Vec<Claim> {
@@ -77,9 +73,6 @@ fn unpack_claims(path: Vec<String>, value: &Value) -> Vec<Claim> {
 
             claims
         }
-        _ => vec![Claim {
-            path,
-            value: value.clone(),
-        }],
+        _ => vec![Claim { path, value: value.clone() }],
     }
 }

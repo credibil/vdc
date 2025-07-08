@@ -263,9 +263,7 @@ async fn credential(
     State(client): State<Client<Issuer<'static>>>, TypedHeader(host): TypedHeader<Host>,
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>, Json(r): Json<CredentialRequest>,
 ) -> impl IntoResponse {
-    let headers = CredentialHeaders {
-        authorization: auth.token().to_string(),
-    };
+    let headers = CredentialHeaders { authorization: auth.token().to_string() };
     client.request(r).owner(&format!("http://{host}")).headers(headers).await.into_http()
 }
 
@@ -275,9 +273,7 @@ async fn deferred_credential(
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     Json(r): Json<DeferredCredentialRequest>,
 ) -> impl IntoResponse {
-    let headers = CredentialHeaders {
-        authorization: auth.token().to_string(),
-    };
+    let headers = CredentialHeaders { authorization: auth.token().to_string() };
     client.request(r).owner(&format!("http://{host}")).headers(headers).await.into_http()
 }
 
@@ -287,9 +283,7 @@ async fn notification(
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     Json(request): Json<NotificationRequest>,
 ) -> impl IntoResponse {
-    let headers = NotificationHeaders {
-        authorization: auth.token().to_string(),
-    };
+    let headers = NotificationHeaders { authorization: auth.token().to_string() };
     client.request(request).owner(&format!("http://{host}")).headers(headers).await.into_http()
 }
 
@@ -307,9 +301,8 @@ async fn did(
     State(client): State<Client<Issuer<'static>>>, TypedHeader(host): TypedHeader<Host>,
     request: Request,
 ) -> Result<Json<Document>, AppError> {
-    let request = credibil_binding::DocumentRequest {
-        url: format!("http://{host}/{}", request.uri()),
-    };
+    let request =
+        credibil_binding::DocumentRequest { url: format!("http://{host}/{}", request.uri()) };
     let doc =
         client.request(request).owner(&format!("http://{host}")).await.map_err(AppError::from)?;
     Ok(Json(doc.0.clone()))
@@ -323,10 +316,7 @@ struct AppError {
 
 impl From<anyhow::Error> for AppError {
     fn from(e: anyhow::Error) -> Self {
-        Self {
-            status: StatusCode::INTERNAL_SERVER_ERROR,
-            error: json!({"error": e.to_string()}),
-        }
+        Self { status: StatusCode::INTERNAL_SERVER_ERROR, error: json!({"error": e.to_string()}) }
     }
 }
 

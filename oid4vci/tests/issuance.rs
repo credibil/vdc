@@ -121,9 +121,7 @@ async fn two_proofs() {
     let response = client
         .request(request)
         .owner(ISSUER)
-        .headers(CredentialHeaders {
-            authorization: token.access_token.clone(),
-        })
+        .headers(CredentialHeaders { authorization: token.access_token.clone() })
         .await
         .expect("should return credential");
 
@@ -231,9 +229,7 @@ async fn sd_jwt() {
     let response = client
         .request(request)
         .owner(ISSUER)
-        .headers(CredentialHeaders {
-            authorization: token.access_token.clone(),
-        })
+        .headers(CredentialHeaders { authorization: token.access_token.clone() })
         .await
         .expect("should return credential");
 

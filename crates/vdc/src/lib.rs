@@ -70,9 +70,7 @@ pub enum FormatProfile {
 
 impl Default for FormatProfile {
     fn default() -> Self {
-        Self::JwtVcJson {
-            credential_definition: CredentialDefinition::default(),
-        }
+        Self::JwtVcJson { credential_definition: CredentialDefinition::default() }
     }
 }
 

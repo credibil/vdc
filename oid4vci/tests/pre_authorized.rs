@@ -99,9 +99,7 @@ async fn offer_val() {
         .with_proof(jwt)
         .build();
 
-    let headers = CredentialHeaders {
-        authorization: token.access_token.clone(),
-    };
+    let headers = CredentialHeaders { authorization: token.access_token.clone() };
     let response = client
         .request(request)
         .owner(ISSUER)
@@ -238,9 +236,7 @@ async fn two_datasets() {
         // --------------------------------------------------
         let request =
             CredentialRequest::builder().credential_identifier(identifier).with_proof(jwt).build();
-        let headers = CredentialHeaders {
-            authorization: token.access_token.clone(),
-        };
+        let headers = CredentialHeaders { authorization: token.access_token.clone() };
         let response =
             client.request(request).owner(ISSUER).headers(headers).await.expect("should execute");
 
@@ -337,9 +333,7 @@ async fn reduce_credentials() {
     // --------------------------------------------------
     let request =
         CredentialRequest::builder().credential_identifier(identifier).with_proof(jwt).build();
-    let headers = CredentialHeaders {
-        authorization: token.access_token.clone(),
-    };
+    let headers = CredentialHeaders { authorization: token.access_token.clone() };
     let response = client
         .request(request)
         .owner(ISSUER)
@@ -436,9 +430,7 @@ async fn reduce_claims() {
         .credential_identifier(&details[0].credential_identifiers[0])
         .with_proof(jwt)
         .build();
-    let headers = CredentialHeaders {
-        authorization: token.access_token.clone(),
-    };
+    let headers = CredentialHeaders { authorization: token.access_token.clone() };
 
     let response = client
         .request(request)
@@ -537,9 +529,7 @@ async fn notify_accepted() {
         .credential_identifier(&details[0].credential_identifiers[0])
         .with_proof(jwt)
         .build();
-    let headers = CredentialHeaders {
-        authorization: token.access_token.clone(),
-    };
+    let headers = CredentialHeaders { authorization: token.access_token.clone() };
 
     let response = client
         .request(request)
@@ -560,8 +550,6 @@ async fn notify_accepted() {
         .event(NotificationEvent::CredentialAccepted)
         .event_description("Credential accepted")
         .build();
-    let headers = NotificationHeaders {
-        authorization: token.access_token.clone(),
-    };
+    let headers = NotificationHeaders { authorization: token.access_token.clone() };
     client.request(request).owner(ISSUER).headers(headers).await.expect("response is ok");
 }

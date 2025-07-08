@@ -32,10 +32,7 @@ async fn par(
     let Ok(issuer_meta) = Metadata::issuer(provider, issuer).await else {
         return Err(Error::InvalidClient("invalid `credential_issuer`".to_string()));
     };
-    let mut ctx = authorize::Context {
-        issuer: issuer_meta,
-        ..authorize::Context::default()
-    };
+    let mut ctx = authorize::Context { issuer: issuer_meta, ..authorize::Context::default() };
     ctx.verify(issuer, provider, &request.request).await?;
 
     // generate a request URI and expiry between 5 - 600 secs
@@ -43,16 +40,10 @@ async fn par(
     let expires_in = Duration::seconds(600);
 
     // save request to state for retrieval by authorization endpoint
-    let state = State {
-        body: request.request.clone(),
-        expires_at: Utc::now() + expires_in,
-    };
+    let state = State { body: request.request.clone(), expires_at: Utc::now() + expires_in };
     StateStore::put(provider, issuer, &request_uri, &state).await.context("saving state")?;
 
-    Ok(PushedAuthorizationResponse {
-        request_uri,
-        expires_in: expires_in.num_seconds(),
-    })
+    Ok(PushedAuthorizationResponse { request_uri, expires_in: expires_in.num_seconds() })
 }
 
 impl<P: Provider> Handler<PushedAuthorizationResponse, P> for Request<PushedAuthorizationRequest> {

@@ -88,9 +88,7 @@ impl Signer for Issuer<'_> {
 
 impl Signature for Issuer<'_> {
     async fn verification_method(&self) -> Result<VerifyBy> {
-        let request = DocumentRequest {
-            url: format!("{}/.well-known/did.json", self.owner),
-        };
+        let request = DocumentRequest { url: format!("{}/.well-known/did.json", self.owner) };
         let document = Client::new(self.clone())
             .request(request)
             .owner(self.owner)

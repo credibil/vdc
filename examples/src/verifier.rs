@@ -81,9 +81,8 @@ async fn did(
     State(client): State<Client<Verifier<'static>>>, TypedHeader(host): TypedHeader<Host>,
     request: Request,
 ) -> Result<Json<Document>, AppError> {
-    let request = credibil_binding::DocumentRequest {
-        url: format!("http://{host}{}", request.uri()),
-    };
+    let request =
+        credibil_binding::DocumentRequest { url: format!("http://{host}{}", request.uri()) };
     let doc =
         client.request(request).owner(&format!("http://{host}")).await.map_err(AppError::from)?;
     Ok(Json(doc.0.clone()))

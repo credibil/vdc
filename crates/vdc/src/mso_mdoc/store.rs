@@ -38,9 +38,7 @@ pub async fn to_queryable(issued: &str, resolver: &impl Resolver) -> Result<Quer
     }
 
     Ok(Queryable {
-        meta: FormatProfile::MsoMdoc {
-            doctype: mso.0.doc_type,
-        },
+        meta: FormatProfile::MsoMdoc { doctype: mso.0.doc_type },
         claims,
         credential: Kind::String(issued.to_string()),
     })
@@ -55,10 +53,7 @@ fn unpack_claims(path: Vec<String>, value: &ciborium::Value) -> Vec<Claim> {
             acc
         }),
         ciborium::Value::Text(txt) => {
-            vec![Claim {
-                path,
-                value: serde_json::Value::String(txt.to_string()),
-            }]
+            vec![Claim { path, value: serde_json::Value::String(txt.to_string()) }]
         }
         _ => todo!(),
     }

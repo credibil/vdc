@@ -100,10 +100,7 @@ where
         if !sd_jwt.claims.sd.contains(&disclosure.hash()?) {
             return Err(anyhow!("disclosure not in sd-jwt `sd` claim"));
         }
-        claims.push(Claim {
-            path: vec![disclosure.name.clone()],
-            value: disclosure.value.clone(),
-        });
+        claims.push(Claim { path: vec![disclosure.name.clone()], value: disclosure.value.clone() });
     }
 
     Ok(claims)

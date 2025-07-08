@@ -43,10 +43,7 @@ pub async fn sign(payload: Vec<u8>, signer: &impl Signature) -> Result<CoseSign1
 
     let sig_data = sig_structure_data(
         SignatureContext::CoseSign1,
-        ProtectedHeader {
-            original_data: None,
-            header: protected.clone(),
-        },
+        ProtectedHeader { original_data: None, header: protected.clone() },
         None,
         &[],
         &payload,

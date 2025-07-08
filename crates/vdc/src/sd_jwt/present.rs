@@ -48,12 +48,7 @@ impl SdJwtVpBuilder<NoMatched, NoClientId, NoSigner> {
     /// Create a new builder.
     #[must_use]
     pub const fn new() -> Self {
-        Self {
-            matched: NoMatched,
-            client_id: NoClientId,
-            nonce: None,
-            signer: NoSigner,
-        }
+        Self { matched: NoMatched, client_id: NoClientId, nonce: None, signer: NoSigner }
     }
 }
 

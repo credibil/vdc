@@ -237,10 +237,7 @@ async fn authorize(
     // Generate a VP token
     // --------------------------------------------------
     let vp_token = vp_token::generate(&request_object, &results, &provider).await?;
-    let response = AuthorizationResponse {
-        vp_token,
-        state: request_object.state,
-    };
+    let response = AuthorizationResponse { vp_token, state: request_object.state };
 
     // --------------------------------------------------
     // Return an Authorization Response

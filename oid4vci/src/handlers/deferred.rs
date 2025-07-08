@@ -41,9 +41,7 @@ async fn deferred(
     // make credential request
     let req = Request {
         body: state.body.credential_request,
-        headers: CredentialHeaders {
-            authorization: request.headers.authorization,
-        },
+        headers: CredentialHeaders { authorization: request.headers.authorization },
     };
     let response = credential(issuer, provider, req).await?;
 

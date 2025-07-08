@@ -159,11 +159,7 @@ impl Disclosure {
             return Err(anyhow!("disclosure name is invalid"));
         };
 
-        Ok(Self {
-            salt: salt.to_string(),
-            name: name.to_string(),
-            value: disclosure[2].clone(),
-        })
+        Ok(Self { salt: salt.to_string(), name: name.to_string(), value: disclosure[2].clone() })
     }
 
     /// `Base64Url` encode the disclosure as JSON array of the form:

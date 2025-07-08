@@ -565,10 +565,7 @@ impl IssuerSigned {
     /// Create a new `IssuerSigned` with default values.
     #[must_use]
     pub fn new() -> Self {
-        Self {
-            name_spaces: BTreeMap::new(),
-            issuer_auth: IssuerAuth::default(),
-        }
+        Self { name_spaces: BTreeMap::new(), issuer_auth: IssuerAuth::default() }
     }
 }
 

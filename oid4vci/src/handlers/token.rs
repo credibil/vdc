@@ -41,17 +41,11 @@ use crate::{generate, pkce};
 async fn token(
     issuer: &str, provider: &impl Provider, request: TokenRequest,
 ) -> Result<TokenResponse> {
-    let mut ctx = Context {
-        issuer,
-        offered: None,
-        authorized: None,
-    };
+    let mut ctx = Context { issuer, offered: None, authorized: None };
 
     // get previously authorized credentials from state
     let (subject_id, authorized_details) = match &request.grant_type {
-        TokenGrantType::PreAuthorizedCode {
-            pre_authorized_code, ..
-        } => {
+        TokenGrantType::PreAuthorizedCode { pre_authorized_code, .. } => {
             let state = get_state::<Offered>(issuer, pre_authorized_code, provider).await?;
             ctx.offered = Some(state.body.clone());
             let Some(subject_id) = state.body.subject_id else {
@@ -172,11 +166,7 @@ impl TokenRequest {
                     return Err(Error::InvalidGrant("invalid `tx_code` provided".to_string()));
                 }
             }
-            TokenGrantType::AuthorizationCode {
-                redirect_uri,
-                code_verifier,
-                ..
-            } => {
+            TokenGrantType::AuthorizationCode { redirect_uri, code_verifier, .. } => {
                 let Some(authorization) = &ctx.authorized else {
                     return Err(server!("authorization state not set"));
                 };
@@ -294,9 +284,9 @@ fn verify_claims(issuer: &IssuerMetadata, detail: &AuthorizationDetail) -> Resul
 
     // get credential configuration with claim metadata
     let config_id = match &detail.credential {
-        AuthorizationDefinition::ConfigurationId {
-            credential_configuration_id,
-        } => credential_configuration_id,
+        AuthorizationDefinition::ConfigurationId { credential_configuration_id } => {
+            credential_configuration_id
+        }
         AuthorizationDefinition::FormatProfile(fmt) => {
             issuer.credential_configuration_id(fmt).context("issuer issue")?
         }

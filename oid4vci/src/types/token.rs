@@ -200,11 +200,7 @@ pub enum TokenGrantType {
 
 impl Default for TokenGrantType {
     fn default() -> Self {
-        Self::AuthorizationCode {
-            code: String::new(),
-            redirect_uri: None,
-            code_verifier: None,
-        }
+        Self::AuthorizationCode { code: String::new(), redirect_uri: None, code_verifier: None }
     }
 }
 
@@ -263,10 +259,7 @@ pub struct AuthorizedDetail {
 
 impl From<AuthorizationDetail> for AuthorizedDetail {
     fn from(authorization_detail: AuthorizationDetail) -> Self {
-        Self {
-            authorization_detail,
-            credential_identifiers: Vec::new(),
-        }
+        Self { authorization_detail, credential_identifiers: Vec::new() }
     }
 }
 
@@ -276,9 +269,9 @@ impl AuthorizedDetail {
     #[must_use]
     pub const fn credential_configuration_id(&self) -> Option<&str> {
         match &self.authorization_detail.credential {
-            AuthorizationDefinition::ConfigurationId {
-                credential_configuration_id,
-            } => Some(credential_configuration_id.as_str()),
+            AuthorizationDefinition::ConfigurationId { credential_configuration_id } => {
+                Some(credential_configuration_id.as_str())
+            }
             AuthorizationDefinition::FormatProfile(_) => None,
         }
     }
