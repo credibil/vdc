@@ -8,21 +8,14 @@
 //! `Datastore` trait, which is used to store and retrieve data. Users can
 //! implement the other traits as needed.
 
-use std::collections::HashMap;
 use std::future::Future;
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 pub use credibil_binding::{Resolver, Signature};
-use credibil_core::datastore::Datastore;
 pub use credibil_core::state::StateStore;
 pub use credibil_status::StatusStore;
 
 use crate::types::{ClientMetadata, Dataset, IssuerMetadata, ServerMetadata};
-
-const METADATA: &str = "metadata";
-const ISSUER: &str = "issuer";
-const SERVER: &str = "server";
-const SUBJECT: &str = "subject";
 
 /// Issuer Provider trait.
 pub trait Provider:
@@ -74,73 +67,4 @@ pub trait Subject: Send + Sync {
     fn dataset(
         &self, owner: &str, subject_id: &str, credential_identifier: &str,
     ) -> impl Future<Output = Result<Dataset>> + Send;
-}
-
-impl<T: Datastore> Metadata for T {
-    async fn client(&self, owner: &str, client_id: &str) -> Result<ClientMetadata> {
-        let Some(data) = Datastore::get(self, owner, METADATA, client_id).await? else {
-            return Err(anyhow!("could not find client"));
-        };
-        Ok(serde_json::from_slice(&data)?)
-    }
-
-    async fn issuer(&self, owner: &str) -> Result<IssuerMetadata> {
-        let Some(data) = Datastore::get(self, owner, METADATA, ISSUER).await? else {
-            return Err(anyhow!("could not find issuer metadata"));
-        };
-        Ok(serde_json::from_slice(&data)?)
-    }
-
-    async fn server(&self, owner: &str) -> Result<ServerMetadata> {
-        let Some(data) = Datastore::get(self, owner, METADATA, SERVER).await? else {
-            return Err(anyhow!("could not find server metadata"));
-        };
-        Ok(serde_json::from_slice(&data)?)
-    }
-
-    async fn register(&self, owner: &str, client: &ClientMetadata) -> Result<ClientMetadata> {
-        let mut client = client.clone();
-        client.oauth.client_id = uuid::Uuid::new_v4().to_string();
-
-        let data = serde_json::to_vec(&client)?;
-        Datastore::put(self, owner, METADATA, &client.oauth.client_id, &data).await?;
-        Ok(client)
-    }
-}
-
-impl<T: Datastore> Subject for T {
-    async fn authorize(
-        &self, owner: &str, subject_id: &str, credential_configuration_id: &str,
-    ) -> Result<Vec<String>> {
-        let Some(data) = Datastore::get(self, owner, SUBJECT, subject_id).await? else {
-            return Err(anyhow!("could not find dataset for subject"));
-        };
-        let datasets: HashMap<String, Dataset> = serde_json::from_slice(&data)?;
-
-        // find dataset identifiers for the provided subject & credential
-        let identifiers = datasets
-            .iter()
-            .filter(|(_, ds)| ds.credential_configuration_id == credential_configuration_id)
-            .map(|(k, _)| k.clone())
-            .collect::<Vec<_>>();
-        if identifiers.is_empty() {
-            return Err(anyhow!("no matching dataset for subject/credential"));
-        }
-
-        Ok(identifiers)
-    }
-
-    async fn dataset(
-        &self, owner: &str, subject_id: &str, credential_identifier: &str,
-    ) -> Result<Dataset> {
-        let Some(data) = Datastore::get(self, owner, SUBJECT, subject_id).await? else {
-            return Err(anyhow!("could not find dataset for subject"));
-        };
-        let datasets: HashMap<String, Dataset> = serde_json::from_slice(&data)?;
-
-        let Some(dataset) = datasets.get(credential_identifier) else {
-            return Err(anyhow!("could not find dataset for subject"));
-        };
-        Ok(dataset.clone())
-    }
 }

@@ -24,8 +24,8 @@ use std::fmt::Display;
 
 pub use credibil_binding::{self as identity, did};
 pub use credibil_core::api::*;
+pub use credibil_core::http;
 pub use credibil_core::state::State;
-pub use credibil_core::{datastore, http};
 use serde::{Deserialize, Serialize};
 pub use {credibil_jose as jose, credibil_status as status, credibil_vdc as vdc};
 
