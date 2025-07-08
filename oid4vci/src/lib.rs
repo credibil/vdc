@@ -24,12 +24,12 @@ mod state;
 pub mod proof {
     pub use credibil_vdc::w3c_vc::{Payload, Verify, W3cVcClaims};
 }
-pub use credibil_core::api::*;
-pub use credibil_core::state::State;
-pub use credibil_core::{OneMany, datastore, html, http};
-pub use credibil_proof::{
+pub use credibil_binding::{
     did, {self as identity},
 };
+pub use credibil_core::api::*;
+pub use credibil_core::state::State;
+pub use credibil_core::{OneMany, html, http};
 pub use credibil_vdc::{mso_mdoc, sd_jwt, w3c_vc};
 use serde::{Deserialize, Serialize};
 pub use {credibil_jose as jose, credibil_status as status, credibil_vdc as vdc};

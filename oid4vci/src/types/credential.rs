@@ -17,11 +17,7 @@ pub struct CredentialRequestBuilder<C, P> {
 
 impl Default for CredentialRequestBuilder<NoCredential, NoProofs> {
     fn default() -> Self {
-        Self {
-            credential: NoCredential,
-            proofs: NoProofs,
-            response_encryption: None,
-        }
+        Self { credential: NoCredential, proofs: NoProofs, response_encryption: None }
     }
 }
 
@@ -116,9 +112,7 @@ impl CredentialRequestBuilder<HasCredential, Proofs> {
     #[must_use]
     pub fn build(self) -> CredentialRequest {
         let proof = if self.proofs.0.len() == 1 {
-            Some(Proof::Single(SingleProof::Jwt {
-                jwt: self.proofs.0[0].clone(),
-            }))
+            Some(Proof::Single(SingleProof::Jwt { jwt: self.proofs.0[0].clone() }))
         } else {
             Some(Proof::Multiple(MultipleProofs::Jwt(self.proofs.0)))
         };
@@ -284,10 +278,7 @@ impl ProofClaims {
     /// Create a new `ProofClaims` instance.
     #[must_use]
     pub fn new() -> Self {
-        Self {
-            iat: Utc::now(),
-            ..Self::default()
-        }
+        Self { iat: Utc::now(), ..Self::default() }
     }
 
     /// Set the `client_id` of the Client making the Credential request.
@@ -434,9 +425,7 @@ pub enum CredentialResponse {
 impl Default for CredentialResponse {
     fn default() -> Self {
         Self::Credentials {
-            credentials: vec![Credential {
-                credential: Kind::default(),
-            }],
+            credentials: vec![Credential { credential: Kind::default() }],
             notification_id: None,
         }
     }
@@ -480,9 +469,7 @@ mod tests {
         });
         let request = CredentialRequest {
             credential: RequestBy::Identifier("EngineeringDegree2023".to_string()),
-            proof: Some(Proof::Single(SingleProof::Jwt {
-                jwt: "SomeJWT".to_string(),
-            })),
+            proof: Some(Proof::Single(SingleProof::Jwt { jwt: "SomeJWT".to_string() })),
             ..CredentialRequest::default()
         };
 

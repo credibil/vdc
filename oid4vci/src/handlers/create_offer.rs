@@ -91,10 +91,8 @@ async fn create_offer(
     let uri_token = generate::uri_token();
 
     // save offer to state
-    let state = State {
-        expires_at: Utc::now() + Expire::Authorized.duration(),
-        body: credential_offer,
-    };
+    let state =
+        State { expires_at: Utc::now() + Expire::Authorized.duration(), body: credential_offer };
     StateStore::put(provider, issuer, &uri_token, &state).await.context("saving state")?;
 
     Ok(Response {
@@ -167,10 +165,7 @@ impl CreateOfferRequest {
         let authorization_server =
             ctx.issuer.authorization_servers.as_ref().map(|servers| servers[0].clone());
 
-        let mut grants = Grants {
-            authorization_code: None,
-            pre_authorized_code: None,
-        };
+        let mut grants = Grants { authorization_code: None, pre_authorized_code: None };
 
         if grant_types.contains(&GrantType::PreAuthorizedCode) {
             let tx_code_def = if self.tx_code_required {

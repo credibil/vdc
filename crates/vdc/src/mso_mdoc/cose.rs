@@ -12,9 +12,9 @@ use coset::{
     CoseSign1, CoseSign1Builder, HeaderBuilder, ProtectedHeader, SignatureContext, iana,
     sig_structure_data,
 };
+use credibil_binding::{Signature, VerifyBy};
 use credibil_ecc::PublicKey;
 use credibil_jose::PublicKeyJwk;
-use credibil_proof::{Signature, VerifyBy};
 use serde::{Deserialize, Serialize, de, ser};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
@@ -43,10 +43,7 @@ pub async fn sign(payload: Vec<u8>, signer: &impl Signature) -> Result<CoseSign1
 
     let sig_data = sig_structure_data(
         SignatureContext::CoseSign1,
-        ProtectedHeader {
-            original_data: None,
-            header: protected.clone(),
-        },
+        ProtectedHeader { original_data: None, header: protected.clone() },
         None,
         &[],
         &payload,

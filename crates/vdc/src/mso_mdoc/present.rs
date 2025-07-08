@@ -4,8 +4,8 @@
 
 use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
+use credibil_binding::Signature;
 use credibil_core::Kind;
-use credibil_proof::Signature;
 use sha2::{Digest, Sha256};
 
 use crate::dcql::Matched;
@@ -253,11 +253,10 @@ impl<S: Signature>
 
 #[cfg(test)]
 mod tests {
+    use credibil_binding::resolve_jwk;
     use credibil_jose::KeyBinding;
-    use credibil_proof::resolve_jwk;
     use serde_json::{Value, json};
-    use test_utils::issuer::Issuer;
-    use test_utils::wallet::Wallet;
+    use test_utils::{Issuer, Wallet};
 
     use super::*;
     use crate::dcql::Claim;
@@ -278,10 +277,8 @@ mod tests {
         };
 
         // skip `portrait` claim
-        let matched = Matched {
-            claims: vec![given_name, family_name],
-            issued: &Kind::String(issued),
-        };
+        let matched =
+            Matched { claims: vec![given_name, family_name], issued: &Kind::String(issued) };
 
         let response = DeviceResponseBuilder::new()
             .matched(&matched)

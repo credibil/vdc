@@ -2,8 +2,8 @@
 
 use anyhow::{Context as _, Result, anyhow};
 use chrono::Utc;
+use credibil_binding::Signature;
 use credibil_jose::Jws;
-use credibil_proof::Signature;
 
 use crate::dcql::Matched;
 use crate::sd_jwt::{Disclosure, JwtType, KbJwtClaims};
@@ -48,12 +48,7 @@ impl SdJwtVpBuilder<NoMatched, NoClientId, NoSigner> {
     /// Create a new builder.
     #[must_use]
     pub const fn new() -> Self {
-        Self {
-            matched: NoMatched,
-            client_id: NoClientId,
-            nonce: None,
-            signer: NoSigner,
-        }
+        Self { matched: NoMatched, client_id: NoClientId, nonce: None, signer: NoSigner }
     }
 }
 

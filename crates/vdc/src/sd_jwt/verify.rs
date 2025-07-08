@@ -1,8 +1,8 @@
 //! # sd-jwt Identity
 
 use anyhow::{Result, anyhow};
+use credibil_binding::{Resolver, resolve_jwk};
 use credibil_jose::{Jwt, decode_jws};
-use credibil_proof::{Resolver, resolve_jwk};
 use credibil_status::{StatusListClaims, StatusToken};
 
 use crate::dcql::Claim;
@@ -100,10 +100,7 @@ where
         if !sd_jwt.claims.sd.contains(&disclosure.hash()?) {
             return Err(anyhow!("disclosure not in sd-jwt `sd` claim"));
         }
-        claims.push(Claim {
-            path: vec![disclosure.name.clone()],
-            value: disclosure.value.clone(),
-        });
+        claims.push(Claim { path: vec![disclosure.name.clone()], value: disclosure.value.clone() });
     }
 
     Ok(claims)

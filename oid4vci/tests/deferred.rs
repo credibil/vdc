@@ -2,7 +2,8 @@
 
 use std::collections::HashMap;
 
-use credibil_oid4vci::datastore::Datastore;
+use credibil_binding::resolve_jwk;
+// use credibil_oid4vci::datastore::Datastore;
 use credibil_oid4vci::identity::{Signature, VerifyBy};
 use credibil_oid4vci::jose::{JwsBuilder, Jwt, decode_jws};
 use credibil_oid4vci::proof::W3cVcClaims;
@@ -11,10 +12,8 @@ use credibil_oid4vci::types::{
     DeferredCredentialRequest, NonceRequest, ProofClaims, TokenGrantType, TokenRequest,
 };
 use credibil_oid4vci::{Client, CredentialHeaders, DeferredHeaders, JwtType, OneMany};
-use credibil_proof::resolve_jwk;
 use serde_json::json;
-use test_utils::issuer::Issuer;
-use test_utils::wallet::Wallet;
+use test_utils::{Datastore, Issuer, Wallet};
 use tokio::sync::OnceCell;
 
 static CLIENT: OnceCell<Client<Issuer>> = OnceCell::const_new();
@@ -34,7 +33,7 @@ async fn carol() -> &'static Wallet<'static> {
         })
         .await
 }
-const CAROL_SUBJECT: &str = "pending_user";
+const CAROL_SUBJECT: &str = "pending-user";
 const ISSUER: &str = "http://localhost:8080";
 
 // Should return a credential when using the pre-authorized code flow and the
@@ -103,9 +102,7 @@ async fn deferred() {
     let response = client
         .request(request)
         .owner(ISSUER)
-        .headers(CredentialHeaders {
-            authorization: token.access_token.clone(),
-        })
+        .headers(CredentialHeaders { authorization: token.access_token.clone() })
         .await
         .expect("should return credential");
 
@@ -115,8 +112,7 @@ async fn deferred() {
     // --------------------------------------------------
     let credential_identifier = &details[0].credential_identifiers[0];
 
-    let data =
-        Datastore::get(&client.provider, ISSUER, "subject", CAROL_SUBJECT).await.unwrap().unwrap();
+    let data = Datastore::get(ISSUER, "subject", CAROL_SUBJECT).await.unwrap().unwrap();
     let mut subject: HashMap<String, Dataset> = serde_json::from_slice(&data).unwrap();
 
     let mut credential: Dataset = subject.get(credential_identifier).unwrap().clone();
@@ -124,8 +120,8 @@ async fn deferred() {
     subject.insert(credential_identifier.to_string(), credential);
 
     let data = serde_json::to_vec(&subject).unwrap();
-    Datastore::delete(&client.provider, ISSUER, "subject", CAROL_SUBJECT).await.unwrap();
-    Datastore::put(&client.provider, ISSUER, "subject", CAROL_SUBJECT, &data).await.unwrap();
+    Datastore::delete(ISSUER, "subject", CAROL_SUBJECT).await.unwrap();
+    Datastore::put(ISSUER, "subject", CAROL_SUBJECT, &data).await.unwrap();
 
     // --------------------------------------------------
     // After a brief wait Bob retrieves the credential
@@ -134,12 +130,8 @@ async fn deferred() {
         panic!("expected transaction_id");
     };
 
-    let request = DeferredCredentialRequest {
-        transaction_id: transaction_id.clone(),
-    };
-    let headers = DeferredHeaders {
-        authorization: token.access_token.clone(),
-    };
+    let request = DeferredCredentialRequest { transaction_id: transaction_id.clone() };
+    let headers = DeferredHeaders { authorization: token.access_token.clone() };
     let response = client
         .request(request)
         .owner(ISSUER)

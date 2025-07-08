@@ -58,11 +58,7 @@ async fn authorize(
         return Err(invalid!("invalid `credential_issuer`"));
     };
 
-    let mut ctx = Context {
-        issuer: issuer_meta,
-        is_par,
-        ..Context::default()
-    };
+    let mut ctx = Context { issuer: issuer_meta, is_par, ..Context::default() };
     ctx.verify(issuer, provider, &request).await?;
 
     // authorization_detail
@@ -277,9 +273,9 @@ impl Context {
 
             // verify requested claims
             let config_id = match &detail.credential {
-                AuthorizationDefinition::ConfigurationId {
-                    credential_configuration_id,
-                } => credential_configuration_id,
+                AuthorizationDefinition::ConfigurationId { credential_configuration_id } => {
+                    credential_configuration_id
+                }
                 AuthorizationDefinition::FormatProfile(fmt) => {
                     let config_id = self
                         .issuer

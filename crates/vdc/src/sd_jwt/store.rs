@@ -1,8 +1,8 @@
 //! # Store
 
 use anyhow::{Result, anyhow};
+use credibil_binding::Resolver;
 use credibil_core::Kind;
-use credibil_proof::Resolver;
 use serde_json::Value;
 
 use crate::FormatProfile;
@@ -38,9 +38,7 @@ pub async fn to_queryable(issued: &str, resolver: &impl Resolver) -> Result<Quer
     }
 
     Ok(Queryable {
-        meta: FormatProfile::DcSdJwt {
-            vct: sd_jwt.claims.vct,
-        },
+        meta: FormatProfile::DcSdJwt { vct: sd_jwt.claims.vct },
         claims,
         credential: Kind::String(issued.to_string()),
     })
@@ -54,9 +52,6 @@ fn unpack_claims(path: Vec<String>, value: &Value) -> Vec<Claim> {
             acc.extend(unpack_claims(new_path, value));
             acc
         }),
-        _ => vec![Claim {
-            path,
-            value: value.clone(),
-        }],
+        _ => vec![Claim { path, value: value.clone() }],
     }
 }

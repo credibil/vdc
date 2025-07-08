@@ -3,6 +3,7 @@
 //! Pre-Authorized Code Flow Tests
 
 use base64ct::{Base64UrlUnpadded, Encoding};
+use credibil_binding::resolve_jwk;
 use credibil_jose::{JwsBuilder, Jwt, decode_jws};
 use credibil_oid4vci::identity::{Signature, VerifyBy};
 use credibil_oid4vci::proof::W3cVcClaims;
@@ -12,15 +13,13 @@ use credibil_oid4vci::types::{
 };
 use credibil_oid4vci::vdc::sd_jwt::SdJwtClaims;
 use credibil_oid4vci::{Client, CredentialHeaders, JwtType, OneMany};
-use credibil_proof::resolve_jwk;
 use serde_json::json;
 use sha2::{Digest, Sha256};
-use test_utils::issuer::Issuer;
-use test_utils::wallet::Wallet;
+use test_utils::{Issuer, Wallet};
 use tokio::sync::OnceCell;
 
 const ISSUER: &str = "http://localhost:8080";
-const BOB_SUBJECT: &str = "normal_user";
+const BOB_SUBJECT: &str = "normal-user";
 
 static CLIENT: OnceCell<Client<Issuer>> = OnceCell::const_new();
 static BOB: OnceCell<Wallet> = OnceCell::const_new();
@@ -122,9 +121,7 @@ async fn two_proofs() {
     let response = client
         .request(request)
         .owner(ISSUER)
-        .headers(CredentialHeaders {
-            authorization: token.access_token.clone(),
-        })
+        .headers(CredentialHeaders { authorization: token.access_token.clone() })
         .await
         .expect("should return credential");
 
@@ -232,9 +229,7 @@ async fn sd_jwt() {
     let response = client
         .request(request)
         .owner(ISSUER)
-        .headers(CredentialHeaders {
-            authorization: token.access_token.clone(),
-        })
+        .headers(CredentialHeaders { authorization: token.access_token.clone() })
         .await
         .expect("should return credential");
 

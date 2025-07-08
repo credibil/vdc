@@ -626,10 +626,7 @@ impl LangString {
     pub fn add(&mut self, value: Language) {
         match &self.0 {
             Kind::String(s) => {
-                let existing = Language {
-                    value: s.clone(),
-                    ..Language::default()
-                };
+                let existing = Language { value: s.clone(), ..Language::default() };
                 self.0 = Kind::Object(OneMany::Many(vec![existing, value]));
             }
             Kind::Object(lang_values) => {
@@ -825,10 +822,7 @@ mod tests {
 
         let mut issuer = match &vc.issuer {
             Kind::Object(issuer) => issuer.clone(),
-            Kind::String(id) => Issuer {
-                id: id.clone(),
-                ..Issuer::default()
-            },
+            Kind::String(id) => Issuer { id: id.clone(), ..Issuer::default() },
         };
         issuer.extra = Some(HashMap::from([(
             "name".to_string(),

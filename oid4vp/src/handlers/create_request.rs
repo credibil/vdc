@@ -58,10 +58,7 @@ async fn create_request(
         AuthorizationRequest::Object(req_obj.clone())
     };
 
-    let state = State {
-        expires_at: Utc::now() + Expire::Request.duration(),
-        body: req_obj,
-    };
+    let state = State { expires_at: Utc::now() + Expire::Request.duration(), body: req_obj };
     StateStore::put(provider, verifier, &uri_token, &state).await.context("saving state")?;
 
     Ok(CreateResponse(auth_req))

@@ -27,10 +27,8 @@ use crate::types::{NonceRequest, NonceResponse};
 async fn nonce(issuer: &str, provider: &impl Provider, _: NonceRequest) -> Result<NonceResponse> {
     let c_nonce = generate::nonce();
 
-    let state = &State {
-        body: c_nonce.clone(),
-        expires_at: Utc::now() + Expire::Authorized.duration(),
-    };
+    let state =
+        &State { body: c_nonce.clone(), expires_at: Utc::now() + Expire::Authorized.duration() };
     StateStore::put(provider, issuer, &c_nonce, state).await.context("failed to purge state")?;
 
     Ok(NonceResponse { c_nonce })

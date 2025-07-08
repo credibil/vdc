@@ -19,9 +19,9 @@ path = "src/cmd/automated.rs"
 anyhow.workspace = true
 axum.workspace = true
 axum-extra.workspace = true
+credibil-binding.workspace = true
 credibil-oid4vci = { path = "../oid4vci" }
 credibil-oid4vp = { path = "../oid4vp" }
-credibil-proof.workspace = true
 http.workspace = true
 oauth2 = { version = "5.0.0" }
 reqwest.workspace = true
@@ -30,5 +30,5 @@ serde_json.workspace = true
 test-utils.workspace = true
 tokio.workspace = true
 tower-http.workspace = true
-tracing-subscriber.workspace = true
 tracing.workspace = true
+tracing-subscriber.workspace = true

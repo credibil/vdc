@@ -1,8 +1,8 @@
 //! # W3C Identity
 
 use anyhow::{Result, anyhow};
+use credibil_binding::{Resolver, resolve_jwk};
 use credibil_jose::{Jwt, decode_jws};
-use credibil_proof::{Resolver, resolve_jwk};
 
 use super::W3cVpClaims;
 use crate::dcql::Claim;

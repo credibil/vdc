@@ -10,8 +10,8 @@ use bitvec::slice::BitSlice;
 use bitvec::vec::BitVec;
 use bitvec::view::BitView;
 use chrono::{DateTime, Utc};
+use credibil_binding::Signature;
 use credibil_jose::Jws;
-use credibil_proof::Signature;
 use flate2::Compression;
 use flate2::read::ZlibDecoder;
 use flate2::write::ZlibEncoder;
@@ -68,9 +68,7 @@ impl StatusList {
         let deflated = encoder.finish()?;
         self.lst = Base64UrlUnpadded::encode_string(&deflated);
 
-        Ok(StatusClaim {
-            status_list: StatusListEntry { idx, uri: uri.into() },
-        })
+        Ok(StatusClaim { status_list: StatusListEntry { idx, uri: uri.into() } })
     }
 }
 
@@ -119,12 +117,7 @@ impl TokenBuilder<NoList, NoUri, NoSigner> {
     /// Create a new `TokenBuilder`.
     #[must_use]
     pub const fn new() -> Self {
-        Self {
-            status_list: NoList,
-            uri: NoUri,
-            expiry: None,
-            signer: NoSigner,
-        }
+        Self { status_list: NoList, uri: NoUri, expiry: None, signer: NoSigner }
     }
 }
 

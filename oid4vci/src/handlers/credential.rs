@@ -13,10 +13,10 @@ use std::fmt::Debug;
 
 use anyhow::Context as _;
 use chrono::Utc;
+use credibil_binding::resolve_jwk;
 use credibil_core::api::{Body, Handler, Request, Response};
 use credibil_core::state::State;
 use credibil_jose::{Jwt, KeyBinding, decode_jws};
-use credibil_proof::resolve_jwk;
 use credibil_status::{StatusList, StatusStore, TokenBuilder};
 use credibil_vdc::FormatProfile;
 use credibil_vdc::mso_mdoc::MdocBuilder;
@@ -231,9 +231,7 @@ impl Context {
                 .context("creating status claim")?;
 
             let credential = match &self.configuration.profile {
-                FormatProfile::JwtVcJson {
-                    credential_definition,
-                } => {
+                FormatProfile::JwtVcJson { credential_definition } => {
                     // FIXME: do we need to resolve DID document?
                     let Some(did) = kid.split('#').next() else {
                         return Err(Error::InvalidProof("Proof JWT DID is invalid".to_string()));
@@ -249,9 +247,7 @@ impl Context {
                         .await
                         .context("creating `jwt_vc_json` credential")?;
 
-                    Credential {
-                        credential: jwt.into(),
-                    }
+                    Credential { credential: jwt.into() }
                 }
                 FormatProfile::MsoMdoc { doctype } => {
                     let jwk = resolve_jwk(kid, provider)
@@ -267,9 +263,7 @@ impl Context {
                         .await
                         .context("creating `mso_mdoc` credential")?;
 
-                    Credential {
-                        credential: mdl.into(),
-                    }
+                    Credential { credential: mdl.into() }
                 }
                 FormatProfile::DcSdJwt { vct } => {
                     // TODO: cache the result of jwk when verifying proof (`verify` method)
@@ -291,9 +285,7 @@ impl Context {
                         .await
                         .context("creating `dc+sd-jwt` credential")?;
 
-                    Credential {
-                        credential: sd_jwt.into(),
-                    }
+                    Credential { credential: sd_jwt.into() }
                 }
                 FormatProfile::JwtVcJsonLd { .. } => todo!(),
                 FormatProfile::LdpVc { .. } => todo!(),
@@ -327,10 +319,7 @@ impl Context {
             .await
             .context("saving state")?;
 
-        Ok(CredentialResponse::Credentials {
-            credentials,
-            notification_id: Some(notification_id),
-        })
+        Ok(CredentialResponse::Credentials { credentials, notification_id: Some(notification_id) })
     }
 
     // Defer issuance of the requested credential.
@@ -340,17 +329,12 @@ impl Context {
         let txn_id = generate::transaction_id();
 
         let state = State {
-            body: Deferred {
-                transaction_id: txn_id.clone(),
-                credential_request: request,
-            },
+            body: Deferred { transaction_id: txn_id.clone(), credential_request: request },
             expires_at: Utc::now() + Expire::Access.duration(),
         };
         StateStore::put(provider, issuer, &txn_id, &state).await.context("saving state")?;
 
-        Ok(CredentialResponse::TransactionId {
-            transaction_id: txn_id,
-        })
+        Ok(CredentialResponse::TransactionId { transaction_id: txn_id })
     }
 
     // Get credential dataset for the request

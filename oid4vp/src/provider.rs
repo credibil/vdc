@@ -2,10 +2,9 @@
 
 use std::future::Future;
 
-use anyhow::{Result, anyhow};
-use credibil_core::datastore::Datastore;
+use anyhow::Result;
+pub use credibil_binding::{Resolver, Signature};
 pub use credibil_core::state::StateStore;
-pub use credibil_proof::{Resolver, Signature};
 pub use credibil_status::StatusToken;
 
 use crate::types::VerifierMetadata;
@@ -31,25 +30,4 @@ pub trait Metadata: Send + Sync {
     fn register(
         &self, owner: &str, verifier: &VerifierMetadata,
     ) -> impl Future<Output = Result<VerifierMetadata>> + Send;
-}
-
-const METADATA: &str = "metadata";
-const VERIFIER: &str = "verifier";
-
-impl<T: Datastore> Metadata for T {
-    async fn verifier(&self, owner: &str) -> Result<VerifierMetadata> {
-        let Some(data) = Datastore::get(self, owner, METADATA, VERIFIER).await? else {
-            return Err(anyhow!("could not find client"));
-        };
-        Ok(serde_json::from_slice(&data)?)
-    }
-
-    async fn register(&self, owner: &str, verifier: &VerifierMetadata) -> Result<VerifierMetadata> {
-        let mut verifier = verifier.clone();
-        verifier.oauth.client_id = uuid::Uuid::new_v4().to_string();
-
-        let data = serde_json::to_vec(&verifier)?;
-        Datastore::put(self, owner, VERIFIER, &verifier.oauth.client_id, &data).await?;
-        Ok(verifier)
-    }
 }

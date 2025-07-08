@@ -99,10 +99,7 @@ impl CredentialQuery {
         let mut matches = vec![];
         for vc in credentials {
             if let Some(claims) = self.is_match(vc) {
-                matches.push(Matched {
-                    claims,
-                    issued: &vc.credential,
-                });
+                matches.push(Matched { claims, issued: &vc.credential });
                 if multiple {
                     break;
                 }
@@ -362,24 +359,21 @@ impl MetadataQuery {
     pub fn execute(&self, credential: &Queryable) -> bool {
         match &self {
             Self::MsoMdoc { doctype_value } => {
-                if let FormatProfile::MsoMdoc { doctype } = &credential.meta {
-                    if doctype == doctype_value {
-                        return true;
-                    }
+                if let FormatProfile::MsoMdoc { doctype } = &credential.meta
+                    && doctype == doctype_value
+                {
+                    return true;
                 }
             }
             Self::SdJwt { vct_values } => {
-                if let FormatProfile::DcSdJwt { vct } = &credential.meta {
-                    if vct_values.contains(vct) {
-                        return true;
-                    }
+                if let FormatProfile::DcSdJwt { vct } = &credential.meta
+                    && vct_values.contains(vct)
+                {
+                    return true;
                 }
             }
             Self::W3cVc { type_values } => {
-                if let FormatProfile::JwtVcJson {
-                    credential_definition,
-                } = &credential.meta
-                {
+                if let FormatProfile::JwtVcJson { credential_definition } = &credential.meta {
                     // all `credential_definition.type` values must be
                     // contained in a single `type_values` set
                     'next_set: for type_value in type_values {
@@ -402,9 +396,7 @@ impl MetadataQuery {
 
 impl Default for MetadataQuery {
     fn default() -> Self {
-        Self::W3cVc {
-            type_values: vec![vec![]],
-        }
+        Self::W3cVc { type_values: vec![vec![]] }
     }
 }
 
@@ -417,12 +409,8 @@ impl From<&MetadataQuery> for FormatProfile {
 impl From<MetadataQuery> for FormatProfile {
     fn from(value: MetadataQuery) -> Self {
         match value {
-            MetadataQuery::MsoMdoc { doctype_value } => Self::MsoMdoc {
-                doctype: doctype_value,
-            },
-            MetadataQuery::SdJwt { vct_values } => Self::DcSdJwt {
-                vct: vct_values[0].clone(),
-            },
+            MetadataQuery::MsoMdoc { doctype_value } => Self::MsoMdoc { doctype: doctype_value },
+            MetadataQuery::SdJwt { vct_values } => Self::DcSdJwt { vct: vct_values[0].clone() },
             MetadataQuery::W3cVc { type_values } => Self::JwtVcJson {
                 credential_definition: CredentialDefinition {
                     context: None,

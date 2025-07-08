@@ -1,6 +1,6 @@
 //! Tests for the Verifier API
 
-use credibil_oid4vp::datastore::Datastore;
+use credibil_binding::resolve_jwk;
 use credibil_oid4vp::identity::{Signature, VerifyBy};
 use credibil_oid4vp::jose::PublicKeyJwk;
 use credibil_oid4vp::status::{STATUSTOKEN, StatusClaim, StatusList, TokenBuilder};
@@ -11,11 +11,8 @@ use credibil_oid4vp::{
     AuthorizationRequest, AuthorizationResponse, Client, CreateRequest, DeviceFlow, ResponseMode,
     vp_token,
 };
-use credibil_proof::resolve_jwk;
 use serde_json::{Value, json};
-use test_utils::issuer::Issuer;
-use test_utils::verifier::Verifier;
-use test_utils::wallet::Wallet;
+use test_utils::{Datastore, Issuer, Verifier, Wallet};
 use tokio::sync::OnceCell;
 
 const ISSUER_ID: &str = "http://localhost:8080";
@@ -90,10 +87,7 @@ async fn multiple_claims() {
     // assert_eq!(results.len(), 2);
 
     let vp_token = vp_token::generate(&req_obj, &results, wallet).await.expect("should get token");
-    let request = AuthorizationResponse {
-        vp_token,
-        state: req_obj.state,
-    };
+    let request = AuthorizationResponse { vp_token, state: req_obj.state };
 
     // --------------------------------------------------
     // Verifier processes the Wallets's Authorization Response.
@@ -185,10 +179,7 @@ async fn multiple_credentials() {
     let vp_token = vp_token::generate(&req_obj, &results, wallet).await.expect("should get token");
     assert_eq!(vp_token.len(), 3);
 
-    let request = AuthorizationResponse {
-        vp_token,
-        state: req_obj.state,
-    };
+    let request = AuthorizationResponse { vp_token, state: req_obj.state };
     let response = client.request(request).owner(VERIFIER_ID).await.expect("should execute");
 
     // --------------------------------------------------
@@ -502,7 +493,7 @@ async fn populate(owner: &str) -> Wallet<'_> {
         .await
         .expect("should build status list token");
     let data = serde_json::to_vec(&token).expect("should serialize");
-    Datastore::put(issuer, ISSUER_ID, STATUSTOKEN, &statuslist_id, &data).await.unwrap();
+    Datastore::put(ISSUER_ID, STATUSTOKEN, &statuslist_id, &data).await.unwrap();
 
     // load credentials
     let vct = "https://credentials.example.com/identity_credential";

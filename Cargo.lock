@@ -98,12 +98,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "76a2e8124351fda1ef8aaaa3bbd7ebbcb486bbcd4225aca0aa0d84bb2db8fecb"
 
 [[package]]
-name = "arrayvec"
-version = "0.7.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
-
-[[package]]
 name = "atomic-waker"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -268,41 +262,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "blake2b_simd"
-version = "1.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06e903a20b159e944f91ec8499fe1e55651480c541ea0a584f5d967c49ad9d99"
-dependencies = [
- "arrayref",
- "arrayvec",
- "constant_time_eq",
-]
-
-[[package]]
-name = "blake2s_simd"
-version = "1.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e90f7deecfac93095eb874a40febd69427776e24e1bd7f87f33ac62d6f0174df"
-dependencies = [
- "arrayref",
- "arrayvec",
- "constant_time_eq",
-]
-
-[[package]]
-name = "blake3"
-version = "1.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3888aaa89e4b2a40fca9848e400f6a658a5a3978de7be858e209cafa8be9a4a0"
-dependencies = [
- "arrayref",
- "arrayvec",
- "cc",
- "cfg-if",
- "constant_time_eq",
-]
-
-[[package]]
 name = "block-buffer"
 version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -322,12 +281,6 @@ name = "bytemuck"
 version = "1.23.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c76a5792e44e4abe34d3abf15636779261d45a7450612059293d1d2cfc63422"
-
-[[package]]
-name = "byteorder"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 
 [[package]]
 name = "byteorder-lite"
@@ -429,18 +382,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cid"
-version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3147d8272e8fa0ccd29ce51194dd98f79ddfb8191ba9e3409884e751798acf3a"
-dependencies = [
- "core2",
- "multibase",
- "multihash",
- "unsigned-varint",
-]
-
-[[package]]
 name = "cipher"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -458,12 +399,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2459377285ad874054d797f3ccebf984978aa39129f6eafde5cdc8315b612f8"
 
 [[package]]
-name = "constant_time_eq"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c74b8349d32d297c9134b8c88677813a227df8f779daa29bfc29c183fe3dca6"
-
-[[package]]
 name = "core-foundation"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -478,15 +413,6 @@ name = "core-foundation-sys"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
-
-[[package]]
-name = "core2"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b49ba7ef1ad6107f8824dbe97de947cbaac53c44e7f9756a1fba0d37c1eec505"
-dependencies = [
- "memchr",
-]
 
 [[package]]
 name = "coset"
@@ -517,9 +443,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "credibil-binding"
+version = "0.1.2"
+source = "git+https://github.com/credibil/key.git#5cd36bd7da09d74131016f88b936444c5141cf8f"
+dependencies = [
+ "anyhow",
+ "credibil-core",
+ "credibil-did",
+ "credibil-ecc",
+ "credibil-jose",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "credibil-core"
 version = "0.1.0"
-source = "git+https://github.com/credibil/core.git#a68726d10f58e8469c2e50c0a4b06df29f410360"
+source = "git+https://github.com/credibil/core.git#a394f342e97bc4bfe3733ce46c4167c77622a89f"
 dependencies = [
  "anyhow",
  "bytes",
@@ -536,7 +476,7 @@ dependencies = [
 [[package]]
 name = "credibil-did"
 version = "0.1.2"
-source = "git+https://github.com/credibil/proof.git#59ec40d7dd41e2602b7d140a4117fe6d69e5f2a6"
+source = "git+https://github.com/credibil/key.git#5cd36bd7da09d74131016f88b936444c5141cf8f"
 dependencies = [
  "anyhow",
  "chrono",
@@ -556,7 +496,7 @@ dependencies = [
 [[package]]
 name = "credibil-ecc"
 version = "0.1.2"
-source = "git+https://github.com/credibil/key.git#3e112c2e0c5eeadfd9a66c1f4e7eb81514dff06a"
+source = "git+https://github.com/credibil/key.git#5cd36bd7da09d74131016f88b936444c5141cf8f"
 dependencies = [
  "aes-gcm",
  "aes-kw",
@@ -579,7 +519,7 @@ dependencies = [
 [[package]]
 name = "credibil-jose"
 version = "0.1.2"
-source = "git+https://github.com/credibil/key.git#3e112c2e0c5eeadfd9a66c1f4e7eb81514dff06a"
+source = "git+https://github.com/credibil/key.git#5cd36bd7da09d74131016f88b936444c5141cf8f"
 dependencies = [
  "anyhow",
  "base64ct",
@@ -600,10 +540,10 @@ dependencies = [
  "axum-extra",
  "base64ct",
  "chrono",
+ "credibil-binding",
  "credibil-core",
  "credibil-ecc",
  "credibil-jose",
- "credibil-proof",
  "credibil-status",
  "credibil-vdc",
  "fastrand",
@@ -622,7 +562,6 @@ dependencies = [
  "tower-http",
  "tracing",
  "tracing-subscriber",
- "uuid",
 ]
 
 [[package]]
@@ -634,10 +573,10 @@ dependencies = [
  "axum-extra",
  "base64ct",
  "chrono",
+ "credibil-binding",
  "credibil-core",
  "credibil-ecc",
  "credibil-jose",
- "credibil-proof",
  "credibil-status",
  "credibil-vdc",
  "fastrand",
@@ -651,22 +590,6 @@ dependencies = [
  "tokio",
  "tower-http",
  "tracing-subscriber",
- "uuid",
-]
-
-[[package]]
-name = "credibil-proof"
-version = "0.1.2"
-source = "git+https://github.com/credibil/proof.git#59ec40d7dd41e2602b7d140a4117fe6d69e5f2a6"
-dependencies = [
- "anyhow",
- "credibil-core",
- "credibil-did",
- "credibil-ecc",
- "credibil-jose",
- "serde",
- "serde_json",
- "tracing",
 ]
 
 [[package]]
@@ -677,13 +600,11 @@ dependencies = [
  "base64ct",
  "bitvec",
  "chrono",
+ "credibil-binding",
  "credibil-core",
  "credibil-jose",
- "credibil-proof",
  "flate2",
- "http",
  "serde",
- "serde_json",
  "serde_repr",
  "thiserror 2.0.12",
 ]
@@ -697,10 +618,10 @@ dependencies = [
  "chrono",
  "ciborium",
  "coset",
+ "credibil-binding",
  "credibil-core",
  "credibil-ecc",
  "credibil-jose",
- "credibil-proof",
  "credibil-status",
  "fastrand",
  "hex",
@@ -983,9 +904,9 @@ dependencies = [
  "anyhow",
  "axum",
  "axum-extra",
+ "credibil-binding",
  "credibil-oid4vci",
  "credibil-oid4vp",
- "credibil-proof",
  "http",
  "oauth2",
  "reqwest",
@@ -1373,9 +1294,9 @@ dependencies = [
 
 [[package]]
 name = "hyper-util"
-version = "0.1.14"
+version = "0.1.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc2fdfdbff08affe55bb779f33b053aa1fe5dd5b54c257343c17edfa55711bdb"
+checksum = "7f66d5bd4c6f02bf0542fad85d626775bab9258cf795a4256dcaf3161114d1df"
 dependencies = [
  "base64",
  "bytes",
@@ -1617,15 +1538,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "keccak"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ecc2af9a1119c51f12a14607e783cb977bde58bc069ff0c3da1095e635d70654"
-dependencies = [
- "cpufeatures",
-]
-
-[[package]]
 name = "lazy_static"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1773,59 +1685,6 @@ dependencies = [
  "base-x",
  "data-encoding",
  "data-encoding-macro",
-]
-
-[[package]]
-name = "multihash"
-version = "0.19.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b430e7953c29dd6a09afc29ff0bb69c6e306329ee6794700aee27b76a1aea8d"
-dependencies = [
- "core2",
- "unsigned-varint",
-]
-
-[[package]]
-name = "multihash-codetable"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67996849749d25f1da9f238e8ace2ece8f9d6bdf3f9750aaf2ae7de3a5cad8ea"
-dependencies = [
- "blake2b_simd",
- "blake2s_simd",
- "blake3",
- "core2",
- "digest 0.10.7",
- "multihash-derive",
- "ripemd",
- "sha1",
- "sha2",
- "sha3",
- "strobe-rs",
-]
-
-[[package]]
-name = "multihash-derive"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f1b7edab35d920890b88643a765fc9bd295cf0201f4154dda231bef9b8404eb"
-dependencies = [
- "core2",
- "multihash",
- "multihash-derive-impl",
-]
-
-[[package]]
-name = "multihash-derive-impl"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3dc7141bd06405929948754f0628d247f5ca1865be745099205e5086da957cb"
-dependencies = [
- "proc-macro-crate",
- "proc-macro2",
- "quote",
- "syn",
- "synstructure",
 ]
 
 [[package]]
@@ -2116,15 +1975,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "proc-macro-crate"
-version = "3.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "edce586971a4dfaa28950c6f18ed55e0406c1ab88bbce2c6f6293a7aaba73d35"
-dependencies = [
- "toml_edit",
-]
-
-[[package]]
 name = "proc-macro2"
 version = "1.0.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2399,15 +2249,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ripemd"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd124222d17ad93a644ed9d011a40f4fb64aa54275c08cc216524a9ea82fb09f"
-dependencies = [
- "digest 0.10.7",
-]
-
-[[package]]
 name = "rustc-demangle"
 version = "0.1.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2651,16 +2492,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sha3"
-version = "0.10.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75872d278a8f37ef87fa0ddbda7802605cb18344497949862c0d4dcb291eba60"
-dependencies = [
- "digest 0.10.7",
- "keccak",
-]
-
-[[package]]
 name = "sharded-slab"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2737,19 +2568,6 @@ name = "stable_deref_trait"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
-
-[[package]]
-name = "strobe-rs"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "98fe17535ea31344936cc58d29fec9b500b0452ddc4cc24c429c8a921a0e84e5"
-dependencies = [
- "bitflags 1.3.2",
- "byteorder",
- "keccak",
- "subtle",
- "zeroize",
-]
 
 [[package]]
 name = "subtle"
@@ -2833,14 +2651,13 @@ name = "test-utils"
 version = "0.0.0"
 dependencies = [
  "anyhow",
- "ciborium",
- "cid",
- "credibil-core",
+ "credibil-binding",
  "credibil-ecc",
- "credibil-proof",
+ "credibil-oid4vci",
+ "credibil-oid4vp",
  "credibil-vdc",
  "dashmap",
- "multihash-codetable",
+ "http",
  "reqwest",
  "serde",
  "serde_json",
@@ -2984,23 +2801,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "toml_datetime"
-version = "0.6.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22cddaf88f4fbc13c51aebbf5f8eceb5c7c5a9da2ac40a13519eb5b0a0e8f11c"
-
-[[package]]
-name = "toml_edit"
-version = "0.22.27"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41fe8c660ae4257887cf66394862d21dbca4a6ddd26f04a3560410406a2f819a"
-dependencies = [
- "indexmap",
- "toml_datetime",
- "winnow",
-]
-
-[[package]]
 name = "tower"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3136,12 +2936,6 @@ dependencies = [
  "crypto-common",
  "subtle",
 ]
-
-[[package]]
-name = "unsigned-varint"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb066959b24b5196ae73cb057f45598450d2c5f71460e98c49b738086eff9c06"
 
 [[package]]
 name = "untrusted"
@@ -3567,15 +3361,6 @@ name = "windows_x86_64_msvc"
 version = "0.53.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "271414315aff87387382ec3d271b52d7ae78726f5d44ac98b4f4030c91880486"
-
-[[package]]
-name = "winnow"
-version = "0.7.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74c7b26e3480b707944fc872477815d29a8e429d2f93a1ce000f5fa84a15cbcd"
-dependencies = [
- "memchr",
-]
 
 [[package]]
 name = "wit-bindgen-rt"

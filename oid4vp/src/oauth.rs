@@ -129,10 +129,7 @@ impl OAuthClient {
     /// Create a new Client with the specified client ID.
     #[must_use]
     pub fn new(client_id: &str) -> Self {
-        Self {
-            client_id: client_id.to_string(),
-            ..Self::default()
-        }
+        Self { client_id: client_id.to_string(), ..Self::default() }
     }
 }
 

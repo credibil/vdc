@@ -4,10 +4,10 @@ use std::str::FromStr;
 
 use anyhow::{Context, Result};
 use base64ct::{Base64, Encoding};
+pub use credibil_binding::Signature;
 use credibil_core::{Kind, html};
 use credibil_ecc::EncAlgorithm;
 use credibil_jose::{JwsBuilder, PublicKeyJwk};
-pub use credibil_proof::Signature;
 use credibil_vdc::dcql::DcqlQuery;
 use qrcode::QrCode;
 use serde::{Deserialize, Serialize};
@@ -426,9 +426,7 @@ pub enum ResponseMode {
 
 impl Default for ResponseMode {
     fn default() -> Self {
-        Self::Fragment {
-            redirect_uri: String::new(),
-        }
+        Self::Fragment { redirect_uri: String::new() }
     }
 }
 

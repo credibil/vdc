@@ -9,6 +9,7 @@ use axum::routing::get;
 use axum::{Json, Router};
 use axum_extra::TypedHeader;
 use axum_extra::headers::Host;
+use credibil_binding::{Client, DocumentRequest, resolve_jwk};
 use credibil_oid4vci::identity::Signature;
 use credibil_oid4vci::identity::did::Document;
 use credibil_oid4vci::jose::JwsBuilder;
@@ -22,10 +23,9 @@ use credibil_oid4vp::{
     AuthorizationRequest, AuthorizationResponse, ClientId, RequestObject, RequestUriMethod,
     RequestUriRequest, RequestUriResponse, ResponseMode, VpFormat, WalletMetadata, vp_token,
 };
-use credibil_proof::{Client, resolve_jwk};
 use http::StatusCode;
 use serde::Deserialize;
-use test_utils::wallet::Wallet;
+use test_utils::Wallet;
 use tokio::net::TcpListener;
 use tokio::task::JoinHandle;
 use tower_http::cors::{Any, CorsLayer};
@@ -99,7 +99,8 @@ async fn credential_offer(
         tx_code: offer_uri.tx_code,
     };
 
-    let token_req = TokenRequest::builder().client_id(provider.id()).grant_type(grant_type).build();
+    let token_req =
+        TokenRequest::builder().client_id("public-client").grant_type(grant_type).build();
     let token_uri = server.oauth.token_endpoint;
     let http_resp = http.post(&token_uri).form(&token_req).send().await?;
     if http_resp.status() != StatusCode::OK {
@@ -236,10 +237,7 @@ async fn authorize(
     // Generate a VP token
     // --------------------------------------------------
     let vp_token = vp_token::generate(&request_object, &results, &provider).await?;
-    let response = AuthorizationResponse {
-        vp_token,
-        state: request_object.state,
-    };
+    let response = AuthorizationResponse { vp_token, state: request_object.state };
 
     // --------------------------------------------------
     // Return an Authorization Response
@@ -270,16 +268,13 @@ async fn authorize(
 async fn did(
     State(provider): State<Wallet<'static>>, TypedHeader(host): TypedHeader<Host>, request: Request,
 ) -> Result<Json<Document>, AppError> {
-    let client = Client::new(provider);
-    let r = credibil_proof::DocumentRequest {
-        url: format!("http://{host}{}", request.uri()),
-    };
-    let doc = client
-        .request(r)
-        .owner(&format!("http://{host}{}", request.uri()))
+    let did_url = format!("http://{host}{}", request.uri());
+    let document = Client::new(provider)
+        .request(DocumentRequest { url: did_url.clone() })
+        .owner(&format!("http://{host}"))
         .await
         .map_err(AppError::from)?;
-    Ok(Json(doc.0.clone()))
+    Ok(Json(document.0.clone()))
 }
 
 // Wrap anyhow::Error.

@@ -1,5 +1,6 @@
- mod identity;
- mod store;
+// mod identity;
+mod store;
+mod vault;
 
-pub use identity::Identity;
-pub use store::Store;
+pub use store::{Datastore, Keyvalue};
+pub use vault::KeyVault;

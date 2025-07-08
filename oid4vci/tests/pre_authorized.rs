@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 
+use credibil_binding::resolve_jwk;
 use credibil_oid4vci::identity::{Signature, VerifyBy};
 use credibil_oid4vci::jose::{JwsBuilder, Jwt, decode_jws};
 use credibil_oid4vci::proof::W3cVcClaims;
@@ -11,14 +12,12 @@ use credibil_oid4vci::types::{
     TokenGrantType, TokenRequest,
 };
 use credibil_oid4vci::{Client, CredentialHeaders, JwtType, NotificationHeaders, OneMany};
-use credibil_proof::resolve_jwk;
 use serde_json::json;
-use test_utils::issuer::Issuer;
-use test_utils::wallet::Wallet;
+use test_utils::{Issuer, Wallet};
 use tokio::sync::OnceCell;
 
 const ISSUER: &str = "http://localhost:8080";
-const BOB_SUBJECT: &str = "normal_user";
+const BOB_SUBJECT: &str = "normal-user";
 
 static CLIENT: OnceCell<Client<Issuer<'static>>> = OnceCell::const_new();
 static BOB: OnceCell<Wallet<'static>> = OnceCell::const_new();
@@ -100,9 +99,7 @@ async fn offer_val() {
         .with_proof(jwt)
         .build();
 
-    let headers = CredentialHeaders {
-        authorization: token.access_token.clone(),
-    };
+    let headers = CredentialHeaders { authorization: token.access_token.clone() };
     let response = client
         .request(request)
         .owner(ISSUER)
@@ -239,9 +236,7 @@ async fn two_datasets() {
         // --------------------------------------------------
         let request =
             CredentialRequest::builder().credential_identifier(identifier).with_proof(jwt).build();
-        let headers = CredentialHeaders {
-            authorization: token.access_token.clone(),
-        };
+        let headers = CredentialHeaders { authorization: token.access_token.clone() };
         let response =
             client.request(request).owner(ISSUER).headers(headers).await.expect("should execute");
 
@@ -338,9 +333,7 @@ async fn reduce_credentials() {
     // --------------------------------------------------
     let request =
         CredentialRequest::builder().credential_identifier(identifier).with_proof(jwt).build();
-    let headers = CredentialHeaders {
-        authorization: token.access_token.clone(),
-    };
+    let headers = CredentialHeaders { authorization: token.access_token.clone() };
     let response = client
         .request(request)
         .owner(ISSUER)
@@ -437,9 +430,7 @@ async fn reduce_claims() {
         .credential_identifier(&details[0].credential_identifiers[0])
         .with_proof(jwt)
         .build();
-    let headers = CredentialHeaders {
-        authorization: token.access_token.clone(),
-    };
+    let headers = CredentialHeaders { authorization: token.access_token.clone() };
 
     let response = client
         .request(request)
@@ -538,9 +529,7 @@ async fn notify_accepted() {
         .credential_identifier(&details[0].credential_identifiers[0])
         .with_proof(jwt)
         .build();
-    let headers = CredentialHeaders {
-        authorization: token.access_token.clone(),
-    };
+    let headers = CredentialHeaders { authorization: token.access_token.clone() };
 
     let response = client
         .request(request)
@@ -561,8 +550,6 @@ async fn notify_accepted() {
         .event(NotificationEvent::CredentialAccepted)
         .event_description("Credential accepted")
         .build();
-    let headers = NotificationHeaders {
-        authorization: token.access_token.clone(),
-    };
+    let headers = NotificationHeaders { authorization: token.access_token.clone() };
     client.request(request).owner(ISSUER).headers(headers).await.expect("response is ok");
 }
