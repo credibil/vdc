@@ -362,17 +362,17 @@ impl MetadataQuery {
     pub fn execute(&self, credential: &Queryable) -> bool {
         match &self {
             Self::MsoMdoc { doctype_value } => {
-                if let FormatProfile::MsoMdoc { doctype } = &credential.meta {
-                    if doctype == doctype_value {
-                        return true;
-                    }
+                if let FormatProfile::MsoMdoc { doctype } = &credential.meta
+                    && doctype == doctype_value
+                {
+                    return true;
                 }
             }
             Self::SdJwt { vct_values } => {
-                if let FormatProfile::DcSdJwt { vct } = &credential.meta {
-                    if vct_values.contains(vct) {
-                        return true;
-                    }
+                if let FormatProfile::DcSdJwt { vct } = &credential.meta
+                    && vct_values.contains(vct)
+                {
+                    return true;
                 }
             }
             Self::W3cVc { type_values } => {

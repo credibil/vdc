@@ -47,10 +47,10 @@ pub async fn request_uri(
     }
 
     // FIXME: use wallet_metadata to determine supported formats, alg_values, etc.
-    if let Some(wallet_metadata) = request.wallet_metadata {
-        if let Some(_supported_algs) = wallet_metadata.request_object_signing_alg_values_supported {
-            // FIXME: ensure we use a supported alg for signing
-        }
+    if let Some(wallet_metadata) = request.wallet_metadata
+        && let Some(_supported_algs) = wallet_metadata.request_object_signing_alg_values_supported
+    {
+        // FIXME: ensure we use a supported alg for signing
 
         // TODO: Encryption - check jwks/jwks_uri param for Wallet's public key
         // https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#name-request-uri-method-post
