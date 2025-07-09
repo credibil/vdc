@@ -75,37 +75,34 @@ async fn make_offer(response: &CreateOfferResponse) -> Result<()> {
 }
 
 async fn create_request() -> Result<CreateResponse> {
-    let client = reqwest::Client::new();
-
-    let value = json!({
+    let request = json!({
         "client_id": VERIFIER,
         "response_mode": "direct_post.jwt",
         "response_uri": format!("{VERIFIER}/post"),
         "device_flow": "CrossDevice",
         "dcql_query": {
-            "credentials": [
-                {
-                    "id": "pid",
-                    "format": "dc+sd-jwt",
-                    "meta": {
-                        "vct_values": ["Identity_SD_JWT"]
-                    },
-                    "claims": [
-                        {"path": ["given_name"]},
-                        {"path": ["family_name"]},
-                        {"path": ["address"]}
-                    ]
-                }
-            ]
+            "credentials": [{
+                "id": "pid",
+                "format": "dc+sd-jwt",
+                "meta": {
+                    "vct_values": ["Identity_SD_JWT"]
+                },
+                "claims": [
+                    {"path": ["given_name"]},
+                    {"path": ["family_name"]},
+                    {"path": ["address"]}
+                ]
+            }]
         }
     });
 
-    let http_resp = client.post(format!("{VERIFIER}/create_request")).json(&value).send().await?;
+    let client = reqwest::Client::new();
+    let http_resp = client.post(format!("{VERIFIER}/create_request")).json(&request).send().await?;
     if http_resp.status() != StatusCode::OK {
         let body = http_resp.text().await?;
         return Err(anyhow!("{body}"));
     }
-
+    
     http_resp.json::<CreateResponse>().await.map_err(|e| anyhow!("issue deserializing: {e}"))
 }
 
