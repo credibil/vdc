@@ -1,13 +1,18 @@
 //! # Digital Credentials Query Language (DCQL)
 
 use anyhow::{Result, anyhow};
+use std::fmt::{Display, Formatter};
+
+use anyhow::{Result, anyhow, bail};
+use credibil_binding::Resolver;
 use credibil_core::Kind;
+use credibil_jose::KeyBinding;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::w3c_vc::{CredentialDefinition,VerifiableCredential};
 use crate::{ FormatProfile};
-
+use crate::w3c_vc::{self, CredentialDefinition, VerifiableCredential};
+use crate::{FormatProfile, mso_mdoc, sd_jwt};
 
 /// DCQL query for requesting Verifiable Presentations.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
@@ -490,6 +495,149 @@ pub struct Matched<'a> {
 
     /// The original issued credential.
     pub issued: &'a Kind<VerifiableCredential>,
+}
+
+impl Queryable {
+    /// Get a builder for constructing a Queryable object.
+    pub fn builder() -> QueryableBuilder<NoFormat, NoCredential, NoResolver> {
+        QueryableBuilder::new()
+    }
+}
+
+/// Builder that helps to construct a Queryable object from a formatted
+/// credential and verifies it.
+#[derive(Clone, Debug, Default)]
+pub struct QueryableBuilder<F, C, R> {
+    meta: F,
+    credential: C,
+    resolver: R,
+}
+
+/// No specified format. Cannot build.
+#[doc(hidden)]
+pub struct NoFormat;
+/// A format has been specified.
+#[doc(hidden)]
+pub struct HasFormat(FormatProfile);
+
+/// No credential specified. Cannot build.
+#[doc(hidden)]
+pub struct NoCredential;
+/// A credential has been specified.
+#[doc(hidden)]
+pub struct HasCredential(Kind<VerifiableCredential>);
+
+/// No resolver specified. Cannot build.
+#[doc(hidden)]
+pub struct NoResolver;
+/// A resolver has been specified.
+#[doc(hidden)]
+pub struct HasResolver<R: Resolver>(R);
+
+impl QueryableBuilder<NoFormat, NoCredential, NoResolver> {
+    /// Create a new QueryableBuilder.
+    pub fn new() -> Self {
+        Self { meta: NoFormat, credential: NoCredential, resolver: NoResolver }
+    }
+}
+
+impl<C> QueryableBuilder<NoFormat, C, NoResolver> {
+    /// Set the credential format.
+    pub fn with_format<F: Into<FormatProfile>>(
+        self, format: F,
+    ) -> QueryableBuilder<HasFormat, C, NoResolver> {
+        QueryableBuilder {
+            meta: HasFormat(format.into()),
+            credential: self.credential,
+            resolver: self.resolver,
+        }
+    }
+}
+
+impl<F> QueryableBuilder<F, NoCredential, NoResolver> {
+    /// Set the credential.
+    pub fn with_credential<C: Into<Kind<VerifiableCredential>>>(
+        self, credential: C,
+    ) -> QueryableBuilder<F, HasCredential, NoResolver> {
+        QueryableBuilder {
+            meta: self.meta,
+            credential: HasCredential(credential.into()),
+            resolver: self.resolver,
+        }
+    }
+}
+
+impl<R> QueryableBuilder<HasFormat, HasCredential, R> {
+    /// Get the key ID needed to verify the credential.
+    ///
+    /// # Errors
+    ///
+    /// Some decoding and parsing of the raw credential is needed to get to the
+    /// verification key identifier. If this fails, an error is returned.
+    pub fn key_binding(self) -> Result<KeyBinding> {
+        match self.meta.0 {
+            FormatProfile::MsoMdoc { .. } => {
+                let Kind::String(issued) = self.credential.0 else {
+                    bail!("{} requires a string credential", self.meta.0);
+                };
+                mso_mdoc::key_binding(&issued)
+            }
+            FormatProfile::DcSdJwt { .. } => {
+                let Kind::String(issued) = self.credential.0 else {
+                    bail!("{} requires a string credential", self.meta.0);
+                };
+                sd_jwt::key_binding(&issued)
+            }
+            FormatProfile::JwtVcJson { .. } => w3c_vc::key_binding(self.credential.0),
+            _ => {
+                bail!("unverified Queryable is not implemented for {} format profile", self.meta.0)
+            }
+        }
+    }
+}
+
+impl QueryableBuilder<HasFormat, HasCredential, NoResolver> {
+    /// Set the resolver to use for verifying the credential.
+    pub fn with_resolver<R: Resolver>(
+        self, resolver: R,
+    ) -> QueryableBuilder<HasFormat, HasCredential, HasResolver<R>> {
+        QueryableBuilder {
+            meta: self.meta,
+            credential: self.credential,
+            resolver: HasResolver(resolver),
+        }
+    }
+}
+
+impl<R> QueryableBuilder<HasFormat, HasCredential, HasResolver<R>>
+where
+    R: Resolver,
+{
+    /// Build the Queryable object.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the credential cannot be verified.
+    pub async fn build(self) -> Result<Queryable> {
+        match self.meta.0 {
+            FormatProfile::MsoMdoc { .. } => {
+                let Kind::String(issued) = self.credential.0 else {
+                    bail!("{} build requires a string credential", self.meta.0);
+                };
+                mso_mdoc::to_queryable(&issued, &self.resolver.0).await
+            }
+            FormatProfile::DcSdJwt { .. } => {
+                let Kind::String(issued) = self.credential.0 else {
+                    bail!("{} build requires a string credential", self.meta.0);
+                };
+                sd_jwt::to_queryable(&issued, &self.resolver.0).await
+            }
+            FormatProfile::JwtVcJson { .. } => {
+                w3c_vc::to_queryable(self.credential.0, &self.resolver.0).await
+            }
+            _ => Err(anyhow!("not implemented for {} format profile", self.meta.0)),
+        }
+    }
 }
 
 #[cfg(test)]
