@@ -21,7 +21,7 @@ use credibil_core::{Kind, OneMany};
 use credibil_status::StatusClaim;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-pub use verify::verify_vp;
+pub use verify::{key_binding, verify_vp};
 
 pub use self::issue::W3cVcBuilder;
 pub use self::present::W3cVpBuilder;

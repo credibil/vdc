@@ -32,7 +32,7 @@ pub use self::cose::{CoseKey, Curve, KeyType};
 pub use self::issue::MdocBuilder;
 pub use self::present::DeviceResponseBuilder;
 pub use self::store::to_queryable;
-pub use self::verify::verify_vp;
+pub use self::verify::{key_binding, verify_vp};
 use crate::serde_cbor;
 
 /// Supported device retrieval methods.
