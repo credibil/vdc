@@ -5,11 +5,11 @@ use std::str::FromStr;
 use anyhow::{Result, anyhow, bail};
 use credibil_binding::{Resolver, resolve_jwk};
 use credibil_core::Kind;
-use credibil_jose::{decode_jws, Jws, Jwt, KeyBinding};
+use credibil_jose::{Jws, Jwt, KeyBinding, decode_jws};
 
 use super::W3cVpClaims;
 use crate::dcql::Claim;
-use crate::w3c_vc::{store, VerifiableCredential};
+use crate::w3c_vc::{VerifiableCredential, store};
 
 /// Verifies an SD-JWT presentation (KB-JWT, and associated disclosures).
 ///
@@ -68,9 +68,8 @@ pub fn key_binding(issued: impl Into<Kind<VerifiableCredential>>) -> Result<KeyB
     match issued.into() {
         Kind::String(encoded) => {
             let jws = Jws::from_str(&encoded)?;
-            let signature = jws.signatures
-                .first()
-                .ok_or_else(|| anyhow!("missing JWS signature"))?;
+            let signature =
+                jws.signatures.first().ok_or_else(|| anyhow!("missing JWS signature"))?;
             Ok(signature.protected.key.clone())
         }
         Kind::Object(vc) => {

@@ -1,8 +1,5 @@
 //! # Digital Credentials Query Language (DCQL)
 
-use anyhow::{Result, anyhow};
-use std::fmt::{Display, Formatter};
-
 use anyhow::{Result, anyhow, bail};
 use credibil_binding::Resolver;
 use credibil_core::Kind;
@@ -10,7 +7,6 @@ use credibil_jose::KeyBinding;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{ FormatProfile};
 use crate::w3c_vc::{self, CredentialDefinition, VerifiableCredential};
 use crate::{FormatProfile, mso_mdoc, sd_jwt};
 
