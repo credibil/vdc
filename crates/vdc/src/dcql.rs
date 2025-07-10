@@ -5,8 +5,9 @@ use credibil_core::Kind;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::w3c_vc::VerifiableCredential;
-use crate::{CredentialDefinition, FormatProfile};
+use crate::w3c_vc::{CredentialDefinition,VerifiableCredential};
+use crate::{ FormatProfile};
+
 
 /// DCQL query for requesting Verifiable Presentations.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
@@ -114,7 +115,7 @@ impl CredentialQuery {
     /// Determines whether the specified credential matches the query.
     #[must_use]
     pub fn is_match<'a>(&self, queryable: &'a Queryable) -> Option<Vec<&'a Claim>> {
-        // metadata match
+        // format/metadata match
         if !self.format.execute(queryable) {
             return None;
         }
@@ -224,18 +225,6 @@ impl Default for FormatQuery {
         Self::DcSdJwt { vct_values: vec![] }
     }
 }
-
-// impl Display for FormatQuery {
-//     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-//         match self {
-//             Self::DcSdJwt { .. } => write!(f, "dc+sd-jwt"),
-//             Self::MsoMdoc { .. } => write!(f, "mso_mdoc"),
-//             Self::JwtVcJson { .. } => write!(f, "jwt_vc_json"),
-//             Self::LdpVc { .. } => write!(f, "ldp-vc"),
-//             Self::JwtVcJsonLd { .. } => write!(f, "jwt_vc_json-ld"),
-//         }
-//     }
-// }
 
 impl FormatQuery {
     /// Execute the metadata query to determine whether credential matches.

@@ -36,17 +36,15 @@ async fn main() -> Result<()> {
 }
 
 async fn create_offer() -> Result<CreateOfferResponse> {
-    let client = reqwest::Client::new();
-
-    let value = json!({
+    let request = json!({
         "subject_id": "normal-user",
         "credential_configuration_ids": ["Identity_SD_JWT"],
         "grant_types": ["urn:ietf:params:oauth:grant-type:pre-authorized_code"],
         "pre-authorize": true,
         "tx_code_required": true
     });
-
-    let http_resp = client.post(format!("{ISSUER}/create_offer")).json(&value).send().await?;
+    let http_resp =
+        reqwest::Client::new().post(format!("{ISSUER}/create_offer")).json(&request).send().await?;
     if http_resp.status() != StatusCode::CREATED {
         let body = http_resp.text().await?;
         return Err(anyhow!("{body}"));
@@ -55,8 +53,6 @@ async fn create_offer() -> Result<CreateOfferResponse> {
 }
 
 async fn make_offer(response: &CreateOfferResponse) -> Result<()> {
-    let client = reqwest::Client::new();
-
     let OfferType::Uri(uri) = &response.offer_type else {
         return Err(anyhow!("expected offer URI"));
     };
@@ -65,7 +61,7 @@ async fn make_offer(response: &CreateOfferResponse) -> Result<()> {
     };
     let url = format!("{WALLET}/credential_offer?credential_offer_uri={uri}&tx_code={tx_code}");
 
-    let http_resp = client.get(url).send().await?;
+    let http_resp = reqwest::Client::new().get(url).send().await?;
     if http_resp.status() != StatusCode::OK {
         let body = http_resp.text().await?;
         return Err(anyhow!("{body}"));
@@ -102,7 +98,7 @@ async fn create_request() -> Result<CreateResponse> {
         let body = http_resp.text().await?;
         return Err(anyhow!("{body}"));
     }
-    
+
     http_resp.json::<CreateResponse>().await.map_err(|e| anyhow!("issue deserializing: {e}"))
 }
 

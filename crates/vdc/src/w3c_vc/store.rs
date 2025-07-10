@@ -8,9 +8,9 @@ use credibil_core::Kind;
 use credibil_jose::Jws;
 use serde_json::Value;
 
+use crate::FormatProfile;
 use crate::dcql::{Claim, Queryable};
-use crate::w3c_vc::{VerifiableCredential, W3cVcClaims};
-use crate::{CredentialDefinition, FormatProfile};
+use crate::w3c_vc::{CredentialDefinition, VerifiableCredential, W3cVcClaims};
 
 /// Convert a `w3c` credential to a `Queryable` object.
 ///
