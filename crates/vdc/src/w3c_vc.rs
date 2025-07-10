@@ -27,6 +27,27 @@ pub use self::issue::W3cVcBuilder;
 pub use self::present::W3cVpBuilder;
 pub use self::store::to_queryable;
 
+/// `CredentialDefinition` defines a Supported Credential that may requested by
+/// Wallets.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+pub struct CredentialDefinition {
+    /// The @context property is used to map property URIs into short-form
+    /// aliases, in accordance with the W3C Verifiable Credentials Data
+    /// Model.
+    ///
+    /// REQUIRED when `format` is "`jwt_vc_json-ld`" or "`ldp_vc`".
+    #[serde(rename = "@context")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub context: Option<Vec<String>>,
+
+    /// Contains the type values the Wallet requests authorization for at the
+    /// Credential Issuer. It MUST be present if the claim format is present in
+    /// the root of the authorization details object. It MUST not be present
+    /// otherwise.
+    #[serde(rename = "type")]
+    pub r#type: Vec<String>,
+}
+
 /// `VerifiableCredential` represents a naive implementation of the W3C
 /// Verifiable Credential data model v1.1.
 /// See <https://www.w3.org/TR/vc-data-model>.

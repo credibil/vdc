@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use credibil_binding::Signature;
-use credibil_vdc::dcql::{QueryResult, RequestedFormat};
+use credibil_vdc::dcql::{FormatQuery, QueryResult};
 use credibil_vdc::mso_mdoc::DeviceResponseBuilder;
 use credibil_vdc::sd_jwt::SdJwtVpBuilder;
 use credibil_vdc::w3c_vc::W3cVpBuilder;
@@ -28,7 +28,7 @@ pub async fn generate(
 
         // create presentation for each query result
         match result.query.format {
-            RequestedFormat::DcSdJwt => {
+            FormatQuery::DcSdJwt { .. } => {
                 for matched in &result.matches {
                     let vp = SdJwtVpBuilder::new()
                         .client_id(request_object.client_id.to_string())
@@ -40,7 +40,7 @@ pub async fn generate(
                     presentations.push(vp);
                 }
             }
-            RequestedFormat::MsoMdoc => {
+            FormatQuery::MsoMdoc { .. } => {
                 let response_uri = match &request_object.response_mode {
                     ResponseMode::DirectPost { response_uri }
                     | ResponseMode::DirectPostJwt { response_uri } => response_uri,
@@ -61,7 +61,7 @@ pub async fn generate(
                     presentations.push(vp);
                 }
             }
-            RequestedFormat::JwtVcJson => {
+            FormatQuery::JwtVcJson { .. } => {
                 for matched in &result.matches {
                     let vp = W3cVpBuilder::new()
                         .client_id(request_object.client_id.to_string())
@@ -73,7 +73,7 @@ pub async fn generate(
                     presentations.push(vp);
                 }
             }
-            RequestedFormat::JwtVcJsonLd | RequestedFormat::LdpVc => {
+            FormatQuery::JwtVcJsonLd { .. } | FormatQuery::LdpVc { .. } => {
                 todo!()
             }
         }

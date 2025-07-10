@@ -14,9 +14,10 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-pub use self::dcql::{DcqlQuery, Queryable};
+pub use self::dcql::*;
 pub use self::mso_mdoc::MdocBuilder;
 pub use self::sd_jwt::SdJwtVcBuilder;
+use self::w3c_vc::CredentialDefinition;
 pub use self::w3c_vc::W3cVcBuilder;
 
 /// Format Profile defines supported Credential data models. Each profile
@@ -84,25 +85,4 @@ impl fmt::Display for FormatProfile {
             Self::DcSdJwt { .. } => write!(f, "dc+sd-jwt"),
         }
     }
-}
-
-/// `CredentialDefinition` defines a Supported Credential that may requested by
-/// Wallets.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-pub struct CredentialDefinition {
-    /// The @context property is used to map property URIs into short-form
-    /// aliases, in accordance with the W3C Verifiable Credentials Data
-    /// Model.
-    ///
-    /// REQUIRED when `format` is "`jwt_vc_json-ld`" or "`ldp_vc`".
-    #[serde(rename = "@context")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub context: Option<Vec<String>>,
-
-    /// Contains the type values the Wallet requests authorization for at the
-    /// Credential Issuer. It MUST be present if the claim format is present in
-    /// the root of the authorization details object. It MUST not be present
-    /// otherwise.
-    #[serde(rename = "type")]
-    pub r#type: Vec<String>,
 }

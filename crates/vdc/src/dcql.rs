@@ -1,5 +1,6 @@
 //! # Digital Credentials Query Language (DCQL)
 
+use anyhow::{Result, anyhow};
 use std::fmt::{Display, Formatter};
 
 use anyhow::{Result, anyhow, bail};
@@ -9,8 +10,9 @@ use credibil_jose::KeyBinding;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::w3c_vc::{self, VerifiableCredential};
-use crate::{CredentialDefinition, FormatProfile, mso_mdoc, sd_jwt};
+use crate::{ FormatProfile};
+use crate::w3c_vc::{self, CredentialDefinition, VerifiableCredential};
+use crate::{FormatProfile, mso_mdoc, sd_jwt};
 
 /// DCQL query for requesting Verifiable Presentations.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
@@ -58,17 +60,17 @@ pub struct CredentialQuery {
     pub id: String,
 
     /// The format of the requested credential
-    pub format: RequestedFormat,
+    #[serde(flatten)]
+    pub format: FormatQuery,
 
     /// Indicates whether multiple credentials can be returned for this
     /// query. Defaults to false.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub multiple: Option<bool>,
 
-    /// Additional properties requested that apply to the metadata of the
-    /// credential. Properties are specific to Credential Format Profile.
-    pub meta: MetadataQuery,
-
+    // /// Additional properties requested that apply to the metadata of the
+    // /// credential. Properties are specific to Credential Format Profile.
+    // pub meta: MetadataQuery,
     /// Issuer certification authorities or trust frameworks that the Verifier
     /// will accept. Every credential returned by the Wallet SHOULD match at
     /// least one of the conditions present.
@@ -118,19 +120,8 @@ impl CredentialQuery {
     /// Determines whether the specified credential matches the query.
     #[must_use]
     pub fn is_match<'a>(&self, queryable: &'a Queryable) -> Option<Vec<&'a Claim>> {
-        // format match
-        let format = match &queryable.meta {
-            FormatProfile::MsoMdoc { .. } => RequestedFormat::MsoMdoc,
-            FormatProfile::DcSdJwt { .. } => RequestedFormat::DcSdJwt,
-            FormatProfile::JwtVcJson { .. } => RequestedFormat::JwtVcJson,
-            _ => return None,
-        };
-        if self.format != format {
-            return None;
-        }
-
-        // metadata match
-        if !self.meta.execute(queryable) {
+        // format/metadata match
+        if !self.format.execute(queryable) {
             return None;
         }
         // claims match
@@ -183,6 +174,126 @@ impl CredentialQuery {
         }
 
         Ok(matches)
+    }
+}
+
+/// The format and associated metadata query parameters of the requested
+/// credential. Properties are specific to Credential Format Profile.
+///
+/// Enum content references the metadata properties appropriate to the format
+/// of the requested credential. Properties are specific to Credential Format
+/// Profile.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(tag = "format", content = "meta")]
+pub enum FormatQuery {
+    /// SD-JWT format credential metadata.
+    #[serde(rename = "dc+sd-jwt")]
+    DcSdJwt {
+        /// Allowed `vct` values when querying for SD-JWT Credentials.
+        vct_values: Vec<String>,
+    },
+
+    /// ISO-MDL format credential metadata.
+    #[serde(rename = "mso_mdoc")]
+    MsoMdoc {
+        /// Allowed value for the `doctype` of the requested credential.
+        doctype_value: String,
+    },
+
+    /// W3C VC format credential metadata.
+    #[serde(rename = "jwt_vc_json")]
+    JwtVcJson {
+        /// The fully expanded types after the @context has been applied to the
+        /// VC `type` parameter.
+        type_values: Vec<Vec<String>>,
+    },
+
+    /// A W3C Verifiable Credential not using JSON-LD.
+    #[serde(rename = "ldp-vc")]
+    LdpVc {
+        /// The fully expanded types after the @context has been applied to the
+        /// VC `type` parameter.
+        type_values: Vec<Vec<String>>,
+    },
+
+    /// A W3C Verifiable Credential using JSON-LD.
+    #[serde(rename = "jwt_vc_json-ld")]
+    JwtVcJsonLd {
+        /// The fully expanded types after the @context has been applied to the
+        /// VC `type` parameter.
+        type_values: Vec<Vec<String>>,
+    },
+}
+
+impl Default for FormatQuery {
+    fn default() -> Self {
+        Self::DcSdJwt { vct_values: vec![] }
+    }
+}
+
+impl FormatQuery {
+    /// Execute the metadata query to determine whether credential matches.
+    #[must_use]
+    pub fn execute(&self, credential: &Queryable) -> bool {
+        match &self {
+            Self::DcSdJwt { vct_values } => {
+                if let FormatProfile::DcSdJwt { vct } = &credential.meta
+                    && vct_values.contains(vct)
+                {
+                    return true;
+                }
+            }
+            Self::MsoMdoc { doctype_value } => {
+                if let FormatProfile::MsoMdoc { doctype } = &credential.meta
+                    && doctype == doctype_value
+                {
+                    return true;
+                }
+            }
+            Self::JwtVcJson { type_values }
+            | Self::LdpVc { type_values }
+            | Self::JwtVcJsonLd { type_values } => {
+                if let FormatProfile::JwtVcJson { credential_definition } = &credential.meta {
+                    // all `credential_definition.type` values must be
+                    // contained in a single `type_values` set
+                    'next_set: for type_value in type_values {
+                        for vc_type in &credential_definition.r#type {
+                            if !type_value.contains(vc_type) {
+                                continue 'next_set;
+                            }
+                        }
+                        // if we get here, `type_values` references
+                        // `credential_definition.type` entries
+                        return true;
+                    }
+                }
+            }
+        }
+
+        false
+    }
+}
+
+impl From<&FormatQuery> for FormatProfile {
+    fn from(value: &FormatQuery) -> Self {
+        Self::from(value.clone())
+    }
+}
+
+impl From<FormatQuery> for FormatProfile {
+    fn from(value: FormatQuery) -> Self {
+        match value {
+            FormatQuery::MsoMdoc { doctype_value } => Self::MsoMdoc { doctype: doctype_value },
+            FormatQuery::DcSdJwt { vct_values } => Self::DcSdJwt { vct: vct_values[0].clone() },
+            FormatQuery::JwtVcJson { type_values }
+            | FormatQuery::LdpVc { type_values }
+            | FormatQuery::JwtVcJsonLd { type_values } => Self::JwtVcJson {
+                credential_definition: CredentialDefinition {
+                    context: None,
+                    r#type: type_values[0].clone(),
+                },
+            },
+        }
     }
 }
 
@@ -293,170 +404,6 @@ impl ClaimQuery {
 
         // every query value must have a corresponding claim value
         values.iter().all(|v| v == &claim.value)
-    }
-}
-
-/// Credential metadata query parameters. Properties are specific to Credential
-/// Format Profile.
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(untagged)]
-pub enum MetadataQuery {
-    /// ISO-MDL format credential metadata.
-    MsoMdoc {
-        /// Allowed value for the `doctype` of the requested credential.
-        doctype_value: String,
-    },
-
-    /// SD-JWT format credential metadata.
-    SdJwt {
-        /// Allowed `vct` values when querying for SD-JWT Credentials.
-        vct_values: Vec<String>,
-    },
-
-    /// W3C VC format credential metadata.
-    W3cVc {
-        /// The fully expanded types after the @context has been applied to the
-        /// VC `type` parameter.
-        ///
-        /// Each top-level array specifies one alternative to match the type
-        /// values of the Verifiable Credential against. Each inner array
-        /// specifies a set of fully expanded types that MUST be present
-        /// in the type property of the Verifiable Credential, regardless
-        ///  of order or the presence of additional types.
-        ///
-        /// For example, the following query
-        ///
-        /// ```json
-        /// "type_values":[
-        ///   [
-        ///       "https://www.w3.org/2018/credentials#VerifiableCredential",
-        ///       "https://example.org/examples#AlumniCredential",
-        ///       "https://example.org/examples#BachelorDegree"
-        ///   ],
-        ///   [
-        ///       "https://www.w3.org/2018/credentials#VerifiableCredential",
-        ///       "https://example.org/examples#UniversityDegreeCredential"
-        ///   ]
-        /// ]
-        /// ```
-        ///
-        /// would match a credential with the following type property:
-        /// ```json
-        /// {
-        ///   "@context": [
-        ///     "https://www.w3.org/2018/credentials/v1",
-        ///     "https://www.w3.org/2018/credentials/examples/v1"
-        ///   ],
-        ///   "type": ["VerifiableCredential", "UniversityDegreeCredential"]
-        ///   ...
-        /// }
-        /// ```
-        type_values: Vec<Vec<String>>,
-    },
-}
-
-impl MetadataQuery {
-    /// Execute the metadata query to determine whether credential matches.
-    #[must_use]
-    pub fn execute(&self, credential: &Queryable) -> bool {
-        match &self {
-            Self::MsoMdoc { doctype_value } => {
-                if let FormatProfile::MsoMdoc { doctype } = &credential.meta
-                    && doctype == doctype_value
-                {
-                    return true;
-                }
-            }
-            Self::SdJwt { vct_values } => {
-                if let FormatProfile::DcSdJwt { vct } = &credential.meta
-                    && vct_values.contains(vct)
-                {
-                    return true;
-                }
-            }
-            Self::W3cVc { type_values } => {
-                if let FormatProfile::JwtVcJson { credential_definition } = &credential.meta {
-                    // all `credential_definition.type` values must be
-                    // contained in a single `type_values` set
-                    'next_set: for type_value in type_values {
-                        for vc_type in &credential_definition.r#type {
-                            if !type_value.contains(vc_type) {
-                                continue 'next_set;
-                            }
-                        }
-                        // if we get here, `type_values` references
-                        // `credential_definition.type` entries
-                        return true;
-                    }
-                }
-            }
-        }
-
-        false
-    }
-}
-
-impl Default for MetadataQuery {
-    fn default() -> Self {
-        Self::W3cVc { type_values: vec![vec![]] }
-    }
-}
-
-impl From<&MetadataQuery> for FormatProfile {
-    fn from(value: &MetadataQuery) -> Self {
-        Self::from(value.clone())
-    }
-}
-
-impl From<MetadataQuery> for FormatProfile {
-    fn from(value: MetadataQuery) -> Self {
-        match value {
-            MetadataQuery::MsoMdoc { doctype_value } => Self::MsoMdoc { doctype: doctype_value },
-            MetadataQuery::SdJwt { vct_values } => Self::DcSdJwt { vct: vct_values[0].clone() },
-            MetadataQuery::W3cVc { type_values } => Self::JwtVcJson {
-                credential_definition: CredentialDefinition {
-                    context: None,
-                    r#type: type_values[0].clone(),
-                },
-            },
-        }
-    }
-}
-
-/// The format of the requested credential.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq, Hash)]
-pub enum RequestedFormat {
-    /// A W3C Verifiable Credential.
-    #[serde(rename = "jwt_vc_json")]
-    #[default]
-    JwtVcJson,
-
-    /// A W3C Verifiable Credential not using JSON-LD.
-    #[serde(rename = "ldp-vc")]
-    LdpVc,
-
-    /// A W3C Verifiable Credential using JSON-LD.
-    #[serde(rename = "jwt_vc_json-ld")]
-    JwtVcJsonLd,
-
-    /// An ISO mDL (ISO.18013-5) mobile driving licence format credential.
-    #[serde(rename = "mso_mdoc")]
-    MsoMdoc,
-
-    /// An IETF SD-JWT format credential.
-    #[serde(rename = "dc+sd-jwt")]
-    DcSdJwt,
-}
-
-impl Display for RequestedFormat {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::JwtVcJson => write!(f, "jwt_vc_json"),
-            Self::LdpVc => write!(f, "ldp-vc"),
-            Self::JwtVcJsonLd => write!(f, "jwt_vc_json-ld"),
-            Self::MsoMdoc => write!(f, "mso_mdoc"),
-            Self::DcSdJwt => write!(f, "dc+sd-jwt"),
-        }
     }
 }
 

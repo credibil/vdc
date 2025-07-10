@@ -24,7 +24,7 @@
 use anyhow::Context;
 use credibil_core::Kind;
 use credibil_core::api::{Body, Handler, Request, Response};
-use credibil_vdc::dcql::{Queryable, RequestedFormat};
+use credibil_vdc::dcql::{FormatQuery, Queryable};
 use credibil_vdc::{mso_mdoc, sd_jwt, w3c_vc};
 
 use crate::error::invalid;
@@ -103,22 +103,22 @@ async fn verify(
 
         for vp in presentations {
             let claims = match query.format {
-                RequestedFormat::DcSdJwt => sd_jwt::verify_vp(vp, nonce, client_id, provider)
+                FormatQuery::DcSdJwt { .. } => sd_jwt::verify_vp(vp, nonce, client_id, provider)
                     .await
                     .map_err(|e| invalid!("failed to verify presentation: {e}"))?,
-                RequestedFormat::MsoMdoc => mso_mdoc::verify_vp(vp, provider)
+                FormatQuery::MsoMdoc { .. } => mso_mdoc::verify_vp(vp, provider)
                     .await
                     .map_err(|e| invalid!("failed to verify presentation: {e}"))?,
-                RequestedFormat::JwtVcJson => w3c_vc::verify_vp(vp, nonce, client_id, provider)
+                FormatQuery::JwtVcJson { .. } => w3c_vc::verify_vp(vp, nonce, client_id, provider)
                     .await
                     .map_err(|e| invalid!("failed to verify presentation: {e}"))?,
                 _ => {
-                    return Err(invalid!("unsupported format: {}", query.format));
+                    return Err(invalid!("unsupported format: {:?}", query.format));
                 }
             };
 
             found.push(Queryable {
-                meta: query.meta.clone().into(),
+                meta: query.format.clone().into(),
                 claims,
                 credential: Kind::String(String::new()),
             });
