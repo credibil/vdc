@@ -1,8 +1,10 @@
 //! # sd-jwt Identity
 
+use std::str::FromStr;
+
 use anyhow::{Result, anyhow};
 use credibil_binding::{Resolver, resolve_jwk};
-use credibil_jose::{Jwt, decode_jws};
+use credibil_jose::{Jws, Jwt, decode_jws};
 use credibil_status::{StatusListClaims, StatusToken};
 
 use crate::dcql::Claim;
@@ -104,4 +106,20 @@ where
     }
 
     Ok(claims)
+}
+
+/// Extracts the verifying key information from an `sd-jwt` credential.
+///
+/// # Errors
+///
+/// Returns an error if the decoding fails.
+pub fn key_binding(issued: &str) -> Result<KeyBinding> {
+    let split = issued.split('~').collect::<Vec<_>>();
+    if split.len() < 2 {
+        return Err(anyhow!("invalid sd-jwt"));
+    }
+    let credential = split[0];
+    let jws = Jws::from_str(credential)?;
+    let signature = jws.signatures.first().ok_or_else(|| anyhow!("missing JWS signature"))?;
+    Ok(signature.protected.key.clone())
 }

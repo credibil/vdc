@@ -4,9 +4,10 @@ use anyhow::{Result, anyhow};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use coset::CoseSign1;
 use credibil_binding::{Resolver, resolve_jwk};
+use credibil_jose::KeyBinding;
 
 use crate::dcql::Claim;
-use crate::mso_mdoc::{CoseKey, DeviceAuth, DeviceResponse};
+use crate::mso_mdoc::{CoseKey, DeviceAuth, DeviceResponse, IssuerSigned};
 use crate::serde_cbor;
 
 /// Verifies an ISO mdoc presentation.
@@ -64,4 +65,17 @@ pub async fn verify_signature(signature: &CoseSign1, resolver: &impl Resolver) -
     let kid = String::from_utf8_lossy(kid_bytes);
     let verifying_key: CoseKey = resolve_jwk(&*kid, resolver).await?.into();
     signature.verify_signature(&[], |sig, tbs| verifying_key.verify(sig, tbs))
+}
+
+/// Extract the verifying key information from an `mso_mdoc` credential.
+///
+/// # Errors
+///
+/// Returns an error if the decoding fails.
+pub fn key_binding(issued: &str) -> Result<KeyBinding> {
+    let mdoc_bytes = Base64UrlUnpadded::decode_vec(issued)?;
+    let issuer_signed: IssuerSigned = serde_cbor::from_slice(&mdoc_bytes)?;
+    let kid = String::from_utf8_lossy(&issuer_signed.issuer_auth.protected.header.key_id);
+
+    Ok(KeyBinding::Kid(kid.to_string()))
 }

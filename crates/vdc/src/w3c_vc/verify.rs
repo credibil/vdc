@@ -1,12 +1,15 @@
 //! # W3C Identity
 
-use anyhow::{Result, anyhow};
+use std::str::FromStr;
+
+use anyhow::{Result, anyhow, bail};
 use credibil_binding::{Resolver, resolve_jwk};
-use credibil_jose::{Jwt, decode_jws};
+use credibil_core::Kind;
+use credibil_jose::{decode_jws, Jws, Jwt, KeyBinding};
 
 use super::W3cVpClaims;
 use crate::dcql::Claim;
-use crate::w3c_vc::store;
+use crate::w3c_vc::{store, VerifiableCredential};
 
 /// Verifies an SD-JWT presentation (KB-JWT, and associated disclosures).
 ///
@@ -54,4 +57,29 @@ pub async fn verify_vp(
     }
 
     Ok(claims)
+}
+
+/// Extract the verifying key information from `W3C` credential.
+///
+/// # Errors
+///
+/// Returns an error if the decoding fails.
+pub fn key_binding(issued: impl Into<Kind<VerifiableCredential>>) -> Result<KeyBinding> {
+    match issued.into() {
+        Kind::String(encoded) => {
+            let jws = Jws::from_str(&encoded)?;
+            let signature = jws.signatures
+                .first()
+                .ok_or_else(|| anyhow!("missing JWS signature"))?;
+            Ok(signature.protected.key.clone())
+        }
+        Kind::Object(vc) => {
+            let Some(proof) = vc.proof else {
+                bail!("missing proof in W3C VC");
+            };
+            let proofs = proof.to_vec();
+            let proof = proofs.first().ok_or_else(|| anyhow!("missing proof in W3C VC"))?;
+            Ok(KeyBinding::Kid(proof.verification_method.clone()))
+        }
+    }
 }
