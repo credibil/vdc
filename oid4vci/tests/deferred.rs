@@ -1,7 +1,5 @@
 //! Deferred Issuance Tests
 
-use std::collections::HashMap;
-
 use credibil_binding::resolve_jwk;
 // use credibil_oid4vci::datastore::Datastore;
 use credibil_oid4vci::identity::{Signature, VerifyBy};
@@ -17,7 +15,7 @@ use test_utils::{Datastore, Issuer, Wallet};
 use tokio::sync::OnceCell;
 
 static CLIENT: OnceCell<Client<Issuer>> = OnceCell::const_new();
-static CAROL: OnceCell<Wallet> = OnceCell::const_new();
+static BOB: OnceCell<Wallet> = OnceCell::const_new();
 
 async fn client() -> &'static Client<Issuer<'static>> {
     CLIENT
@@ -26,14 +24,13 @@ async fn client() -> &'static Client<Issuer<'static>> {
         })
         .await
 }
-async fn carol() -> &'static Wallet<'static> {
-    CAROL
-        .get_or_init(|| async {
-            Wallet::new("https://deferred.io/carol").await.expect("should create wallet")
-        })
-        .await
+async fn bob() -> &'static Wallet<'static> {
+    BOB.get_or_init(|| async {
+        Wallet::new("https://deferred.io/bob").await.expect("should create wallet")
+    })
+    .await
 }
-const CAROL_SUBJECT: &str = "pending-user";
+const BOB_SUBJECT: &str = "bob";
 const ISSUER: &str = "http://localhost:8080";
 
 // Should return a credential when using the pre-authorized code flow and the
@@ -41,13 +38,13 @@ const ISSUER: &str = "http://localhost:8080";
 #[tokio::test]
 async fn deferred() {
     let client = client().await; // Client::new(Issuer::new(ISSUER).await);
-    let carol = carol().await;
+    let bob = bob().await;
 
     // --------------------------------------------------
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(CAROL_SUBJECT)
+        .subject_id(BOB_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response = client.request(request).owner(ISSUER).await.expect("should create offer");
@@ -73,7 +70,7 @@ async fn deferred() {
     let nonce = client.request(NonceRequest).owner(ISSUER).await.expect("should return nonce");
 
     // proof of possession of key material
-    let key = carol
+    let key = bob
         .verification_method()
         .await
         .expect("should have did")
@@ -84,7 +81,7 @@ async fn deferred() {
         .typ(JwtType::ProofJwt)
         .payload(ProofClaims::new().credential_issuer(ISSUER).nonce(&nonce.c_nonce))
         .key_binding(&key)
-        .add_signer(carol)
+        .add_signer(bob)
         .build()
         .await
         .expect("builds JWS");
@@ -112,16 +109,17 @@ async fn deferred() {
     // --------------------------------------------------
     let credential_identifier = &details[0].credential_identifiers[0];
 
-    let data = Datastore::get(ISSUER, "subject", CAROL_SUBJECT).await.unwrap().unwrap();
-    let mut subject: HashMap<String, Dataset> = serde_json::from_slice(&data).unwrap();
+    let data = Datastore::get(ISSUER, "subject", BOB_SUBJECT).await.unwrap().unwrap();
+    let mut subject: Vec<Dataset> = serde_json::from_slice(&data).unwrap();
 
-    let mut credential: Dataset = subject.get(credential_identifier).unwrap().clone();
-    credential.pending = false;
-    subject.insert(credential_identifier.to_string(), credential);
+    let dataset = subject
+        .iter_mut()
+        .find(|ds| &ds.credential_identifier == credential_identifier)
+        .expect("should find dataset");
+    dataset.pending = false;
 
     let data = serde_json::to_vec(&subject).unwrap();
-    Datastore::delete(ISSUER, "subject", CAROL_SUBJECT).await.unwrap();
-    Datastore::put(ISSUER, "subject", CAROL_SUBJECT, &data).await.unwrap();
+    Datastore::put(ISSUER, "subject", BOB_SUBJECT, &data).await.unwrap();
 
     // --------------------------------------------------
     // After a brief wait Bob retrieves the credential
@@ -154,7 +152,7 @@ async fn deferred() {
     let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
     // verify the credential
-    let VerifyBy::KeyId(carol_kid) = carol.verification_method().await.unwrap() else {
+    let VerifyBy::KeyId(carol_kid) = bob.verification_method().await.unwrap() else {
         panic!("should have did");
     };
     let carol_did = carol_kid.split('#').next().expect("should have did");
@@ -166,5 +164,5 @@ async fn deferred() {
         panic!("should be a single credential subject");
     };
     assert_eq!(subject.id, Some(carol_did.to_string()));
-    assert_eq!(subject.claims.get("family_name"), Some(&json!("Person")));
+    assert_eq!(subject.claims.get("family_name"), Some(&json!("User")));
 }

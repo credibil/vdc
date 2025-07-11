@@ -19,7 +19,7 @@ use test_utils::{Issuer, Wallet};
 use tokio::sync::OnceCell;
 
 const ISSUER: &str = "http://localhost:8080";
-const BOB_SUBJECT: &str = "normal-user";
+const BOB_SUBJECT: &str = "alice";
 
 static CLIENT: OnceCell<Client<Issuer>> = OnceCell::const_new();
 static BOB: OnceCell<Wallet> = OnceCell::const_new();
@@ -161,7 +161,7 @@ async fn two_proofs() {
             panic!("should be a single credential subject");
         };
         assert_eq!(subject.id, Some(dids[i].clone()));
-        assert_eq!(subject.claims.get("family_name"), Some(&json!("Person")));
+        assert_eq!(subject.claims.get("family_name"), Some(&json!("Holder")));
     }
 }
 
