@@ -24,6 +24,10 @@ pub use crate::oauth::GrantType;
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Dataset {
+    /// The dataset identifier. This is the unique identifier for the
+    /// credential to be issued to the user.
+    pub credential_identifier: String,
+
     /// The credential configuration ID of the credential this dataset is for.
     pub credential_configuration_id: String,
 

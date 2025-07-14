@@ -17,7 +17,7 @@ use test_utils::{Issuer, Wallet};
 use tokio::sync::OnceCell;
 
 const ISSUER: &str = "http://localhost:8080";
-const BOB_SUBJECT: &str = "normal-user";
+const BOB_SUBJECT: &str = "alice";
 
 static CLIENT: OnceCell<Client<Issuer<'static>>> = OnceCell::const_new();
 static BOB: OnceCell<Wallet<'static>> = OnceCell::const_new();
@@ -131,7 +131,7 @@ async fn offer_val() {
         panic!("should be a single credential subject");
     };
     assert_eq!(subject.id, Some(bob_did.to_string()));
-    assert_eq!(subject.claims.get("family_name"), Some(&json!("Person")));
+    assert_eq!(subject.claims.get("family_name"), Some(&json!("Holder")));
 }
 
 // Should return a credential when using the pre-authorized code flow and the
@@ -206,8 +206,8 @@ async fn two_datasets() {
     // --------------------------------------------------
     let details = &token.authorization_details.as_ref().expect("should have authorization details");
     let expected = HashMap::from([
-        ("OpenSourceDeveloper", vec!["A. Mazing", "Hacker"]),
-        ("PHLDeveloper", vec!["A. Developer", "Lead"]),
+        ("OpenSourceDeveloper", vec!["A. Holder", "Hacker"]),
+        ("PHLDeveloper", vec!["A. Holder", "Lead"]),
     ]);
 
     for identifier in &details[0].credential_identifiers {
@@ -358,8 +358,8 @@ async fn reduce_credentials() {
     let OneMany::One(subject) = jwt.claims.vc.credential_subject else {
         panic!("should have single subject");
     };
-    assert_eq!(subject.claims["given_name"], "Normal");
-    assert_eq!(subject.claims["family_name"], "Person");
+    assert_eq!(subject.claims["given_name"], "Alice");
+    assert_eq!(subject.claims["family_name"], "Holder");
 }
 
 // Should return fewer claims when requested in token request.
@@ -464,7 +464,7 @@ async fn reduce_claims() {
         panic!("should be a single credential subject");
     };
     assert_eq!(subject.id, Some(bob_did.to_string()));
-    assert_eq!(subject.claims.get("family_name"), Some(&json!("Person")));
+    assert_eq!(subject.claims.get("family_name"), Some(&json!("Holder")));
     assert_eq!(subject.claims.get("email"), None);
 }
 

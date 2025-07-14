@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::thread;
 
 use anyhow::{Result, anyhow};
@@ -18,8 +17,8 @@ use crate::resources::{Datastore, KeyVault, Keyvalue};
 
 const ISSUER_METADATA: &[u8] = include_bytes!("../../data/issuer-metadata.json");
 const SERVER_METADATA: &[u8] = include_bytes!("../../data/server-metadata.json");
-const NORMAL_USER: &[u8] = include_bytes!("../../data/normal-user.json");
-const PENDING_USER: &[u8] = include_bytes!("../../data/pending-user.json");
+const ALICE: &[u8] = include_bytes!("../../data/alice-datasets.json");
+const BOB: &[u8] = include_bytes!("../../data/bob-datasets.json");
 const CLIENT_METADATA: &[u8] = include_bytes!("../../data/client-metadata.json");
 
 #[derive(Clone)]
@@ -33,8 +32,8 @@ impl<'a> Issuer<'a> {
         Datastore::put(owner, "metadata", "issuer", ISSUER_METADATA).await?;
         Datastore::put(owner, "metadata", "server", SERVER_METADATA).await?;
         Datastore::put(owner, "metadata", "public-client", CLIENT_METADATA).await?;
-        Datastore::put(owner, "subject", "normal-user", NORMAL_USER).await?;
-        Datastore::put(owner, "subject", "pending-user", PENDING_USER).await?;
+        Datastore::put(owner, "subject", "alice", ALICE).await?;
+        Datastore::put(owner, "subject", "bob", BOB).await?;
 
         // fetch (or generate) the signing key
         let signer = match Keyring::entry(&KeyVault, owner, "signing").await {
@@ -140,12 +139,12 @@ impl Subject for Issuer<'_> {
         let Some(data) = Datastore::get(owner, "subject", subject_id).await? else {
             return Err(anyhow!("no dataset for subject {owner}:{subject_id}"));
         };
-        let datasets: HashMap<String, Dataset> = serde_json::from_slice(&data)?;
+        let datasets: Vec<Dataset> = serde_json::from_slice(&data)?;
 
         let identifiers = datasets
             .iter()
-            .filter(|(_, ds)| ds.credential_configuration_id == credential_configuration_id)
-            .map(|(k, _)| k.clone())
+            .filter(|ds| ds.credential_configuration_id == credential_configuration_id)
+            .map(|ds| ds.credential_identifier.clone())
             .collect::<Vec<_>>();
         if identifiers.is_empty() {
             return Err(anyhow!("no dataset for {subject_id}:{credential_configuration_id}"));
@@ -160,9 +159,11 @@ impl Subject for Issuer<'_> {
         let Some(data) = Datastore::get(owner, "subject", subject_id).await? else {
             return Err(anyhow!("no datasets for subject {subject_id}"));
         };
-        let datasets: HashMap<String, Dataset> = serde_json::from_slice(&data)?;
+        let datasets: Vec<Dataset> = serde_json::from_slice(&data)?;
 
-        let Some(dataset) = datasets.get(credential_identifier) else {
+        let Some(dataset) =
+            datasets.iter().find(|ds| ds.credential_identifier == credential_identifier)
+        else {
             return Err(anyhow!("no dataset for subject {subject_id}:{credential_identifier}"));
         };
         Ok(dataset.clone())

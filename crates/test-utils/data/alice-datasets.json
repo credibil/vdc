@@ -1,50 +1,55 @@
-{
-    "PHLEmployeeID": {
+[
+    {
+        "credential_identifier": "PHLEmployeeID",
         "credential_configuration_id": "EmployeeID_W3C_VC",
         "claims": {
-            "given_name": "Normal",
-            "family_name": "Person",
-            "email": "normal.user@example.com",
+            "given_name": "Alice",
+            "family_name": "Holder",
+            "email": "alice.holder@example.com",
             "address": {
                 "street_address": "123 Fake St",
                 "locality": "Wellington"
             }
         }
     },
-    "PHLDeveloper": {
+    {
+        "credential_identifier": "PHLDeveloper",
         "credential_configuration_id": "Developer_W3C_VC",
         "claims": {
-            "name": "A. Developer",
+            "name": "A. Holder",
             "role": "Lead",
             "proficiency": "3"
         }
     },
-    "OpenSourceDeveloper": {
+    {
+        "credential_identifier": "OpenSourceDeveloper",
         "credential_configuration_id": "Developer_W3C_VC",
         "claims": {
-            "name": "A. Mazing",
+            "name": "A. Holder",
             "role": "Hacker",
             "proficiency": "2"
         }
     },
-    "DriverLicence": {
+    {
+        "credential_identifier": "DriverLicence",
         "credential_configuration_id": "org.iso.18013.5.1.mDL",
         "claims": {
-            "given_name": "Normal",
-            "family_name": "Person",
-            "email": "normal.user@example.com"
+            "given_name": "Alice",
+            "family_name": "Holder",
+            "email": "alice.holder@example.com"
         }
     },
-    "Identity": {
+    {
+        "credential_identifier": "Identity",
         "credential_configuration_id": "Identity_SD_JWT",
         "claims": {
-            "given_name": "Normal",
-            "family_name": "Person",
-            "email": "normal.user@example.com",
+            "given_name": "Alice",
+            "family_name": "Holder",
+            "email": "alice.holder@example.com",
             "address": {
                 "street_address": "123 Fake St",
                 "locality": "Wellington"
             }
         }
     }
-}
+]
