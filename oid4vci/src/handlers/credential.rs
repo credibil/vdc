@@ -143,16 +143,13 @@ impl CredentialRequest {
 
             for proof in proof_jwts {
                 // TODO: ProofClaims cannot use `client_id` if the access token was
-                // obtained in a pre-auth flow with anonymous access to the token
-                // endpoint
+                //       obtained in a pre-auth flow with anonymous access to the token
+                //       endpoint
                 // TODO: check proof is signed with supported algorithm (from proof_type)
 
-                let jwt: Jwt<ProofClaims> = match decode_jws(proof, resolver).await {
-                    Ok(jwt) => jwt,
-                    Err(e) => {
-                        return Err(Error::InvalidProof(format!("issue decoding JWT: {e}")));
-                    }
-                };
+                let jwt: Jwt<ProofClaims> = decode_jws(proof, resolver)
+                    .await
+                    .map_err(|e| Error::InvalidProof(format!("issue decoding proof JWT: {e}")))?;
 
                 // proof type
                 if jwt.header.typ != JwtType::ProofJwt.to_string() {
