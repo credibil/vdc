@@ -445,7 +445,7 @@ dependencies = [
 [[package]]
 name = "credibil-binding"
 version = "0.1.2"
-source = "git+https://github.com/credibil/key.git#f65ddd06c1bf43b3a1455bb30cf1d406bdc21138"
+source = "git+https://github.com/credibil/key.git#89304fddebe126a43dc8d2b36d99dbd51443898d"
 dependencies = [
  "anyhow",
  "credibil-core",
@@ -476,7 +476,7 @@ dependencies = [
 [[package]]
 name = "credibil-did"
 version = "0.1.2"
-source = "git+https://github.com/credibil/key.git#f65ddd06c1bf43b3a1455bb30cf1d406bdc21138"
+source = "git+https://github.com/credibil/key.git#89304fddebe126a43dc8d2b36d99dbd51443898d"
 dependencies = [
  "anyhow",
  "chrono",
@@ -485,6 +485,7 @@ dependencies = [
  "credibil-jose",
  "multibase",
  "nom",
+ "percent-encoding",
  "serde",
  "serde_json",
  "serde_json_canonicalizer",
@@ -496,7 +497,7 @@ dependencies = [
 [[package]]
 name = "credibil-ecc"
 version = "0.1.2"
-source = "git+https://github.com/credibil/key.git#f65ddd06c1bf43b3a1455bb30cf1d406bdc21138"
+source = "git+https://github.com/credibil/key.git#89304fddebe126a43dc8d2b36d99dbd51443898d"
 dependencies = [
  "aes-gcm",
  "aes-kw",
@@ -519,7 +520,7 @@ dependencies = [
 [[package]]
 name = "credibil-jose"
 version = "0.1.2"
-source = "git+https://github.com/credibil/key.git#f65ddd06c1bf43b3a1455bb30cf1d406bdc21138"
+source = "git+https://github.com/credibil/key.git#89304fddebe126a43dc8d2b36d99dbd51443898d"
 dependencies = [
  "anyhow",
  "base64ct",
