@@ -2,7 +2,7 @@
 
 use std::str::FromStr;
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use credibil_binding::{Resolver, resolve_jwk};
 use credibil_jose::{Jws, Jwt, decode_jws};
 use credibil_status::{StatusListClaims, StatusToken};
@@ -54,9 +54,12 @@ where
     // ..verify credential's status
     if let Some(status_claim) = &sd_jwt.claims.status {
         // FIXME: move this code  to `StatusList`
-        let token = StatusToken::fetch(resolver, &status_claim.status_list.uri).await?;
+        let token = StatusToken::fetch(resolver, &status_claim.status_list.uri)
+            .await
+            .context("issue fetching status token")?;
         let jwk_resolver = async |kid: String| resolve_jwk(&kid, resolver).await;
-        let decoded: Jwt<StatusListClaims> = decode_jws(&token, jwk_resolver).await?;
+        let decoded: Jwt<StatusListClaims> =
+            decode_jws(&token, jwk_resolver).await.context("issue decoding status token")?;
         if !decoded.claims.status_list.is_valid(status_claim.status_list.idx)? {
             return Err(anyhow!("credential status is invalid"));
         }
@@ -72,12 +75,9 @@ where
     let Some(KeyBinding::Jwk(holder_jwk)) = &sd_jwt.claims.cnf else {
         return Err(anyhow!("sd-jwt `cnf` claim not found"));
     };
-
     let jwk_resolver = async |_| async { Ok(holder_jwk.clone()) }.await;
-    let kb_jwt: Jwt<KbJwtClaims> = decode_jws(key_binding, jwk_resolver).await?;
-
-    // let jwk_resolver = async |kid: String| resolve_jwk(&kid, resolver).await;
-    // let kb_jwt: Jwt<KbJwtClaims> = decode_jws(key_binding, jwk_resolver).await?;
+    let kb_jwt: Jwt<KbJwtClaims> =
+        decode_jws(key_binding, jwk_resolver).await.context("issue decoding kb-jwt")?;
 
     // ..verify the `sd_hash` claim
     let sd_hash = super::sd_hash(&format!("{credential}~{}", disclosures.join("~")));
@@ -98,7 +98,7 @@ where
     // unpack and verify disclosures
     let mut claims = vec![];
     for encoded in disclosures {
-        let disclosure = Disclosure::from(encoded)?;
+        let disclosure = Disclosure::from(encoded).context("issue decoding disclosure")?;
         if !sd_jwt.claims.sd.contains(&disclosure.hash()?) {
             return Err(anyhow!("disclosure not in sd-jwt `sd` claim"));
         }

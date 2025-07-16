@@ -34,7 +34,7 @@ async fn metadata(
 ) -> Result<ServerResponse> {
     let oauth_server = Metadata::server(provider, issuer)
         .await
-        .context("getting authorization server metadata")?;
+        .context("issue getting authorization server metadata")?;
 
     Ok(ServerResponse(oauth_server))
 }

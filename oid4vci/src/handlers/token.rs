@@ -79,7 +79,7 @@ async fn token(
     };
     StateStore::put(provider, issuer, &state.body.access_token, &state)
         .await
-        .context("saving state")?;
+        .context("issue saving state")?;
 
     // return response
     Ok(TokenResponse {
@@ -113,7 +113,7 @@ async fn get_state<T: DeserializeOwned>(
     let Ok(state) = StateStore::get::<T>(provider, issuer, code).await else {
         return Err(Error::InvalidGrant("invalid authorization code".to_string()));
     };
-    StateStore::purge(provider, issuer, code).await.context("purging state")?;
+    StateStore::purge(provider, issuer, code).await.context("issue purging state")?;
     if state.is_expired() {
         return Err(invalid!("authorization state expired"));
     }
@@ -288,7 +288,7 @@ fn verify_claims(issuer: &IssuerMetadata, detail: &AuthorizationDetail) -> Resul
             credential_configuration_id
         }
         AuthorizationDefinition::FormatProfile(fmt) => {
-            issuer.credential_configuration_id(fmt).context("issuer issue")?
+            issuer.credential_configuration_id(fmt).context("issue issuer issue")?
         }
     };
     let config = issuer.credential_configuration(config_id).map_err(|e| {

@@ -35,11 +35,11 @@ struct Context {
 async fn create_offer(
     issuer: &str, provider: &impl Provider, request: CreateOfferRequest,
 ) -> Result<Response<CreateOfferResponse>> {
-    let iss = Metadata::issuer(provider, issuer).await.context("getting issuer metadata")?;
+    let iss = Metadata::issuer(provider, issuer).await.context("issue getting issuer metadata")?;
 
     // TODO: determine how to select correct server?
     // select `authorization_server`, if specified
-    let server = Metadata::server(provider, issuer).await.context("getting server metadata")?;
+    let server = Metadata::server(provider, issuer).await.context("issue getting server metadata")?;
     let ctx = Context { issuer: iss, server };
     request.verify(&ctx)?;
 
@@ -71,7 +71,7 @@ async fn create_offer(
                 tx_code: tx_code.clone(),
             },
         };
-        StateStore::put(provider, issuer, &state_key, &state).await.context("saving state")?;
+        StateStore::put(provider, issuer, &state_key, &state).await.context("issue saving state")?;
     }
 
     // respond with Offer object or uri?
@@ -91,7 +91,7 @@ async fn create_offer(
     // save offer to state
     let state =
         State { expires_at: Utc::now() + Expire::Authorized.duration(), body: credential_offer };
-    StateStore::put(provider, issuer, &uri_token, &state).await.context("saving state")?;
+    StateStore::put(provider, issuer, &uri_token, &state).await.context("issue saving state")?;
 
     Ok(Response {
         status: StatusCode::CREATED,
@@ -218,7 +218,7 @@ async fn authorize(
     for config_id in request.credential_configuration_ids.clone() {
         let identifiers = Subject::authorize(provider, issuer, &subject_id, &config_id)
             .await
-            .context("authorizing holder")?;
+            .context("issue authorizing holder")?;
 
         authorized.push(AuthorizedDetail {
             authorization_detail: AuthorizationDetail {

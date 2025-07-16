@@ -360,7 +360,7 @@ impl CredentialOffer {
 
         // generate qr code
         let qr_code =
-            QrCode::new(format!("{endpoint}?{qs}")).context("failed to create QR code: {e}")?;
+            QrCode::new(format!("{endpoint}?{qs}")).context("issue failed to create QR code: {e}")?;
 
         // write image to buffer
         let img_buf = qr_code.render::<image::Luma<u8>>().build();
@@ -368,7 +368,7 @@ impl CredentialOffer {
         let mut writer = Cursor::new(&mut buffer);
         img_buf
             .write_to(&mut writer, image::ImageFormat::Png)
-            .context("failed to create QR code")?;
+            .context("issue failed to create QR code")?;
 
         // base64 encode image
         Ok(format!("data:image/png;base64,{}", Base64::encode_string(buffer.as_slice())))

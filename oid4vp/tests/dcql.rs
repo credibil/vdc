@@ -25,14 +25,12 @@ static CLIENT: OnceCell<Client<Verifier<'static>>> = OnceCell::const_new();
 async fn client() -> &'static Client<Verifier<'static>> {
     CLIENT
         .get_or_init(|| async {
-            Client::new(Verifier::new(VERIFIER_ID).await.expect("should create verifier"))
+            Client::new(Verifier::new(VERIFIER_ID).await.expect("should create"))
         })
         .await
 }
 async fn issuer() -> &'static Issuer<'static> {
-    ISSUER
-        .get_or_init(|| async { Issuer::new(ISSUER_ID).await.expect("should create issuer") })
-        .await
+    ISSUER.get_or_init(|| async { Issuer::new(ISSUER_ID).await.expect("should create") }).await
 }
 async fn wallet() -> &'static Wallet<'static> {
     WALLET.get_or_init(|| async { populate("https://dcql.io/wallet").await }).await

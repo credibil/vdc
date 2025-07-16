@@ -51,7 +51,7 @@ pub async fn credential(
     // create a request context for data accessed more than once
     let mut ctx = Context {
         state,
-        issuer: Metadata::issuer(provider, issuer).await.context("fetching metadata")?,
+        issuer: Metadata::issuer(provider, issuer).await.context("issue fetching metadata")?,
         configuration: CredentialConfiguration::default(),
         proof_kids: vec![],
     };
@@ -176,10 +176,10 @@ impl CredentialRequest {
             for c_nonce in nonces {
                 StateStore::get::<String>(provider, issuer, &c_nonce)
                     .await
-                    .context("proof nonce claim")?;
+                    .context("issue proof nonce claim")?;
                 StateStore::purge(provider, issuer, &c_nonce)
                     .await
-                    .context("deleting proof nonce")?;
+                    .context("issue deleting proof nonce")?;
             }
         }
 
@@ -219,13 +219,13 @@ impl Context {
     ) -> Result<CredentialResponse> {
         let mut credentials = vec![];
 
-        let mut status_list = StatusList::new().context("creating status list")?;
+        let mut status_list = StatusList::new().context("issue creating status list")?;
 
         // create a credential for each proof
         for kid in &self.proof_kids {
             let status_claim = status_list
                 .add_entry(format!("{issuer}/statuslists/1"))
-                .context("creating status claim")?;
+                .context("issue creating status claim")?;
 
             let credential = match &self.configuration.profile {
                 FormatProfile::JwtVcJson { credential_definition } => {
@@ -242,14 +242,14 @@ impl Context {
                         .signer(provider)
                         .build()
                         .await
-                        .context("creating `jwt_vc_json` credential")?;
+                        .context("issue creating `jwt_vc_json` credential")?;
 
                     Credential { credential: jwt.into() }
                 }
                 FormatProfile::MsoMdoc { doctype } => {
                     let jwk = resolve_jwk(kid, provider)
                         .await
-                        .context("retrieving JWK for `dc+sd-jwt` credential")?;
+                        .context("issue retrieving JWK for `dc+sd-jwt` credential")?;
 
                     let mdl = MdocBuilder::new()
                         .doctype(doctype)
@@ -258,14 +258,14 @@ impl Context {
                         .signer(provider)
                         .build()
                         .await
-                        .context("creating `mso_mdoc` credential")?;
+                        .context("issue creating `mso_mdoc` credential")?;
 
                     Credential { credential: mdl.into() }
                 }
                 FormatProfile::DcSdJwt { vct } => {
                     // TODO: cache the result of jwk when verifying proof (`verify` method)
                     let jwk =
-                        resolve_jwk(kid, provider).await.context("getting JWK for `dc+sd-jwt`")?;
+                        resolve_jwk(kid, provider).await.context("issue getting JWK for `dc+sd-jwt`")?;
                     let Some(did) = kid.split('#').next() else {
                         return Err(Error::InvalidProof("Proof JWT DID is invalid".to_string()));
                     };
@@ -280,7 +280,7 @@ impl Context {
                         .signer(provider)
                         .build()
                         .await
-                        .context("creating `dc+sd-jwt` credential")?;
+                        .context("issue creating `dc+sd-jwt` credential")?;
 
                     Credential { credential: sd_jwt.into() }
                 }
@@ -298,8 +298,8 @@ impl Context {
             .signer(provider)
             .build()
             .await
-            .context("building status list token")?;
-        StatusStore::put(provider, issuer, &list_id, &token).await.context("saving status list")?;
+            .context("issue building status list token")?;
+        StatusStore::put(provider, issuer, &list_id, &token).await.context("issue saving status list")?;
 
         // update token state with new `c_nonce`
         let mut state = self.state.clone();
@@ -308,13 +308,13 @@ impl Context {
         let token = &state.body;
         StateStore::put(provider, issuer, &token.access_token, &state)
             .await
-            .context("saving state")?;
+            .context("issue saving state")?;
 
         // TODO: create issuance state for notification endpoint
         let notification_id = generate::notification_id();
         StateStore::put(provider, issuer, &notification_id, &state)
             .await
-            .context("saving state")?;
+            .context("issue saving state")?;
 
         Ok(CredentialResponse::Credentials { credentials, notification_id: Some(notification_id) })
     }
@@ -329,7 +329,7 @@ impl Context {
             body: Deferred { transaction_id: txn_id.clone(), credential_request: request },
             expires_at: Utc::now() + Expire::Access.duration(),
         };
-        StateStore::put(provider, issuer, &txn_id, &state).await.context("saving state")?;
+        StateStore::put(provider, issuer, &txn_id, &state).await.context("issue saving state")?;
 
         Ok(CredentialResponse::TransactionId { transaction_id: txn_id })
     }
@@ -350,7 +350,7 @@ impl Context {
         let subject_id = &self.state.body.subject_id;
         let mut dataset = Subject::dataset(provider, issuer, subject_id, identifier)
             .await
-            .context("populating claims")?;
+            .context("issue populating claims")?;
 
         // only include previously requested/authorized claims
         if let Some(claims) = &authorized.authorization_detail.claims {

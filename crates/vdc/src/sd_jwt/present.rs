@@ -106,7 +106,8 @@ impl<M, C> SdJwtVpBuilder<M, C, NoSigner> {
 
 impl<S: Signature> SdJwtVpBuilder<HasMatched<'_>, HasClientId, HasSigner<'_, S>> {
     /// Build the SD-JWT credential, returning a base64url-encoded, JSON SD-JWT
-    /// with the format: `<Issuer-signed JWT>~<Disclosure 1>~<Disclosure 2>~...~<KB-JWT>`.
+    /// with the format: 
+    ///     `<Issuer-signed JWT>~<Disclosure 1>~<Disclosure 2>~...~<KB-JWT>`.
     ///
     /// # Errors
     /// TODO: Document errors
@@ -150,10 +151,9 @@ impl<S: Signature> SdJwtVpBuilder<HasMatched<'_>, HasClientId, HasSigner<'_, S>>
             .add_signer(self.signer.0)
             .build()
             .await
-            .context("building KB-JWT")?
+            .context("issue building KB-JWT")?
             .to_string();
 
-        // assemble presentation
         Ok(format!("{sd}~{kb_jwt}"))
     }
 }

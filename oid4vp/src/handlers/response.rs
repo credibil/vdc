@@ -48,7 +48,7 @@ async fn response(
     let Some(state_key) = &request.state else {
         return Err(invalid!("client state not found"));
     };
-    StateStore::purge(provider, verifier, state_key).await.context("purging state")?;
+    StateStore::purge(provider, verifier, state_key).await.context("issue purging state")?;
 
     Ok(RedirectResponse {
         // FIXME: add response to state using `response_code` so Wallet can fetch full response

@@ -37,7 +37,7 @@ pub async fn request_uri(
     // retrieve request object from state
     let state = StateStore::get::<RequestObject>(provider, verifier, &request.id)
         .await
-        .context("retrieving state")?;
+        .context("issue retrieving state")?;
 
     let mut request_object = state.body;
 
@@ -58,8 +58,8 @@ pub async fn request_uri(
 
     request_object.wallet_nonce = request.wallet_nonce;
 
-    let kid = provider.verification_method().await.context("getting verification method")?;
-    let key_binding = kid.try_into().context("converting key_binding")?;
+    let kid = provider.verification_method().await.context("issue getting verification method")?;
+    let key_binding = kid.try_into().context("issue converting key_binding")?;
 
     let jws = JwsBuilder::new()
         .typ(JwtType::OauthAuthzReqJwt)
@@ -68,9 +68,9 @@ pub async fn request_uri(
         .add_signer(provider)
         .build()
         .await
-        .context("building jwt")?;
+        .context("issue building jwt")?;
 
-    Ok(RequestUriResponse::Jwt(jws.encode().context("encoding jwt")?))
+    Ok(RequestUriResponse::Jwt(jws.encode().context("issue encoding jwt")?))
 }
 
 impl<P: Provider> Handler<RequestUriResponse, P> for Request<RequestUriRequest> {

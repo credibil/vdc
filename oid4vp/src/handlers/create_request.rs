@@ -59,7 +59,7 @@ async fn create_request(
     };
 
     let state = State { expires_at: Utc::now() + Expire::Request.duration(), body: req_obj };
-    StateStore::put(provider, verifier, &uri_token, &state).await.context("saving state")?;
+    StateStore::put(provider, verifier, &uri_token, &state).await.context("issue saving state")?;
 
     Ok(CreateResponse(auth_req))
 }

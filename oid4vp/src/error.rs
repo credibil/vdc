@@ -113,7 +113,8 @@ mod test {
         );
     }
     fn oid4vp_error() -> Result<(), Error> {
-        Err(Error::InvalidRequest("some invalid request".to_string())).context("request context")?
+        Err(Error::InvalidRequest("some invalid request".to_string()))
+            .context("issue request context")?
     }
 
     #[test]
@@ -125,7 +126,7 @@ mod test {
         );
     }
     fn anyhow_error() -> Result<(), Error> {
-        Err(anyhow!("one-off error")).context("error context")?
+        Err(anyhow!("one-off error")).context("issue error context")?
     }
 
     // Test that the error details are returned as an http query string.

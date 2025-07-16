@@ -41,7 +41,7 @@ async fn par(
 
     // save request to state for retrieval by authorization endpoint
     let state = State { body: request.request.clone(), expires_at: Utc::now() + expires_in };
-    StateStore::put(provider, issuer, &request_uri, &state).await.context("saving state")?;
+    StateStore::put(provider, issuer, &request_uri, &state).await.context("issue saving state")?;
 
     Ok(PushedAuthorizationResponse { request_uri, expires_in: expires_in.num_seconds() })
 }

@@ -22,7 +22,7 @@ async fn metadata(
     _verifier: &str, provider: &impl Provider, request: VerifierRequest,
 ) -> Result<VerifierResponse> {
     Ok(VerifierResponse(
-        Metadata::verifier(provider, &request.client_id).await.context("getting metadata")?,
+        Metadata::verifier(provider, &request.client_id).await.context("issue getting metadata")?,
     ))
 }
 

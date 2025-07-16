@@ -98,7 +98,6 @@ async fn create_request() -> Result<CreateResponse> {
         let body = http_resp.text().await?;
         return Err(anyhow!("{body}"));
     }
-
     http_resp.json::<CreateResponse>().await.map_err(|e| anyhow!("issue deserializing: {e}"))
 }
 

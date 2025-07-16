@@ -205,7 +205,7 @@ async fn authorize(
         }),
         wallet_nonce: Some("qPmxiNFCR3QTm19POc8u".to_string()),
     };
-    let form = object_req.form_encode().context("encoding request")?;
+    let form = object_req.form_encode().context("issue encoding request")?;
 
     let http_resp = http.get(&req_uri.request_uri).form(&form).send().await?;
     if http_resp.status() != StatusCode::OK {
@@ -253,7 +253,7 @@ async fn authorize(
         return Err(anyhow!("invalid client id").into());
     }
 
-    let form = response.form_encode().context("encoding response")?;
+    let form = response.form_encode().context("issue encoding response")?;
     let http_resp = http.post(response_uri).form(&form).send().await?;
     if http_resp.status() != StatusCode::OK {
         let status = http_resp.status();

@@ -34,8 +34,8 @@ async fn credential_offer(
 ) -> Result<CredentialOfferResponse> {
     let state = StateStore::get::<CredentialOffer>(provider, issuer, &request.id)
         .await
-        .context("credential offer not found in state")?;
-    StateStore::purge(provider, issuer, &request.id).await.context("purging state")?;
+        .context("issue credential offer not found in state")?;
+    StateStore::purge(provider, issuer, &request.id).await.context("issue purging state")?;
 
     if state.is_expired() {
         return Err(invalid!("state expired"));

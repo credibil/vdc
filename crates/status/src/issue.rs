@@ -190,7 +190,7 @@ impl<S: Signature> TokenBuilder<HasList, HasUri, HasSigner<'_, S>> {
             .add_signer(self.signer.0)
             .build()
             .await
-            .context("building Status List Token")?
+            .context("issue building Status List Token")?
             .to_string();
 
         Ok(jws)

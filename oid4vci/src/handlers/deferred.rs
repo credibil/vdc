@@ -52,7 +52,7 @@ async fn deferred(
     }
 
     // remove deferred state item
-    StateStore::purge(provider, issuer, transaction_id).await.context("purging state")?;
+    StateStore::purge(provider, issuer, transaction_id).await.context("issue purging state")?;
 
     Ok(response)
 }

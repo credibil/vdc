@@ -44,7 +44,7 @@ async fn authorize(
             is_par = true;
             let state = StateStore::get::<RequestObject>(provider, issuer, &uri.request_uri)
                 .await
-                .context("retrieving state")?;
+                .context("issue retrieving state")?;
 
             if state.expires_at < Utc::now() {
                 return Err(invalid!("`request_uri` has expired"));
@@ -100,11 +100,11 @@ async fn authorize(
     };
 
     let code = generate::auth_code();
-    StateStore::put(provider, issuer, &code, &state).await.context("saving authorization state")?;
+    StateStore::put(provider, issuer, &code, &state).await.context("issue saving authorization state")?;
 
     // remove offer state
     if let Some(issuer_state) = &request.issuer_state {
-        StateStore::purge(provider, issuer, issuer_state).await.context("purging offer state")?;
+        StateStore::purge(provider, issuer, issuer_state).await.context("issue purging offer state")?;
     }
 
     Ok(AuthorizationResponse {
@@ -196,7 +196,7 @@ impl Context {
         if let Some(issuer_state) = &request.issuer_state {
             let state = StateStore::get::<Offered>(provider, issuer, issuer_state)
                 .await
-                .context("retrieving state")?;
+                .context("issue retrieving state")?;
 
             if state.is_expired() {
                 return Err(invalid!("issuer state expired"));
@@ -280,7 +280,7 @@ impl Context {
                     let config_id = self
                         .issuer
                         .credential_configuration_id(fmt)
-                        .context("getting `credential_configuration_id`")?;
+                        .context("issue getting `credential_configuration_id`")?;
                     detail.credential = AuthorizationDefinition::ConfigurationId {
                         credential_configuration_id: config_id.clone(),
                     };

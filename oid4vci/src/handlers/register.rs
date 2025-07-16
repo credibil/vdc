@@ -22,7 +22,7 @@ async fn register(
     // verify access token
     StateStore::get::<Token>(provider, issuer, &request.headers.authorization)
         .await
-        .context("retrieving state")?;
+        .context("issue retrieving state")?;
 
     let Ok(client_metadata) = provider.register(issuer, &request.body.client_metadata).await else {
         return Err(server!("registration failed"));

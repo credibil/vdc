@@ -113,7 +113,7 @@ impl AuthorizationRequest {
         let qs = self.url_encode()?;
 
         // generate qr code
-        let qr_code = QrCode::new(format!("{endpoint}{qs}")).context("failed to create QR code")?;
+        let qr_code = QrCode::new(format!("{endpoint}{qs}")).context("issue failed to create QR code")?;
 
         // write image to buffer
         let img_buf = qr_code.render::<image::Luma<u8>>().build();
@@ -121,7 +121,7 @@ impl AuthorizationRequest {
         let mut writer = Cursor::new(&mut buffer);
         img_buf
             .write_to(&mut writer, image::ImageFormat::Png)
-            .context("failed to create QR code")?;
+            .context("issue failed to create QR code")?;
 
         // base64 encode image
         Ok(format!("data:image/png;base64,{}", Base64::encode_string(buffer.as_slice())))
@@ -236,13 +236,13 @@ impl RequestObject {
             .add_signer(signer)
             .build()
             .await
-            .context("building jwt")?;
+            .context("issue building jwt")?;
 
-        let encoded = jws.encode().context("encoding jws")?;
+        let encoded = jws.encode().context("issue encoding jws")?;
 
         let mut client_id = Map::new();
         client_id.insert("client_id".to_string(), Value::String(self.client_id.to_string()));
-        let client_param = html::url_encode(&client_id).context("encoding `client_id`")?;
+        let client_param = html::url_encode(&client_id).context("issue encoding `client_id`")?;
 
         Ok(format!("{client_param}&request={encoded}"))
     }
