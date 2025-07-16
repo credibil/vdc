@@ -40,9 +40,7 @@ async fn create_offer(
     // TODO: determine how to select correct server?
     // select `authorization_server`, if specified
     let server = Metadata::server(provider, issuer).await.context("getting server metadata")?;
-
     let ctx = Context { issuer: iss, server };
-
     request.verify(&ctx)?;
 
     let grant_types = request.grant_types.clone().unwrap_or_default();

@@ -56,10 +56,10 @@ uuid = { version = "1.17.0", features = ["fast-rng", "v4"] }
 # [patch."https://github.com/credibil/core"]
 # credibil-core = { path = "../core" }
 
-# [patch."https://github.com/credibil/key"]
-# credibil-ecc = { path = "../key/ecc" }
-# credibil-jose = { path = "../key/jose" }
-# credibil-binding = { path = "../key/binding" }
+[patch."https://github.com/credibil/key"]
+credibil-ecc = { path = "../key/ecc" }
+credibil-jose = { path = "../key/jose" }
+credibil-binding = { path = "../key/binding" }
 
 [profile.release]
 # optimize for small code size
