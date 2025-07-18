@@ -113,7 +113,8 @@ impl AuthorizationRequest {
         let qs = self.url_encode()?;
 
         // generate qr code
-        let qr_code = QrCode::new(format!("{endpoint}{qs}")).context("issue failed to create QR code")?;
+        let qr_code =
+            QrCode::new(format!("{endpoint}{qs}")).context("issue failed to create QR code")?;
 
         // write image to buffer
         let img_buf = qr_code.render::<image::Luma<u8>>().build();

@@ -15,7 +15,6 @@ use credibil_jose::Jws;
 use flate2::Compression;
 use flate2::read::ZlibDecoder;
 use flate2::write::ZlibEncoder;
-use serde::{Deserialize, Serialize};
 
 use crate::{BitsPerToken, StatusClaim, StatusList, StatusListClaims, StatusListEntry};
 
@@ -71,11 +70,6 @@ impl StatusList {
         Ok(StatusClaim { status_list: StatusListEntry { idx, uri: uri.into() } })
     }
 }
-
-/// Used to query the Status List endpoint in order to return Status List
-/// Token(s).
-#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
-pub struct StatusListResponse(pub String);
 
 /// Generate a Status List token.
 #[derive(Debug)]

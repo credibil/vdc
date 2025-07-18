@@ -1,4 +1,4 @@
-//! # Create Request handler
+//! # Create Request Handler
 //!
 //! This endpoint is used to prepare an [RFC6749](https://www.rfc-editor.org/rfc/rfc6749.html)
 //! Authorization Request to use when requesting a Verifiable Presentation from

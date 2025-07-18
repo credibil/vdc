@@ -8,7 +8,7 @@ use credibil_oid4vp::vdc::{
     DcqlQuery, MdocBuilder, SdJwtVcBuilder, W3cVcBuilder, mso_mdoc, sd_jwt, w3c_vc,
 };
 use credibil_oid4vp::{
-    AuthorizationRequest, AuthorizationResponse, Client, CreateRequest, DeviceFlow, ResponseMode,
+    AuthorizationRequest, Client, CreateRequest, DeviceFlow, ResponseMode, AuthorizationResponse,
     vp_token,
 };
 use serde_json::{Value, json};

@@ -22,15 +22,18 @@
 //! Token is provided in the Token Response.
 
 use anyhow::Context;
+use chrono::{Duration, Utc};
 use credibil_core::Kind;
 use credibil_core::api::{Body, Handler, Request, Response};
+use credibil_core::state::State;
 use credibil_vdc::dcql::{FormatQuery, Queryable};
 use credibil_vdc::{mso_mdoc, sd_jwt, w3c_vc};
 
 use crate::error::invalid;
+use crate::generate;
 use crate::handlers::{Error, Result};
 use crate::provider::{Provider, StateStore};
-use crate::types::{AuthorizationResponse, RedirectResponse, RequestObject};
+use crate::types::{AuthorizationResponse, RequestObject, SubmissionResponse};
 
 /// Endpoint for the Wallet to respond Verifier's Authorization Request.
 ///
@@ -40,29 +43,37 @@ use crate::types::{AuthorizationResponse, RedirectResponse, RequestObject};
 /// not available.
 async fn response(
     verifier: &str, provider: &impl Provider, request: AuthorizationResponse,
-) -> Result<RedirectResponse> {
+) -> Result<SubmissionResponse> {
     // FIXME: handle case where Wallet returns error instead of presentation
-    verify(verifier, provider, &request).await?;
 
-    // retrive state and clear
+    // verify presentation submission
+    let presented = verify(verifier, provider, &request).await?;
+
+    // cache presentation data for retrieval by the verifier
+    let data_id = generate::nonce();
+    let state = State { body: presented, expires_at: Utc::now() + Duration::minutes(5) };
+    StateStore::put(provider, verifier, &data_id, &state).await?;
+
+    // retrieve state and clear
     let Some(state_key) = &request.state else {
         return Err(invalid!("client state not found"));
     };
     StateStore::purge(provider, verifier, state_key).await.context("issue purging state")?;
 
-    Ok(RedirectResponse {
+    Ok(SubmissionResponse {
         // FIXME: add response to state using `response_code` so Wallet can fetch full response
         // FIXME: align redirct_uri to spec
         // redirect_uri: Some(format!("http://localhost:3000/cb#response_code={}", "1234")),
         redirect_uri: Some("http://localhost:3000/cb".to_string()),
         response_code: None,
+        vp_data_id: data_id,
     })
 }
 
-impl<P: Provider> Handler<RedirectResponse, P> for Request<AuthorizationResponse> {
+impl<P: Provider> Handler<SubmissionResponse, P> for Request<AuthorizationResponse> {
     type Error = Error;
 
-    async fn handle(self, verifier: &str, provider: &P) -> Result<Response<RedirectResponse>> {
+    async fn handle(self, verifier: &str, provider: &P) -> Result<Response<SubmissionResponse>> {
         Ok(response(verifier, provider, self.body).await?.into())
     }
 }
@@ -72,7 +83,7 @@ impl Body for AuthorizationResponse {}
 // Verfiy the `vp_token` and presentation against the `dcql_query`.
 async fn verify(
     verifier: &str, provider: &impl Provider, request: &AuthorizationResponse,
-) -> Result<()> {
+) -> Result<Vec<Queryable>> {
     // get state by client state key
     let Some(state_key) = &request.state else {
         return Err(invalid!("client state not found"));
@@ -90,7 +101,7 @@ async fn verify(
     //  FIXME: verify query constraints have been met
     //  FIXME: verify VC is valid (hasn't expired, been revoked, etc)
 
-    let mut found = vec![];
+    let mut presented = vec![];
 
     // process each presentation
     for (query_id, presentations) in &request.vp_token {
@@ -117,7 +128,7 @@ async fn verify(
                 }
             };
 
-            found.push(Queryable {
+            presented.push(Queryable {
                 meta: query.format.clone().into(),
                 claims,
                 credential: Kind::String(String::new()),
@@ -127,7 +138,7 @@ async fn verify(
 
     // re-query presentations to confirm the query constraints have been met
     let result =
-        dcql_query.execute(&found).map_err(|e| invalid!("failed to execute query: {e}"))?;
+        dcql_query.execute(&presented).map_err(|e| invalid!("failed to execute query: {e}"))?;
 
     if request.vp_token.len() != result.len() {
         return Err(invalid!("presentation does not match query: {}", result.len()));
@@ -142,5 +153,5 @@ async fn verify(
     // Checks based on the set of trust requirements such as trust frameworks
     // it belongs to (i.e., revocation checks), if applicable.
 
-    Ok(())
+    Ok(presented)
 }

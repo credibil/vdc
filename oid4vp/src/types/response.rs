@@ -5,8 +5,8 @@ use std::str::FromStr;
 use credibil_core::html;
 use serde::{Deserialize, Serialize};
 
-/// Authorization Response request object is used by Wallets to send a VP Token
-/// and Presentation Submission to the Verifier who initiated the verification.
+/// The [`AuthorizationResponse`] object is used by Wallets to send a VP Token
+/// to the Verifier who initiated the verification process.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 pub struct AuthorizationResponse {
     /// The VP Token returned by the Wallet.
@@ -64,7 +64,7 @@ impl FromStr for AuthorizationResponse {
 /// Authorization Response object is used to return a `redirect_uri` to
 /// the Wallet following successful processing of the presentation submission.
 #[derive(Debug, Deserialize, Serialize)]
-pub struct RedirectResponse {
+pub struct SubmissionResponse {
     /// When the redirect parameter is used the Wallet MUST send the User Agent
     /// to the provided URI. The redirect URI allows the Verifier to
     /// continue the interaction with the End-User on the device where the
@@ -86,13 +86,19 @@ pub struct RedirectResponse {
     /// ```
     /// If the response does not contain a parameter, the Wallet is not required
     /// to perform any further steps.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub redirect_uri: Option<String>,
 
     /// A cryptographically random number with sufficient entropy used to link
     /// the Authorization Response to the Authorization Request. The
     /// `response_code` is returned to the Verifier when the Wallet follows
     /// the redirect in the `redirect_uri` parameter.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub response_code: Option<String>,
+
+    /// The identifier for use when retrieving the verified, deserialized
+    /// VP token data.
+    pub vp_data_id: String,
 }
 
 #[cfg(test)]
