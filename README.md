@@ -2,11 +2,11 @@
 
 Issuance and Identity libraries for use in `OpenID` Verifiable Credentials solutions.
 
+
 > [!CAUTION]
 >
-> The code in this repository is under active development.
-> 
-> We still have much to do and welcome feedback and contributions.
+> This repository is archived as development has been moved to <https://github.com/credibil/vdc>.
+
 
 ## OpenID for Verifiable Credentials
 
