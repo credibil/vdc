@@ -30,7 +30,7 @@ async fn request() {
             "type": "openid_credential",
             "credential_configuration_id": "EmployeeID_W3C_VC",
         }],
-        "subject_id": BOB_ID,
+        "subject": BOB_ID,
         "wallet_issuer": CREDENTIAL_ISSUER
     });
     let request = serde_json::from_value(value).expect("request is valid");

@@ -48,7 +48,7 @@ async fn two_proofs() {
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(BOB_SUBJECT)
+        .subject(BOB_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response = client.request(request).owner(ISSUER).await.expect("should create offer");
@@ -175,7 +175,7 @@ async fn sd_jwt() {
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(BOB_SUBJECT)
+        .subject(BOB_SUBJECT)
         .with_credential("Identity_SD_JWT")
         .build();
     let response = client.request(request).owner(ISSUER).await.expect("should create offer");

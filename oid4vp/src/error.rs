@@ -109,7 +109,7 @@ mod test {
         let err = oid4vp_error().unwrap_err();
         assert_eq!(
             err.to_string(),
-            r#"{"error": "invalid_request", "error_description": "request context: some invalid request"}"#
+            r#"{"error": "invalid_request", "error_description": "issue request context: some invalid request"}"#
         );
     }
     fn oid4vp_error() -> Result<(), Error> {
@@ -122,7 +122,7 @@ mod test {
         let err = anyhow_error().unwrap_err();
         assert_eq!(
             err.to_string(),
-            r#"{"error": "server_error", "error_description": "error context: one-off error"}"#
+            r#"{"error": "server_error", "error_description": "issue error context: one-off error"}"#
         );
     }
     fn anyhow_error() -> Result<(), Error> {

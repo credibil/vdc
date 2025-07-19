@@ -66,7 +66,7 @@ async fn create_offer(
         let state = State {
             expires_at: Utc::now() + Expire::Authorized.duration(),
             body: Offered {
-                subject_id: request.subject_id.clone(),
+                subject: request.subject.clone(),
                 details: auth_items,
                 tx_code: tx_code.clone(),
             },
@@ -144,9 +144,9 @@ impl CreateOfferRequest {
                 }
             }
 
-            // subject_id is required for pre-authorized offers
-            if grant_types.contains(&GrantType::PreAuthorizedCode) && self.subject_id.is_none() {
-                return Err(invalid!("`subject_id` is required for pre-authorization"));
+            // subject is required for pre-authorized offers
+            if grant_types.contains(&GrantType::PreAuthorizedCode) && self.subject.is_none() {
+                return Err(invalid!("`subject` is required for pre-authorization"));
             }
         }
 
@@ -213,10 +213,10 @@ async fn authorize(
     // skip authorization if not pre-authorized
 
     let mut authorized = vec![];
-    let subject_id = request.subject_id.clone().unwrap_or_default();
+    let subject = request.subject.clone().unwrap_or_default();
 
     for config_id in request.credential_configuration_ids.clone() {
-        let identifiers = Subject::authorize(provider, issuer, &subject_id, &config_id)
+        let identifiers = Subject::authorize(provider, issuer, &subject, &config_id)
             .await
             .context("issue authorizing holder")?;
 

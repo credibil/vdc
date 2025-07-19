@@ -44,22 +44,22 @@ async fn token(
     let mut ctx = Context { issuer, offered: None, authorized: None };
 
     // get previously authorized credentials from state
-    let (subject_id, authorized_details) = match &request.grant_type {
+    let (subject, authorized_details) = match &request.grant_type {
         TokenGrantType::PreAuthorizedCode { pre_authorized_code, .. } => {
             let state = get_state::<Offered>(issuer, pre_authorized_code, provider).await?;
             ctx.offered = Some(state.body.clone());
-            let Some(subject_id) = state.body.subject_id else {
+            let Some(subject) = state.body.subject else {
                 return Err(server!("no authorized subject"));
             };
             let Some(authorization_details) = state.body.details else {
                 return Err(server!("no authorized items"));
             };
-            (subject_id, authorization_details)
+            (subject, authorization_details)
         }
         TokenGrantType::AuthorizationCode { code, .. } => {
             let state = get_state::<Authorized>(issuer, code, provider).await?;
             ctx.authorized = Some(state.body.clone());
-            (state.body.subject_id, state.body.details)
+            (state.body.subject, state.body.details)
         }
     };
 
@@ -71,7 +71,7 @@ async fn token(
     // update state
     let state = State {
         body: Token {
-            subject_id,
+            subject,
             access_token: generate::token(),
             authorized_details: retained_details,
         },

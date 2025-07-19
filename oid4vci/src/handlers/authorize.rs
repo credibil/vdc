@@ -65,7 +65,7 @@ async fn authorize(
     let mut details = vec![];
 
     for (config_id, mut auth_det) in ctx.auth_dets.clone() {
-        let identifiers = Subject::authorize(provider, issuer, &request.subject_id, &config_id)
+        let identifiers = Subject::authorize(provider, issuer, &request.subject, &config_id)
             .await
             .map_err(|e| Error::AccessDenied(format!("issue authorizing subject: {e}")))?;
 
@@ -90,7 +90,7 @@ async fn authorize(
     let state = State {
         expires_at: Utc::now() + Expire::Authorized.duration(),
         body: Authorized {
-            subject_id: request.subject_id,
+            subject: request.subject,
             code_challenge: request.code_challenge,
             code_challenge_method: request.code_challenge_method,
             details,
@@ -100,11 +100,15 @@ async fn authorize(
     };
 
     let code = generate::auth_code();
-    StateStore::put(provider, issuer, &code, &state).await.context("issue saving authorization state")?;
+    StateStore::put(provider, issuer, &code, &state)
+        .await
+        .context("issue saving authorization state")?;
 
     // remove offer state
     if let Some(issuer_state) = &request.issuer_state {
-        StateStore::purge(provider, issuer, issuer_state).await.context("issue purging offer state")?;
+        StateStore::purge(provider, issuer, issuer_state)
+            .await
+            .context("issue purging offer state")?;
     }
 
     Ok(AuthorizationResponse {
@@ -188,11 +192,11 @@ impl Context {
         }
 
         // is holder identified (authenticated)?
-        if request.subject_id.is_empty() {
+        if request.subject.is_empty() {
             return Err(invalid!("missing holder subject"));
         }
 
-        // does offer `subject_id`  match request `subject_id`?
+        // does offer `subject`  match request `subject`?
         if let Some(issuer_state) = &request.issuer_state {
             let state = StateStore::get::<Offered>(provider, issuer, issuer_state)
                 .await
@@ -202,8 +206,8 @@ impl Context {
                 return Err(invalid!("issuer state expired"));
             }
 
-            if state.body.subject_id.as_ref() != Some(&request.subject_id) {
-                return Err(invalid!("request `subject_id` does not match offer"));
+            if state.body.subject.as_ref() != Some(&request.subject) {
+                return Err(invalid!("request `subject` does not match offer"));
             }
         }
 

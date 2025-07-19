@@ -13,7 +13,7 @@ pub struct Offered {
     /// Identifies the (previously authenticated) Holder in order that Issuer
     /// can authorize credential issuance.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub subject_id: Option<String>,
+    pub subject: Option<String>,
 
     /// A list of `authorization_details` entries referencing credentials the
     /// Wallet is authorized to request.
@@ -31,7 +31,7 @@ pub struct Offered {
 pub struct Authorized {
     /// Identifies the (previously authenticated) Holder in order that Issuer
     /// can authorize credential issuance.
-    pub subject_id: String,
+    pub subject: String,
 
     /// The `client_id` of the Wallet requesting issuance.
     pub client_id: String,
@@ -56,7 +56,7 @@ pub struct Authorized {
 pub struct Token {
     /// Identifies the (previously authenticated) Holder in order that Issuer
     /// can authorize credential issuance.
-    pub subject_id: String,
+    pub subject: String,
 
     /// The access token.
     #[allow(clippy::struct_field_names)]

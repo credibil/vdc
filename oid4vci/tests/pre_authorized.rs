@@ -47,7 +47,7 @@ async fn offer_val() {
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(BOB_SUBJECT)
+        .subject(BOB_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response = client.request(request).owner(ISSUER).await.expect("should create offer");
@@ -144,7 +144,7 @@ async fn offer_ref() {
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(BOB_SUBJECT)
+        .subject(BOB_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .by_ref(true)
         .build();
@@ -181,7 +181,7 @@ async fn two_datasets() {
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(BOB_SUBJECT)
+        .subject(BOB_SUBJECT)
         .with_credential("Developer_W3C_VC")
         .build();
     let response = client.request(request).owner(ISSUER).await.expect("should create offer");
@@ -273,7 +273,7 @@ async fn reduce_credentials() {
     // Alice creates a credential offer for Bob with 2 credentials
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(BOB_SUBJECT)
+        .subject(BOB_SUBJECT)
         .with_credential("Developer_W3C_VC")
         .with_credential("EmployeeID_W3C_VC")
         .build();
@@ -372,7 +372,7 @@ async fn reduce_claims() {
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(BOB_SUBJECT)
+        .subject(BOB_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response = client.request(request).owner(ISSUER).await.expect("should create offer");
@@ -478,7 +478,7 @@ async fn notify_accepted() {
     // Alice creates a credential offer for Bob
     // --------------------------------------------------
     let request = CreateOfferRequest::builder()
-        .subject_id(BOB_SUBJECT)
+        .subject(BOB_SUBJECT)
         .with_credential("EmployeeID_W3C_VC")
         .build();
     let response = client.request(request).owner(ISSUER).await.expect("should create offer");

@@ -134,10 +134,10 @@ impl Metadata for Issuer<'_> {
 
 impl Subject for Issuer<'_> {
     async fn authorize(
-        &self, owner: &str, subject_id: &str, credential_configuration_id: &str,
+        &self, owner: &str, subject: &str, credential_configuration_id: &str,
     ) -> Result<Vec<String>> {
-        let Some(data) = Datastore::get(owner, "subject", subject_id).await? else {
-            return Err(anyhow!("no dataset for subject {owner}:{subject_id}"));
+        let Some(data) = Datastore::get(owner, "subject", subject).await? else {
+            return Err(anyhow!("no dataset for subject {owner}:{subject}"));
         };
         let datasets: Vec<Dataset> = serde_json::from_slice(&data)?;
 
@@ -147,24 +147,24 @@ impl Subject for Issuer<'_> {
             .map(|ds| ds.credential_identifier.clone())
             .collect::<Vec<_>>();
         if identifiers.is_empty() {
-            return Err(anyhow!("no dataset for {subject_id}:{credential_configuration_id}"));
+            return Err(anyhow!("no dataset for {subject}:{credential_configuration_id}"));
         }
 
         Ok(identifiers)
     }
 
     async fn dataset(
-        &self, owner: &str, subject_id: &str, credential_identifier: &str,
+        &self, owner: &str, subject: &str, credential_identifier: &str,
     ) -> Result<Dataset> {
-        let Some(data) = Datastore::get(owner, "subject", subject_id).await? else {
-            return Err(anyhow!("no datasets for subject {subject_id}"));
+        let Some(data) = Datastore::get(owner, "subject", subject).await? else {
+            return Err(anyhow!("no datasets for subject {subject}"));
         };
         let datasets: Vec<Dataset> = serde_json::from_slice(&data)?;
 
         let Some(dataset) =
             datasets.iter().find(|ds| ds.credential_identifier == credential_identifier)
         else {
-            return Err(anyhow!("no dataset for subject {subject_id}:{credential_identifier}"));
+            return Err(anyhow!("no dataset for subject {subject}:{credential_identifier}"));
         };
         Ok(dataset.clone())
     }

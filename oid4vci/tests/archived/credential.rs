@@ -40,7 +40,7 @@ async fn identifier() {
                 credential_identifiers: vec!["PHLEmployeeID".to_string()],
             }],
         }),
-        subject_id: Some(BOB_ID.into()),
+        subject: Some(BOB_ID.into()),
         expires_at: Utc::now() + Expire::Authorized.duration(),
     };
 
@@ -131,7 +131,7 @@ async fn format() {
                 credential_identifiers: vec!["PHLEmployeeID".to_string()],
             }],
         }),
-        subject_id: Some(BOB_ID.into()),
+        subject: Some(BOB_ID.into()),
         expires_at: Utc::now() + Expire::Authorized.duration(),
     };
 
@@ -229,7 +229,7 @@ async fn iso_mdl() {
                 credential_identifiers: vec!["DriverLicence".to_string()],
             }],
         }),
-        subject_id: Some(BOB_ID.into()),
+        subject: Some(BOB_ID.into()),
         expires_at: Utc::now() + Expire::Authorized.duration(),
     };
 

@@ -30,7 +30,7 @@ async fn authorize_configuration_id() {
         .with_authorization_detail(
             AuthorizationDetailBuilder::new().credential_configuration_id("EmployeeID_W3C_VC").build(),
         )
-        .subject_id(BOB_ID)
+        .subject(BOB_ID)
         .build();
 
     let response = endpoint::handle(CREDENTIAL_ISSUER, request, &provider).await.expect("ok");
@@ -63,7 +63,7 @@ async fn authorize_format() {
                 ]
             }
         }],
-        "subject_id": BOB_ID,
+        "subject": BOB_ID,
         "wallet_issuer": CREDENTIAL_ISSUER
     });
 
@@ -98,7 +98,7 @@ async fn authorize_scope() {
         "code_challenge": Base64UrlUnpadded::encode_string(&Sha256::digest("ABCDEF12345")),
         "code_challenge_method": "S256",
         "scope": "EmployeeIDCredential",
-        "subject_id": BOB_ID,
+        "subject": BOB_ID,
         "wallet_issuer": CREDENTIAL_ISSUER
     });
 
@@ -147,7 +147,7 @@ async fn authorize_claims() {
                 }
             }
         }],
-        "subject_id": BOB_ID,
+        "subject": BOB_ID,
         "wallet_issuer": CREDENTIAL_ISSUER
     });
 
@@ -196,7 +196,7 @@ async fn authorize_claims_err() {
                 }
             }
         }],
-        "subject_id": BOB_ID,
+        "subject": BOB_ID,
         "wallet_issuer": CREDENTIAL_ISSUER
     });
 

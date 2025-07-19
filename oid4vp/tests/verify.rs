@@ -15,7 +15,7 @@ async fn same_device() {
     // Alice creates a presentation requesto to send to Bob
     // --------------------------------------------------
     // let request = CreateRequest::builder()
-    //     .subject_id(BOB_ID)
+    //     .subject(BOB_ID)
     //     .with_credential("EmployeeID_W3C_VC")
     //     .build();
     // let response =

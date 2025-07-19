@@ -15,7 +15,7 @@ use crate::types::{AuthorizationCodeGrant, Grants, PreAuthorizedCodeGrant};
 #[derive(Default, Debug)]
 pub struct CreateOfferRequestBuilder<C, S, P> {
     credential_configuration_ids: C,
-    subject_id: S,
+    subject: S,
     pre_authorized: P,
     grant_types: Vec<GrantType>,
     tx_code: bool,
@@ -48,7 +48,7 @@ impl CreateOfferRequestBuilder<NoIdentifiers, NoSubjectId, PreAuthorized> {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            subject_id: NoSubjectId,
+            subject: NoSubjectId,
             credential_configuration_ids: NoIdentifiers,
             pre_authorized: PreAuthorized,
             grant_types: vec![GrantType::PreAuthorizedCode],
@@ -66,7 +66,7 @@ impl<S, P> CreateOfferRequestBuilder<NoIdentifiers, S, P> {
         self, configuration_id: impl Into<String>,
     ) -> CreateOfferRequestBuilder<HasIdentifiers, S, P> {
         CreateOfferRequestBuilder {
-            subject_id: self.subject_id,
+            subject: self.subject,
             credential_configuration_ids: HasIdentifiers(vec![configuration_id.into()]),
             pre_authorized: self.pre_authorized,
             grant_types: self.grant_types,
@@ -80,11 +80,11 @@ impl<C, P> CreateOfferRequestBuilder<C, NoSubjectId, P> {
     /// Specify the (previously authenticated) Holder for the Issuer to use
     /// when building Credential Dataset(s) for credential issuance.
     #[must_use]
-    pub fn subject_id(
-        self, subject_id: impl Into<String>,
+    pub fn subject(
+        self, subject: impl Into<String>,
     ) -> CreateOfferRequestBuilder<C, SubjectId, P> {
         CreateOfferRequestBuilder {
-            subject_id: SubjectId(subject_id.into()),
+            subject: SubjectId(subject.into()),
             credential_configuration_ids: self.credential_configuration_ids,
             pre_authorized: self.pre_authorized,
             grant_types: self.grant_types,
@@ -100,7 +100,7 @@ impl<C, S> CreateOfferRequestBuilder<C, S, NoPreAuthorized> {
     #[must_use]
     pub fn with_grant(self, grant: GrantType) -> CreateOfferRequestBuilder<C, S, PreAuthorized> {
         CreateOfferRequestBuilder {
-            subject_id: self.subject_id,
+            subject: self.subject,
             credential_configuration_ids: self.credential_configuration_ids,
             pre_authorized: PreAuthorized,
             grant_types: vec![grant],
@@ -144,7 +144,7 @@ impl CreateOfferRequestBuilder<HasIdentifiers, SubjectId, PreAuthorized> {
         let send_by = if self.by_ref { SendBy::ByRef } else { SendBy::ByVal };
 
         CreateOfferRequest {
-            subject_id: Some(self.subject_id.0),
+            subject: Some(self.subject.0),
             credential_configuration_ids: self.credential_configuration_ids.0,
             grant_types: Some(self.grant_types),
             tx_code_required: self.tx_code,
@@ -160,7 +160,7 @@ impl<P> CreateOfferRequestBuilder<HasIdentifiers, NoSubjectId, P> {
         let send_by = if self.by_ref { SendBy::ByRef } else { SendBy::ByVal };
 
         let mut request = CreateOfferRequest {
-            subject_id: None,
+            subject: None,
             credential_configuration_ids: self.credential_configuration_ids.0,
             grant_types: None,
             tx_code_required: self.tx_code,
@@ -188,7 +188,7 @@ pub struct CreateOfferRequest {
     /// Identifies the (previously authenticated) Holder in order that Issuer
     /// can authorize credential issuance.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub subject_id: Option<String>,
+    pub subject: Option<String>,
 
     /// A list of keys of Credentials in the
     /// `credential_configurations_supported` Credential Issuer metadata.

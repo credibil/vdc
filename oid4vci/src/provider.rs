@@ -52,12 +52,12 @@ pub trait Subject: Send + Sync {
     /// `credential_identifier`s the subject (holder) is authorized to
     /// request.
     fn authorize(
-        &self, owner: &str, subject_id: &str, credential_configuration_id: &str,
+        &self, owner: &str, subject: &str, credential_configuration_id: &str,
     ) -> impl Future<Output = Result<Vec<String>>> + Send;
 
     /// Returns a populated `Dataset` object for the given subject (holder) and
     /// credential definition.
     fn dataset(
-        &self, owner: &str, subject_id: &str, credential_identifier: &str,
+        &self, owner: &str, subject: &str, credential_identifier: &str,
     ) -> impl Future<Output = Result<Dataset>> + Send;
 }

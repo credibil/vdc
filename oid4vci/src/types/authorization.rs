@@ -21,7 +21,7 @@ pub struct AuthorizationRequestBuilder {
     authorization_details: Option<Vec<AuthorizationDetail>>,
     scope: Option<String>,
     resource: Option<String>,
-    subject_id: Option<String>,
+    subject: Option<String>,
     wallet_issuer: Option<String>,
     user_hint: Option<String>,
     issuer_state: Option<String>,
@@ -102,8 +102,8 @@ impl AuthorizationRequestBuilder {
     /// Specify the (previously authenticated) Holder for the Issuer to use
     /// when authorizing credential issuance.
     #[must_use]
-    pub fn subject_id(mut self, subject_id: impl Into<String>) -> Self {
-        self.subject_id = Some(subject_id.into());
+    pub fn subject(mut self, subject: impl Into<String>) -> Self {
+        self.subject = Some(subject.into());
         self
     }
 
@@ -149,7 +149,7 @@ impl AuthorizationRequestBuilder {
             authorization_details: self.authorization_details,
             scope: self.scope,
             resource: self.resource,
-            subject_id: self.subject_id.unwrap_or_default(),
+            subject: self.subject.unwrap_or_default(),
             wallet_issuer: self.wallet_issuer,
             user_hint: self.user_hint,
             issuer_state: self.issuer_state,
@@ -323,7 +323,7 @@ impl<'de> de::Deserialize<'de> for AuthorizationRequest {
                         }
                         "scope" => obj.scope = Some(map.next_value::<String>()?),
                         "resource" => obj.resource = Some(map.next_value::<String>()?),
-                        "subject_id" => obj.subject_id = map.next_value::<String>()?,
+                        "subject" => obj.subject = map.next_value::<String>()?,
                         "wallet_issuer" => obj.wallet_issuer = Some(map.next_value::<String>()?),
                         "user_hint" => obj.user_hint = Some(map.next_value::<String>()?),
                         "issuer_state" => obj.issuer_state = Some(map.next_value::<String>()?),
@@ -545,12 +545,12 @@ pub struct RequestObject {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub resource: Option<String>,
 
-    // TODO: replace `subject_id` with support for authentication
+    // TODO: replace `subject` with support for authentication
     // <https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest>
     /// A Holder identifier provided by the Wallet. It must have meaning to the
     /// Credential Issuer in order that credentialSubject claims can be
     /// populated.
-    pub subject_id: String,
+    pub subject: String,
 
     /// The Wallet's `OpenID` Connect issuer URL. The Credential Issuer can use
     /// the discovery process as defined in [SIOPv2] to determine the Wallet's
@@ -752,7 +752,7 @@ mod tests {
             params["authorization_details"],
             "%5B%7B%22claims%22%3A%5B%7B%22path%22%3A%5B%22given_name%22%5D%7D%2C%7B%22path%22%3A%5B%22family_name%22%5D%7D%2C%7B%22path%22%3A%5B%22email%22%5D%7D%5D%2C%22credential_configuration_id%22%3A%22EmployeeID_W3C_VC%22%2C%22type%22%3A%22openid_credential%22%7D%5D"
         );
-        assert_eq!(params["subject_id"], "1234");
+        assert_eq!(params["subject"], "1234");
         assert_eq!(params["wallet_issuer"], "1234");
     }
 
@@ -802,7 +802,7 @@ mod tests {
                 ]),
                 locations: None,
             }]),
-            subject_id: "1234".to_string(),
+            subject: "1234".to_string(),
             wallet_issuer: Some("1234".to_string()),
             ..RequestObject::default()
         })

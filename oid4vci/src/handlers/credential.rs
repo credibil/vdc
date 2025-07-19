@@ -264,8 +264,9 @@ impl Context {
                 }
                 FormatProfile::DcSdJwt { vct } => {
                     // TODO: cache the result of jwk when verifying proof (`verify` method)
-                    let jwk =
-                        resolve_jwk(kid, provider).await.context("issue getting JWK for `dc+sd-jwt`")?;
+                    let jwk = resolve_jwk(kid, provider)
+                        .await
+                        .context("issue getting JWK for `dc+sd-jwt`")?;
                     let Some(did) = kid.split('#').next() else {
                         return Err(Error::InvalidProof("Proof JWT DID is invalid".to_string()));
                     };
@@ -299,7 +300,9 @@ impl Context {
             .build()
             .await
             .context("issue building status list token")?;
-        StatusStore::put(provider, issuer, &list_uri, &token).await.context("issue saving status list")?;
+        StatusStore::put(provider, issuer, &list_uri, &token)
+            .await
+            .context("issue saving status list")?;
 
         // update token state with new `c_nonce`
         let mut state = self.state.clone();
@@ -347,8 +350,8 @@ impl Context {
         };
 
         // get claims dataset for `credential_identifier`
-        let subject_id = &self.state.body.subject_id;
-        let mut dataset = Subject::dataset(provider, issuer, subject_id, identifier)
+        let subject = &self.state.body.subject;
+        let mut dataset = Subject::dataset(provider, issuer, subject, identifier)
             .await
             .context("issue populating claims")?;
 

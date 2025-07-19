@@ -122,14 +122,14 @@ async fn authorize(
         panic!("should be an object request");
     };
 
-    // return error if no subject_id
-    if object.subject_id.is_empty() {
-        return (StatusCode::UNAUTHORIZED, Json(json!({"error": "no subject_id"}))).into_response();
+    // return error if no subject
+    if object.subject.is_empty() {
+        return (StatusCode::UNAUTHORIZED, Json(json!({"error": "no subject"}))).into_response();
     }
 
-    // show login form if subject_id is unauthorized
+    // show login form if subject is unauthorized
     // (subject is authorized if they can be found in the 'authorized' HashMap)
-    if AUTH_REQUESTS.read().await.get(&object.subject_id).is_none() {
+    if AUTH_REQUESTS.read().await.get(&object.subject).is_none() {
         // save request
         let csrf = CsrfToken::new_random();
         let token = csrf.secret();
@@ -174,14 +174,14 @@ async fn par(
 ) -> impl IntoResponse {
     let object = &request.request;
 
-    // return error if no subject_id
-    if object.subject_id.is_empty() {
-        return (StatusCode::UNAUTHORIZED, Json(json!({"error": "no subject_id"}))).into_response();
+    // return error if no subject
+    if object.subject.is_empty() {
+        return (StatusCode::UNAUTHORIZED, Json(json!({"error": "no subject"}))).into_response();
     }
 
-    // show login form if subject_id is unauthorized
+    // show login form if subject is unauthorized
     // (subject is authorized if they can be found in the 'authorized' HashMap)
-    if PAR_REQUESTS.read().await.get(&object.subject_id).is_none() {
+    if PAR_REQUESTS.read().await.get(&object.subject).is_none() {
         // save request
         let csrf = CsrfToken::new_random();
         let token = csrf.secret();
@@ -292,7 +292,7 @@ async fn statuslists(
     State(client): State<Client<Issuer<'static>>>, TypedHeader(host): TypedHeader<Host>,
     request: Request,
 ) -> impl IntoResponse {
-    let uri = request.uri().to_string();
+    let uri = format!("http://{host}{}", request.uri());
     let request = StatusListRequest { uri: Some(uri) };
     client.request(request).owner(&format!("http://{host}")).await.into_http()
 }

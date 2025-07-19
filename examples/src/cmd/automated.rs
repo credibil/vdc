@@ -37,7 +37,7 @@ async fn main() -> Result<()> {
 
 async fn create_offer() -> Result<CreateOfferResponse> {
     let request = json!({
-        "subject_id": "alice",
+        "subject": "alice",
         "credential_configuration_ids": ["Identity_SD_JWT"],
         "grant_types": ["urn:ietf:params:oauth:grant-type:pre-authorized_code"],
         "pre-authorize": true,

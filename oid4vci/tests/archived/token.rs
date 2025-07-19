@@ -41,7 +41,7 @@ async fn authorized() {
             client_id: CLIENT_ID.into(),
             ..Authorization::default()
         }),
-        subject_id: Some(BOB_ID.into()),
+        subject: Some(BOB_ID.into()),
         expires_at: Utc::now() + Expire::Authorized.duration(),
     };
 
@@ -108,7 +108,7 @@ async fn authorization_details() {
             }],
             ..Authorization::default()
         }),
-        subject_id: Some(BOB_ID.into()),
+        subject: Some(BOB_ID.into()),
         expires_at: Utc::now() + Expire::Authorized.duration(),
     };
 
