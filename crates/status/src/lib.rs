@@ -143,10 +143,10 @@ pub enum StatusType {
 /// Token(s).
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct StatusListRequest {
-    /// The index of the Status List to retrieve. When not specified, all
+    /// The full URI of the Status List to retrieve. When not specified, all
     /// status lists should be returned.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
+    pub uri: Option<String>,
 }
 
 /// Used to query the Status List endpoint in order to return Status List

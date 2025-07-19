@@ -52,7 +52,7 @@ pub async fn serve(issuer_id: &'static str) -> Result<JoinHandle<()>> {
         .route("/credential", post(credential))
         .route("/deferred_credential", post(deferred_credential))
         .route("/notification", post(notification))
-        .route("/statuslists/{id}", get(statuslists))
+        .route("/statuslists", get(statuslists))
         .route("/.well-known/openid-credential-issuer", get(issuer))
         .route("/.well-known/oauth-authorization-server", get(server))
         .route("/.well-known/did.json", get(did))
@@ -290,9 +290,10 @@ async fn notification(
 #[axum::debug_handler]
 async fn statuslists(
     State(client): State<Client<Issuer<'static>>>, TypedHeader(host): TypedHeader<Host>,
-    Path(id): Path<String>,
+    request: Request,
 ) -> impl IntoResponse {
-    let request = StatusListRequest { id: Some(id) };
+    let uri = request.uri().to_string();
+    let request = StatusListRequest { uri: Some(uri) };
     client.request(request).owner(&format!("http://{host}")).await.into_http()
 }
 

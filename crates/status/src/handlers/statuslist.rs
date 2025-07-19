@@ -17,11 +17,12 @@ use crate::{StatusListRequest, StatusListResponse};
 async fn statuslist(
     issuer: &str, provider: &impl Provider, request: StatusListRequest,
 ) -> Result<StatusListResponse> {
-    let Some(id) = request.id else {
-        return Err(invalid!("missing id"));
+    let Some(uri) = request.uri else {
+        return Err(invalid!("missing uri"));
     };
 
-    let Some(token) = StatusStore::get(provider, issuer, &id).await.context("issue getting metadata")?
+    let Some(token) =
+        StatusStore::get(provider, issuer, &uri).await.context("issue getting metadata")?
     else {
         return Err(invalid!("status token not found"));
     };
