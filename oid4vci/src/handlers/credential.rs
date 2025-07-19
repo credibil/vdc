@@ -291,15 +291,15 @@ impl Context {
             credentials.push(credential);
         }
 
-        let list_id = format!("{issuer}/statuslists/1");
+        let list_uri = format!("{issuer}/statuslists/1");
         let token = TokenBuilder::new()
             .status_list(status_list.clone())
-            .uri(&list_id)
+            .uri(&list_uri)
             .signer(provider)
             .build()
             .await
             .context("issue building status list token")?;
-        StatusStore::put(provider, issuer, &list_id, &token).await.context("issue saving status list")?;
+        StatusStore::put(provider, issuer, &list_uri, &token).await.context("issue saving status list")?;
 
         // update token state with new `c_nonce`
         let mut state = self.state.clone();
