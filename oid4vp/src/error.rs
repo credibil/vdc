@@ -77,7 +77,8 @@ impl From<anyhow::Error> for Error {
             }
             Some(Self::WalletUnavailable(e)) => Self::WalletUnavailable(format!("{err}: {e}")),
             None => {
-                let stack = err.chain().map(|cause| format!(" -> {cause}")).collect::<String>();
+                let stack = err.chain().fold(String::new(), |cause, e| format!("{cause} -> {e}"));
+                let stack = stack.trim_start_matches(" -> ").to_string();
                 Self::ServerError(stack)
             }
         }
@@ -122,7 +123,7 @@ mod test {
         let err = anyhow_error().unwrap_err();
         assert_eq!(
             err.to_string(),
-            r#"{"error": "server_error", "error_description": "issue error context: one-off error"}"#
+            r#"{"error": "server_error", "error_description": "issue error context -> one-off error"}"#
         );
     }
     fn anyhow_error() -> Result<(), Error> {

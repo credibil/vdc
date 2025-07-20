@@ -190,7 +190,8 @@ impl From<anyhow::Error> for Error {
                 Self::InvalidTransactionId(format!("{err}: {e}"))
             }
             None => {
-                let stack = err.chain().map(|cause| format!(" -> {cause}")).collect::<String>();
+                let stack = err.chain().fold(String::new(), |cause, e| format!("{cause} -> {e}"));
+                let stack = stack.trim_start_matches(" -> ").to_string();
                 Self::ServerError(stack)
             }
         }
