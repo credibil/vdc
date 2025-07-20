@@ -1,6 +1,6 @@
 use std::thread;
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use credibil_binding::did::{Document, DocumentBuilder, KeyId, VerificationMethod};
 use credibil_binding::ecc::Curve::Ed25519;
 use credibil_binding::ecc::{Entry, Keyring};
@@ -107,24 +107,21 @@ impl Metadata for Issuer<'_> {
         let Some(client) = Datastore::get(owner, "metadata", client_id).await? else {
             return Err(anyhow!("client not found for {owner}:{client_id}"));
         };
-        serde_json::from_slice(&client)
-            .map_err(|e| anyhow!("issue deserializing client metadata: {e}"))
+        serde_json::from_slice(&client).context("issue deserializing client metadata")
     }
 
     async fn issuer(&self, owner: &str) -> Result<IssuerMetadata> {
         let Some(issuer) = Datastore::get(owner, "metadata", "issuer").await? else {
             return Err(anyhow!("issuer not found for {owner}"));
         };
-        serde_json::from_slice(&issuer)
-            .map_err(|e| anyhow!("issue deserializing issuer metadata: {e}"))
+        serde_json::from_slice(&issuer).context("issue deserializing issuer metadata")
     }
 
     async fn server(&self, owner: &str) -> Result<ServerMetadata> {
         let Some(server) = Datastore::get(owner, "metadata", "server").await? else {
             return Err(anyhow!("server not found for {owner}"));
         };
-        serde_json::from_slice(&server)
-            .map_err(|e| anyhow!("issue deserializing server metadata: {e}"))
+        serde_json::from_slice(&server).context("issue deserializing server metadata")
     }
 
     async fn register(&self, _: &str, _: &ClientMetadata) -> Result<ClientMetadata> {

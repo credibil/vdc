@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use std::thread;
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use credibil_binding::did::{Document, DocumentBuilder, KeyId, VerificationMethod};
 use credibil_binding::ecc::Curve::Ed25519;
 use credibil_binding::ecc::{Entry, Keyring, Signer};
@@ -100,8 +100,7 @@ impl Metadata for Verifier<'_> {
         let Some(verifier) = Datastore::get(owner, "metadata", "verifier").await? else {
             return Err(anyhow!("verifier not found for {owner}"));
         };
-        serde_json::from_slice(&verifier)
-            .map_err(|e| anyhow!("issue deserializing verifier metadata: {e}"))
+        serde_json::from_slice(&verifier).context("issue deserializing verifier metadata")
     }
 
     async fn register(&self, _: &str, _: &VerifierMetadata) -> Result<VerifierMetadata> {
@@ -131,7 +130,7 @@ impl StateStore for Verifier<'_> {
 
 impl StatusToken for Verifier<'_> {
     async fn fetch(&self, uri: &str) -> Result<String> {
-        let http_uri = http::Uri::from_str(uri).map_err(|_| anyhow!("invalid status token URI"))?;
+        let http_uri = http::Uri::from_str(uri).context("invalid status token URI")?;
         let Some(scheme) = http_uri.scheme_str() else {
             return Err(anyhow!("invalid scheme"));
         };

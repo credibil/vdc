@@ -2,7 +2,7 @@
 
 use std::io::Read;
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use bitvec::order::Lsb0;
 use bitvec::view::BitView;
@@ -19,7 +19,7 @@ impl StatusList {
     /// out of bounds.
     pub fn is_valid(&self, idx: usize) -> Result<bool> {
         let deflated = Base64UrlUnpadded::decode_vec(&self.lst)
-            .map_err(|_| anyhow!("Invalid base64url-encoded status list"))?;
+            .context("invalid base64url-encoded status list")?;
         let mut decoder = ZlibDecoder::new(deflated.as_slice());
         let mut inflated = Vec::new();
         decoder.read_to_end(&mut inflated)?;

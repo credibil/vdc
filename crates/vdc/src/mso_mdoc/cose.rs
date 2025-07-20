@@ -5,7 +5,7 @@
 
 use std::collections::BTreeMap;
 
-use anyhow::{Result, anyhow, bail};
+use anyhow::{Context, Result, anyhow, bail};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use ciborium::{Value, cbor};
 use coset::{
@@ -106,29 +106,15 @@ impl TryFrom<CoseKey> for PublicKey {
             Curve::Es256K => {
                 let y = cose_key.y.as_ref().ok_or_else(|| anyhow!("Proof JWT 'y' is invalid"))?;
                 Self::try_from((cose_key.x.as_slice(), y.as_slice()))
-                    .map_err(|e| anyhow!("unable to convert to public key: {e}"))
+                    .context("unable to convert to public key")
             }
-            Curve::Ed25519 => Self::try_from(cose_key.x.as_slice())
-                .map_err(|e| anyhow!("unable to convert to public key: {e}")),
+            Curve::Ed25519 => {
+                Self::try_from(cose_key.x.as_slice()).context("unable to convert to public key")
+            }
             _ => bail!("unsupported DSA curve"),
         }
     }
 }
-
-// impl TryInto<PublicKey> for CoseKey {
-//     type Error = anyhow::Error;
-
-//     fn try_into(self) -> Result<PublicKey> {
-//         match self.crv {
-//             Curve::Es256K =>
-//                 PublicKey::try_from((self.x.as_slice(), self.y.unwrap_or_default().as_slice()))
-//                     .map_err(|e| anyhow!("unable to convert to public key: {e}")),
-//             Curve::Ed25519 => PublicKey::try_from(self.x.as_slice())
-//                 .map_err(|e| anyhow!("unable to convert to public key: {e}")),
-//             _ => bail!("unsupported DSA curve"),
-//         }
-//     }
-// }
 
 impl From<PublicKeyJwk> for CoseKey {
     fn from(jwk: PublicKeyJwk) -> Self {

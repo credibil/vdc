@@ -3,7 +3,7 @@
 use std::fmt::Debug;
 use std::io::{Read, Write};
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Context, Result};
 use base64ct::{Base64UrlUnpadded, Encoding};
 use bitvec::order::Lsb0;
 use bitvec::slice::BitSlice;
@@ -49,7 +49,7 @@ impl StatusList {
     pub fn add_entry(&mut self, uri: impl Into<String>) -> Result<StatusClaim> {
         // inflate the list
         let deflated = Base64UrlUnpadded::decode_vec(&self.lst)
-            .map_err(|_| anyhow!("Invalid base64url-encoded status list"))?;
+            .context("invalid base64url-encoded status list")?;
         let mut decoder = ZlibDecoder::new(deflated.as_slice());
         let mut inflated = Vec::new();
         decoder.read_to_end(&mut inflated)?;

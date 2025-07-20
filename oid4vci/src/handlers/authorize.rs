@@ -63,16 +63,13 @@ async fn authorize(
 
     // authorization_detail
     let mut details = vec![];
-
     for (config_id, mut auth_det) in ctx.auth_dets.clone() {
         let identifiers = Subject::authorize(provider, issuer, &request.subject, &config_id)
             .await
             .map_err(|e| Error::AccessDenied(format!("issue authorizing subject: {e}")))?;
-
         auth_det.credential = AuthorizationDefinition::ConfigurationId {
             credential_configuration_id: config_id.clone(),
         };
-
         details.push(AuthorizedDetail {
             authorization_detail: auth_det.clone(),
             credential_identifiers: identifiers.clone(),

@@ -2,7 +2,7 @@
 //!
 //! This module provides CBOR helper functions and types.
 
-use anyhow::anyhow;
+use anyhow::{Context, Result};
 // use ciborium::Value;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -11,7 +11,7 @@ use serde::de::DeserializeOwned;
 ///
 /// # Errors
 /// TODO: Document errors
-pub fn to_vec<T>(value: &T) -> anyhow::Result<Vec<u8>>
+pub fn to_vec<T>(value: &T) -> Result<Vec<u8>>
 where
     T: Serialize,
 {
@@ -20,24 +20,13 @@ where
     Ok(buf)
 }
 
-// /// Serialize a value to a ciborium `Value`.
-// ///
-// /// # Errors
-// /// TODO: Document errors
-// pub fn to_value<T>(value: &T) -> anyhow::Result<Value>
-// where
-//     T: Serialize,
-// {
-//     ciborium::cbor!(value).map_err(|e| anyhow!(e))
-// }
-
 /// Deserialize a value from a CBOR byte slice.
 ///
 /// # Errors
 /// TODO: Document errors
-pub fn from_slice<T>(slice: &[u8]) -> anyhow::Result<T>
+pub fn from_slice<T>(slice: &[u8]) -> Result<T>
 where
     T: DeserializeOwned,
 {
-    ciborium::from_reader(slice).map_err(|e| anyhow!(e))
+    ciborium::from_reader(slice).context("failed to deserialize CBOR")
 }

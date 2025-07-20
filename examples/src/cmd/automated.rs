@@ -2,7 +2,7 @@
 //!
 //! Example Issuer, Wallet, and Verifier
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use credibil_oid4vci::{CreateOfferResponse, OfferType};
 use credibil_oid4vp::{AuthorizationRequest, CreateResponse};
 use examples::{issuer, verifier, wallet};
@@ -49,7 +49,7 @@ async fn create_offer() -> Result<CreateOfferResponse> {
         let body = http_resp.text().await?;
         return Err(anyhow!("{body}"));
     }
-    http_resp.json::<CreateOfferResponse>().await.map_err(|e| anyhow!("issue deserializing: {e}"))
+    http_resp.json::<CreateOfferResponse>().await.context("issue deserializing")
 }
 
 async fn make_offer(response: &CreateOfferResponse) -> Result<()> {
@@ -98,7 +98,7 @@ async fn create_request() -> Result<CreateResponse> {
         let body = http_resp.text().await?;
         return Err(anyhow!("{body}"));
     }
-    http_resp.json::<CreateResponse>().await.map_err(|e| anyhow!("issue deserializing: {e}"))
+    http_resp.json::<CreateResponse>().await.context("issue deserializing")
 }
 
 async fn request_authorization(auth_req: &AuthorizationRequest) -> Result<()> {
