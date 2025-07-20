@@ -77,8 +77,8 @@ impl From<anyhow::Error> for Error {
             }
             Some(Self::WalletUnavailable(e)) => Self::WalletUnavailable(format!("{err}: {e}")),
             None => {
-                let source = err.source().map_or_else(String::new, ToString::to_string);
-                Self::ServerError(format!("{err}: {source}"))
+                let stack = err.chain().map(|cause| format!(" -> {cause}")).collect::<String>();
+                Self::ServerError(stack)
             }
         }
     }
