@@ -35,6 +35,7 @@ credibil-ecc.workspace = true
 credibil-jose.workspace = true
 credibil-status.workspace = true
 credibil-vdc.workspace = true
+cuid2.workspace = true
 fastrand = "2.3.0"
 http.workspace = true
 image = { version = "0.25.6", default-features = false, features = ["png"] }

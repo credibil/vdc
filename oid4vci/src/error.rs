@@ -227,9 +227,46 @@ pub(crate) use server;
 
 #[cfg(test)]
 mod test {
-    use serde_json::json;
+    use anyhow::{Context, anyhow};
+    use serde_json::{Value, json};
 
     use super::*;
+
+    // Test that error details are retuned as json.
+    #[test]
+    fn oid4vvi_context() {
+        let result = Err::<(), Error>(Error::InvalidRequest("invalid request".to_string()))
+            .context("request context");
+        let err: Error = result.unwrap_err().into();
+
+        assert_eq!(
+            err.to_string(),
+            r#"{"error": "invalid_request", "error_description": "request context: invalid request"}"#
+        );
+    }
+
+    #[test]
+    fn anyhow_context() {
+        let result = Err::<(), anyhow::Error>(anyhow!("one-off error")).context("error context");
+        let err: Error = result.unwrap_err().into();
+
+        assert_eq!(
+            err.to_string(),
+            r#"{"error": "server_error", "error_description": "error context -> one-off error"}"#
+        );
+    }
+
+    #[test]
+    fn serde_context() {
+        let result: Result<Value, anyhow::Error> =
+            serde_json::from_str(r#"{"foo": "bar""#).context("error context");
+        let err: Error = result.unwrap_err().into();
+
+        assert_eq!(
+            err.to_string(),
+            r#"{"error": "server_error", "error_description": "error context -> EOF while parsing an object at line 1 column 13"}"#
+        );
+    }
 
     // Test that the error details are returned as an http query string.
     #[test]

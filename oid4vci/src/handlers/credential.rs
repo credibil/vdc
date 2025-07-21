@@ -223,9 +223,9 @@ impl Context {
 
         // create a credential for each proof
         for kid in &self.proof_kids {
-            let status_claim = status_list
-                .add_entry(format!("{issuer}/statuslists/1"))
-                .context("issue creating status claim")?;
+            let list_uri = format!("{issuer}/statuslists/{}", cuid2::create_id());
+            let status_claim =
+                status_list.add_entry(&list_uri).context("issue creating status claim")?;
 
             let credential = match &self.configuration.profile {
                 FormatProfile::JwtVcJson { credential_definition } => {
@@ -290,19 +290,20 @@ impl Context {
             };
 
             credentials.push(credential);
-        }
 
-        let list_uri = format!("{issuer}/statuslists/1");
-        let token = TokenBuilder::new()
-            .status_list(status_list.clone())
-            .uri(&list_uri)
-            .signer(provider)
-            .build()
-            .await
-            .context("issue building status list token")?;
-        StatusStore::put(provider, issuer, &list_uri, &token)
-            .await
-            .context("issue saving status list")?;
+            // FIXME: all credentials could use the same status list
+            // save status list
+            let token = TokenBuilder::new()
+                .status_list(status_list.clone())
+                .uri(&list_uri)
+                .signer(provider)
+                .build()
+                .await
+                .context("issue building status list token")?;
+            StatusStore::put(provider, issuer, &list_uri, &token)
+                .await
+                .context("issue saving status list")?;
+        }
 
         // update token state with new `c_nonce`
         let mut state = self.state.clone();

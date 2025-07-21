@@ -100,34 +100,44 @@ pub(crate) use invalid;
 #[cfg(test)]
 mod test {
     use anyhow::{Context, Result, anyhow};
-    use serde_json::json;
+    use serde_json::{Value, json};
 
     use super::*;
 
     // Test that error details are retuned as json.
     #[test]
     fn oid4vp_context() {
-        let err = oid4vp_error().unwrap_err();
+        let result = Err::<(), Error>(Error::InvalidRequest("invalid request".to_string()))
+            .context("request context");
+        let err: Error = result.unwrap_err().into();
+
         assert_eq!(
             err.to_string(),
-            r#"{"error": "invalid_request", "error_description": "issue request context: some invalid request"}"#
+            r#"{"error": "invalid_request", "error_description": "request context: invalid request"}"#
         );
-    }
-    fn oid4vp_error() -> Result<(), Error> {
-        Err(Error::InvalidRequest("some invalid request".to_string()))
-            .context("issue request context")?
     }
 
     #[test]
     fn anyhow_context() {
-        let err = anyhow_error().unwrap_err();
+        let result = Err::<(), anyhow::Error>(anyhow!("one-off error")).context("error context");
+        let err: Error = result.unwrap_err().into();
+
         assert_eq!(
             err.to_string(),
-            r#"{"error": "server_error", "error_description": "issue error context -> one-off error"}"#
+            r#"{"error": "server_error", "error_description": "error context -> one-off error"}"#
         );
     }
-    fn anyhow_error() -> Result<(), Error> {
-        Err(anyhow!("one-off error")).context("issue error context")?
+
+    #[test]
+    fn serde_context() {
+        let result: Result<Value, anyhow::Error> =
+            serde_json::from_str(r#"{"foo": "bar""#).context("error context");
+        let err: Error = result.unwrap_err().into();
+
+        assert_eq!(
+            err.to_string(),
+            r#"{"error": "server_error", "error_description": "error context -> EOF while parsing an object at line 1 column 13"}"#
+        );
     }
 
     // Test that the error details are returned as an http query string.
