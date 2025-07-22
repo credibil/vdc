@@ -1,6 +1,7 @@
 //! # Digital Credentials Query Language (DCQL)
 
 use anyhow::{Result, anyhow, bail};
+use chrono::{DateTime, Utc};
 use credibil_binding::Resolver;
 use credibil_core::Kind;
 use credibil_jose::KeyBinding;
@@ -461,6 +462,9 @@ pub struct Queryable {
 
     /// The credential, as issued.
     pub credential: Kind<VerifiableCredential>,
+
+    /// The validity period of the credential.
+    pub validity: ValidityPeriod,
 }
 
 /// A generic credential claim to use with DCQL queries.
@@ -471,6 +475,23 @@ pub struct Claim {
 
     /// The claim's values.
     pub value: Value,
+}
+
+/// A set of date-times that indicate the issuance and validity period of a
+/// credential.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct ValidityPeriod {
+    /// The date and time the credential was issued.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub issued_at: Option<DateTime<Utc>>,
+
+    /// The date and time the credential is valid from.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub valid_from: Option<DateTime<Utc>>,
+
+    /// The date and time the credential is valid until (expires).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub valid_until: Option<DateTime<Utc>>,
 }
 
 /// `QueryResult` credentials matching a Credential Query.

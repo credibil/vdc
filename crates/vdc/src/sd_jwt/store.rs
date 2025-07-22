@@ -5,9 +5,9 @@ use credibil_binding::Resolver;
 use credibil_core::Kind;
 use serde_json::Value;
 
-use crate::FormatProfile;
+use crate::{FormatProfile, ValidityPeriod};
 use crate::dcql::{Claim, Queryable};
-use crate::sd_jwt::{Disclosure, verify};
+use crate::sd_jwt::{verify, Disclosure};
 
 /// Convert a `dc+sd-jwt` encoded credential to a `Queryable` object.
 ///
@@ -37,10 +37,18 @@ pub async fn to_queryable(issued: &str, resolver: &impl Resolver) -> Result<Quer
         claims.extend(unpack_claims(path, &disclosure.value));
     }
 
+    // validity period
+    let validity = ValidityPeriod {
+        issued_at: sd_jwt.claims.iat,
+        valid_from: sd_jwt.claims.nbf,
+        valid_until: sd_jwt.claims.exp,
+    };
+
     Ok(Queryable {
         meta: FormatProfile::DcSdJwt { vct: sd_jwt.claims.vct },
         claims,
         credential: Kind::String(issued.to_string()),
+        validity,
     })
 }
 
