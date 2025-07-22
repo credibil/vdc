@@ -27,7 +27,7 @@ use credibil_core::Kind;
 use credibil_core::api::{Body, Handler, Request, Response};
 use credibil_core::state::State;
 use credibil_vdc::dcql::{FormatQuery, Queryable};
-use credibil_vdc::{mso_mdoc, sd_jwt, w3c_vc};
+use credibil_vdc::{mso_mdoc, sd_jwt, w3c_vc, ValidityPeriod};
 
 use crate::error::invalid;
 use crate::generate;
@@ -132,6 +132,7 @@ async fn verify(
                 meta: query.format.clone().into(),
                 claims,
                 credential: Kind::String(String::new()),
+                validity: ValidityPeriod::default(),
             });
         }
     }

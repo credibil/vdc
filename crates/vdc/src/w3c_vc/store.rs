@@ -8,9 +8,9 @@ use credibil_core::Kind;
 use credibil_jose::Jws;
 use serde_json::Value;
 
-use crate::FormatProfile;
 use crate::dcql::{Claim, Queryable};
 use crate::w3c_vc::{CredentialDefinition, VerifiableCredential, W3cVcClaims};
+use crate::{FormatProfile, ValidityPeriod};
 
 /// Convert a `w3c` credential to a `Queryable` object.
 ///
@@ -57,7 +57,19 @@ pub async fn to_queryable(
         claims.extend(nested);
     }
 
-    Ok(Queryable { meta, claims, credential: issued })
+    // Date-times
+    let validity = ValidityPeriod {
+        valid_from: vc.valid_from,
+        valid_until: vc.valid_until,
+        issued_at: None, // W3C VC does not have an issued_at field
+    };
+
+    Ok(Queryable {
+        meta,
+        claims,
+        credential: issued,
+        validity,
+    })
 }
 
 fn unpack_claims(path: Vec<String>, value: &Value) -> Vec<Claim> {

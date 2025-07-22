@@ -5,9 +5,9 @@ use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_binding::Resolver;
 use credibil_core::Kind;
 
-use crate::FormatProfile;
 use crate::dcql::{Claim, Queryable};
 use crate::mso_mdoc::{DataItem, IssuerSigned, MobileSecurityObject, serde_cbor, verify};
+use crate::{FormatProfile, ValidityPeriod};
 
 /// Convert a `mso_mdoc` encoded credential to a `Queryable` object.
 ///
@@ -37,10 +37,18 @@ pub async fn to_queryable(issued: &str, resolver: &impl Resolver) -> Result<Quer
         }
     }
 
+    // Date-times
+    let validity = ValidityPeriod {
+        issued_at: Some(mso.validity_info.signed),
+        valid_from: Some(mso.validity_info.valid_from),
+        valid_until: Some(mso.validity_info.valid_until),
+    };
+
     Ok(Queryable {
         meta: FormatProfile::MsoMdoc { doctype: mso.0.doc_type },
         claims,
         credential: Kind::String(issued.to_string()),
+        validity,
     })
 }
 
