@@ -56,6 +56,9 @@ pub enum Error {
     /// on the Verifier website.
     #[error(r#"{{"error": "wallet_unavailable", "error_description": "{0}"}}"#)]
     WalletUnavailable(String),
+
+    // #[error(r#"{{"error": "test"}}"#)]
+    // Test,
 }
 
 impl From<anyhow::Error> for Error {
@@ -81,6 +84,7 @@ impl From<anyhow::Error> for Error {
                 let stack = stack.trim_start_matches(" -> ").to_string();
                 Self::ServerError(stack)
             }
+            // Some(Self::Test) => Self::Test,
         }
     }
 }
@@ -103,6 +107,13 @@ mod test {
     use serde_json::{Value, json};
 
     use super::*;
+
+    // #[test]
+    // fn test_context() {
+    //     let result = Err::<(), Error>(Error::Test).context("request context");
+    //     let err = result.unwrap_err();
+    //     println!("Error: {}", err);
+    // }
 
     // Test that error details are retuned as json.
     #[test]

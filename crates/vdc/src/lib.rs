@@ -10,7 +10,7 @@ pub mod w3c_vc;
 
 mod generate;
 
-use std::fmt;
+use std::fmt::{Display, Formatter, Result};
 
 use serde::{Deserialize, Serialize};
 
@@ -75,8 +75,8 @@ impl Default for FormatProfile {
     }
 }
 
-impl fmt::Display for FormatProfile {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for FormatProfile {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
             Self::JwtVcJson { .. } => write!(f, "jwt_vc_json"),
             Self::LdpVc { .. } => write!(f, "ldp_vc"),

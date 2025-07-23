@@ -27,17 +27,14 @@ pub async fn to_queryable(
     let (vc, meta) = match &issued {
         Kind::String(encoded) => {
             let jws = Jws::from_str(encoded)?;
-            let jwt_claims: W3cVcClaims = jws.payload()?;
-            let vc = jwt_claims.vc;
-
+            let claims: W3cVcClaims = jws.payload()?;
             let meta = FormatProfile::JwtVcJson {
                 credential_definition: CredentialDefinition {
                     context: None,
-                    r#type: vc.r#type.clone(),
+                    r#type: claims.vc.r#type.clone(),
                 },
             };
-
-            (vc, meta)
+            (claims.vc, meta)
         }
         Kind::Object(vc) => {
             let meta = FormatProfile::LdpVc {
