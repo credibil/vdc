@@ -1,0 +1,40 @@
+[package]
+name = "credibil-wallet"
+description = "Verifiable digital credential wallet core"
+readme = "README.md"
+authors.workspace = true
+categories.workspace = true
+edition.workspace = true
+exclude.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+anyhow.workspace = true
+base64ct.workspace = true
+bitvec = "1.0.1"
+chrono.workspace = true
+credibil-binding.workspace = true
+credibil-core.workspace = true
+credibil-jose.workspace = true
+flate2 = "1.1.2"
+serde.workspace = true
+serde_repr.workspace = true
+thiserror.workspace = true
+
+credibil-ecc.workspace = true
+credibil-oid4vci.workspace = true
+credibil-oid4vp.workspace = true
+credibil-vdc.workspace = true
+# futures.workspace = true
+# jsonrpc.workspace = true
+# resources.workspace = true
+# rpc-types.workspace = true
+serde_json.workspace = true

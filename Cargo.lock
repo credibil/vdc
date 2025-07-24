@@ -637,6 +637,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "credibil-wallet"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64ct",
+ "bitvec",
+ "chrono",
+ "credibil-binding",
+ "credibil-core",
+ "credibil-ecc",
+ "credibil-jose",
+ "credibil-oid4vci",
+ "credibil-oid4vp",
+ "credibil-vdc",
+ "flate2",
+ "serde",
+ "serde_json",
+ "serde_repr",
+ "thiserror 2.0.12",
+]
+
+[[package]]
 name = "critical-section"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
