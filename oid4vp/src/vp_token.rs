@@ -53,7 +53,7 @@ pub async fn generate(
                     let vp = DeviceResponseBuilder::new()
                         .client_id(request_object.client_id.to_string())
                         .nonce(request_object.nonce.clone())
-                        .response_uri(response_uri.to_string())
+                        .response_uri(response_uri.clone())
                         .matched(matched)
                         .signer(signer)
                         .build()

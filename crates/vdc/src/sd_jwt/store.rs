@@ -5,9 +5,9 @@ use credibil_binding::Resolver;
 use credibil_core::Kind;
 use serde_json::Value;
 
-use crate::{FormatProfile, ValidityPeriod};
 use crate::dcql::{Claim, Queryable};
-use crate::sd_jwt::{verify, Disclosure};
+use crate::sd_jwt::{Disclosure, verify};
+use crate::{FormatProfile, ValidityPeriod};
 
 /// Convert a `dc+sd-jwt` encoded credential to a `Queryable` object.
 ///

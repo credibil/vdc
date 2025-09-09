@@ -15,7 +15,7 @@
 //! to match the Wallet's capabilities.
 
 use anyhow::Context;
-use credibil_core::api::{Body, Handler, Request, Response};
+use credibil_api::{Body, Handler, Request, Response};
 use credibil_jose::JwsBuilder;
 
 use crate::JwtType;

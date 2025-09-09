@@ -6,7 +6,7 @@
 //! endpoint returns Client metadata as defined in [RFC7591](https://www.rfc-editor.org/rfc/rfc7591).
 
 use anyhow::Context;
-use credibil_core::api::{Body, Handler, Request, Response};
+use credibil_api::{Body, Handler, Request, Response};
 
 use crate::handlers::{Error, Result};
 use crate::provider::{Metadata, Provider};

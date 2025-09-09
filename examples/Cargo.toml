@@ -20,6 +20,7 @@ anyhow.workspace = true
 axum.workspace = true
 axum-extra.workspace = true
 credibil-binding.workspace = true
+credibil-encoding.workspace = true
 credibil-oid4vci = { path = "../oid4vci" }
 credibil-oid4vp = { path = "../oid4vp" }
 http.workspace = true

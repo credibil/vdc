@@ -9,7 +9,7 @@ use credibil_binding::{Binding, DocumentRequest, Resolver, Signature, VerifyBy};
 use credibil_ecc::{Algorithm, PublicKey, Signer};
 use credibil_oid4vci::provider::{Metadata, Provider, StateStore, StatusStore, Subject};
 use credibil_oid4vci::{ClientMetadata, Dataset, IssuerMetadata, ServerMetadata, State};
-use credibil_oid4vp::Client;
+use credibil_oid4vp::api::Client;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 

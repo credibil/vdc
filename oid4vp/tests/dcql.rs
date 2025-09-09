@@ -1,6 +1,7 @@
 //! Tests for the Verifier API
 
 use credibil_binding::resolve_jwk;
+use credibil_oid4vp::api::Client;
 use credibil_oid4vp::identity::{Signature, VerifyBy};
 use credibil_oid4vp::jose::PublicKeyJwk;
 use credibil_oid4vp::status::{STATUSTOKEN, StatusClaim, StatusList, TokenBuilder};
@@ -8,8 +9,7 @@ use credibil_oid4vp::vdc::{
     DcqlQuery, MdocBuilder, SdJwtVcBuilder, W3cVcBuilder, mso_mdoc, sd_jwt, w3c_vc,
 };
 use credibil_oid4vp::{
-    AuthorizationRequest, Client, CreateRequest, DeviceFlow, ResponseMode, AuthorizationResponse,
-    vp_token,
+    AuthorizationRequest, AuthorizationResponse, CreateRequest, DeviceFlow, ResponseMode, vp_token,
 };
 use serde_json::{Value, json};
 use test_utils::{Datastore, Issuer, Verifier, Wallet};
@@ -286,6 +286,7 @@ async fn complex_query() {
 
 // Should return an ID and address from any credential.
 #[tokio::test]
+#[allow(clippy::too_many_lines)]
 async fn any_credential() {
     let wallet = wallet().await;
     let all_vcs = wallet.fetch().await.expect("should fetch credentials");
@@ -470,6 +471,7 @@ async fn specific_values() {
 }
 
 // Initialise a mock "wallet" with test credentials.
+#[allow(clippy::too_many_lines)]
 async fn populate(owner: &str) -> Wallet<'_> {
     let wallet = Wallet::new(owner).await.expect("should create wallet");
     let issuer = issuer().await;

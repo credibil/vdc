@@ -61,12 +61,7 @@ pub async fn to_queryable(
         issued_at: None, // W3C VC does not have an issued_at field
     };
 
-    Ok(Queryable {
-        meta,
-        claims,
-        credential: issued,
-        validity,
-    })
+    Ok(Queryable { meta, claims, credential: issued, validity })
 }
 
 fn unpack_claims(path: Vec<String>, value: &Value) -> Vec<Claim> {

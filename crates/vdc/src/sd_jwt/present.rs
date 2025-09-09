@@ -106,7 +106,7 @@ impl<M, C> SdJwtVpBuilder<M, C, NoSigner> {
 
 impl<S: Signature> SdJwtVpBuilder<HasMatched<'_>, HasClientId, HasSigner<'_, S>> {
     /// Build the SD-JWT credential, returning a base64url-encoded, JSON SD-JWT
-    /// with the format: 
+    /// with the format:
     ///     `<Issuer-signed JWT>~<Disclosure 1>~<Disclosure 2>~...~<KB-JWT>`.
     ///
     /// # Errors

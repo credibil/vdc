@@ -17,7 +17,7 @@
 //! `/.well-known/oauth-authorization-server/issuer1`.
 
 use anyhow::Context as _;
-use credibil_core::api::{Body, Handler, Request, Response};
+use credibil_api::{Body, Handler, Request, Response};
 
 use crate::handlers::{Error, Result};
 use crate::provider::{Metadata, Provider};

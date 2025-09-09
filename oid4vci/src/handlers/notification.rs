@@ -19,7 +19,7 @@
 //! no guarantees that a Credential Issuer will receive a notification within a
 //! certain time period or at all.
 
-use credibil_core::api::{Body, Handler, Headers, Request, Response};
+use credibil_api::{Body, Handler, Headers, Request, Response};
 
 use crate::handlers::{Error, NotificationHeaders, Result};
 use crate::provider::{Provider, StateStore};

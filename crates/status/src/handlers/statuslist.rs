@@ -1,7 +1,7 @@
 //! # Status List Endpoint
 
 use anyhow::Context;
-use credibil_core::api::{Body, Handler, Request, Response};
+use credibil_api::{Body, Handler, Request, Response};
 
 use crate::error::invalid;
 use crate::handlers::{Error, Result};

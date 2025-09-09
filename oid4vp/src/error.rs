@@ -56,7 +56,6 @@ pub enum Error {
     /// on the Verifier website.
     #[error(r#"{{"error": "wallet_unavailable", "error_description": "{0}"}}"#)]
     WalletUnavailable(String),
-
     // #[error(r#"{{"error": "test"}}"#)]
     // Test,
 }
@@ -83,8 +82,7 @@ impl From<anyhow::Error> for Error {
                 let stack = err.chain().fold(String::new(), |cause, e| format!("{cause} -> {e}"));
                 let stack = stack.trim_start_matches(" -> ").to_string();
                 Self::ServerError(stack)
-            }
-            // Some(Self::Test) => Self::Test,
+            } // Some(Self::Test) => Self::Test,
         }
     }
 }

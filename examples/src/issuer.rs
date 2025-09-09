@@ -14,13 +14,13 @@ use axum::{Form, Json, Router};
 use axum_extra::TypedHeader;
 use axum_extra::headers::authorization::Bearer;
 use axum_extra::headers::{Authorization, Host};
-use credibil_oid4vci::http::IntoHttp;
+use credibil_oid4vci::api::{Client, IntoHttp};
 use credibil_oid4vci::identity::did::Document;
 use credibil_oid4vci::status::StatusListRequest;
 use credibil_oid4vci::{
-    AuthorizationRequest, Client, CreateOfferRequest, CredentialHeaders, CredentialOfferRequest,
+    AuthorizationRequest, CreateOfferRequest, CredentialHeaders, CredentialOfferRequest,
     CredentialRequest, DeferredCredentialRequest, IssuerRequest, NonceRequest, NotificationHeaders,
-    NotificationRequest, PushedAuthorizationRequest, ServerRequest, TokenRequest, html,
+    NotificationRequest, PushedAuthorizationRequest, ServerRequest, TokenRequest,
 };
 use oauth2::CsrfToken;
 use serde::Deserialize;
@@ -160,7 +160,7 @@ async fn authorize(
         Ok(v) => (StatusCode::FOUND, Redirect::to(&format!("{redirect_uri}?code={}", v.body.code)))
             .into_response(),
         Err(e) => {
-            let err_params = html::url_encode(&e).unwrap();
+            let err_params = credibil_encoding::url_encode(&e).unwrap();
             (StatusCode::FOUND, Redirect::to(&format!("{redirect_uri}?{err_params}")))
                 .into_response()
         }
@@ -235,7 +235,7 @@ async fn handle_login(
     AUTH_REQUESTS.write().await.insert(request.username.clone(), auth_req.clone());
 
     // redirect back to authorize endpoint
-    let qs = html::url_encode(&auth_req).expect("should serialize");
+    let qs = credibil_encoding::url_encode(&auth_req).expect("should serialize");
     (StatusCode::FOUND, Redirect::to(&format!("http://{host}/auth?{qs}"))).into_response()
 }
 

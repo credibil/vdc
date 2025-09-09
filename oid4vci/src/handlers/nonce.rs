@@ -9,7 +9,7 @@
 
 use anyhow::Context as _;
 use chrono::Utc;
-use credibil_core::api::{Body, Handler, Request, Response};
+use credibil_api::{Body, Handler, Request, Response};
 use credibil_core::state::State;
 
 use crate::generate;
@@ -29,7 +29,9 @@ async fn nonce(issuer: &str, provider: &impl Provider, _: NonceRequest) -> Resul
 
     let state =
         &State { body: c_nonce.clone(), expires_at: Utc::now() + Expire::Authorized.duration() };
-    StateStore::put(provider, issuer, &c_nonce, state).await.context("issue failed to purge state")?;
+    StateStore::put(provider, issuer, &c_nonce, state)
+        .await
+        .context("issue failed to purge state")?;
 
     Ok(NonceResponse { c_nonce })
 }

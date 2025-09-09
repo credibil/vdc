@@ -6,7 +6,7 @@
 
 mod statuslist;
 
-pub use credibil_core::api::{Body, Client, Handler, Headers, Request, RequestBuilder, Response};
+pub use credibil_api::{Body, Client, Handler, Headers, Request, RequestBuilder, Response};
 
 use crate::error::Error;
 

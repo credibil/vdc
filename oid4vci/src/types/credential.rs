@@ -510,6 +510,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn claim_label_display() {
         let json = serde_json::json!({
             "format": "jwt_vc_json",
