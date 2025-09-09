@@ -7,7 +7,7 @@ use credibil_binding::ecc::{Entry, Keyring, Signer};
 use credibil_binding::jose::PublicKeyJwk;
 use credibil_binding::{Binding, DocumentRequest, Resolver, Signature, VerifyBy};
 use credibil_ecc::{Algorithm, PublicKey};
-use credibil_oid4vp::Client;
+use credibil_oid4vp::api::Client;
 use credibil_vdc::Queryable;
 
 use crate::resources::{Datastore, KeyVault};

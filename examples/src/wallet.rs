@@ -20,8 +20,8 @@ use credibil_oid4vci::{
 use credibil_oid4vp::identity::ecc::Algorithm;
 use credibil_oid4vp::jose::{self, Jwt};
 use credibil_oid4vp::{
-    AuthorizationRequest, ClientId, RequestObject, RequestUriMethod, RequestUriRequest,
-    RequestUriResponse, ResponseMode, AuthorizationResponse, VpFormat, WalletMetadata, vp_token,
+    AuthorizationRequest, AuthorizationResponse, ClientId, RequestObject, RequestUriMethod,
+    RequestUriRequest, RequestUriResponse, ResponseMode, VpFormat, WalletMetadata, vp_token,
 };
 use http::StatusCode;
 use serde::Deserialize;

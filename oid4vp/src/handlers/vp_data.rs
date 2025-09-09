@@ -1,7 +1,7 @@
 //! # Verifiable Presentation Retrieval Endpoint
 
 use anyhow::Context;
-use credibil_core::api::{Body, Handler, Request, Response};
+use credibil_api::{Body, Handler, Request, Response};
 use credibil_core::state::State;
 use credibil_vdc::dcql::Queryable;
 

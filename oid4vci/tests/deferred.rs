@@ -1,7 +1,7 @@
 //! Deferred Issuance Tests
 
 use credibil_binding::resolve_jwk;
-// use credibil_oid4vci::datastore::Datastore;
+use credibil_oid4vci::api::Client;
 use credibil_oid4vci::identity::{Signature, VerifyBy};
 use credibil_oid4vci::jose::{JwsBuilder, Jwt, decode_jws};
 use credibil_oid4vci::proof::W3cVcClaims;
@@ -9,7 +9,7 @@ use credibil_oid4vci::types::{
     CreateOfferRequest, Credential, CredentialRequest, CredentialResponse, Dataset,
     DeferredCredentialRequest, NonceRequest, ProofClaims, TokenGrantType, TokenRequest,
 };
-use credibil_oid4vci::{Client, CredentialHeaders, DeferredHeaders, JwtType, OneMany};
+use credibil_oid4vci::{CredentialHeaders, DeferredHeaders, JwtType, OneMany};
 use serde_json::json;
 use test_utils::{Datastore, Issuer, Wallet};
 use tokio::sync::OnceCell;

@@ -29,6 +29,8 @@ wasm = ["fastrand/js"]
 anyhow.workspace = true
 base64ct.workspace = true
 chrono.workspace = true
+credibil-api.workspace = true
+credibil-encoding.workspace = true
 credibil-binding.workspace = true
 credibil-core.workspace = true
 credibil-ecc.workspace = true
@@ -38,7 +40,7 @@ credibil-vdc.workspace = true
 cuid2.workspace = true
 fastrand = "2.3.0"
 http.workspace = true
-image = { version = "0.25.6", default-features = false, features = ["png"] }
+image = { version = "0.25.8", default-features = false, features = ["png"] }
 qrcode = { version = "0.14.1", default-features = false, features = ["image"] }
 serde.workspace = true
 serde_json.workspace = true

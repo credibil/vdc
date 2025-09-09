@@ -9,7 +9,7 @@
 //! Credential Endpoint or the Batch Credential Endpoint.
 
 use anyhow::Context as _;
-use credibil_core::api::{Body, Handler, Request, Response};
+use credibil_api::{Body, Handler, Request, Response};
 
 use crate::error::invalid;
 use crate::handlers::credential::credential;

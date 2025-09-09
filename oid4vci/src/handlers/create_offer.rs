@@ -9,7 +9,7 @@ use std::vec;
 
 use anyhow::Context as _;
 use chrono::Utc;
-use credibil_core::api::{Body, Handler, Request, Response};
+use credibil_api::{Body, Handler, Request, Response};
 use credibil_core::state::State;
 use http::StatusCode;
 
@@ -39,7 +39,8 @@ async fn create_offer(
 
     // TODO: determine how to select correct server?
     // select `authorization_server`, if specified
-    let server = Metadata::server(provider, issuer).await.context("issue getting server metadata")?;
+    let server =
+        Metadata::server(provider, issuer).await.context("issue getting server metadata")?;
     let ctx = Context { issuer: iss, server };
     request.verify(&ctx)?;
 
@@ -71,7 +72,9 @@ async fn create_offer(
                 tx_code: tx_code.clone(),
             },
         };
-        StateStore::put(provider, issuer, &state_key, &state).await.context("issue saving state")?;
+        StateStore::put(provider, issuer, &state_key, &state)
+            .await
+            .context("issue saving state")?;
     }
 
     // respond with Offer object or uri?

@@ -927,9 +927,10 @@ mod tests {
     }
 
     fn base_vp() -> VerifiablePresentation {
-        let mut subj = CredentialSubject::default();
-        subj.id = Some("did:example:ebfeb1f712ebc6f1c276e12ec21".to_string());
-        subj.claims = json!({"employeeID": "1234567890"}).as_object().unwrap().clone();
+        let subj = CredentialSubject {
+            id: Some("did:example:ebfeb1f712ebc6f1c276e12ec21".to_string()),
+            claims: json!({"employeeID": "1234567890"}).as_object().unwrap().clone(),
+        };
 
         let vc = VerifiableCredential {
             id: Some("https://example.com/credentials/3732".to_string()),

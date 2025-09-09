@@ -4,7 +4,6 @@ use std::str::FromStr;
 
 use anyhow::Context as _;
 use base64ct::{Base64, Encoding};
-use credibil_core::html;
 use qrcode::QrCode;
 use serde::{Deserialize, Serialize};
 
@@ -80,9 +79,7 @@ impl<C, P> CreateOfferRequestBuilder<C, NoSubjectId, P> {
     /// Specify the (previously authenticated) Holder for the Issuer to use
     /// when building Credential Dataset(s) for credential issuance.
     #[must_use]
-    pub fn subject(
-        self, subject: impl Into<String>,
-    ) -> CreateOfferRequestBuilder<C, SubjectId, P> {
+    pub fn subject(self, subject: impl Into<String>) -> CreateOfferRequestBuilder<C, SubjectId, P> {
         CreateOfferRequestBuilder {
             subject: SubjectId(subject.into()),
             credential_configuration_ids: self.credential_configuration_ids,
@@ -359,8 +356,8 @@ impl CredentialOffer {
         let qs = self.encode();
 
         // generate qr code
-        let qr_code =
-            QrCode::new(format!("{endpoint}?{qs}")).context("issue failed to create QR code: {e}")?;
+        let qr_code = QrCode::new(format!("{endpoint}?{qs}"))
+            .context("issue failed to create QR code: {e}")?;
 
         // write image to buffer
         let img_buf = qr_code.render::<image::Luma<u8>>().build();
@@ -402,7 +399,7 @@ impl CredentialOffer {
 
 impl Display for CredentialOffer {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = html::url_encode(self).map_err(|_| fmt::Error)?;
+        let s = credibil_encoding::url_encode(self).map_err(|_| fmt::Error)?;
         write!(f, "{s}")
     }
 }
@@ -411,7 +408,7 @@ impl FromStr for CredentialOffer {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        html::url_decode(s)
+        credibil_encoding::url_decode(s)
     }
 }
 

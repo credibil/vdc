@@ -5,7 +5,7 @@ use std::str::FromStr;
 use anyhow::{Context, Result};
 use base64ct::{Base64, Encoding};
 pub use credibil_binding::Signature;
-use credibil_core::{Kind, html};
+use credibil_core::Kind;
 use credibil_ecc::EncAlgorithm;
 use credibil_jose::{JwsBuilder, PublicKeyJwk};
 use credibil_vdc::dcql::DcqlQuery;
@@ -81,7 +81,7 @@ impl AuthorizationRequest {
     /// Returns an `Error::ServerError` error if the request cannot be
     /// serialized.
     pub fn url_encode(&self) -> Result<String> {
-        html::url_encode(self)
+        credibil_encoding::url_encode(self)
     }
 
     /// Convert a url-encoded string into an `AuthorizationRequest`.
@@ -91,7 +91,7 @@ impl AuthorizationRequest {
     /// Returns an `Error::ServerError` error if the string cannot be decoded
     /// to an `AuthorizationRequest`.
     pub fn url_decode(s: &str) -> Result<Self> {
-        html::url_decode(s)
+        credibil_encoding::url_decode(s)
     }
 
     /// Generate qrcode for the Request Object.
@@ -140,7 +140,7 @@ impl FromStr for AuthorizationRequest {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.contains('=') && s.contains('&') {
-            Ok(html::url_decode(s)?)
+            Ok(credibil_encoding::url_decode(s)?)
         } else {
             Ok(Self::Object(serde_json::from_str(s)?))
         }
@@ -243,7 +243,8 @@ impl RequestObject {
 
         let mut client_id = Map::new();
         client_id.insert("client_id".to_string(), Value::String(self.client_id.to_string()));
-        let client_param = html::url_encode(&client_id).context("issue encoding `client_id`")?;
+        let client_param =
+            credibil_encoding::url_encode(&client_id).context("issue encoding `client_id`")?;
 
         Ok(format!("{client_param}&request={encoded}"))
     }
@@ -548,7 +549,7 @@ impl RequestUriRequest {
     /// serialized to JSON and URL-encoded. (`authorization_details` and
     /// `client_assertion`).
     pub fn form_encode(&self) -> Result<Vec<(String, String)>> {
-        html::form_encode(self)
+        credibil_encoding::form_encode(self)
     }
 
     /// Create a `RequestUriRequest` from a `x-www-form-urlencoded` form.
@@ -558,7 +559,7 @@ impl RequestUriRequest {
     /// Will return an error if any of the object-type fields, assumed to be
     /// URL-encoded JSON, cannot be decoded.
     pub fn form_decode(form: &[(String, String)]) -> Result<Self> {
-        html::form_decode(form)
+        credibil_encoding::form_decode(form)
     }
 }
 

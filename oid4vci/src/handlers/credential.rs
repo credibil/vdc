@@ -13,8 +13,8 @@ use std::fmt::Debug;
 
 use anyhow::Context as _;
 use chrono::Utc;
+use credibil_api::{Body, Handler, Request, Response};
 use credibil_binding::resolve_jwk;
-use credibil_core::api::{Body, Handler, Request, Response};
 use credibil_core::state::State;
 use credibil_jose::{Jwt, KeyBinding, decode_jws};
 use credibil_status::{StatusList, StatusStore, TokenBuilder};
@@ -169,7 +169,7 @@ impl CredentialRequest {
                 let KeyBinding::Kid(kid) = &jwt.header.key else {
                     return Err(Error::InvalidProof("Proof JWT 'kid' is missing".to_string()));
                 };
-                ctx.proof_kids.push(kid.to_string());
+                ctx.proof_kids.push(kid.clone());
             }
 
             // should only be a single c_nonce, but just in case...

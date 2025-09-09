@@ -23,11 +23,11 @@ mod state;
 use std::fmt::Display;
 
 pub use credibil_binding::{self as identity, did};
-pub use credibil_core::api::*;
-pub use credibil_core::http;
 pub use credibil_core::state::State;
 use serde::{Deserialize, Serialize};
-pub use {credibil_jose as jose, credibil_status as status, credibil_vdc as vdc};
+pub use {
+    credibil_api as api, credibil_jose as jose, credibil_status as status, credibil_vdc as vdc,
+};
 
 pub use self::error::Error;
 pub use self::handlers::*;

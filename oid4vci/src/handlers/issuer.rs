@@ -24,7 +24,7 @@
 //! ```
 
 use anyhow::Context as _;
-use credibil_core::api::{Body, Handler, Headers, Request, Response};
+use credibil_api::{Body, Handler, Headers, Request, Response};
 
 use crate::handlers::{Error, MetadataHeaders, Result};
 use crate::provider::{Metadata, Provider};
@@ -40,7 +40,8 @@ async fn metadata(
     issuer: &str, provider: &impl Provider, _: Request<IssuerRequest, MetadataHeaders>,
 ) -> Result<IssuerResponse> {
     // FIXME: use language header in request
-    let credential_issuer = Metadata::issuer(provider, issuer).await.context("issue getting metadata")?;
+    let credential_issuer =
+        Metadata::issuer(provider, issuer).await.context("issue getting metadata")?;
     Ok(IssuerResponse(credential_issuer))
 }
 
