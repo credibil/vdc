@@ -618,7 +618,7 @@ mod tests {
         });
 
         let config: CredentialConfiguration =
-            serde_json::from_value(json.clone()).expect("should deserialize from json");
+            serde_json::from_value(json).expect("should deserialize from json");
         let claims = config.claims_display(Some("en-NZ"));
         assert_eq!(claims.len(), 8);
         assert_eq!(claims[0], "Email");

@@ -152,10 +152,10 @@ async fn deferred() {
     let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
     // verify the credential
-    let VerifyBy::KeyId(carol_kid) = bob.verification_method().await.unwrap() else {
+    let VerifyBy::KeyId(kid) = bob.verification_method().await.unwrap() else {
         panic!("should have did");
     };
-    let carol_did = carol_kid.split('#').next().expect("should have did");
+    let carol_did = kid.split('#').next().expect("should have did");
 
     assert_eq!(jwt.claims.iss, ISSUER);
     assert_eq!(jwt.claims.sub, carol_did);

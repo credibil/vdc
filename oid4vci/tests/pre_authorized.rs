@@ -120,10 +120,10 @@ async fn offer_val() {
     let resolver = async |kid: String| resolve_jwk(&kid, &client.provider).await;
     let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
-    let VerifyBy::KeyId(bob_kid) = bob.verification_method().await.unwrap() else {
+    let VerifyBy::KeyId(kid) = bob.verification_method().await.unwrap() else {
         panic!("should have did");
     };
-    let bob_did = bob_kid.split('#').next().expect("should have did");
+    let bob_did = kid.split('#').next().expect("should have did");
 
     assert_eq!(jwt.claims.iss, ISSUER);
     assert_eq!(jwt.claims.sub, bob_did.to_string());
@@ -393,8 +393,8 @@ async fn reduce_claims() {
         .with_authorization_detail(
             AuthorizationDetail::builder()
                 .configuration_id("EmployeeID_W3C_VC")
-                .with_claim(&vec!["credentialSubject", "given_name"])
-                .with_claim(&vec!["credentialSubject", "family_name"])
+                .with_claim(&["credentialSubject", "given_name"])
+                .with_claim(&["credentialSubject", "family_name"])
                 .build(),
         )
         .build();
@@ -453,10 +453,10 @@ async fn reduce_claims() {
     let resolver = async |kid: String| resolve_jwk(&kid, &client.provider).await;
     let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
-    let VerifyBy::KeyId(bob_kid) = bob.verification_method().await.unwrap() else {
+    let VerifyBy::KeyId(kid) = bob.verification_method().await.unwrap() else {
         panic!("should have did");
     };
-    let bob_did = bob_kid.split('#').next().expect("should have did");
+    let bob_did = kid.split('#').next().expect("should have did");
 
     assert_eq!(jwt.claims.iss, ISSUER);
     assert_eq!(jwt.claims.sub, bob_did.to_string());
