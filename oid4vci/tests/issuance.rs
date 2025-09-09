@@ -135,18 +135,18 @@ async fn two_proofs() {
 
     assert_eq!(credentials.len(), 2);
 
-    let VerifyBy::KeyId(bob_kid) = bob.verification_method().await.unwrap() else {
+    let VerifyBy::KeyId(kid) = bob.verification_method().await.unwrap() else {
         panic!("should have did");
     };
-    let bob_did = bob_kid.split('#').next().expect("should have did");
+    let bob_did = kid.split('#').next().expect("should have did");
 
-    let VerifyBy::KeyId(dan_kid) = dan.verification_method().await.unwrap() else {
+    let VerifyBy::KeyId(kid) = dan.verification_method().await.unwrap() else {
         panic!("should have did");
     };
-    let dan_did = dan_kid.split('#').next().expect("should have did");
+    let dan_did = kid.split('#').next().expect("should have did");
 
     let resolver = async |kid: String| resolve_jwk(&kid, &client.provider).await;
-    let dids = vec![bob_did.to_string(), dan_did.to_string()];
+    let dids = [bob_did.to_string(), dan_did.to_string()];
 
     for (i, credential) in credentials.iter().enumerate() {
         let Credential { credential } = credential;
@@ -253,10 +253,10 @@ async fn sd_jwt() {
     let jwt: Jwt<SdJwtClaims> = decode_jws(token, resolver).await.expect("should decode");
 
     // verify the credential
-    let VerifyBy::KeyId(bob_kid) = bob.verification_method().await.unwrap() else {
+    let VerifyBy::KeyId(kid) = bob.verification_method().await.unwrap() else {
         panic!("should have did");
     };
-    let bob_did = bob_kid.split('#').next().expect("should have did");
+    let bob_did = kid.split('#').next().expect("should have did");
 
     assert_eq!(jwt.header.typ, "dc+sd-jwt");
     assert_eq!(jwt.claims.iss, ISSUER);
