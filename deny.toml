@@ -20,15 +20,14 @@ ignore = []
 
 [licenses]
 allow = [
-    "Apache-2.0",
-    #"Apache-2.0 WITH LLVM-exception",
-    "MIT",
-    "MIT-0",
-    "BSD-2-Clause",
-    "BSD-3-Clause",
-    "ISC",
-    "OpenSSL",
-    "Unicode-3.0"
+  "Apache-2.0",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "CDLA-Permissive-2.0",
+  "ISC",
+  "MIT",
+  "Unicode-3.0",
+  "Zlib",
 ]
 
 [licenses.private]
@@ -46,14 +45,16 @@ license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
 [bans]
 multiple-versions = "warn"
 wildcards = "allow"
-highlight = "all"
-workspace-default-features = "allow"
-external-default-features = "allow"
 deny = [{ name = "tokio", deny-multiple-versions = true }]
+skip-tree = [
+  # cuid2 depends on wasi v0.11.1+wasi-snapshot-preview1 while other crates
+  # depend on 0.14.5+wasi-0.2.4 so ignore its dependency tree until it updates
+  { name = "examples", depth = 5 },
+  { name = "test-utils", depth = 5 },
+]
+# allow=["git"]
 
-[sources]
-unknown-registry = "deny"
-unknown-git = "deny"
-allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-allow-git = []
-
+[bans.workspace-dependencies]
+duplicates = "deny"
+include-path-dependencies = true
+unused = "deny"

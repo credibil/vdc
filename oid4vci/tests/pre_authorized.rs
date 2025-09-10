@@ -91,7 +91,7 @@ async fn offer_val() {
         .build()
         .await
         .expect("builds JWS");
-    let jwt = jws.encode().expect("encodes JWS");
+    let proof_jwt = jws.encode().expect("encodes JWS");
 
     // --------------------------------------------------
     // Bob requests a credential
@@ -99,7 +99,7 @@ async fn offer_val() {
     let details = &token.authorization_details.as_ref().expect("should have authorization details");
     let request = CredentialRequest::builder()
         .credential_identifier(&details[0].credential_identifiers[0])
-        .with_proof(jwt)
+        .with_proof(proof_jwt)
         .build();
 
     let headers = CredentialHeaders { authorization: token.access_token.clone() };
@@ -120,17 +120,17 @@ async fn offer_val() {
 
     let token = credential.as_str().expect("should be a string");
     let resolver = async |kid: String| resolve_jwk(&kid, &client.provider).await;
-    let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
+    let vc_jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
     let VerifyBy::KeyId(kid) = bob.verification_method().await.unwrap() else {
         panic!("should have did");
     };
     let bob_did = kid.split('#').next().expect("should have did");
 
-    assert_eq!(jwt.claims.iss, ISSUER);
-    assert_eq!(jwt.claims.sub, bob_did.to_string());
+    assert_eq!(vc_jwt.claims.iss, ISSUER);
+    assert_eq!(vc_jwt.claims.sub, bob_did.to_string());
 
-    let OneMany::One(subject) = jwt.claims.vc.credential_subject else {
+    let OneMany::One(subject) = vc_jwt.claims.vc.credential_subject else {
         panic!("should be a single credential subject");
     };
     assert_eq!(subject.id, Some(bob_did.to_string()));
@@ -232,13 +232,15 @@ async fn two_datasets() {
             .build()
             .await
             .expect("builds JWS");
-        let jwt = jws.encode().expect("encodes JWS");
+        let proof_jwt = jws.encode().expect("encodes JWS");
 
         // --------------------------------------------------
         // Bob requests a credential
         // --------------------------------------------------
-        let request =
-            CredentialRequest::builder().credential_identifier(identifier).with_proof(jwt).build();
+        let request = CredentialRequest::builder()
+            .credential_identifier(identifier)
+            .with_proof(proof_jwt)
+            .build();
         let headers = CredentialHeaders { authorization: token.access_token.clone() };
         let response =
             client.request(request).owner(ISSUER).headers(headers).await.expect("should execute");
@@ -254,10 +256,10 @@ async fn two_datasets() {
         // verify the credential proof
         let token = credential.as_str().expect("should be a string");
         let resolver = async |kid: String| resolve_jwk(&kid, &client.provider).await;
-        let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
+        let vc_jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
         // validate the credential subject
-        let OneMany::One(subject) = jwt.claims.vc.credential_subject else {
+        let OneMany::One(subject) = vc_jwt.claims.vc.credential_subject else {
             panic!("should have single subject");
         };
         assert_eq!(subject.claims["name"], expected[identifier.as_str()][0]);
@@ -329,13 +331,15 @@ async fn reduce_credentials() {
         .build()
         .await
         .expect("builds JWS");
-    let jwt = jws.encode().expect("encodes JWS");
+    let proof_jwt = jws.encode().expect("encodes JWS");
 
     // --------------------------------------------------
     // Bob requests the credential
     // --------------------------------------------------
-    let request =
-        CredentialRequest::builder().credential_identifier(identifier).with_proof(jwt).build();
+    let request = CredentialRequest::builder()
+        .credential_identifier(identifier)
+        .with_proof(proof_jwt)
+        .build();
     let headers = CredentialHeaders { authorization: token.access_token.clone() };
     let response = client
         .request(request)
@@ -355,10 +359,10 @@ async fn reduce_credentials() {
     // verify the credential proof
     let token = credential.as_str().expect("should be a string");
     let resolver = async |kid: String| resolve_jwk(&kid, &client.provider).await;
-    let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
+    let vc_jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
     // validate the credential subject
-    let OneMany::One(subject) = jwt.claims.vc.credential_subject else {
+    let OneMany::One(subject) = vc_jwt.claims.vc.credential_subject else {
         panic!("should have single subject");
     };
     assert_eq!(subject.claims["given_name"], "Alice");
@@ -423,7 +427,7 @@ async fn reduce_claims() {
         .build()
         .await
         .expect("builds JWS");
-    let jwt = jws.encode().expect("encodes JWS");
+    let proof_jwt = jws.encode().expect("encodes JWS");
 
     // --------------------------------------------------
     // Bob requests a credential
@@ -431,7 +435,7 @@ async fn reduce_claims() {
     let details = &token.authorization_details.as_ref().expect("should have authorization details");
     let request = CredentialRequest::builder()
         .credential_identifier(&details[0].credential_identifiers[0])
-        .with_proof(jwt)
+        .with_proof(proof_jwt)
         .build();
     let headers = CredentialHeaders { authorization: token.access_token.clone() };
 
@@ -453,17 +457,17 @@ async fn reduce_claims() {
     // verify the credential proof
     let token = credential.as_str().expect("should be a string");
     let resolver = async |kid: String| resolve_jwk(&kid, &client.provider).await;
-    let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
+    let vc_jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
     let VerifyBy::KeyId(kid) = bob.verification_method().await.unwrap() else {
         panic!("should have did");
     };
     let bob_did = kid.split('#').next().expect("should have did");
 
-    assert_eq!(jwt.claims.iss, ISSUER);
-    assert_eq!(jwt.claims.sub, bob_did.to_string());
+    assert_eq!(vc_jwt.claims.iss, ISSUER);
+    assert_eq!(vc_jwt.claims.sub, bob_did.to_string());
 
-    let OneMany::One(subject) = jwt.claims.vc.credential_subject else {
+    let OneMany::One(subject) = vc_jwt.claims.vc.credential_subject else {
         panic!("should be a single credential subject");
     };
     assert_eq!(subject.id, Some(bob_did.to_string()));
@@ -522,7 +526,7 @@ async fn notify_accepted() {
         .build()
         .await
         .expect("builds JWS");
-    let jwt = jws.encode().expect("encodes JWS");
+    let proof_jwt = jws.encode().expect("encodes JWS");
 
     // --------------------------------------------------
     // Bob requests a credential
@@ -530,7 +534,7 @@ async fn notify_accepted() {
     let details = &token.authorization_details.as_ref().expect("should have authorization details");
     let request = CredentialRequest::builder()
         .credential_identifier(&details[0].credential_identifiers[0])
-        .with_proof(jwt)
+        .with_proof(proof_jwt)
         .build();
     let headers = CredentialHeaders { authorization: token.access_token.clone() };
 

@@ -30,21 +30,21 @@ anyhow.workspace = true
 base64ct.workspace = true
 chrono.workspace = true
 credibil-api.workspace = true
-credibil-encoding.workspace = true
 credibil-binding.workspace = true
 credibil-core.workspace = true
 credibil-ecc.workspace = true
+credibil-encoding.workspace = true
 credibil-jose.workspace = true
 credibil-status.workspace = true
 credibil-vdc.workspace = true
 cuid2.workspace = true
-fastrand = "2.3.0"
+fastrand.workspace = true
 http.workspace = true
-image = { version = "0.25.8", default-features = false, features = ["png"] }
-qrcode = { version = "0.14.1", default-features = false, features = ["image"] }
+image.workspace = true
+qrcode.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-serde_urlencoded = "0.7.1"
+serde_urlencoded.workspace = true
 sha2.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
@@ -52,7 +52,7 @@ tracing.workspace = true
 [dev-dependencies]
 axum.workspace = true
 axum-extra.workspace = true
-oauth2 = { version = "5.0.0" }
+oauth2.workspace = true
 reqwest.workspace = true
 test-utils.workspace = true
 tokio.workspace = true
