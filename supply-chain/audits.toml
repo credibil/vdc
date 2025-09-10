@@ -1,20 +1,4 @@
 
 # cargo-vet audits file
 
-[[wildcard-audits.credibil-vc]]
-who = "Andrew Weston <andrewweston@propellerhead.co.nz>"
-criteria = "safe-to-deploy"
-user-id = 1 # wasmtime-publish
-start = "2024-01-01"
-end = "2025-01-01"
-notes = """
-Credibil VC uses `<publisher>` crates.io account to automate
-publication of this crate from CI. This repository requires all PRs are reviewed
-by a Credibil VC maintainer and it owned by Credibil itself.
-"""
-
-[[trusted.core-utils]]
-criteria = "safe-to-deploy"
-user-id = 1                 # Andrew Weston (andrewweston)
-start = "2019-03-04"
-end = "2024-07-14"
+[audits]

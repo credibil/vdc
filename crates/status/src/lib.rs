@@ -159,12 +159,14 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn new() {
         let status_list = StatusList::new().expect("should create status list");
         dbg!(status_list);
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn add_entry() {
         let mut status_list = StatusList::new().expect("should create status list");
         let status_claim = status_list.add_entry("https://example.com/status").unwrap();

@@ -1,6 +1,6 @@
 //! Credential Format Profile Tests
 
-//! Pre-Authorized Code Flow Tests
+#![cfg(not(miri))] // waiting for https://github.com/rust-lang/miri/issues/602
 
 use base64ct::{Base64UrlUnpadded, Encoding};
 use credibil_binding::resolve_jwk;

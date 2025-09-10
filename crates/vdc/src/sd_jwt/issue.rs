@@ -253,6 +253,7 @@ mod tests {
     use super::SdJwtVcBuilder;
 
     #[tokio::test]
+    #[cfg_attr(miri, ignore)]
     async fn test_claims() {
         // create claims
         let claims_json = json!({

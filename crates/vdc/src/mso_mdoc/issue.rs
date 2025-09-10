@@ -178,6 +178,7 @@ mod tests {
     use crate::mso_mdoc::{DataItem, DigestAlgorithm, KeyType, serde_cbor};
 
     #[tokio::test]
+    #[cfg_attr(miri, ignore)]
     async fn build_vc() {
         let wallet = Wallet::new("https://mso_mdoc.io/wallet").await.expect("should create wallet");
         let key_binding = wallet
