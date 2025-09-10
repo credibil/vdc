@@ -7,7 +7,6 @@ Issuance and Identity libraries for use in `OpenID` Verifiable Credentials solut
 >
 > The code in this repository is incomplete and under active development.
 
-
 ## OpenID for Verifiable Credentials
 
 This repository provides (rudimentary) implementations of [OpenID for Verifiable 
