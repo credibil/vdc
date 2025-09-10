@@ -1,7 +1,7 @@
 [toolchain]
 channel = "stable"
 # channel = "nightly"
-components = ["clippy", "miri", "rust-src", "rustfmt"]
+components = ["clippy", "rust-src", "rustfmt"] # "miri"
 targets = [
   "aarch64-apple-darwin",
   "wasm32-wasip2",
