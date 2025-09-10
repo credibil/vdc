@@ -474,6 +474,7 @@ async fn specific_values() {
 
 // Initialise a mock "wallet" with test credentials.
 #[allow(clippy::too_many_lines)]
+#[allow(clippy::cognitive_complexity)]
 async fn populate(owner: &str) -> Wallet<'_> {
     let wallet = Wallet::new(owner).await.expect("should create wallet");
     let issuer = issuer().await;

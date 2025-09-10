@@ -4,11 +4,9 @@
 targets = [
   "aarch64-apple-darwin",
   "wasm32-wasip2",
+  "x86_64-unknown-linux-musl",
 ]
 all-features = true
-# exclude = []
-# no-default-features = false
-# features = []
 
 [output]
 feature-depth = 1
@@ -31,10 +29,6 @@ allow = [
 [licenses.private]
 ignore = true
 
-# [[licenses.exceptions]] 
-# allow = ["OpenSSL"]
-# crate = "ring"
-
 [[licenses.clarify]]
 name = "ring"
 expression = "MIT AND ISC AND OpenSSL"
@@ -50,7 +44,6 @@ skip-tree = [
   { name = "examples", depth = 5, reason = "cuid2 depends on wasi v0.11.1+wasi-snapshot-preview1" },
   { name = "test-utils", depth = 5, reason = "cuid2 depends on wasi v0.11.1+wasi-snapshot-preview1" },
 ]
-# allow=["git"]
 
 [bans.workspace-dependencies]
 duplicates = "deny"
