@@ -30,7 +30,10 @@ Additionally, end-to-end client examples can be found in the `/tests` directory.
 
 ## WASM
 
-One of the goals of this project is to allow WASM services to be built using this API. While the bulk of the library is compatible with WASM without special consideration, some dependencies require a feature flag. So if compiling for WASM, regardless of the WASM runtime, include the `wasm` feature.
+One of the goals of this project is to allow WASM services to be built using this API. While the 
+bulk of the library is compatible with WASM without special consideration, some dependencies 
+require a feature flag. So if compiling for WASM, regardless of the WASM runtime, include the
+`wasm` feature.
 
 ## Specification Conformance
 
