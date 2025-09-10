@@ -30,19 +30,19 @@ anyhow.workspace = true
 base64ct.workspace = true
 chrono.workspace = true
 credibil-api.workspace = true
-credibil-encoding.workspace = true
 credibil-binding.workspace = true
 credibil-core.workspace = true
 credibil-ecc.workspace = true
+credibil-encoding.workspace = true
 credibil-jose.workspace = true
 credibil-status.workspace = true
 credibil-vdc.workspace = true
-fastrand = "2.3.0"
-image = { version = "0.25.8", default-features = false, features = ["png"] }
-qrcode = { version = "0.14.1", default-features = false, features = ["image"] }
+fastrand.workspace = true
+image.workspace = true
+qrcode.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-serde_urlencoded = "0.7.1"
+serde_urlencoded.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]

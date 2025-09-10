@@ -87,7 +87,7 @@ async fn deferred() {
         .build()
         .await
         .expect("builds JWS");
-    let jwt = jws.encode().expect("encodes JWS");
+    let proof_jwt = jws.encode().expect("encodes JWS");
 
     // --------------------------------------------------
     // Bob requests a credential and receives a deferred response
@@ -95,7 +95,7 @@ async fn deferred() {
     let details = token.authorization_details.as_ref().expect("should have authorization details");
     let request = CredentialRequest::builder()
         .credential_identifier(&details[0].credential_identifiers[0])
-        .with_proof(jwt)
+        .with_proof(proof_jwt)
         .build();
 
     let response = client
@@ -151,7 +151,7 @@ async fn deferred() {
     // verify the credential proof
     let token = credential.as_str().expect("should be a string");
     let resolver = async |kid: String| resolve_jwk(&kid, &client.provider).await;
-    let jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
+    let proof_jwt: Jwt<W3cVcClaims> = decode_jws(token, resolver).await.expect("should decode");
 
     // verify the credential
     let VerifyBy::KeyId(kid) = bob.verification_method().await.unwrap() else {
@@ -159,10 +159,10 @@ async fn deferred() {
     };
     let carol_did = kid.split('#').next().expect("should have did");
 
-    assert_eq!(jwt.claims.iss, ISSUER);
-    assert_eq!(jwt.claims.sub, carol_did);
+    assert_eq!(proof_jwt.claims.iss, ISSUER);
+    assert_eq!(proof_jwt.claims.sub, carol_did);
 
-    let OneMany::One(subject) = jwt.claims.vc.credential_subject else {
+    let OneMany::One(subject) = proof_jwt.claims.vc.credential_subject else {
         panic!("should be a single credential subject");
     };
     assert_eq!(subject.id, Some(carol_did.to_string()));

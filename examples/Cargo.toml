@@ -21,10 +21,10 @@ axum.workspace = true
 axum-extra.workspace = true
 credibil-binding.workspace = true
 credibil-encoding.workspace = true
-credibil-oid4vci = { path = "../oid4vci" }
-credibil-oid4vp = { path = "../oid4vp" }
+credibil-oid4vci.workspace = true
+credibil-oid4vp.workspace = true
 http.workspace = true
-oauth2 = { version = "5.0.0" }
+oauth2.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true

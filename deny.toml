@@ -3,14 +3,9 @@
 [graph]
 targets = [
   "aarch64-apple-darwin",
-  "x86_64-unknown-linux-musl",
-  "aarch64-unknown-linux-musl",
   "wasm32-wasip2",
 ]
 all-features = true
-# exclude = []
-# no-default-features = false
-# features = []
 
 [output]
 feature-depth = 1
@@ -20,23 +15,18 @@ ignore = []
 
 [licenses]
 allow = [
-    "Apache-2.0",
-    #"Apache-2.0 WITH LLVM-exception",
-    "MIT",
-    "MIT-0",
-    "BSD-2-Clause",
-    "BSD-3-Clause",
-    "ISC",
-    "OpenSSL",
-    "Unicode-3.0"
+  "Apache-2.0",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "CDLA-Permissive-2.0",
+  "ISC",
+  "MIT",
+  "Unicode-3.0",
+  "Zlib",
 ]
 
 [licenses.private]
 ignore = true
-
-# [[licenses.exceptions]] 
-# allow = ["OpenSSL"]
-# crate = "ring"
 
 [[licenses.clarify]]
 name = "ring"
@@ -46,14 +36,15 @@ license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
 [bans]
 multiple-versions = "warn"
 wildcards = "allow"
-highlight = "all"
-workspace-default-features = "allow"
-external-default-features = "allow"
-deny = [{ name = "tokio", deny-multiple-versions = true }]
+deny = [
+  { name = "tokio", deny-multiple-versions = true },
+]
+skip-tree = [
+  { name = "examples", depth = 5, reason = "cuid2 depends on wasi v0.11.1+wasi-snapshot-preview1" },
+  { name = "test-utils", depth = 5, reason = "cuid2 depends on wasi v0.11.1+wasi-snapshot-preview1" },
+]
 
-[sources]
-unknown-registry = "deny"
-unknown-git = "deny"
-allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-allow-git = []
-
+[bans.workspace-dependencies]
+duplicates = "deny"
+include-path-dependencies = true
+unused = "deny"

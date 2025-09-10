@@ -33,6 +33,12 @@ user-id = 55123 # rust-lang-owner
 start = "2022-10-29"
 end = "2026-09-10"
 
+[[trusted.errno]]
+criteria = "safe-to-deploy"
+user-id = 6825 # Dan Gohman (sunfishcode)
+start = "2023-08-29"
+end = "2026-09-10"
+
 [[trusted.ff]]
 criteria = "safe-to-deploy"
 user-id = 6289 # Jack Grigg (str4d)
@@ -367,6 +373,12 @@ end = "2026-09-10"
 criteria = "safe-to-deploy"
 user-id = 10
 start = "2019-04-27"
+end = "2026-09-10"
+
+[[trusted.unicode-ident]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2021-10-02"
 end = "2026-09-10"
 
 [[trusted.url]]

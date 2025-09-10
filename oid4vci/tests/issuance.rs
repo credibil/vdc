@@ -250,7 +250,7 @@ async fn sd_jwt() {
 
     let token = parts.0;
     let resolver = async |kid: String| resolve_jwk(&kid, &client.provider).await;
-    let jwt: Jwt<SdJwtClaims> = decode_jws(token, resolver).await.expect("should decode");
+    let sd_jwt: Jwt<SdJwtClaims> = decode_jws(token, resolver).await.expect("should decode");
 
     // verify the credential
     let VerifyBy::KeyId(kid) = bob.verification_method().await.unwrap() else {
@@ -258,15 +258,15 @@ async fn sd_jwt() {
     };
     let bob_did = kid.split('#').next().expect("should have did");
 
-    assert_eq!(jwt.header.typ, "dc+sd-jwt");
-    assert_eq!(jwt.claims.iss, ISSUER);
-    assert_eq!(jwt.claims.vct, "Identity_SD_JWT");
-    assert_eq!(jwt.claims.sub, Some(bob_did.to_string()));
+    assert_eq!(sd_jwt.header.typ, "dc+sd-jwt");
+    assert_eq!(sd_jwt.claims.iss, ISSUER);
+    assert_eq!(sd_jwt.claims.vct, "Identity_SD_JWT");
+    assert_eq!(sd_jwt.claims.sub, Some(bob_did.to_string()));
 
     // verify disclosures
     let disclosures = parts.1.split('~').collect::<Vec<&str>>();
     for d in &disclosures {
         let sd_hash = Base64UrlUnpadded::encode_string(Sha256::digest(d).as_slice());
-        assert!(jwt.claims.sd.contains(&sd_hash), "disclosure not found");
+        assert!(sd_jwt.claims.sd.contains(&sd_hash), "disclosure not found");
     }
 }

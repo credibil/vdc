@@ -462,7 +462,7 @@ version = "1.0.2"
 criteria = "safe-to-deploy"
 
 [[exemptions.schannel]]
-version = "0.1.27"
+version = "0.1.28"
 criteria = "safe-to-deploy"
 
 [[exemptions.sec1]]
@@ -506,7 +506,7 @@ version = "0.6.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.tempfile]]
-version = "3.21.0"
+version = "3.22.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.tinyvec]]

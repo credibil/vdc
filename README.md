@@ -7,7 +7,6 @@ Issuance and Identity libraries for use in `OpenID` Verifiable Credentials solut
 >
 > The code in this repository is incomplete and under active development.
 
-
 ## OpenID for Verifiable Credentials
 
 This repository provides (rudimentary) implementations of [OpenID for Verifiable 
@@ -15,20 +14,26 @@ Credential Issuance] and [OpenID for Verifiable Presentations] specifications wi
 initial focus on meeting requirements in the [JWT VC Issuance] and [JWT VC Presentation]
 Profiles.
 
-You will find a more complete set of documentation on the 
-[Credibil website](https://credibil.io).
+You will find a more complete set of documentation on the [Credibil website](https://credibil.io).
 
 ## Getting Started
 
-There is no default feature for this crate. To use the Issuer API include the `issuer` feature flag; to include the Verifier API use `verifier`. You can include both if building a single service that both issues and verifies credentials or if you are building, say, a holder agent application (like a wallet) that might need the types necessary to interact with both types of service.
+There is no default feature for this crate. To use the Issuer API include the `issuer` feature 
+flag; to include the Verifier API use `verifier`. You can include both if building a single service
+that both issues and verifies credentials or if you are building, say, a holder agent application
+ (like a wallet) that might need the types necessary to interact with both types of service.
 
-Example impementations for Credential issuance and presentation can be found in the [examples](./examples) directory
+Example impementations for Credential issuance and presentation can be found in the 
+[examples](./examples) directory.
 
 Additionally, end-to-end client examples can be found in the `/tests` directory.
 
 ## WASM
 
-One of the goals of this project is to allow WASM services to be built using this API. While the bulk of the library is compatible with WASM without special consideration, some dependencies require a feature flag. So if compiling for WASM, regardless of the WASM runtime, include the `wasm` feature.
+One of the goals of this project is to allow WASM services to be built using this API. While the 
+bulk of the library is compatible with WASM without special consideration, some dependencies 
+require a feature flag. So if compiling for WASM, regardless of the WASM runtime, include the
+`wasm` feature.
 
 ## Specification Conformance
 
