@@ -1,5 +1,7 @@
 //! Tests for the Verifier API
 
+#![cfg(not(miri))] // waiting for https://github.com/rust-lang/miri/issues/602
+
 // use credibil_openid::oid4vp::endpoint;
 // use credibil_openid::oid4vp::types::CreateRequest;
 // use insta::assert_yaml_snapshot as assert_snapshot;

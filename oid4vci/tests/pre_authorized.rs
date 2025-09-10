@@ -1,5 +1,7 @@
 //! Pre-Authorized Code Flow Tests
 
+#![cfg(not(miri))] // waiting for https://github.com/rust-lang/miri/issues/602
+
 use std::collections::HashMap;
 
 use credibil_binding::resolve_jwk;

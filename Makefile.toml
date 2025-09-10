@@ -61,6 +61,16 @@ install_crate = "cargo-edit"
 command = "cargo"
 args = ["audit"]
 
+[tasks.miri]
+command = "cargo"
+args = ["miri", "nextest", "run"]
+env = { RUSTFLAGS = "-Dwarnings" }
+
+[tasks.vet]
+command = "cargo"
+args = ["vet"]
+install_crate = "cargo-vet"
+
 [tasks.unused]
 command = "cargo"
 args = ["machete", "--skip-target-dir"]

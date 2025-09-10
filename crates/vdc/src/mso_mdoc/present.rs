@@ -263,6 +263,7 @@ mod tests {
     use crate::mso_mdoc::MdocBuilder;
 
     #[tokio::test]
+    #[cfg_attr(miri, ignore)]
     async fn build_vp() {
         let issuer = Issuer::new("https://mso_mdoc.io/issuer").await.expect("should create issuer");
         let issued = build_vc(&issuer).await;

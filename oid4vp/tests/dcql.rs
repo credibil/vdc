@@ -1,5 +1,7 @@
 //! Tests for the Verifier API
 
+#![cfg(not(miri))] // waiting for https://github.com/rust-lang/miri/issues/602
+
 use credibil_binding::resolve_jwk;
 use credibil_oid4vp::api::Client;
 use credibil_oid4vp::identity::{Signature, VerifyBy};
