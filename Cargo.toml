@@ -32,11 +32,11 @@ base64ct = { version = "1.8.0", features = ["std"] }
 chrono = { version = "0.4.42", features = ["serde"] }
 ciborium = "0.2.2"
 credibil-api = { git = "https://github.com/credibil/core.git", tag = "v0.1.0" }
-credibil-binding = { git = "https://github.com/credibil/key.git", tag = "v0.1.0" }
+credibil-binding = { git = "https://github.com/credibil/key.git", tag = "v0.2.0" }
 credibil-core = { git = "https://github.com/credibil/core.git", tag = "v0.1.0" }
-credibil-ecc = { git = "https://github.com/credibil/key.git", tag = "v0.1.0" }
+credibil-ecc = { git = "https://github.com/credibil/key.git", tag = "v0.2.0" }
 credibil-encoding = { git = "https://github.com/credibil/core.git", tag = "v0.1.0" }
-credibil-jose = { git = "https://github.com/credibil/key.git", tag = "v0.1.0" }
+credibil-jose = { git = "https://github.com/credibil/key.git", tag = "v0.2.0" }
 credibil-oid4vci = { path = "oid4vci" }
 credibil-oid4vp = { path = "oid4vp" }
 credibil-status = { path = "crates/status" }
@@ -48,8 +48,8 @@ image = { version = "0.25.8", default-features = false, features = ["png"] }
 oauth2 = "5.0.0"
 qrcode = { version = "0.14.1", default-features = false, features = ["image"] }
 reqwest = { version = "0.12.23", features = ["json"] }
-serde = { version = "1.0.219", features = ["derive"] }
-serde_json = { version = "1.0.143", features = ["alloc"] }
+serde = { version = "1.0.225", features = ["derive"] }
+serde_json = { version = "1.0.145", features = ["alloc"] }
 serde_repr = "0.1"
 serde_urlencoded = "0.7.1"
 sha2 = "0.10.9"
