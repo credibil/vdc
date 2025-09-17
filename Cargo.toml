@@ -13,7 +13,7 @@ license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/credibil/vc"
 rust-version = "1.89"
-version = "0.2.0"
+version = "0.3.0"
 
 [workspace.lints.rust]
 missing_docs = "warn"
