@@ -48,3 +48,8 @@ skip-tree = [
 duplicates = "deny"
 include-path-dependencies = true
 unused = "deny"
+
+[sources.allow-org]
+github = [
+  "credibil",
+]
