@@ -94,7 +94,7 @@ version = "0.1.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.cc]]
-version = "1.2.37"
+version = "1.2.38"
 criteria = "safe-to-deploy"
 
 [[exemptions.chacha20]]
@@ -218,7 +218,7 @@ version = "0.13.8"
 criteria = "safe-to-deploy"
 
 [[exemptions.find-msvc-tools]]
-version = "0.1.1"
+version = "0.1.2"
 criteria = "safe-to-deploy"
 
 [[exemptions.form_urlencoded]]
@@ -290,7 +290,7 @@ version = "0.7.8"
 criteria = "safe-to-deploy"
 
 [[exemptions.js-sys]]
-version = "0.3.79"
+version = "0.3.80"
 criteria = "safe-to-deploy"
 
 [[exemptions.k256]]
@@ -410,7 +410,7 @@ version = "0.13.6"
 criteria = "safe-to-deploy"
 
 [[exemptions.pxfm]]
-version = "0.1.23"
+version = "0.1.24"
 criteria = "safe-to-deploy"
 
 [[exemptions.qrcode]]
@@ -450,7 +450,7 @@ version = "0.17.14"
 criteria = "safe-to-deploy"
 
 [[exemptions.rustls]]
-version = "0.23.31"
+version = "0.23.32"
 criteria = "safe-to-deploy"
 
 [[exemptions.rustls-pki-types]]
@@ -522,7 +522,7 @@ version = "1.10.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.tokio-rustls]]
-version = "0.26.2"
+version = "0.26.3"
 criteria = "safe-to-deploy"
 
 [[exemptions.tower-layer]]
@@ -566,31 +566,31 @@ version = "0.9.5"
 criteria = "safe-to-deploy"
 
 [[exemptions.wasm-bindgen]]
-version = "0.2.102"
+version = "0.2.103"
 criteria = "safe-to-deploy"
 
 [[exemptions.wasm-bindgen-backend]]
-version = "0.2.102"
+version = "0.2.103"
 criteria = "safe-to-deploy"
 
 [[exemptions.wasm-bindgen-futures]]
-version = "0.4.52"
+version = "0.4.53"
 criteria = "safe-to-deploy"
 
 [[exemptions.wasm-bindgen-macro]]
-version = "0.2.102"
+version = "0.2.103"
 criteria = "safe-to-deploy"
 
 [[exemptions.wasm-bindgen-macro-support]]
-version = "0.2.102"
+version = "0.2.103"
 criteria = "safe-to-deploy"
 
 [[exemptions.wasm-bindgen-shared]]
-version = "0.2.102"
+version = "0.2.103"
 criteria = "safe-to-deploy"
 
 [[exemptions.web-sys]]
-version = "0.3.79"
+version = "0.3.80"
 criteria = "safe-to-deploy"
 
 [[exemptions.web-time]]

@@ -12,7 +12,7 @@ keywords = ["credentials", "decentralized", "identity", "openid", "verifiable"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/credibil/vc"
-rust-version = "1.89"
+rust-version = "1.90"
 version = "0.3.0"
 
 [workspace.lints.rust]
@@ -25,7 +25,7 @@ pedantic = "warn"
 nursery = "warn"
 
 [workspace.dependencies]
-anyhow = "1.0.99"
+anyhow = "1.0.100"
 axum = { version = "0.8.4", features = ["macros"] }
 axum-extra = { version = "0.10.1", features = ["typed-header"] }
 base64ct = { version = "1.8.0", features = ["std"] }
