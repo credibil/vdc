@@ -73,8 +73,8 @@ pub async fn request_uri(
 impl<P: Provider> Handler<RequestUriResponse, P> for Request<RequestUriRequest> {
     type Error = Error;
 
-    async fn handle(self, verifier: &str, provider: &P) -> Result<Response<RequestUriResponse>> {
-        Ok(request_uri(verifier, provider, self.body).await?.into())
+    async fn handle(self, owner: &str, provider: &P) -> Result<Response<RequestUriResponse>> {
+        Ok(request_uri(owner, provider, self.body).await?.into())
     }
 }
 

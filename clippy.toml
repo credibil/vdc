@@ -1,3 +1,23 @@
 # https://doc.rust-lang.org/stable/clippy/index.html
 
-doc-valid-idents = ["EdDSA", "OAuth", "OpenID", "OpenID4VCI", "OpenID4VP", "SIOPv2", "TypeScript", "VC_DATA", "VC_DATA_2.0", "VC_Data_Integrity"]
+doc-valid-idents = [
+    "EdDSA",
+    "OAuth",
+    "OpenID",
+    "OpenID4VCI",
+    "OpenID4VP",
+    "SIOPv2",
+    "TypeScript",
+    "VC_DATA",
+    "VC_DATA_2.0",
+    "VC_Data_Integrity",
+]
+
+allowed-duplicate-crates = [
+    "digest",
+    "getrandom",
+    "rand",
+    "rand_chacha",
+    "rand_core",
+    "wasi",
+]

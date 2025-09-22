@@ -93,8 +93,8 @@ async fn token(
 impl<P: Provider> Handler<TokenResponse, P> for Request<TokenRequest> {
     type Error = Error;
 
-    async fn handle(self, issuer: &str, provider: &P) -> Result<Response<TokenResponse>> {
-        Ok(token(issuer, provider, self.body).await?.into())
+    async fn handle(self, owner: &str, provider: &P) -> Result<Response<TokenResponse>> {
+        Ok(token(owner, provider, self.body).await?.into())
     }
 }
 

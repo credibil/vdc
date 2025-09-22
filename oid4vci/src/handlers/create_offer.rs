@@ -46,17 +46,14 @@ async fn create_offer(
 
     let grant_types = request.grant_types.clone().unwrap_or_default();
     let credential_offer = request.create_offer(&ctx);
-    let tx_code = if request.tx_code_required && grant_types.contains(&GrantType::PreAuthorizedCode)
-    {
-        Some(generate::tx_code())
-    } else {
-        None
-    };
+    let tx_code = (request.tx_code_required && grant_types.contains(&GrantType::PreAuthorizedCode))
+        .then(generate::tx_code);
 
     // save offer details to state
     if grant_types.contains(&GrantType::PreAuthorizedCode)
         || grant_types.contains(&GrantType::AuthorizationCode)
     {
+        #[allow(clippy::if_then_some_else_none)]
         let auth_items = if grant_types.contains(&GrantType::PreAuthorizedCode) {
             Some(authorize(issuer, provider, &request).await?)
         } else {
@@ -109,8 +106,8 @@ async fn create_offer(
 impl<P: Provider> Handler<CreateOfferResponse, P> for Request<CreateOfferRequest> {
     type Error = Error;
 
-    async fn handle(self, issuer: &str, provider: &P) -> Result<Response<CreateOfferResponse>> {
-        create_offer(issuer, provider, self.body).await
+    async fn handle(self, owner: &str, provider: &P) -> Result<Response<CreateOfferResponse>> {
+        create_offer(owner, provider, self.body).await
     }
 }
 
@@ -169,15 +166,11 @@ impl CreateOfferRequest {
         let mut grants = Grants { authorization_code: None, pre_authorized_code: None };
 
         if grant_types.contains(&GrantType::PreAuthorizedCode) {
-            let tx_code_def = if self.tx_code_required {
-                Some(TxCode {
-                    input_mode: Some("numeric".to_string()),
-                    length: Some(6),
-                    description: Some("Please provide the one-time code received".to_string()),
-                })
-            } else {
-                None
-            };
+            let tx_code_def = self.tx_code_required.then(|| TxCode {
+                input_mode: Some("numeric".to_string()),
+                length: Some(6),
+                description: Some("Please provide the one-time code received".to_string()),
+            });
 
             grants.pre_authorized_code = Some(PreAuthorizedCodeGrant {
                 pre_authorized_code: auth_code.clone(),
@@ -194,12 +187,8 @@ impl CreateOfferRequest {
             });
         }
 
-        let grants = if grants.authorization_code.is_some() || grants.pre_authorized_code.is_some()
-        {
-            Some(grants)
-        } else {
-            None
-        };
+        let grants = (grants.authorization_code.is_some() || grants.pre_authorized_code.is_some())
+            .then_some(grants);
 
         CredentialOffer {
             credential_issuer: ctx.issuer.credential_issuer.clone(),

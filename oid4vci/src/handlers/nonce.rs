@@ -39,8 +39,8 @@ async fn nonce(issuer: &str, provider: &impl Provider, _: NonceRequest) -> Resul
 impl<P: Provider> Handler<NonceResponse, P> for Request<NonceRequest> {
     type Error = Error;
 
-    async fn handle(self, issuer: &str, provider: &P) -> Result<Response<NonceResponse>> {
-        Ok(nonce(issuer, provider, self.body).await?.into())
+    async fn handle(self, owner: &str, provider: &P) -> Result<Response<NonceResponse>> {
+        Ok(nonce(owner, provider, self.body).await?.into())
     }
 }
 

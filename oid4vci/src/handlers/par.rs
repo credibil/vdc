@@ -50,9 +50,9 @@ impl<P: Provider> Handler<PushedAuthorizationResponse, P> for Request<PushedAuth
     type Error = Error;
 
     async fn handle(
-        self, issuer: &str, provider: &P,
+        self, owner: &str, provider: &P,
     ) -> Result<Response<PushedAuthorizationResponse>> {
-        Ok(par(issuer, provider, self.body).await?.into())
+        Ok(par(owner, provider, self.body).await?.into())
     }
 }
 

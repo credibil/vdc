@@ -30,8 +30,8 @@ async fn vp_data(
 impl<P: Provider> Handler<VpDataResponse, P> for Request<VpDataRequest> {
     type Error = Error;
 
-    async fn handle(self, verifier: &str, provider: &P) -> Result<Response<VpDataResponse>> {
-        Ok(vp_data(verifier, provider, self.body).await?.into())
+    async fn handle(self, owner: &str, provider: &P) -> Result<Response<VpDataResponse>> {
+        Ok(vp_data(owner, provider, self.body).await?.into())
     }
 }
 

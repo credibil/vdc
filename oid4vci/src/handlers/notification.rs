@@ -39,7 +39,7 @@ async fn notification(
     // verify access token
     let _ = StateStore::get::<Token>(provider, issuer, &request.headers.authorization)
         .await
-        .map_err(|_| Error::AccessDenied("invalid access token".to_string()))?;
+        .map_err(|_e| Error::AccessDenied("invalid access token".to_string()))?;
 
     let request = request.body;
     let Ok(_state) = StateStore::get::<Token>(provider, issuer, &request.notification_id).await
@@ -57,8 +57,8 @@ impl<P: Provider> Handler<NotificationResponse, P>
 {
     type Error = Error;
 
-    async fn handle(self, issuer: &str, provider: &P) -> Result<Response<NotificationResponse>> {
-        Ok(notification(issuer, provider, self).await?.into())
+    async fn handle(self, owner: &str, provider: &P) -> Result<Response<NotificationResponse>> {
+        Ok(notification(owner, provider, self).await?.into())
     }
 }
 

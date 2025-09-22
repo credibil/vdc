@@ -48,8 +48,8 @@ async fn metadata(
 impl<P: Provider> Handler<IssuerResponse, P> for Request<IssuerRequest, MetadataHeaders> {
     type Error = Error;
 
-    async fn handle(self, issuer: &str, provider: &P) -> Result<Response<IssuerResponse>> {
-        Ok(metadata(issuer, provider, self).await?.into())
+    async fn handle(self, owner: &str, provider: &P) -> Result<Response<IssuerResponse>> {
+        Ok(metadata(owner, provider, self).await?.into())
     }
 }
 

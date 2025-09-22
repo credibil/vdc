@@ -73,8 +73,8 @@ async fn response(
 impl<P: Provider> Handler<SubmissionResponse, P> for Request<AuthorizationResponse> {
     type Error = Error;
 
-    async fn handle(self, verifier: &str, provider: &P) -> Result<Response<SubmissionResponse>> {
-        Ok(response(verifier, provider, self.body).await?.into())
+    async fn handle(self, owner: &str, provider: &P) -> Result<Response<SubmissionResponse>> {
+        Ok(response(owner, provider, self.body).await?.into())
     }
 }
 
