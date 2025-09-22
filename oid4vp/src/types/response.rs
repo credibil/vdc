@@ -47,7 +47,7 @@ impl AuthorizationResponse {
 
 impl Display for AuthorizationResponse {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = credibil_encoding::url_encode(self).map_err(|_| fmt::Error)?;
+        let s = credibil_encoding::url_encode(self).map_err(|_e| fmt::Error)?;
         write!(f, "{s}")
     }
 }

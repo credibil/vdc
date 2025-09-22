@@ -81,8 +81,8 @@ pub async fn credential(
 impl<P: Provider> Handler<CredentialResponse, P> for Request<CredentialRequest, CredentialHeaders> {
     type Error = Error;
 
-    async fn handle(self, issuer: &str, provider: &P) -> Result<Response<CredentialResponse>> {
-        Ok(credential(issuer, provider, self).await?.into())
+    async fn handle(self, owner: &str, provider: &P) -> Result<Response<CredentialResponse>> {
+        Ok(credential(owner, provider, self).await?.into())
     }
 }
 

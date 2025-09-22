@@ -67,8 +67,8 @@ async fn create_request(
 impl<P: Provider> Handler<CreateResponse, P> for Request<CreateRequest> {
     type Error = Error;
 
-    async fn handle(self, verifier: &str, provider: &P) -> Result<Response<CreateResponse>> {
-        Ok(create_request(verifier, provider, self.body).await?.into())
+    async fn handle(self, owner: &str, provider: &P) -> Result<Response<CreateResponse>> {
+        Ok(create_request(owner, provider, self.body).await?.into())
     }
 }
 

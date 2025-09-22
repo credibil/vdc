@@ -29,8 +29,8 @@ async fn metadata(
 impl<P: Provider> Handler<VerifierResponse, P> for Request<VerifierRequest> {
     type Error = Error;
 
-    async fn handle(self, verifier: &str, provider: &P) -> Result<Response<VerifierResponse>> {
-        Ok(metadata(verifier, provider, self.body).await?.into())
+    async fn handle(self, owner: &str, provider: &P) -> Result<Response<VerifierResponse>> {
+        Ok(metadata(owner, provider, self.body).await?.into())
     }
 }
 

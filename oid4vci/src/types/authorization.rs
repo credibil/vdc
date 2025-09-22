@@ -262,7 +262,7 @@ impl Default for AuthorizationRequest {
 
 impl Display for AuthorizationRequest {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = credibil_encoding::url_encode(self).map_err(|_| fmt::Error)?;
+        let s = credibil_encoding::url_encode(self).map_err(|_e| fmt::Error)?;
         write!(f, "{s}")
     }
 }

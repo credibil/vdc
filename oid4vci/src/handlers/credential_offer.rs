@@ -47,8 +47,8 @@ async fn credential_offer(
 impl<P: Provider> Handler<CredentialOfferResponse, P> for Request<CredentialOfferRequest> {
     type Error = Error;
 
-    async fn handle(self, issuer: &str, provider: &P) -> Result<Response<CredentialOfferResponse>> {
-        Ok(credential_offer(issuer, provider, self.body).await?.into())
+    async fn handle(self, owner: &str, provider: &P) -> Result<Response<CredentialOfferResponse>> {
+        Ok(credential_offer(owner, provider, self.body).await?.into())
     }
 }
 
