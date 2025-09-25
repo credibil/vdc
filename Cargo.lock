@@ -545,7 +545,7 @@ dependencies = [
 
 [[package]]
 name = "credibil-oid4vci"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -581,7 +581,7 @@ dependencies = [
 
 [[package]]
 name = "credibil-oid4vp"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -611,7 +611,7 @@ dependencies = [
 
 [[package]]
 name = "credibil-status"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "base64ct",
@@ -628,7 +628,7 @@ dependencies = [
 
 [[package]]
 name = "credibil-vdc"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "base64ct",
