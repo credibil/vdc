@@ -5,5 +5,5 @@ credibil = { index = "sparse+https://pkgs.dev.azure.com/credibil/_packaging/cred
 global-credential-providers = [
     "cargo:token",
     "cargo:macos-keychain",
-    "cargo-credential-1password --account credibil.1password.com --vault Credibil",
+    # "cargo-credential-1password --account credibil.1password.com --vault Credibil",
 ]
