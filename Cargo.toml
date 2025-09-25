@@ -61,16 +61,6 @@ axum-extra = { version = "0.10.1", features = ["typed-header"] }
 base64ct = { version = "1.8.0", features = ["std"] }
 chrono = { version = "0.4.42", features = ["serde"] }
 ciborium = "0.2.2"
-credibil-api = { git = "https://github.com/credibil/core.git", tag = "v0.1.0" }
-credibil-binding = { git = "https://github.com/credibil/key.git", tag = "v0.2.0" }
-credibil-core = { git = "https://github.com/credibil/core.git", tag = "v0.1.0" }
-credibil-ecc = { git = "https://github.com/credibil/key.git", tag = "v0.2.0" }
-credibil-encoding = { git = "https://github.com/credibil/core.git", tag = "v0.1.0" }
-credibil-jose = { git = "https://github.com/credibil/key.git", tag = "v0.2.0" }
-credibil-oid4vci = { path = "oid4vci" }
-credibil-oid4vp = { path = "oid4vp" }
-credibil-status = { path = "crates/status" }
-credibil-vdc = { path = "crates/vdc" }
 cuid2 = "0.1.4"
 fastrand = "2.3.0"
 http = "1.3.1"
@@ -90,6 +80,20 @@ tower-http = { version = "0.6.6", features = ["cors", "set-header", "trace"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter", "fmt"] }
 uuid = { version = "1.18.1", features = ["fast-rng", "v4"] }
+
+# credibil registry
+credibil-api = { version = "0.2.1", registry = "credibil" }
+credibil-binding = { version = "0.3.0", registry = "credibil" }
+credibil-core = { version = "0.2.1", registry = "credibil" }
+credibil-ecc = { version = "0.3.0", registry = "credibil" }
+credibil-encoding = { version = "0.2.1", registry = "credibil" }
+credibil-jose = { version = "0.3.0", registry = "credibil" }
+
+# internal references
+credibil-oid4vci = { path = "oid4vci", version = "0.3.0", registry = "credibil" }
+credibil-oid4vp = { path = "oid4vp", version = "0.3.0", registry = "credibil" }
+credibil-status = { path = "crates/status", version = "0.3.0", registry = "credibil" }
+credibil-vdc = { path = "crates/vdc", version = "0.3.0", registry = "credibil" }
 
 # [patch."https://github.com/credibil/core"]
 # credibil-core = { path = "../core" }

@@ -1,0 +1,9 @@
+[registries]
+credibil = { index = "sparse+https://pkgs.dev.azure.com/credibil/_packaging/credibil/Cargo/index/" }
+
+[registry]
+global-credential-providers = [
+    "cargo:token",
+    "cargo:macos-keychain",
+    "cargo-credential-1password --account credibil.1password.com --vault credibil",
+]

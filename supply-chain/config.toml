@@ -138,7 +138,7 @@ version = "1.5.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.credibil-core]]
-version = "0.1.0@git:b27dc201fea251e6270bc88eac04d74006a9a54f"
+version = "0.2.1"
 criteria = "safe-to-deploy"
 
 [[exemptions.critical-section]]
@@ -221,10 +221,6 @@ criteria = "safe-to-deploy"
 version = "0.1.2"
 criteria = "safe-to-deploy"
 
-[[exemptions.form_urlencoded]]
-version = "1.2.2"
-criteria = "safe-to-deploy"
-
 [[exemptions.funty]]
 version = "2.0.0"
 criteria = "safe-to-deploy"
@@ -267,10 +263,6 @@ criteria = "safe-to-deploy"
 
 [[exemptions.iana-time-zone]]
 version = "0.1.64"
-criteria = "safe-to-deploy"
-
-[[exemptions.idna]]
-version = "1.1.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.image]]
@@ -371,10 +363,6 @@ criteria = "safe-to-deploy"
 
 [[exemptions.pem-rfc7468]]
 version = "0.7.0"
-criteria = "safe-to-deploy"
-
-[[exemptions.percent-encoding]]
-version = "2.3.2"
 criteria = "safe-to-deploy"
 
 [[exemptions.pkcs8]]
@@ -551,10 +539,6 @@ criteria = "safe-to-deploy"
 
 [[exemptions.untrusted]]
 version = "0.9.0"
-criteria = "safe-to-deploy"
-
-[[exemptions.url]]
-version = "2.5.7"
 criteria = "safe-to-deploy"
 
 [[exemptions.uuid]]
