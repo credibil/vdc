@@ -432,8 +432,9 @@ dependencies = [
 
 [[package]]
 name = "credibil-api"
-version = "0.0.0"
-source = "git+https://github.com/credibil/core.git?tag=v0.1.0#b27dc201fea251e6270bc88eac04d74006a9a54f"
+version = "0.2.1"
+source = "sparse+https://pkgs.dev.azure.com/credibil/_packaging/credibil/Cargo/index/"
+checksum = "6b7f3d9d1fb27170eaa1d6cd5ac37983ca02c80d13eef0fa4bc625db42838ed2"
 dependencies = [
  "bytes",
  "http",
@@ -445,8 +446,9 @@ dependencies = [
 
 [[package]]
 name = "credibil-binding"
-version = "0.2.0"
-source = "git+https://github.com/credibil/key.git?tag=v0.2.0#048a80d18353a3f6dc206b02f85c664e96606dd2"
+version = "0.3.0"
+source = "sparse+https://pkgs.dev.azure.com/credibil/_packaging/credibil/Cargo/index/"
+checksum = "d1782557f98574a930fec1598f1799e415d30ee8520e3af2772b02856f0a42ff"
 dependencies = [
  "anyhow",
  "credibil-api",
@@ -459,8 +461,9 @@ dependencies = [
 
 [[package]]
 name = "credibil-core"
-version = "0.1.0"
-source = "git+https://github.com/credibil/core.git?tag=v0.1.0#b27dc201fea251e6270bc88eac04d74006a9a54f"
+version = "0.2.1"
+source = "sparse+https://pkgs.dev.azure.com/credibil/_packaging/credibil/Cargo/index/"
+checksum = "07bb2ad5594ac6920aef67fd14eb9b0ff5dd57fe89499b824a0f25ee58ec03a3"
 dependencies = [
  "anyhow",
  "chrono",
@@ -469,8 +472,9 @@ dependencies = [
 
 [[package]]
 name = "credibil-did"
-version = "0.2.0"
-source = "git+https://github.com/credibil/key.git?tag=v0.2.0#048a80d18353a3f6dc206b02f85c664e96606dd2"
+version = "0.3.0"
+source = "sparse+https://pkgs.dev.azure.com/credibil/_packaging/credibil/Cargo/index/"
+checksum = "78be514978a1404ec7cadd20e954ab6ff6898b4ca11249d04385016288178d82"
 dependencies = [
  "anyhow",
  "chrono",
@@ -489,8 +493,9 @@ dependencies = [
 
 [[package]]
 name = "credibil-ecc"
-version = "0.2.0"
-source = "git+https://github.com/credibil/key.git?tag=v0.2.0#048a80d18353a3f6dc206b02f85c664e96606dd2"
+version = "0.3.0"
+source = "sparse+https://pkgs.dev.azure.com/credibil/_packaging/credibil/Cargo/index/"
+checksum = "e2a7b706ee71f6bb48d9e5d8f08020a6c5e9fc13238e7b7e5d6eb3b684479164"
 dependencies = [
  "aes-gcm",
  "aes-kw",
@@ -512,8 +517,9 @@ dependencies = [
 
 [[package]]
 name = "credibil-encoding"
-version = "0.0.0"
-source = "git+https://github.com/credibil/core.git?tag=v0.1.0#b27dc201fea251e6270bc88eac04d74006a9a54f"
+version = "0.2.1"
+source = "sparse+https://pkgs.dev.azure.com/credibil/_packaging/credibil/Cargo/index/"
+checksum = "bb8330fd67fec3fd2f2f77ce539b40f4f32931c73d2ab3ed4a1aa55ce4caa962"
 dependencies = [
  "anyhow",
  "percent-encoding",
@@ -523,8 +529,9 @@ dependencies = [
 
 [[package]]
 name = "credibil-jose"
-version = "0.2.0"
-source = "git+https://github.com/credibil/key.git?tag=v0.2.0#048a80d18353a3f6dc206b02f85c664e96606dd2"
+version = "0.3.0"
+source = "sparse+https://pkgs.dev.azure.com/credibil/_packaging/credibil/Cargo/index/"
+checksum = "87c82c41d91e5241285af3781fd0307e1c30e9d3ee128372cb411aeffba5ce75"
 dependencies = [
  "anyhow",
  "base64ct",

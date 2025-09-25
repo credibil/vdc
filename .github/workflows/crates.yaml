@@ -1,0 +1,13 @@
+
+name: Publish Crates
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+    - 'v*'
+    
+jobs:
+  crates:
+    uses: credibil/pipeline/.github/workflows/crates.yaml@main
+ 

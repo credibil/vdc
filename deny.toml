@@ -47,9 +47,9 @@ skip-tree = [
 [bans.workspace-dependencies]
 duplicates = "deny"
 include-path-dependencies = true
-unused = "deny"
+unused = "warn"
 
-[sources.allow-org]
-github = [
-  "credibil",
+[sources]
+private = [
+    "sparse+https://pkgs.dev.azure.com/credibil/_packaging/credibil/Cargo/index/",
 ]
